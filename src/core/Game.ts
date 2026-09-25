@@ -35,6 +35,7 @@ import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
 import { TouchControls } from '../ui/TouchControls';
 import { TRIAL_VERSION, TrialSim, encodeInputs, quantizeInput, type TrialConfig } from '../gameplay/TrialSim';
 import { submitRun } from '../net/Leaderboard';
+import { HUB_S_OFFSET } from '../net/RemotePlayers';
 import type { RoverInput } from '../gameplay/RoverController';
 import { RemotePlayers } from '../net/RemotePlayers';
 
@@ -356,7 +357,7 @@ export class Game {
 
   private playerInfo(): PlayerInfo {
     const id = this.profile.data.vehicle;
-    return { name: this.profile.data.name, look: this.profile.data.look, vehicle: id, vlook: this.profile.vehicleLook(id), chapter: this.world.chapter.id };
+    return { name: this.profile.data.name, look: this.profile.data.look, vehicle: id, vlook: this.profile.vehicleLook(id), chapter: this.inHub ? 'hub' : this.world.chapter.id };
   }
 
   private applySettings(): void {
@@ -1546,6 +1547,8 @@ export class Game {
     this.unlockAudio();
     this.hud.showDistrictTitle('Home port', 'Harbour Town', 'Drive or walk anywhere · painted gates lead to every chapter');
     this.profile.markSeen('hub');
+    this.remotes.clear();
+    if (this.net.connected) this.net.sendHello(this.playerInfo());
   }
 
   /** Hide the hub and show the chapter world again (portals, menu, play). */
@@ -1556,6 +1559,8 @@ export class Game {
     this.world.group.visible = true;
     this.hud.setHub(false);
     this.hud.setPrompt(null);
+    this.remotes.clear();
+    if (this.net.connected) this.net.sendHello(this.playerInfo());
     if (this.state === 'hub') this.state = 'menu';
   }
 
@@ -1586,6 +1591,13 @@ export class Game {
     const inp = this.input;
     if (inp.consume('honk')) this.audio.honk(60);
     if (inp.consume('emote')) this.waveTimer = 2.2;
+    if (inp.consume('chat') && this.net.connected) {
+      this.input.releasePointerLock();
+      this.hud.openChat((text) => {
+        this.net.chat(text);
+        this.hud.chatLine(this.profile.data.name, text);
+      });
+    }
     if (inp.consume('respawn')) {
       this.mode = 'drive';
       this.seatHuman();
@@ -1720,6 +1732,16 @@ export class Game {
     const nearCar = this.mode === 'foot' && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' ? `E · Enter ${this.hubZone.label.replace('→ ', '')} (or drive through)` : `E · ${this.hubZone.label}`) : null;
     this.hud.setPrompt(zoneText ?? (nearCar ? 'F · Get in' : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? 'F · Get out and walk' : null));
+    // Multiplayer in the hub: everyone in the same room and in Harbour Town sees each other.
+    if (this.net.connected) {
+      const foot = this.mode === 'foot';
+      const st: PlayerState = foot
+        ? { chapter: 'hub', mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? 'wave' : undefined }
+        : { chapter: 'hub', mode: 'drive', s: this.hubCar.z + HUB_S_OFFSET, x: this.hubCar.x, h: this.hubCar.y, yaw: this.hubCar.heading, v: this.hubCar.v };
+      this.net.update(dt, st, this.playerInfo());
+      this.remotes.update(dt, this.time, this.net, this.world.path, 'hub', cam, HUB_Y);
+      this.hud.setPlayers([...this.net.peers.values()].map((p) => p.info?.name ?? '…'), this.net.status);
+    } else this.hud.setPlayers([], 'offline');
     this.hud.update(dt);
     this.hud.setClock(this.env.clockText(), this.env.bandLabel(), this.env.presetId, this.env.auto, this.env.weatherLabel);
     this.hud.setInk(this.profile.data.ink);
@@ -1982,8 +2004,8 @@ export class Game {
     if (m) this.startMissionFromMenu(m);
   }
 
-  debugNet(room: string): void {
-    this.net.connect(room, null, this.playerInfo());
+  debugNet(room: string, server?: string): void {
+    this.net.connect(room, server ?? null, this.playerInfo());
   }
 
   debugChapter(id: string): void {

@@ -32,7 +32,10 @@ export function validateState(msg, prev, now) {
   if (!MODES.has(msg.mode)) return { ok: false, reason: 'bad mode' };
   if (Math.abs(msg.v) > LIMITS.maxSpeed) return { ok: false, reason: 'too fast' };
   if (msg.s < 0 || msg.s > LIMITS.maxS) return { ok: false, reason: 'off the route' };
-  if (Math.abs(msg.x) > LIMITS.maxX) return { ok: false, reason: 'too far sideways' };
+  // Hubs are open ground (x is metres across the town, s is metres along it + 200).
+  const hub = msg.chapter === 'hub';
+  if (Math.abs(msg.x) > (hub ? 130 : LIMITS.maxX)) return { ok: false, reason: 'too far sideways' };
+  if (hub && Math.abs(msg.v) > 45) return { ok: false, reason: 'too fast for the hub' };
   if (msg.h < LIMITS.minH || msg.h > LIMITS.maxH) return { ok: false, reason: 'too high' };
   if (prev && prev.chapter === msg.chapter) {
     const dt = Math.max(0.001, (now - prev.at) / 1000);

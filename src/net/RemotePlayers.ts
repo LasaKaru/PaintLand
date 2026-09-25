@@ -5,6 +5,9 @@ import { HumanModel } from '../models/Human';
 import { VehicleModel, vehicleById } from '../models/Vehicles';
 import type { NetClient, RemotePeer } from './Net';
 
+/** Hub states: s = z + HUB_S_OFFSET, x = x, h = height above the hub ground, yaw = heading. */
+export const HUB_S_OFFSET = 200;
+
 interface Avatar {
   key: string;
   vehicle: VehicleModel;
@@ -26,7 +29,8 @@ export class RemotePlayers {
 
   constructor(private readonly scene: THREE.Scene, private readonly labels: HTMLElement) {}
 
-  update(dt: number, time: number, net: NetClient, path: RoadPath, chapter: string, camera: THREE.PerspectiveCamera): void {
+  /** `hubY` set = everyone is in a free-roam hub (world coordinates), otherwise on `path`. */
+  update(dt: number, time: number, net: NetClient, path: RoadPath, chapter: string, camera: THREE.PerspectiveCamera, hubY?: number): void {
     const seen = new Set<string>();
     for (const peer of net.peers.values()) {
       if (!peer.info || peer.info.chapter !== chapter) continue;
@@ -35,11 +39,18 @@ export class RemotePlayers {
       seen.add(peer.id);
       const av = this.ensure(peer);
       if (av.mode !== snap.mode) this.seat(av, snap.mode);
-      const f = path.sample(snap.s, this.frame);
-      this.basis.makeBasis(f.right, f.up, this.tmp.copy(f.tangent).negate());
       const target = snap.mode === 'drive' ? av.vehicle.root : av.human.root;
-      target.quaternion.setFromRotationMatrix(this.basis).multiply(this.yq.setFromAxisAngle(_y, -snap.yaw));
-      target.position.copy(f.position).addScaledVector(f.right, snap.x).addScaledVector(f.up, snap.h + (snap.mode === 'drive' ? 0.02 : 0));
+      const f = this.frame;
+      if (hubY !== undefined) {
+        f.up.set(0, 1, 0);
+        target.quaternion.setFromAxisAngle(_y, snap.yaw);
+        target.position.set(snap.x, hubY + snap.h + (snap.mode === 'drive' ? 0.02 : 0), snap.s - HUB_S_OFFSET);
+      } else {
+        path.sample(snap.s, f);
+        this.basis.makeBasis(f.right, f.up, this.tmp.copy(f.tangent).negate());
+        target.quaternion.setFromRotationMatrix(this.basis).multiply(this.yq.setFromAxisAngle(_y, -snap.yaw));
+        target.position.copy(f.position).addScaledVector(f.right, snap.x).addScaledVector(f.up, snap.h + (snap.mode === 'drive' ? 0.02 : 0));
+      }
       if (snap.mode === 'drive') {
         av.vehicle.roll(snap.v * dt);
         av.human.animate(dt, av.vehicle.def.seatPose, 0, time);

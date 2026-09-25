@@ -50,4 +50,25 @@ await p1.waitForTimeout(5000);
 console.log('p1 sees peers:', (await p1.evaluate(() => window.__paintland.debugInfo())).peers);
 console.log('p2 sees peers:', (await p2.evaluate(() => window.__paintland.debugInfo())).peers);
 await p1.screenshot({ path: new URL('./out/net-p1.png', import.meta.url).pathname });
+// 3 · Two separate windows over the relay, both in Harbour Town: p2 parks in front of p1.
+await ctx.close();
+const relay = spawn(process.execPath, ['server/relay.mjs'], { env: { ...process.env, PORT: '8797' } });
+await new Promise((r) => setTimeout(r, 1000));
+const w1 = await (await browser.newContext({ viewport: { width: 640, height: 400 } })).newPage();
+const w2 = await (await browser.newContext({ viewport: { width: 640, height: 400 } })).newPage();
+for (const p of [w1, w2]) {
+  p.on('pageerror', (e) => console.log('[w pageerror]', e.message));
+  await p.goto('http://localhost:5173/', { timeout: 120000 });
+  await p.waitForFunction(() => window.__paintland, null, { timeout: 90000 });
+}
+await w1.evaluate(() => { window.__paintland.debugHub(0, 30, 0); window.__paintland.debugNet('hubroom', 'ws://localhost:8797'); });
+await w2.evaluate(() => { window.__paintland.debugHub(0, 18, Math.PI); window.__paintland.debugNet('hubroom', 'ws://localhost:8797'); });
+await w1.waitForFunction(() => window.__paintland.remotes.count() > 0, null, { timeout: 90000 }).catch(() => undefined);
+await w1.waitForTimeout(8000);
+const seen = await w1.evaluate(() => { const g = window.__paintland; const av = [...g.remotes.avatars.values()][0]; return av ? { count: g.remotes.count(), x: +av.vehicle.root.position.x.toFixed(1), y: +av.vehicle.root.position.y.toFixed(1), z: +av.vehicle.root.position.z.toFixed(1) } : null; });
+console.log('debug', await w1.evaluate(() => { const g = window.__paintland; return JSON.stringify({ status: g.net.status, state: g.state, peers: [...g.net.peers.values()].map(p => ({ info: p.info?.chapter, snaps: p.snapshots.length, sample: g.net.sample(p)?.chapter })), t: g.time, count: g.remotes.count(), inHub: g.inHub }); }));
+console.log('w2', await w2.evaluate(() => { const g = window.__paintland; return JSON.stringify({ state: g.state, inHub: g.inHub, t: g.time, info: g.playerInfo().chapter }); }));
+console.log('hub: window 1 draws window 2 at', JSON.stringify(seen), '(expected about x 0, y 2, z 18)');
+await w1.screenshot({ path: new URL('./out/net-hub.png', import.meta.url).pathname });
+relay.kill();
 await browser.close();
