@@ -51,6 +51,18 @@ for (const shot of (process.env.SHOTS ?? defaults).split(',').filter(Boolean)) {
   logs.push(`[shot ${shot}] ${JSON.stringify(info)}`);
   await page.screenshot({ path: `${out}${chapter}-${String(s).padStart(4, '0')}-${preset}${rain ? `-${rain}` : ''}${tag}.png` });
 }
+if (process.env.HUB) {
+  // HUB="x,z,heading;x,z,heading" — views of Harbour Town (default: the spawn).
+  const spots = process.env.HUB === '1' ? [''] : process.env.HUB.split(';');
+  for (const [i, spot] of spots.entries()) {
+    const [x, z, h] = spot ? spot.split(',').map(Number) : [];
+    await page.evaluate(([x, z, h]) => window.__paintland.debugHub(x, z, h), [x, z, h]);
+    await page.waitForTimeout(wait + 1500);
+    await page.screenshot({ path: `${out}hub-${i}${tag}.png` });
+  }
+  const info = await page.evaluate(() => window.__paintland.debugInfo());
+  logs.push(`[hub] ${JSON.stringify(info)}`);
+}
 if (process.env.PHOTO) {
   await page.evaluate(() => window.__paintland.debugPhoto());
   await page.waitForTimeout(wait);

@@ -32,6 +32,7 @@ export interface MenuHost {
   openStudio(): void;
   openControls(): void;
   watchIntro(): void;
+  enterHub(): void;
   unlockAudio(): void;
   /** Art + graphics values (mutable; call settingsChanged after editing). */
   studio(): StudioSettings;
@@ -141,6 +142,7 @@ export class Menu {
       <nav class="menu-list">
         ${this.host.canResume() ? '<button class="menu-item primary" data-nav="resume">▶ Resume</button>' : ''}
         <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">▶ Play · ${ch.name}</button>
+        <button class="menu-item" data-nav="hub">⚓ Harbour Town · free roam</button>
         <button class="menu-item" data-nav="chapters">Chapters</button>
         <button class="menu-item" data-nav="missions">Missions</button>
         <button class="menu-item" data-nav="wardrobe">Wardrobe</button>
@@ -512,6 +514,7 @@ export class Menu {
         this.host.unlockAudio();
         this.show('main');
       } else if (d.nav === 'intro') this.host.watchIntro();
+      else if (d.nav === 'hub') this.host.enterHub();
       else if (d.nav === 'resume') this.host.resume();
       else this.show(d.nav as MenuScreen);
       return;

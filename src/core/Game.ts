@@ -30,9 +30,12 @@ import { PhotoMode } from '../ui/PhotoMode';
 import { GhostPlayer, GhostRecorder, loadGhost, saveGhost } from '../gameplay/Ghost';
 import { checkTrophies } from '../gameplay/Trophies';
 import { Wildlife } from '../world/Wildlife';
+import { Hub, HUB_Y, type HubZone } from '../world/Hub';
+import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
+import { TouchControls } from '../ui/TouchControls';
 import { RemotePlayers } from '../net/RemotePlayers';
 
-type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused' | 'photo';
+type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused' | 'photo' | 'hub';
 type PawnMode = 'drive' | 'foot';
 
 const SIM_DT = 1 / 60;
@@ -125,7 +128,18 @@ export class Game {
   private raceCountdown = 0;
   private missionEndTimer = 0;
   private saveTimer = 0;
-  private resumeSnapshot: { s: number; x: number; v: number; mode: PawnMode; hs: number; hx: number } | null = null;
+  private resumeSnapshot: { s: number; x: number; v: number; mode: PawnMode; hs: number; hx: number; hub?: HubSpot } | null = null;
+  // Harbour Town (free roam).
+  private hub: Hub | null = null;
+  private inHub = false;
+  private pausedFrom: GameState = 'play';
+  private readonly hubCar = new FreeCar({ ...tuningFor('rover') });
+  private readonly hubWalker = new FreeWalker();
+  private readonly hubCam = { yaw: 0, pitch: 0.3, pos: new THREE.Vector3(), look: new THREE.Vector3(), snap: true };
+  private hubZone: HubZone | null = null;
+  private readonly touchUi: TouchControls;
+  private contextLost = false;
+  private tipClock = 0;
   private showcaseTarget: 'character' | 'vehicle' | null = null;
   private readonly events: PickupEvent[] = [];
 
@@ -140,6 +154,14 @@ export class Game {
     container.appendChild(this.renderer.domElement);
     this.pipeline = new PaintPipeline(this.renderer, this.settings);
     this.input = new Input(this.renderer.domElement);
+    // The browser can drop the GPU context (driver reset, tab in the background on phones).
+    this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
+      e.preventDefault();
+      this.contextLost = true;
+      this.profile.save();
+      this.hud?.notice('The graphics were reset by the browser — repainting…');
+    });
+    this.renderer.domElement.addEventListener('webglcontextrestored', () => window.location.reload());
 
     this.hud = new Hud(container, {
       onTimePreset: (id) => this.env.setPreset(id),
@@ -159,6 +181,7 @@ export class Game {
       onTitle: () => this.openMenu(),
     });
     this.remotes = new RemotePlayers(this.scene, this.hud.labels);
+    this.touchUi = new TouchControls(container, this.input);
     this.menu = new Menu(container, {
       profile: this.profile,
       chapters: CHAPTERS,
@@ -175,6 +198,7 @@ export class Game {
       openStudio: () => this.studio.toggle(),
       openControls: () => this.hud.show('screenHelp', true),
       watchIntro: () => this.startIntro(),
+      enterHub: () => this.enterHub(),
       unlockAudio: () => this.unlockAudio(),
       studio: () => this.settings,
       options: () => this.options,
@@ -205,7 +229,7 @@ export class Game {
       if (this.state === 'splash' && this.menu.screen !== 'splash') this.afterSplash();
     });
     this.renderer.domElement.addEventListener('click', () => {
-      if (this.state === 'play' && this.mode === 'foot') this.input.requestPointerLock();
+      if ((this.state === 'play' || this.state === 'hub') && this.mode === 'foot') this.input.requestPointerLock();
     });
   }
 
@@ -425,7 +449,17 @@ export class Game {
   }
 
   private openMenu(screen: MenuScreen = 'main'): void {
-    if (this.state === 'play' || this.state === 'paused') {
+    if (this.inHub) {
+      this.resumeSnapshot = { s: 8, x: 0, v: 0, mode: 'drive', hs: 0, hx: 0, hub: { x: this.hubCar.x, z: this.hubCar.z, heading: this.hubCar.heading, foot: this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : null } };
+      this.hud.show('screenPause', false);
+      this.input.releasePointerLock();
+      void this.audio.ctx?.resume();
+      this.leaveHub();
+      if (this.mode === 'foot') {
+        this.mode = 'drive';
+        this.seatHuman();
+      }
+    } else if (this.state === 'play' || this.state === 'paused') {
       this.resumeSnapshot = { s: this.rover.s, x: this.rover.x, v: this.rover.v, mode: this.mode, hs: this.human.s, hx: this.human.x };
       this.hud.show('screenPause', false);
       this.input.releasePointerLock();
@@ -451,6 +485,7 @@ export class Game {
   }
 
   private play(chapterId: string): void {
+    this.leaveHub();
     this.loadChapter(chapterId);
     this.resumeSnapshot = null;
     this.menu.show('none');
@@ -466,6 +501,11 @@ export class Game {
 
   private resumeFromMenu(): void {
     const snap = this.resumeSnapshot;
+    if (snap?.hub) {
+      this.resumeSnapshot = null;
+      this.enterHub(snap.hub);
+      return;
+    }
     this.menu.show('none');
     this.setShowcase(null);
     this.state = 'play';
@@ -537,13 +577,14 @@ export class Game {
   }
 
   private togglePause(): void {
-    if (this.state === 'play') {
+    if (this.state === 'play' || this.state === 'hub') {
+      this.pausedFrom = this.state;
       this.state = 'paused';
       this.hud.show('screenPause', true);
       this.input.releasePointerLock();
       void this.audio.ctx?.suspend();
     } else if (this.state === 'paused') {
-      this.state = 'play';
+      this.state = this.pausedFrom;
       this.hud.show('screenPause', false);
       this.hud.show('screenHelp', false);
       void this.audio.ctx?.resume();
@@ -944,6 +985,7 @@ export class Game {
 
   private loop = (now: number): void => {
     requestAnimationFrame(this.loop);
+    if (this.contextLost) return;
     const cap = this.settings.fpsCap;
     if (cap > 0 && now - this.lastFrame < 1000 / cap - 2) return;
     const dt = Math.min(0.1, (now - this.lastFrame) / 1000);
@@ -959,6 +1001,7 @@ export class Game {
       let steps = 0;
       while (this.accumulator >= SIM_DT && steps < 5) {
         if (this.state === 'play') this.simStep(SIM_DT);
+        else if (this.state === 'hub') this.hubStep(SIM_DT);
         else this.demoStep(SIM_DT);
         this.accumulator -= SIM_DT;
         steps++;
@@ -968,6 +1011,8 @@ export class Game {
       this.handleEvents();
     }
     this.input.clearUnconsumed(['hop', 'interact']);
+    this.touchUi.setVisible(this.state === 'play' || this.state === 'hub');
+    if (this.state === 'play' || this.state === 'hub') this.onboarding(dt);
     this.saveTimer -= dt;
     if (this.saveTimer <= 0) {
       this.saveTimer = 5;
@@ -1022,7 +1067,7 @@ export class Game {
       return;
     }
     if (inp.consume('studio')) this.studio.toggle();
-    if (this.state !== 'play' && this.state !== 'paused') return;
+    if (this.state !== 'play' && this.state !== 'paused' && this.state !== 'hub') return;
     if (inp.consume('pause')) {
       if (this.mode === 'foot' && this.input.isPointerLocked) this.input.releasePointerLock();
       else this.togglePause();
@@ -1042,6 +1087,10 @@ export class Game {
     this.rig.baseFov = this.settings.fov;
     const wheel = inp.takeWheel();
     if (wheel) this.rig.zoom = clamp(this.rig.zoom * (wheel > 0 ? 1.1 : 0.9), 0.6, 2.2);
+    if (this.state === 'hub') {
+      this.hubInput(dt);
+      return;
+    }
     if (this.state !== 'play') return;
 
     if (inp.consume('camera')) this.cycleCamera();
@@ -1089,6 +1138,10 @@ export class Game {
   }
 
   private render(dt: number, alpha: number): void {
+    if (this.inHub && (this.state === 'hub' || this.state === 'paused')) {
+      this.renderHub(dt, alpha);
+      return;
+    }
     const playing = this.state === 'play' || this.state === 'paused';
     const r = this.rover.lerpState(alpha);
     const path = this.world.path;
@@ -1288,6 +1341,284 @@ export class Game {
   private popAtPawn(text: string, kind: 'good' | 'info' | 'big'): void {
     const target = this.mode === 'drive' ? this.vehicle.root.position : this.humanModel.root.position;
     this.popAt(target.clone().addScaledVector(this.frame.up, 3), text, kind);
+  }
+
+  // ————— onboarding —————
+
+  /** First-time tips, each shown once per profile (docs/10 §8). */
+  private onboarding(dt: number): void {
+    this.tipClock += dt;
+    if (this.tipClock < 1.5) return;
+    const touch = document.documentElement.classList.contains('touch-ui');
+    const p = this.profile;
+    const tip = (id: string, text: string): boolean => {
+      if (!p.markSeen(`tip:${id}`)) return false;
+      this.hud.tip(text);
+      this.tipClock = -5; // space tips out
+      p.save();
+      return true;
+    };
+    if (this.state === 'hub') {
+      tip('hub', touch ? 'Drive with the stick and GO · E at a glowing ring opens the garage, wardrobe or shop' : 'W A S D to drive · E at a glowing ring opens the garage, wardrobe or shop · drive through a painted gate to start a chapter');
+      return;
+    }
+    const r = this.rover;
+    if (tip('drive', touch ? 'Hold GO to drive, steer with the stick' : 'Hold W to drive, A / D to steer — the rover keeps rolling on its own')) return;
+    if (this.mode === 'drive' && r.v > 15 && tip('notes', 'Drive through the floating notes: they play this street’s melody. A whole phrase gets sealed ✓')) return;
+    if (this.mode === 'drive' && r.v > 20 && this.lapTime > 20 && tip('hop', touch ? 'HOP over gaps and crates — clean landings give a speed kick' : 'Space to hop — clean landings give a speed kick')) return;
+    if (r.boostMeter > 0.6 && tip('boost', touch ? 'Your boost is full — hold BOOST' : 'Your boost is full — hold Shift')) return;
+    if (this.frame.up.y < 0.3 && tip('gravity', 'The road is your gravity: walls and ceilings are just more road. Hold on!')) return;
+    if (this.lapTime > 60 && tip('walk', touch ? 'Stop and press E to get out and walk' : 'Stop and press F to get out and walk. P opens photo mode')) return;
+    if (this.lapTime > 90) tip('settings', 'Menu → Settings: graphics quality, a realistic art style, realistic handling and key rebinding');
+  }
+
+  // ————— Harbour Town (free-roam hub) —————
+
+  private enterHub(at?: HubSpot): void {
+    if (!this.hub) {
+      this.hub = new Hub(this.hud.labels);
+      this.scene.add(this.hub.group);
+    }
+    this.menu.show('none');
+    this.setShowcase(null);
+    this.hud.letterbox(false);
+    this.hud.show('screenPause', false);
+    this.resumeSnapshot = null;
+    this.missions.cancel();
+    this.world.people.removeRival();
+    this.world.group.visible = false;
+    this.rover.v = 0;
+    if (this.ghostModel) this.ghostModel.root.visible = false;
+    this.hub.show(true);
+    this.inHub = true;
+    this.state = 'hub';
+    this.hud.setPlaying(true);
+    this.hud.setHub(true);
+    this.hubCar.tuning = tuningFor(this.profile.data.vehicle);
+    const sp = this.hub.spawn;
+    this.hubCar.place(at?.x ?? sp.x, at?.z ?? sp.z, at?.heading ?? sp.heading);
+    this.mode = 'drive';
+    if (at?.foot) {
+      this.mode = 'foot';
+      this.hubWalker.place(at.foot.x, at.foot.z, 0);
+    }
+    this.seatHuman();
+    this.updateHeadVisibility();
+    this.hubCam.snap = true;
+    this.hubCam.yaw = this.hubCar.heading;
+    this.particles.clear();
+    this.wildlife.reset(new THREE.Vector3(0, HUB_Y, 0));
+    this.unlockAudio();
+    this.hud.showDistrictTitle('Home port', 'Harbour Town', 'Drive or walk anywhere · painted gates lead to every chapter');
+    this.profile.markSeen('hub');
+  }
+
+  /** Hide the hub and show the chapter world again (portals, menu, play). */
+  private leaveHub(): void {
+    if (!this.inHub) return;
+    this.inHub = false;
+    this.hub?.show(false);
+    this.world.group.visible = true;
+    this.hud.setHub(false);
+    this.hud.setPrompt(null);
+    if (this.state === 'hub') this.state = 'menu';
+  }
+
+  private hubStep(dt: number): void {
+    const inp = this.input;
+    const hub = this.hub!;
+    if (this.mode === 'drive') {
+      const steer = clamp(inp.steer() * this.options.steerSensitivity, -1, 1);
+      this.hubCar.step(dt, { throttle: inp.throttle(), brake: inp.brake(), steer, hop: inp.consume('hop'), boost: inp.held('boost') }, hub.world);
+      this.profile.addStat('distance', Math.abs(this.hubCar.v) * dt);
+      // Drive into a painted gate to enter its chapter.
+      const z = hub.zoneAt(this.hubCar.x, this.hubCar.z);
+      if (z?.kind === 'portal' && this.hubCar.v > 2 && z.chapter) {
+        this.play(z.chapter);
+        return;
+      }
+    } else {
+      // The parked car is solid while walking.
+      hub.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: 1.4 });
+      const move = inp.moveAxes();
+      this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, hub.world);
+      hub.world.colliders.pop();
+    }
+    this.trackStats(dt);
+  }
+
+  private hubInput(dt: number): void {
+    const inp = this.input;
+    if (inp.consume('honk')) this.audio.honk(60);
+    if (inp.consume('emote')) this.waveTimer = 2.2;
+    if (inp.consume('respawn')) {
+      this.mode = 'drive';
+      this.seatHuman();
+      this.hubCar.place(this.hub!.spawn.x, this.hub!.spawn.z, this.hub!.spawn.heading);
+      this.hubCam.snap = true;
+      this.splash = 1;
+    }
+    if (inp.consume('interact')) {
+      const zone = this.hubZone;
+      if (zone) this.useZone(zone);
+      else if (this.mode === 'drive') {
+        if (Math.abs(this.hubCar.v) > 4) this.popAtPawn('Slow down to get out', 'info');
+        else {
+          this.hubCar.v = 0;
+          this.mode = 'foot';
+          const right = this.hubCar.heading;
+          this.hubWalker.place(this.hubCar.x - Math.cos(right) * 2.4, this.hubCar.z + Math.sin(right) * 2.4, this.hubCar.heading);
+          this.hubCam.yaw = this.hubCar.heading;
+          this.seatHuman();
+          this.updateHeadVisibility();
+          this.audio.blip(520, 0.08, 'triangle', 0.06);
+        }
+      } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4) {
+        this.mode = 'drive';
+        this.input.releasePointerLock();
+        this.seatHuman();
+        this.updateHeadVisibility();
+        this.audio.blip(660, 0.08, 'triangle', 0.06);
+      }
+    }
+    const look = inp.takeLook(dt);
+    if (this.mode === 'foot') {
+      this.hubCam.yaw -= look.dx * 0.0028;
+      this.hubCam.pitch = clamp(this.hubCam.pitch + look.dy * 0.0022, -0.6, 1.2);
+    }
+  }
+
+  private useZone(zone: HubZone): void {
+    if (zone.kind === 'portal' && zone.chapter) this.play(zone.chapter);
+    else if (zone.kind === 'garage') this.openMenu('garage');
+    else if (zone.kind === 'wardrobe') this.openMenu('wardrobe');
+    else if (zone.kind === 'shop') this.openMenu('shop');
+    else if (zone.kind === 'missions') this.openMenu('missions');
+    else if (zone.kind === 'trophies') this.openMenu('trophies');
+  }
+
+  private renderHub(dt: number, alpha: number): void {
+    const hub = this.hub!;
+    const vm = this.vehicle;
+    const car = this.hubCar.lerp(alpha);
+    const cam = this.rig.camera;
+    vm.root.position.set(car.x, HUB_Y + car.y + 0.02, car.z);
+    vm.root.quaternion.setFromAxisAngle(_y, car.heading);
+    const steer = this.mode === 'drive' ? this.input.steer() : 0;
+    for (const p of vm.steerPivots) p.rotation.y = -steer * 0.45;
+    vm.roll(this.hubCar.v * dt);
+    vm.body.rotation.z = clamp(this.hubCar.slip * 0.03, -0.07, 0.07);
+    vm.body.rotation.x = this.hubCar.braking ? -0.035 : 0;
+    vm.setBrakeLights(this.hubCar.braking);
+    vm.setHeadlights(paintShared.uNight.value);
+    vm.horn.scale.setScalar(1 + this.audio.beatPulse * 0.08);
+
+    let focus: THREE.Vector3 = vm.root.position;
+    const fwd = _v.set(-Math.sin(car.heading), 0, -Math.cos(car.heading));
+    const desired = _v2;
+    const look = _v3;
+    if (this.mode === 'foot') {
+      const w = this.hubWalker.lerp(alpha);
+      const hm = this.humanModel;
+      hm.root.position.set(w.x, HUB_Y + w.y, w.z);
+      hm.root.quaternion.setFromAxisAngle(_y, w.heading);
+      if (this.waveTimer > 0) this.waveTimer -= dt;
+      hm.animate(dt, this.waveTimer > 0 && this.hubWalker.speed < 0.5 ? 'wave' : this.hubWalker.pose, this.hubWalker.speed, this.time);
+      if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
+        this.footstepTimer -= dt * this.hubWalker.speed;
+        if (this.footstepTimer <= 0) {
+          this.audio.footstep();
+          this.footstepTimer = 1.1;
+        }
+      }
+      focus = hm.root.position;
+      const yaw = this.hubCam.yaw;
+      const pitch = this.hubCam.pitch;
+      const dist = 5.2 * this.rig.zoom;
+      look.copy(focus).add(_v4.set(0, 1.6, 0));
+      desired.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist).add(look);
+    } else {
+      this.humanModel.animate(dt, vm.def.seatPose, 0, this.time);
+      const back = 8 * this.rig.zoom;
+      desired.copy(vm.root.position).addScaledVector(fwd, -back).add(_v4.set(0, 3.2 * this.rig.zoom, 0));
+      look.copy(vm.root.position).addScaledVector(fwd, 4).add(_v4.set(0, 1.3, 0));
+      this.hubCam.yaw = car.heading;
+    }
+    // Keep the lens out of buildings.
+    const lens = { x: desired.x, z: desired.z };
+    if (desired.y < HUB_Y + 14) hub.world.resolve(lens, 0.6);
+    desired.x = lens.x;
+    desired.z = lens.z;
+    desired.y = Math.max(desired.y, HUB_Y + 0.6);
+    const k = this.hubCam.snap ? 1 : 1 - Math.exp(-(this.mode === 'foot' ? 14 : 5) * dt);
+    this.hubCam.pos.lerp(desired, k);
+    this.hubCam.look.lerp(look, this.hubCam.snap ? 1 : 1 - Math.exp(-10 * dt));
+    this.hubCam.snap = false;
+    cam.position.copy(this.hubCam.pos);
+    cam.up.set(0, 1, 0);
+    cam.fov = this.settings.fov + Math.min(10, Math.max(0, this.hubCar.v - 18) * 0.5);
+    cam.updateProjectionMatrix();
+    cam.lookAt(this.hubCam.look);
+    cam.updateMatrixWorld();
+
+    this.sky.position.copy(cam.position);
+    this.env.update(dt, focus, cam, this.settings.reducedMotion || this.options.calmLighting);
+    paintShared.uTime.value = this.time;
+    skyUniforms.uTime.value = this.time;
+    waterUniforms.uTime.value = this.time;
+    const player = this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : { x: this.hubCar.x, z: this.hubCar.z };
+    hub.update(dt, this.time, player, cam);
+    if (this.state === 'hub') {
+      const back = _v5.copy(fwd).negate();
+      const rear = _v6.copy(vm.root.position).addScaledVector(back, 1.7).add(_v4.set(0, 0.3, 0));
+      if (this.mode === 'drive' && Math.abs(this.hubCar.slip) > 1.2 && this.hubCar.grounded) this.particles.emit('smoke', rear, _v4.set(0, 0.5, 0), 30 * dt, 1.2);
+      if (this.mode === 'drive' && this.env.rain > 0.4 && Math.abs(this.hubCar.v) > 8) this.particles.emit('splash', rear, _v4.set(0, 2.5, 0), 14 * dt, 1.4);
+      if (this.hubCar.boosting) this.particles.emit('exhaust', rear, back.multiplyScalar(6), 40 * dt, 0.6);
+      if (paintShared.uNight.value > 0.6) this.particles.emit('firefly', _v4.copy(focus).add(_v5.set((Math.random() - 0.5) * 40, 1.5 + Math.random() * 3, (Math.random() - 0.5) * 40)), _v5.set(0, 0.2, 0), 6 * dt, 1);
+    }
+    this.particles.update(dt, this.pipeline.size.height, cam);
+    this.wildlife.update(dt, this.time, focus, paintShared.uNight.value);
+    this.updateHeadlights(vm, cam);
+
+    // Zones and prompts.
+    this.hubZone = hub.zoneAt(player.x, player.z);
+    const nearCar = this.mode === 'foot' && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
+    const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' ? `E · Enter ${this.hubZone.label.replace('→ ', '')} (or drive through)` : `E · ${this.hubZone.label}`) : null;
+    this.hud.setPrompt(zoneText ?? (nearCar ? 'F · Get in' : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? 'F · Get out and walk' : null));
+    this.hud.update(dt);
+    this.hud.setClock(this.env.clockText(), this.env.bandLabel(), this.env.presetId, this.env.auto, this.env.weatherLabel);
+    this.hud.setInk(this.profile.data.ink);
+    const kmh = this.mode === 'drive' ? this.hubCar.speedKmh : this.hubWalker.speed * 3.6;
+    this.hud.setSpeed(displaySpeed(kmh, this.options.units), this.hubCar.boostMeter, this.hubCar.boosting, 'Harbour Town', 0, 'down is down', this.mode === 'foot', this.options.units === 'mph' ? 'mph' : 'km/h');
+    const st = this.audio.station;
+    this.hud.setRadio(st.freq, st.name, `track ${String(this.audio.trackIndex + 1).padStart(2, '0')} / ${String(st.tracks).padStart(2, '0')}`, this.audio.trackProgress, this.audio.radioOn);
+    this.audio.update(this.mode === 'drive' ? Math.abs(this.hubCar.v) : this.hubWalker.speed, this.hubCar.boosting, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y);
+
+    this.splash = Math.max(0, this.splash - dt * 1.4);
+    this.borderPulse = Math.max(0, this.borderPulse - dt * 0.8);
+    this.lastFx = {
+      fogColor: this.env.fogColor,
+      rain: this.env.rain,
+      speedLines: 0,
+      borderPulse: this.borderPulse + this.splash * 0.4,
+      splash: this.splash * 0.8,
+      sunDir: this.env.sunDirection,
+      sunColor: this.env.sunColour,
+      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.settings.drawDistance),
+      flash: this.env.flash,
+      dofFocus: 10,
+      dofAmount: 0,
+    };
+    this.pipeline.render(this.scene, cam, dt, this.time, this.lastFx);
+  }
+
+  debugHubInfo(): Record<string, unknown> {
+    return { state: this.state, inHub: this.inHub, mode: this.mode, car: { x: +this.hubCar.x.toFixed(2), z: +this.hubCar.z.toFixed(2), v: +this.hubCar.v.toFixed(2) }, walker: { x: +this.hubWalker.x.toFixed(2), z: +this.hubWalker.z.toFixed(2) }, zone: this.hubZone?.kind ?? null, menu: this.menu.screen };
+  }
+
+  debugHub(x?: number, z?: number, heading?: number): void {
+    if (this.state === 'splash') this.profile.data.seenIntro = true;
+    this.enterHub(x !== undefined ? { x, z: z ?? 0, heading: heading ?? 0, foot: null } : undefined);
   }
 
   // ————— ghosts —————
@@ -1535,6 +1866,13 @@ export class Game {
     this.director.script([{ kind: 'landmark', duration: 999, landmark: index }]);
     return this.world.decor.landmarks[index]?.name ?? '?';
   }
+}
+
+interface HubSpot {
+  x: number;
+  z: number;
+  heading: number;
+  foot: { x: number; z: number } | null;
 }
 
 const _m = new THREE.Matrix4();

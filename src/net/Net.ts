@@ -1,3 +1,4 @@
+import { cleanText, validateState } from '../../server/validate.mjs';
 import type { HumanLook } from '../models/Human';
 import type { VehicleId, VehicleLook } from '../models/Vehicles';
 
@@ -182,17 +183,25 @@ export class NetClient {
     peer.lastSeen = performance.now();
     switch (m.t) {
       case 'hello':
-        peer.info = { name: String(m.name).slice(0, 24), look: m.look, vehicle: m.vehicle, vlook: m.vlook, chapter: m.chapter };
+        peer.info = { name: cleanText(m.name, 20) ?? 'Painter', look: m.look, vehicle: m.vehicle, vlook: m.vlook, chapter: m.chapter };
         this.onPeersChanged?.();
         break;
-      case 'state':
-        peer.snapshots.push({ ...m, received: performance.now() });
+      case 'state': {
+        // Defence in depth: tab rooms have no server, so check peers here too.
+        const last = peer.snapshots[peer.snapshots.length - 1];
+        const now = performance.now();
+        if (!validateState(m, last ? { s: last.s, chapter: last.chapter, at: last.received } : null, now).ok) break;
+        peer.snapshots.push({ ...m, received: now });
         if (peer.snapshots.length > 30) peer.snapshots.shift();
         break;
-      case 'chat':
-        peer.chat = { text: String(m.text).slice(0, 120), until: performance.now() + 6000 };
+      }
+      case 'chat': {
+        const text = cleanText(m.text);
+        if (!text) break;
+        peer.chat = { text, until: performance.now() + 6000 };
         this.onChat?.(peer.info?.name ?? 'someone', peer.chat.text);
         break;
+      }
       case 'bye':
         this.peers.delete(m.id);
         this.onPeersChanged?.();

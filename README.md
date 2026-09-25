@@ -6,7 +6,13 @@
 
 This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
 
+![Milestone 4 screenshots: Harbour Town in watercolour and realistic styles, the harbour front, a street, walking into the garage ring, touch controls on a phone](docs/screenshots/milestone-4.jpg)
+
+<details><summary>Milestone 3 screenshots</summary>
+
 ![Milestone 3 screenshots: watercolour vs realistic Biscuit Row, realistic Galle Face Green, Lotus Tower, Taj Mahal, Sigiriya, a rainy night, a storm on the Great Wall, photo mode, graphics settings, art style settings, trophies](docs/screenshots/milestone-3.jpg)
+
+</details>
 
 <details><summary>Milestone 2 screenshots</summary>
 
@@ -38,7 +44,8 @@ npm run dev        # open http://localhost:5173
 | `node tools/screenshot.mjs` | With `npm run dev` running: renders districts in headless Chromium into `tools/out/` (`SHOTS="serendib:120:golden:storm"`, `STYLE=realistic`, `QUALITY=ultra`, `MENUS="settings/controls,trophies"`, `PHOTO=1`, `INTRO=1`, `MISSION=…`, `WALK=1`) |
 | `node tools/landmarks.mjs <chapter> <count>` | Crane shots of every landmark in a chapter (`STYLE=realistic PRESET=golden`) |
 | `node tools/drive-test.mjs` | Presses real keys (menu → play, drive, brake, get out, photo mode, realistic handling, lap wrap) and checks for console errors |
-| `node tools/net-test.mjs` | Starts the relay and checks chat, id rewriting and message filtering |
+| `node tools/net-test.mjs` | Run from the repo root: starts the relay and checks chat, id rewriting, message filtering, and that speed hacks and teleports are dropped |
+| `node tools/hub-test.mjs` | Drives and walks around Harbour Town with real keys, opens the garage from its ring, resumes, drives through a chapter gate, and checks the touch controls on a phone-sized screen |
 
 Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
 
@@ -56,9 +63,22 @@ Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
 
 Also: **P** photo mode · **.** / **,** gear up / down (realistic handling, manual gearbox) · **Q** drink the selected tonic · **Z** next tonic · **G** wave · **Enter** chat (multiplayer) · **scroll** zoom · **[ ]** field of view · **T** radio · **N** next song · **B** change station · **1–7** time of day · **8** auto day · **9** weather (clear → cloudy → fog → rain → storm) · **H** honk · **R** respawn · **`** or **F2** Studio panel · **U** hide HUD · **Esc** pause. Gamepads work too (stick, RT/LT, A hop, X boost, B drift, Y get in/out).
 
-Every key can be rebound in **Menu → Settings → Controls**.
+Every key can be rebound in **Menu → Settings → Controls**. On phones and tablets, touch controls appear on the first touch: a floating stick, GO / BRAKE pedals, HOP, BOOST, DRIFT, E, camera and photo buttons, and drag-to-look.
 
-## What is new in milestone 3 · "Real light"
+## What is new in milestone 4 · "Home port"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **Harbour Town**, a free-roam hub (Menu → ⚓ Harbour Town). Drive or walk anywhere: a cobbled plaza with a fountain, two avenues of shops and houses, cafés and gardens, a harbour with boats, a pier and a lighthouse, and townsfolk who stroll and wave | ✅ | `src/world/Hub.ts` |
+| **Free-roam physics**: a car with bicycle-model steering, slip, hops and wall bumps, and a walker with camera-relative movement that slides along walls. This is the "free driving" mode that complements ribbon driving | ✅ | `src/gameplay/FreeRoam.ts` |
+| **Hub services**: glowing rings for the Garage, Wardrobe, Shop, Mission board and Trophy hall. Press E to open them, and Resume brings you back where you stood. **Painted gates** to each chapter: drive through one to start that chapter | ✅ | `src/world/Hub.ts`, `src/core/Game.ts` |
+| **Touch controls** for phones and tablets, with a HUD layout adjusted for small screens | ✅ | `src/ui/TouchControls.ts` |
+| **Onboarding tips**: short, one-time hints for driving, notes, hopping, boost, gravity, walking and settings, worded for keyboard or touch | ✅ | `Game.onboarding` |
+| **Graphics reset recovery**: if the browser drops the WebGL context, the game saves the profile, shows a notice, and reloads when the context comes back | ✅ | `src/core/Game.ts` |
+| **Multiplayer validation** (server and client): speed, position, teleport and NaN checks, chat and name cleaning, and strikes that drop repeat offenders | ✅ | `server/validate.mjs`, `server/relay.mjs`, `src/net/Net.ts` |
+| **Determinism tests**: the same inputs give bit-identical rover results, in arcade and realistic handling. Ghosts and future server re-simulation of races depend on this | ✅ | `tests/milestone4.test.ts` |
+
+## What was new in milestone 3 · "Real light"
 
 | System | Status | Where |
 | --- | --- | --- |
@@ -107,7 +127,7 @@ Every key can be rebound in **Menu → Settings → Controls**.
 | Procedural radio (3 stations in the district's key and tempo), engine, wind, rain, SFX | ✅ | `src/audio/AudioEngine.ts` |
 | Time of day (7 presets + auto) and rain | ✅ | `src/world/Environment.ts` |
 | HUD and menus as paper cards: title, intro, pause, controls, radio, Songbook, speed card with gravity compass | ✅ | `src/ui/` |
-| Walkable hubs, touch controls, authoritative server, commissioned music, hand-made model pass | ⏳ next milestones | see [docs/12](docs/12-production-plan.md) |
+| More hubs (one per chapter), multiplayer in hubs, server-authoritative ranked races, commissioned music, hand-made model pass, localisation | ⏳ next milestones | see [docs/12](docs/12-production-plan.md) |
 
 ## How to read this
 
@@ -150,5 +170,5 @@ Reference material:
 | Phase 2 · Music core | ✅ Done (procedural radio; commissioned music later) |
 | Phase 3 · On-foot prototype | ✅ Done on ribbon roads (hubs next) |
 | Phase 4 · Vertical slice | 🚧 In progress: 3 chapters, menus, customisation, missions |
-| Phase 5 · Multiplayer | 🚧 First pass: tab and relay rooms, peer interpolation, chat, ghosts (no server authority yet) |
-| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers done; hubs and touch next |
+| Phase 5 · Multiplayer | 🚧 Tab and relay rooms, peer interpolation, chat, ghosts, server-side validation, determinism tests; ranked re-simulation next |
+| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), touch controls, onboarding done; Hub 2, localisation and closed alpha next |

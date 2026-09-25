@@ -19,6 +19,13 @@ a.send(JSON.stringify({ t: 'evil', text: 'dropped' }));
 await new Promise((r) => setTimeout(r, 400));
 const chat = got.find((m) => m.t === 'chat');
 console.log('relay chat received:', !!chat, 'id rewritten:', chat && chat.id !== 'spoofed', 'unknown type dropped:', !got.some((m) => m.t === 'evil'));
+// Physically impossible states are dropped by the server.
+a.send(JSON.stringify({ t: 'state', chapter: 'sketch', mode: 'drive', s: 100, x: 0, h: 0, yaw: 0, v: 30, time: 1 }));
+a.send(JSON.stringify({ t: 'state', chapter: 'sketch', mode: 'drive', s: 100, x: 0, h: 0, yaw: 0, v: 900, time: 2 }));
+a.send(JSON.stringify({ t: 'state', chapter: 'sketch', mode: 'drive', s: 2900, x: 0, h: 0, yaw: 0, v: 30, time: 3 }));
+await new Promise((r) => setTimeout(r, 400));
+const states = got.filter((m) => m.t === 'state');
+console.log('valid state relayed:', states.length === 1, 'speed hack and teleport dropped:', states.every((m) => m.v === 30 && m.s === 100));
 a.close();
 await new Promise((r) => setTimeout(r, 300));
 console.log('bye relayed:', got.some((m) => m.t === 'bye'));

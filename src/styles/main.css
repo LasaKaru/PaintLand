@@ -414,3 +414,43 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
   .menu-panel.side { right: 50%; transform: translateX(50%); top: auto; bottom: 10px; max-height: 55vh; }
   .vehicle-grid { grid-template-columns: 1fr; }
 }
+
+/* Harbour Town hub: only the cards that make sense off the route. */
+.hud.hub .timer, .hud.hub .songbook-card, .hud.hub .bottom-centre, .hud.hub .mission-line, .hud.hub .bag, .hud.hub .tonics, .hud.hub .status-chip, .hud.hub .gravity { display: none !important; }
+.hub-label span { font-family: var(--hand); font-size: 1.15em; background: rgba(247, 243, 232, 0.94); }
+
+/* Touch controls (phones and tablets) */
+.touch { position: fixed; inset: 0; pointer-events: none; z-index: 20; user-select: none; -webkit-user-select: none; touch-action: none; }
+.touch.hidden, .touch.off { display: none; }
+.stick-zone { position: absolute; left: 0; bottom: 0; width: 40%; height: 62%; pointer-events: auto; touch-action: none; }
+.stick-base { position: absolute; left: 90px; top: calc(100% - 110px); width: 124px; height: 124px; margin: -62px 0 0 -62px; border-radius: 50%; border: 2px solid rgba(43, 38, 34, 0.55); background: rgba(247, 243, 232, 0.35); }
+.stick-base.active { background: rgba(247, 243, 232, 0.55); }
+.stick-knob { position: absolute; left: 34px; top: 34px; width: 56px; height: 56px; border-radius: 50%; background: var(--paper-2); border: 2px solid var(--ink); box-shadow: 2px 3px 0 rgba(43, 38, 34, 0.25); }
+.touch-buttons { position: absolute; right: 14px; bottom: 14px; width: 250px; height: 250px; pointer-events: none; }
+.tbtn { position: absolute; pointer-events: auto; touch-action: none; border-radius: 50%; border: 2px solid var(--ink); background: rgba(247, 243, 232, 0.8); font-family: var(--mono); font-weight: 700; color: var(--ink); box-shadow: 2px 3px 0 rgba(43, 38, 34, 0.25); }
+.tbtn.down { transform: scale(0.92); background: var(--ink); color: var(--paper); }
+.tbtn.big { width: 86px; height: 86px; font-size: 15px; }
+.tbtn.mid { width: 66px; height: 66px; font-size: 12px; }
+.tbtn.small { width: 48px; height: 48px; font-size: 14px; }
+.tbtn.gas { right: 0; bottom: 64px; background: rgba(125, 200, 110, 0.85); }
+.tbtn.brake { right: 96px; bottom: 0; background: rgba(232, 120, 100, 0.85); }
+.tbtn.hop { right: 100px; bottom: 100px; }
+.tbtn.boost { right: 10px; bottom: 160px; background: rgba(120, 190, 240, 0.85); }
+.tbtn.act { right: 186px; bottom: 30px; }
+.tbtn.drift { right: 176px; bottom: 150px; font-size: 10px; }
+.tbtn.cam { right: 80px; bottom: 186px; }
+.tbtn.photo { right: 140px; bottom: 206px; }
+.tbtn.pause { position: fixed; top: 12px; left: 50%; margin-left: -24px; }
+.touch-ui .corner.top-left .pills, .touch-ui .status-chip { display: none; }
+
+/* Onboarding tips and notices */
+.tip-card { position: absolute; top: 118px; left: 50%; transform: translate(-50%, -10px); opacity: 0; transition: all 0.3s ease; pointer-events: none;
+  background: var(--paper-2); border: 1.5px solid var(--ink); border-radius: 8px; padding: 7px 14px; font-weight: 700; box-shadow: 3px 4px 0 rgba(43, 38, 34, 0.2); max-width: 80vw; text-align: center; }
+.tip-card b { color: var(--terracotta); margin-right: 6px; text-transform: uppercase; letter-spacing: 0.1em; font-size: 0.8em; }
+.tip-card.show { opacity: 1; transform: translate(-50%, 0); }
+.hud:not(.playing) .tip-card { display: none; }
+.notice { position: fixed; inset: 0; display: none; align-items: center; justify-content: center; background: rgba(241, 236, 221, 0.92); font-family: var(--hand); font-size: 2em; z-index: 100; text-align: center; padding: 20px; }
+
+.touch-ui .radio-card { display: none !important; }
+.touch-ui .speed-card { bottom: auto !important; top: 64px; right: 10px; transform: scale(0.78); transform-origin: top right; }
+.touch-ui .prompt { bottom: auto; top: 46%; }

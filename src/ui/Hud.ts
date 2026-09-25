@@ -106,6 +106,39 @@ export class Hud {
     this.el[screen].classList.toggle('hidden', !visible);
   }
 
+  private tipEl: HTMLDivElement | null = null;
+  private tipTimer = 0;
+
+  /** A short onboarding tip at the top of the screen (docs/10 §8). */
+  tip(text: string, seconds = 6): void {
+    if (!this.tipEl) {
+      this.tipEl = document.createElement('div');
+      this.tipEl.className = 'tip-card';
+      this.root.appendChild(this.tipEl);
+    }
+    this.tipEl.innerHTML = `<b>Tip</b> ${text}`;
+    this.tipEl.classList.add('show');
+    clearTimeout(this.tipTimer);
+    this.tipTimer = window.setTimeout(() => this.tipEl?.classList.remove('show'), seconds * 1000);
+  }
+
+  /** Full-screen notice (graphics reset). */
+  notice(text: string | null): void {
+    let el = this.root.querySelector<HTMLDivElement>('.notice');
+    if (!el) {
+      el = document.createElement('div');
+      el.className = 'notice';
+      document.body.appendChild(el);
+    }
+    el.textContent = text ?? '';
+    el.style.display = text ? 'flex' : 'none';
+  }
+
+  /** Hub mode hides the route-only cards (timer, songbook, missions, tonics). */
+  setHub(on: boolean): void {
+    this.root.classList.toggle('hub', on);
+  }
+
   setPlaying(playing: boolean): void {
     this.root.classList.toggle('playing', playing);
   }

@@ -138,6 +138,8 @@ export class Input {
   private wheel = 0;
   private pointerLocked = false;
   private capture: ((code: string) => void) | null = null;
+  /** On-screen touch controls write here (see ui/TouchControls.ts). */
+  readonly touch = { moveX: 0, moveY: 0, throttle: 0, brake: 0, held: new Set<ActionName>() };
   mouseSensitivity = 1;
   invertY = false;
   padLookSensitivity = 1;
@@ -252,6 +254,7 @@ export class Input {
 
   /** True while any key bound to the action is held (or its pad button). */
   held(action: ActionName): boolean {
+    if (this.touch.held.has(action)) return true;
     for (const code of this.bindings[action]) if (this.down.has(code)) return true;
     const pad = navigator.getGamepads?.().find((p) => p && p.connected);
     const indices = PAD_BUTTONS[action];
@@ -281,20 +284,24 @@ export class Input {
       x = this.padMoveX;
       y = -this.padMoveY;
     }
+    if (this.touch.moveX !== 0 || this.touch.moveY !== 0) {
+      x = this.touch.moveX;
+      y = this.touch.moveY;
+    }
     return { x, y };
   }
 
   throttle(): number {
-    return Math.max(this.held('forward') ? 1 : 0, this.padThrottle);
+    return Math.max(this.held('forward') ? 1 : 0, this.padThrottle, this.touch.throttle);
   }
 
   brake(): number {
-    return Math.max(this.held('back') ? 1 : 0, this.padBrake);
+    return Math.max(this.held('back') ? 1 : 0, this.padBrake, this.touch.brake);
   }
 
   steer(): number {
     const k = (this.held('right') ? 1 : 0) - (this.held('left') ? 1 : 0);
-    return k !== 0 ? k : this.padMoveX;
+    return k !== 0 ? k : this.touch.moveX !== 0 ? this.touch.moveX : this.padMoveX;
   }
 
   /** Mouse movement (pixels) plus scaled right-stick, since the last call. */
@@ -303,6 +310,18 @@ export class Input {
     const dy = (this.mouseDY * this.mouseSensitivity + this.padLookY * 600 * dt * this.padLookSensitivity) * (this.invertY ? -1 : 1);
     this.mouseDX = this.mouseDY = 0;
     return { dx, dy };
+  }
+
+  /** A tap on a touch button: behaves like a key press. */
+  press(action: ActionName): void {
+    this.buffered.add(action);
+    this.lastDevice = 'keyboard';
+  }
+
+  /** Touch-drag look (pixels). */
+  addLook(dx: number, dy: number): void {
+    this.mouseDX += dx;
+    this.mouseDY += dy;
   }
 
   takeWheel(): number {

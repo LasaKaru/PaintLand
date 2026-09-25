@@ -3,13 +3,16 @@
 // A small room server: clients join `ws://host:8787/?room=<code>`; every
 // message a client sends is stamped with its server-assigned id and relayed to
 // the others in the same room. The game simulation stays on the clients for
-// now (cosy modes: cruise, hubs, photo walks); authoritative rooms for ranked
-// racing come later.
+// now (cosy modes: cruise, hubs, photo walks), but the server checks every
+// state for physically possible speed and movement, cleans all text, and drops
+// clients that keep sending bad data. Authoritative rooms for ranked racing
+// (re-simulated inputs) come later.
 //
 // Run: node server/relay.mjs   (PORT and MAX_ROOM env vars are optional)
 
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
+import { LIMITS, Strikes, cleanText, validateState } from './validate.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_ROOM = Number(process.env.MAX_ROOM ?? 32);
@@ -41,6 +44,14 @@ wss.on('connection', (socket, req) => {
   let windowStart = Date.now();
   let count = 0;
   let alive = true;
+  let last = null;
+  const strikes = new Strikes();
+  const strike = (reason) => {
+    if (strikes.add(Date.now())) {
+      console.log(`[${room}] dropping ${id}: ${reason}`);
+      socket.close(4003, 'invalid data');
+    }
+  };
   socket.on('pong', () => (alive = true));
 
   socket.on('message', (raw) => {
@@ -56,8 +67,17 @@ wss.on('connection', (socket, req) => {
     } catch {
       return;
     }
-    if (!msg || typeof msg !== 'object' || !ALLOWED.has(msg.t)) return;
-    if (msg.t === 'chat' && typeof msg.text === 'string') msg.text = msg.text.slice(0, 120);
+    if (!msg || typeof msg !== 'object' || !ALLOWED.has(msg.t)) return strike('unknown message');
+    if (msg.t === 'state') {
+      const check = validateState(msg, last, now);
+      if (!check.ok) return strike(check.reason);
+      last = { s: msg.s, chapter: msg.chapter, at: now };
+    }
+    if (msg.t === 'chat') {
+      msg.text = cleanText(msg.text);
+      if (!msg.text) return;
+    }
+    if (msg.t === 'hello') msg.name = cleanText(msg.name, LIMITS.name) ?? 'Painter';
     msg.id = id; // never trust a client-provided id
     const out = JSON.stringify(msg);
     for (const peer of members) if (peer !== socket && peer.readyState === 1) peer.send(out);
