@@ -46,11 +46,14 @@ await page.screenshot({ path: `${out}m8-travel.png` });
 console.log('fast travel to the Lotus Tower:', travelled, JSON.stringify((await game(() => window.__paintland.debugHubInfo())).car));
 
 // 4. Night: the perahera around Pettah.
-await game(() => { window.__paintland.debugTime('night'); window.__paintland.debugHub(210, -325, Math.PI / 2, 'city'); });
+await game(() => { window.__paintland.debugTime('night'); window.__paintland.debugHub(146, -262, 0, 'city'); });
 const parade = await until(() => window.__paintland.debugPerahera().active, null, 60000);
 await page.waitForTimeout(8000);
+await page.keyboard.press('KeyU'); // hide the HUD so the title card does not cover the parade
+await page.waitForTimeout(2000);
 console.log('perahera:', parade, JSON.stringify(await game(() => window.__paintland.debugPerahera())));
 await page.screenshot({ path: `${out}m8-perahera.png` });
+await page.keyboard.press('KeyU');
 
 // 5. Daily brushstrokes and photo hunt screen.
 console.log('daily', JSON.stringify(await game(() => window.__paintland.debugDaily())));

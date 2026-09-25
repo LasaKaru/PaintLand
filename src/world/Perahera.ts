@@ -33,7 +33,8 @@ export class Perahera {
   s = 0;
   readonly length: number;
   private readonly seg: number[] = [];
-  private readonly material = new PaintMaterial({ vertexColors: true, flat: true });
+  // Lit after dark: the whole procession glows softly, as if strung with lamps.
+  private readonly material = new PaintMaterial({ vertexColors: true, flat: true, emissive: 0.35, glowAtNight: true });
   private readonly v = new THREE.Vector3();
   active = false;
   static readonly SPEED = 1.8;
@@ -58,12 +59,17 @@ export class Perahera {
     const cloth = (colour: string): THREE.BufferGeometry => {
       const k = new ModelKit();
       // Caparison: an embroidered cloth over the back and head, dotted with little lamps.
-      k.box(2.9, 1.9, 4.4, colour, { position: [0, 2.7, 0.2] });
+      // Draped cloth: a cover over the back and two side panels hanging down, so the elephant shows beneath.
+      k.box(2.7, 0.14, 3.7, colour, { position: [0, 3.78, 0.2] });
+      for (const sx of [-1, 1]) {
+        k.box(0.1, 1.5, 3.7, colour, { position: [sx * 1.66, 3.0, 0.2] });
+        k.box(0.12, 0.14, 3.75, '#f4d23b', { position: [sx * 1.67, 2.25, 0.2] });
+      }
       k.box(1.6, 1.4, 0.3, colour, { position: [0, 2.9, -2.45] });
-      for (let i = 0; i < 9; i++) for (const sx of [-1.47, 1.47]) k.box(0.06, 0.2, 0.2, '#ffe08a', { position: [sx, 2.1 + (i % 3) * 0.55, -1.6 + Math.floor(i / 3) * 1.4], nightGlow: 1 });
+      for (let i = 0; i < 9; i++) for (const sx of [-1.73, 1.73]) k.box(0.06, 0.2, 0.2, '#ffe08a', { position: [sx, 2.5 + (i % 3) * 0.45, -1.4 + Math.floor(i / 3) * 1.3], nightGlow: 1 });
       for (let i = 0; i < 6; i++) k.box(0.2, 0.2, 0.06, '#ffe08a', { position: [-0.6 + (i % 3) * 0.6, 2.5 + Math.floor(i / 3) * 0.6, -2.62], nightGlow: 1 });
       // A howdah canopy with the casket on the lead elephant.
-      k.box(1.6, 0.2, 1.8, '#f4d23b', { position: [0, 3.9, 0.3] });
+      k.box(1.6, 0.2, 1.8, '#f4d23b', { position: [0, 3.95, 0.3] });
       k.cylinder(0.05, 0.05, 1.4, 4, '#f6f0e4', { position: [0.7, 4.6, 1.1] });
       k.cylinder(0.05, 0.05, 1.4, 4, '#f6f0e4', { position: [-0.7, 4.6, -0.5] });
       k.cylinder(0.05, 1.2, 0.9, 8, '#d8463a', { position: [0, 5.6, 0.3] });
