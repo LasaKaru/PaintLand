@@ -6,7 +6,13 @@
 
 This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
 
+![Milestone 10 screenshots: Chapter 4 Lantern Roads (the Fushimi Inari torii tunnel, the Great Wave barrel roll, Fuji and the pagoda), Lantern Village (the torii avenue and the lantern street), a Road Studio road through Hội An, the livery painter with the painted car behind it, the Road Studio editor, and push-to-talk voice chat in Harbour Town](docs/screenshots/milestone-10.jpg)
+
+<details><summary>Milestone 6 screenshots</summary>
+
 ![Milestone 6 screenshots: the main menu in Japanese, Chinese, Hindi, Arabic (right-to-left) and Russian, and a live race results board with two server-verified finishes](docs/screenshots/milestone-6.jpg)
+
+</details>
 
 <details><summary>Milestone 5 screenshots</summary>
 
@@ -64,6 +70,7 @@ npm run dev        # open http://localhost:5173
 | `node tools/brand-test.mjs` | Milestone 9, with `npm run server` and the dev server running: the loading screen, the menu footer, the secret word, a wrong and a right login, the dashboard, a sponsor upload, and the watercolour boards in Harbour Town, the city (and blimp) and on a chapter road. Screenshots go to `tools/out/brand-*.png` |
 | `node tools/m8-test.mjs` | Milestone 8: the city as a sketch, painting a district (wash and fireworks), the paper map and a fast travel from it, the night perahera, and the daily brushstrokes screen. Screenshots go to `tools/out/m8-*.png` |
 | `node tools/city-test.mjs` | Drives from Harbour Town into Serendib City through the road sign, opens a loot chest, finds a secret pot, lands the "Over the bus" stunt, charges a drift mini-turbo, starts a city mission and opens the mission board. Screenshots go to `tools/out/city-*.png` |
+| `node tools/loadtest-relay.mjs --clients 200` | Load-tests a relay you run: fake players in rooms of 8 send 20 updates a second; prints delivery and latency (results in [`docs/13-performance-results.md`](docs/13-performance-results.md)) |
 | `node tools/hub-test.mjs` | Drives and walks around Harbour Town with real keys, opens the garage from its ring, resumes, drives through a chapter gate, and checks the touch controls on a phone-sized screen |
 
 Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
@@ -77,7 +84,8 @@ Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
 | **Shift** | Boost | Sprint |
 | **Ctrl** | Drift | Walk slowly |
 | **F / E** | Get out (when slow) | Get in (near the rover) |
-| **C / V** | Chase · Low · Drone · Cinema · Cockpit | Third ↔ first person |
+| **C** | Chase · Low · Drone · Cinema · Cockpit | Third ↔ first person |
+| **V** (hold) | Push to talk (voice chat, when on) | Push to talk |
 | Mouse | — | Look (click to lock the pointer) |
 
 Also: **M** map (free roam) · **P** photo mode · **.** / **,** gear up / down (realistic handling, manual gearbox) · **Q** drink the selected tonic · **Z** next tonic · **G** wave · **Enter** chat (multiplayer) · **scroll** zoom · **[ ]** field of view · **T** radio · **N** next song · **B** change station · **1–7** time of day · **8** auto day · **9** weather (clear → cloudy → fog → rain → storm) · **H** honk · **R** respawn · **`** or **F2** Studio panel · **U** hide HUD · **Esc** pause. Gamepads work too (stick, RT/LT, A hop, X boost, B drift, Y get in/out).
@@ -90,7 +98,7 @@ Every push to GitHub runs these workflows (`.github/workflows/`):
 
 | Workflow | When | What it does |
 | --- | --- | --- |
-| **CI** | every push and pull request | Typecheck, 116 unit tests, web and server builds, a live smoke test of the server (game page, branding, a refused admin login, analytics, leaderboard), the desktop shell's security tests, and `npm audit` for the game and the desktop app |
+| **CI** | every push and pull request | Typecheck, 141 unit tests, web and server builds, a live smoke test of the server (game page, branding, a refused admin login, analytics, leaderboard), the desktop shell's security tests, and `npm audit` for the game and the desktop app |
 | **CodeQL** | pushes to `main`, pull requests, weekly | GitHub's static security analysis (extended queries) over the game, server and desktop code |
 | **Web deploy and previews** | pushes to `main`; pull requests | Publishes the game to GitHub Pages. Every pull request from this repository gets its own preview at `…/previews/pr-<number>/`, linked in a comment and deleted when the pull request closes. Forks never get a write token |
 | **Desktop app (Windows)** | every push (and `v*` tags) | Builds **PaintLand-Setup-x.y.z.exe** (installer) and **PaintLand-Portable-x.y.z.exe**, checks the security fuses in the built exe, writes `SHA256SUMS.txt`, and signs build provenance. Download them from the run's **Artifacts**. A tag like `v1.0.0` also creates a **GitHub Release** with the files |
@@ -106,17 +114,54 @@ Every push to GitHub runs these workflows (`.github/workflows/`):
 
 **Check a download:** compare `certutil -hashfile PaintLand-Setup-1.0.0.exe SHA256` with `SHA256SUMS.txt`, or run `gh attestation verify PaintLand-Setup-1.0.0.exe -R lasakaru/paintland` to prove it was built by this repository's workflow.
 
-**Host the server:** `docker run -d -p 8787:8787 -v paintland-data:/data -e ADMIN_PASSWORD='a long passphrase' ghcr.io/lasakaru/paintland:main`. Put it behind HTTPS (Caddy, nginx or a cloud load balancer). The image runs as a non-root user and keeps its data in `/data`.
+**Host the server with HTTPS (recommended):** the [`deploy/`](deploy/) kit runs the game server behind Caddy, which gets and renews a Let's Encrypt certificate by itself:
+
+```bash
+cd deploy
+cp .env.example .env          # set DOMAIN, EMAIL and ADMIN_PASSWORD
+docker compose up -d
+```
+
+Point your domain's DNS at the server and open ports 80 and 443 first. Caddy redirects HTTP to HTTPS and adds HSTS and security headers. The game container is only reachable through Caddy and runs read-only, as a non-root user with no Linux capabilities. Rate limits use the address Caddy saw (`TRUST_PROXY=1`), never a header a player could forge. The served game finds multiplayer on the same host over `wss://`. This was tested end to end with `DOMAIN=localhost` against Caddy's own local certificate authority: HTTPS, the redirect, the headers, the API and `wss://` multiplayer all passed.
+
+**Or just the container:** `docker run -d -p 8787:8787 -v paintland-data:/data -e ADMIN_PASSWORD='a long passphrase' ghcr.io/lasakaru/paintland:main`, behind your own HTTPS proxy (set `TRUST_PROXY=1` if there is exactly one in front).
 
 **How the desktop app is locked down** (`desktop/`):
 - The game runs in a sandboxed, context-isolated renderer with no Node.js.
 - It is served from a private `app://` scheme out of the ASAR archive, never `file://`, with a strict Content-Security-Policy: no inline or eval'd scripts, no plugins, no framing, no form posts.
 - It cannot navigate away, open windows or attach webviews. Links open in the system browser, and only `https:` and `mailto:`.
-- Every permission request is refused except pointer lock, fullscreen and copying to the clipboard.
+- Every permission request is refused except pointer lock, fullscreen, copying to the clipboard, and the microphone alone (never the camera) for push-to-talk.
 - There is a single instance, no menu and no DevTools in release builds.
 - Electron fuses are flipped in the exe: no RunAsNode, no `NODE_OPTIONS`, no `--inspect`, ASAR integrity checking, app loaded only from the ASAR, and cookie encryption on.
 
- · "Presented by HelaO2"
+## What was new in milestone 10 · "Lantern Roads"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **Chapter 4 · Lantern Roads**: 3.6 km through seven districts: a tunnel of vermilion torii at Fushimi Inari, the Arashiyama bamboo grove, a dive to Hạ Long Bay between the karsts, Hội An's lantern street, switchbacks over a Himalayan pass under prayer flags, a barrel roll through Hokusai's Great Wave, and a cherry avenue to the pagoda under Fuji. Each district has its own music, and there are six missions | ✅ | `src/world/chapters/lanterns.ts`, `src/world/dress/lanterns.ts`, `src/models/LandmarksAsia.ts` |
+| **Hub 3 · Lantern Village**: a free-roam village with a Hội An shophouse street under silk lanterns, a torii avenue up to the chapter gate, a pagoda cherry garden with a koi pond, a bamboo grove, a chorten, and a waterfront with junks and karsts under Fuji. It has garage, wardrobe, shop and mission board rings, three secrets, three chests, the Lantern leap stunt, boost pads, sponsor boards, two photo subjects and a paper map. A lantern road links it with Harbour Town, and driving between areas arrives at the matching sign | ✅ | `src/world/Village.ts` |
+| **Livery painter**: Garage → *Paint a livery* opens a 32 × 16 grid. It has 15 colours and a rubber, a brush in two sizes, fill, six stamps (lotus, star, heart, wave, flame, bolt), mirror painting, undo, and random ideas. The picture appears on both sides of the car as a soft watercolour texture and is saved per vehicle. It is shared as a short `L1.` code, and other players see it too | ✅ | `src/ui/LiveryEditor.ts`, `src/gameplay/Livery.ts` |
+| **More character**: 6 eye styles, 5 mouths, face details (freckles, bindi, moustache, beard, festival face paint), accessories (earrings, necklace, flower, bow tie, headphones), a nón lá leaf hat, cat ears, a star wizard hat and a paper parasol. Some are free, some cost ink and some only come from loot chests | ✅ | `src/models/Human.ts`, `src/gameplay/Profile.ts` |
+| **Road Studio** (creator tool v1): Main menu → *Road Studio*. Build a road from pieces: straights, bends, climbs, dives, barrel rolls, loops, and scene changes that switch to any of the 28 districts' dressing and music. A map from above shows height, length and warnings. You can test drive it, keep best laps and ghosts per road, and share it as an `R1.` code | ✅ | `src/creator/CustomRoad.ts`, `src/ui/RoadStudio.ts` |
+| **Voice chat**: switch it on in the Multiplayer menu, then hold **V** to talk. Players get direct WebRTC audio links, and the relay only passes checked signalling to the one player it is for. The microphone is asked for only when voice is turned on, and it sends nothing unless V is held. Name tags show 🔊 while someone speaks, you can mute anyone, and blocked players are never connected. It is off by default because direct links reveal network addresses, and the setting says so | ✅ | `src/net/Voice.ts`, `server/validate.mjs` |
+| **Performance**: when resolution is at its floor and frames are still slow, effects step down one at a time, then come back when there is headroom. Settings → Graphics → *Run benchmark* measures 15 s at High and recommends a preset. The relay load test is in [`docs/13-performance-results.md`](docs/13-performance-results.md) (400 players, 99.9 % delivery, p99 31 ms on the 4-core build container) | ✅ | `src/render/Adaptive.ts`, `src/render/Benchmark.ts`, `tools/loadtest-relay.mjs` |
+| **Accessibility**: an axe-core audit of every menu screen and the HUD now reports no violations. Every field has a label, colour swatches have names, selected choices announce themselves, messages are read out, text contrast is at least 4.5 : 1, there is a visible keyboard focus ring, and the game honours reduced motion | ✅ | `src/ui/a11y.ts`, `src/styles/main.css` |
+| **Deploy kit**: Docker Compose with Caddy for automatic HTTPS (see *Host the server* above) | ✅ | `deploy/` |
+
+**Tested here:** 141 unit tests, including building and dressing a Road Studio road in all 28 styles. Also checked in the browser:
+
+- all seven Chapter 4 districts
+- Lantern Village, and travel between all areas
+- painting a livery and seeing it on the car
+- the new faces
+- building and driving a Road Studio road
+- the benchmark
+- the accessibility audit
+- a real two-browser voice call with Chromium's fake microphone: silence until V is held, the speaker heard and shown, then muted
+
+Not tested here: a real GPU (the container renders with SwiftShader) or voice across the internet. Voice uses a public STUN server; set `VITE_STUN` to change or remove it. Networks that block direct connections would need a TURN server.
+
+## What was new in milestone 9 · "Presented by HelaO2"
 
 | System | Status | Where |
 | --- | --- | --- |
@@ -285,6 +330,6 @@ Reference material:
 | Phase 1 · Road and rover | ✅ Done |
 | Phase 2 · Music core | ✅ Done (procedural radio; commissioned music later) |
 | Phase 3 · On-foot prototype | ✅ Done on ribbon roads (hubs next) |
-| Phase 4 · Vertical slice | 🚧 In progress: 3 chapters, menus, customisation, missions |
+| Phase 4 · Vertical slice | ✅ 4 chapters (28 districts), 3 hubs, menus, deep customisation (livery painter, faces, accessories), missions |
 | Phase 5 · Multiplayer | ✅ Tab and relay rooms, hub multiplayer, peer interpolation, chat, ghosts, server-side validation, determinism tests, leaderboards verified by re-simulation |
-| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), Hub 2 (Serendib City: open world, loot, secrets, mission chains, stunts, Colour the City, map, perahera), daily challenges, chat safety, soundscape, touch controls, onboarding and 24 languages done; closed alpha next |
+| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), Hub 2 (Serendib City: open world, loot, secrets, mission chains, stunts, Colour the City, map, perahera), daily challenges, chat safety, soundscape, touch controls, onboarding, 24 languages, Hub 3 (Lantern Village), Road Studio, voice chat, adaptive quality and benchmark, accessibility audit and HTTPS deploy kit done; closed alpha next |

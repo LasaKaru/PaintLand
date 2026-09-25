@@ -17,6 +17,20 @@ Build in the order that proves the hardest things first: **the painted look** an
 | **8 · Launch 1.0** | Weeks 61–68 | Polish, trailer, store pages, press kit, community channels | Success checklist (§6) all green |
 | **9 · Live service** | After launch | Seasons every 8–10 weeks: new district/pocket, station, cosmetics, events; creator features | Retention and health KPIs (§5) |
 
+**Where the build is now (milestone 10, September 2026):**
+
+- **Phases 0–6 are built.** The only gap is the real-world part of phase 6: the closed alpha with outside players.
+- **Everything on the phase 7 (beta) feature list is in:**
+  - Chapters 3–4 and Hub 3
+  - ranked time trials and live races verified by server re-simulation
+  - push-to-talk voice chat and the Road Studio creator tool v1
+  - 24 languages and moderation tools (the admin panel)
+  - a performance pass: adaptive quality, a benchmark and a relay load test
+- **Still needed for the beta exit criteria:**
+  - an open beta with real players and crash reporting, to measure crash-free sessions
+  - the 5,000-player load test, run across several relays on real servers. One relay process carries 400 players at 99.9 % delivery on a 4-core container; see [13 · Performance results](13-performance-results.md)
+- **Content targets for chapters, districts and hubs are reached:** 4 chapters, 28 districts, 3 hubs.
+
 Total to 1.0: **about 16 months** with the full team below. A small team can reach the vertical slice (phase 4) in about 6 months and should then decide whether to scale up.
 
 ## 2. Team
@@ -110,19 +124,19 @@ Scale can be smaller (20–25) by cutting Chapter 4, Hub 3 and ranked races from
 - [ ] Driving a clean line plays a melody testers hum afterwards.
 - [ ] Every Studio slider changes the image live and saves.
 - [ ] Time trials show splits and deltas per district; ghosts replay exactly.
-- [ ] Photo mode exports a framed PNG up to 4 K.
+- [x] Photo mode exports a framed PNG up to 4 K.
 - [ ] Character creator and garage have no clipping in the 100 most common combinations.
 
 **Online**
 - [ ] Joining a friend by link takes under 15 s.
-- [ ] Leaderboard runs are validated by re-simulation.
-- [ ] Chat defaults, blocking, reporting and parental controls are live.
-- [ ] Load test at 2× expected launch concurrency passes.
+- [x] Leaderboard runs are validated by re-simulation.
+- [ ] Chat defaults, blocking, reporting and parental controls are live. *(Filtered chat by default, blocking, per-player voice mute, admin bans and chat review are done. In-game reporting and parental controls are still to do.)*
+- [ ] Load test at 2× expected launch concurrency passes. *(Tool ready: `tools/loadtest-relay.mjs`. One relay handled 400 players; the launch target still needs setting and testing on real servers.)*
 
 **Quality**
 - [ ] No known blocker or critical bugs.
 - [ ] Crash-free sessions > 99.5 % in open beta.
-- [ ] Accessibility audit passed (keyboard-only, colour-blind, reduced motion, screen reader menus).
+- [ ] Accessibility audit passed (keyboard-only, colour-blind, reduced motion, screen reader menus). *(The automated axe-core audit of all menus and the HUD passes, and there are colour-vision filters, reduced motion and a focus ring. A manual screen-reader and keyboard-only pass by a person is still to do.)*
 - [ ] All 8 languages reviewed in context.
 - [ ] Playtest: 8 of 10 testers call it "relaxing" and would share a clip.
 
