@@ -1,4 +1,6 @@
 import { LiveryEditor } from './LiveryEditor';
+import { RoadStudio } from './RoadStudio';
+import type { CustomRoad } from '../creator/CustomRoad';
 import { accessible } from './a11y';
 import { defaultServer } from '../net/Leaderboard';
 import type { BenchmarkResult } from '../render/Benchmark';
@@ -26,12 +28,13 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost {
   profile: Profile;
   runBenchmark(done: (r: BenchmarkResult) => void): void;
+  testRoad(road: CustomRoad): void;
   chapters: ChapterDef[];
   currentChapter(): ChapterDef;
   missions(): MissionDef[];
@@ -87,6 +90,10 @@ export class Menu {
   screen: MenuScreen = 'none';
   private wardrobeTab = 'hair';
   private benchResult: BenchmarkResult | null = null;
+  private readonly roadStudio = new RoadStudio(
+    (road) => this.host.testRoad(road),
+    (text) => this.toast(text),
+  );
   private readonly liveryEditor = new LiveryEditor(
     (code) => {
       const p = this.host.profile;
@@ -155,6 +162,7 @@ export class Menu {
       daily: () => this.dailyScreen(),
       wardrobe: () => this.wardrobe(),
       garage: () => this.garage(),
+      roadstudio: () => `<div class="menu-panel wide">${this.header(t('rs.title'))}<div class="panel-body" data-id="roadstudio"></div></div>`,
       livery: () => `<div class="menu-panel side">${this.header(t('lv.title')).replace('data-nav="main"', 'data-nav="garage"')}<div class="panel-body" data-id="livery"></div></div>`,
       shop: () => this.shop(),
       multiplayer: () => this.multiplayer(),
@@ -167,6 +175,8 @@ export class Menu {
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
     const lv = s === 'livery' ? this.root.querySelector<HTMLElement>('[data-id="livery"]') : null;
     if (lv) this.liveryEditor.mount(lv, this.host.profile.vehicleLook(this.host.profile.data.vehicle).livery);
+    const rs = s === 'roadstudio' ? this.root.querySelector<HTMLElement>('[data-id="roadstudio"]') : null;
+    if (rs) this.roadStudio.mount(rs);
     accessible(this.root);
     this.paintBrandImages();
   }
@@ -258,6 +268,7 @@ export class Menu {
         <button class="menu-item" data-nav="village">${t('menu.village')}</button>
         <button class="menu-item" data-nav="daily">${t('daily.menu')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
+        <button class="menu-item" data-nav="roadstudio">🛣 ${t('rs.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
         <button class="menu-item" data-nav="race">${t('menu.race')}</button>
         <button class="menu-item" data-nav="missions">${t('menu.missions')}</button>

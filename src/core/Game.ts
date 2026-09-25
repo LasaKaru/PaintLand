@@ -8,7 +8,8 @@ import { PaintMaterial, paintShared, setWash } from '../render/PaintMaterial';
 import { createSky, createWater, waterUniforms, skyUniforms } from '../render/SkyWater';
 import { applyArtStyle, applyQuality, loadStudio, saveStudio, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 import { Environment, TIME_PRESETS, type WeatherId } from '../world/Environment';
-import { CHAPTERS, chapterById } from '../world/Chapters';
+import { CHAPTERS, chapterById, setCustomChapter } from '../world/Chapters';
+import { encodeRoad, roadChapter, type CustomRoad } from '../creator/CustomRoad';
 import { World } from '../world/World';
 import { VehicleModel, vehicleById, tuningFor } from '../models/Vehicles';
 import { HumanModel } from '../models/Human';
@@ -86,6 +87,7 @@ const INTRO: Shot[] = [
  * Menus, the intro and the live cinematic all run on the same world.
  */
 export class Game {
+  private customKey = 'custom';
   private bench: { spot: number; t: number; frames: number[]; snapshot: StudioSettings; done: (r: BenchmarkResult) => void } | null = null;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
@@ -260,6 +262,7 @@ export class Game {
       enterCity: () => this.enterHub(undefined, 'city'),
       enterVillage: () => this.enterHub(undefined, 'village'),
       runBenchmark: (done: (r: BenchmarkResult) => void) => this.runBenchmark(done),
+      testRoad: (road: CustomRoad) => this.testRoad(road),
       startCityMission: (id) => this.startCityMission(id),
       cancelCityMission: () => this.freeMissions.cancel(),
       cityMission: () => this.freeMissions.mission?.id ?? null,
@@ -366,15 +369,18 @@ export class Game {
 
   private loadChapter(id: string): void {
     const chapter = chapterById(id);
-    if (this.world?.chapter.id === chapter.id) return;
+    if (this.world?.chapter === chapter) return;
     this.world?.dispose();
     this.world = new World(chapter);
     this.scene.add(this.world.group);
     this.routeBoards = new BrandBoards(`route:${chapter.id}`, routeSpots(this.world.path), chapter.id.length * 31 + 5);
     this.world.group.add(this.routeBoards.group);
     void this.routeBoards.refresh();
-    this.profile.data.chapter = chapter.id;
-    this.profile.save();
+    // A Road Studio test drive is not remembered as the chapter to resume.
+    if (chapter.id !== 'custom') {
+      this.profile.data.chapter = chapter.id;
+      this.profile.save();
+    }
     this.env.setPreset(chapter.startPreset);
 
     this.rover = new RoverController(this.world.path, {
@@ -414,7 +420,7 @@ export class Game {
     this.remotes.clear();
     this.particles.clear();
     this.wildlife.reset(this.world.path.sample(8, this.frame).position);
-    this.loadGhostFor(chapter.id);
+    this.loadGhostFor(this.lapKey());
   }
 
   private buildPawnModels(): void {
@@ -494,6 +500,21 @@ export class Game {
       this.env.dayMinutes = o.dayMinutes;
     }
     this.pipeline.colourBlind = ['none', 'protan', 'deutan', 'tritan'].indexOf(o.colourBlind);
+  }
+
+  /** Best laps and ghosts are kept per chapter, and per road for Road Studio roads. */
+  private lapKey(): string {
+    return this.world.chapter.id === 'custom' ? this.customKey : this.world.chapter.id;
+  }
+
+  /** Road Studio: drive the road being built. */
+  testRoad(road: CustomRoad): void {
+    const code = encodeRoad(road);
+    let h = 0;
+    for (let i = 0; i < code.length; i++) h = (h * 31 + code.charCodeAt(i)) | 0;
+    this.customKey = `custom:${(h >>> 0).toString(36)}`;
+    setCustomChapter(roadChapter(road));
+    this.play('custom');
   }
 
   /** Graphics benchmark: drive three stretches of the road at High, fixed resolution, and score it. */
@@ -1011,7 +1032,7 @@ export class Game {
       return;
     }
     const lap = this.lapTime;
-    const cid = this.world.chapter.id;
+    const cid = this.lapKey();
     const prevBest = this.profile.data.bestLap[cid] ?? null;
     if (prevBest === null || lap < prevBest) this.profile.data.bestLap[cid] = lap;
     this.profile.addStat('laps');
@@ -1501,7 +1522,7 @@ export class Game {
     hud.setRadio(st.freq, st.name, `track ${String(this.audio.trackIndex + 1).padStart(2, '0')} / ${String(st.tracks).padStart(2, '0')}`, this.audio.trackProgress, this.audio.radioOn);
     if (this.state !== 'play' && this.state !== 'paused') return;
     const defs = this.world.districts;
-    hud.setTimer(true, defs[this.district].name, this.districtTime, this.lapTime, this.profile.data.bestLap[this.world.chapter.id] ?? null, this.lapNo);
+    hud.setTimer(true, defs[this.district].name, this.districtTime, this.lapTime, this.profile.data.bestLap[this.lapKey()] ?? null, this.lapNo);
     hud.setScore(this.score, this.combo);
     hud.setInk(this.profile.data.ink);
     hud.setBag(this.profile.data.tonics, this.selectedTonic);

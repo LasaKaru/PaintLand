@@ -156,3 +156,47 @@ describe('Deploy: client address behind the HTTPS proxy', async () => {
     expect(clientIp(req() as never, true)).toBe('172.18.0.3');
   });
 });
+
+describe('Road Studio (creator tool v1)', async () => {
+  const C = await import('../src/creator/CustomRoad');
+  const { Decorator } = await import('../src/world/Decorator');
+  const { Collectibles } = await import('../src/gameplay/Collectibles');
+
+  it('round-trips roads through share codes and rejects bad ones', () => {
+    const road = C.defaultRoad();
+    const code = C.encodeRoad(road);
+    expect(code.startsWith('R1.')).toBe(true);
+    expect(C.decodeRoad(code)).toEqual(C.sanitizeRoad(road));
+    for (const bad of [null, 7, '', 'R2.xx', 'R1.!!', 'R1.' + 'A'.repeat(3000), 'R1.' + btoa('{"a":1}'), 'R1.' + btoa('[1,2,3,4,5,[99,1]]')]) expect(C.decodeRoad(bad)).toBeNull();
+    // Out-of-range values are clamped, text is cleaned.
+    const odd = C.sanitizeRoad({ name: '<b>x</b>'.repeat(9), width: 99, pieces: [{ k: 'straight', a: 1e9, b: 0 }, { k: 'left', a: -5, b: 1 }] });
+    expect(odd.name).not.toContain('<');
+    expect(odd.width).toBe(14);
+    expect(odd.pieces[0].a).toBe(400);
+    expect(odd.pieces[1]).toEqual({ k: 'left', a: 10, b: 20 });
+  });
+
+  it('builds a drivable, dressed chapter for every scene style', () => {
+    const pieces = C.PIECE_KINDS.filter((k) => k !== 'scene').map((k) => C.newPiece(k));
+    for (let i = 0; i < C.ROAD_STYLES.length; i++) {
+      const road = C.sanitizeRoad({ name: 'Test', style: i, pieces });
+      const chapter = C.roadChapter(road);
+      const path = chapter.buildRoute();
+      expect(path.length, C.ROAD_STYLES[i].name).toBeGreaterThan(400);
+      const d = new Decorator(path, chapter);
+      expect(() => d.build(), C.ROAD_STYLES[i].style).not.toThrow();
+      expect(new Collectibles(path, chapter.districts).notes.length).toBeGreaterThan(0);
+    }
+  });
+
+  it('turns scene pieces into districts and reports stats', () => {
+    const road = C.defaultRoad();
+    const stats = C.roadStats(road);
+    expect(stats.scenes).toBe(2);
+    expect(stats.length).toBeGreaterThan(500);
+    expect(stats.outline.length).toBeGreaterThan(50);
+    expect(stats.warnings).not.toContain('underwater');
+    const deep = C.sanitizeRoad({ pieces: [C.newPiece('dive'), { k: 'dive', a: 25, b: 300 }] });
+    expect(C.roadStats(deep).warnings).toContain('underwater');
+  });
+});

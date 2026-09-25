@@ -12,7 +12,7 @@ import { LANTERNS } from './chapters/lanterns';
  * (docs/04 §1). Only one chapter is loaded at a time.
  */
 export interface ChapterDef {
-  id: 'sketch' | 'serendib' | 'wonders' | 'lanterns';
+  id: 'sketch' | 'serendib' | 'wonders' | 'lanterns' | 'custom';
   name: string;
   kicker: string;
   blurb: string;
@@ -28,6 +28,14 @@ export interface ChapterDef {
 
 export const CHAPTERS: ChapterDef[] = [SKETCH, SERENDIB, WONDERS, LANTERNS];
 
+/** The road being test-driven from the Road Studio (not in the chapter list). */
+let custom: ChapterDef | null = null;
+
+export function setCustomChapter(def: ChapterDef | null): void {
+  custom = def;
+}
+
 export function chapterById(id: string): ChapterDef {
+  if (id === 'custom' && custom) return custom;
   return CHAPTERS.find((c) => c.id === id) ?? SKETCH;
 }

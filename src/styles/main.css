@@ -649,3 +649,19 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
 }
+
+/* Road Studio. */
+.rs-grid { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 380px); gap: 16px; align-items: start; }
+#app canvas.rs-preview { width: 100%; max-width: 380px; height: auto; aspect-ratio: 36 / 26; border: 2px solid var(--ink); border-radius: 8px; touch-action: auto; }
+.rs-stats { font: 12px var(--mono); margin: 6px 0; }
+.rs-warn { color: var(--bad); font-weight: 700; margin-left: 6px; }
+.rs-list { list-style: none; counter-reset: rs; padding: 0; margin: 6px 0; display: grid; gap: 6px; max-height: 38vh; overflow: auto; }
+.rs-piece { counter-increment: rs; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 6px 8px; border: 1.5px solid rgba(43, 38, 34, 0.25); border-radius: 8px; background: var(--paper-2); }
+.rs-piece::before { content: counter(rs); font: 11px var(--mono); color: var(--ink-soft); min-width: 18px; }
+.rs-kind { font-weight: 700; min-width: 120px; }
+.rs-controls { display: flex; flex-wrap: wrap; gap: 8px; flex: 1; }
+.rs-controls select { max-width: 260px; }
+.rs-num { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; }
+.rs-num input { width: 64px; }
+.rs-move { display: flex; gap: 3px; }
+@media (max-width: 720px) { .rs-grid { grid-template-columns: 1fr; } }
