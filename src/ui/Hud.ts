@@ -122,6 +122,64 @@ export class Hud {
     this.tipTimer = window.setTimeout(() => this.tipEl?.classList.remove('show'), seconds * 1000);
   }
 
+  private objectiveEl: HTMLDivElement | null = null;
+  private compassEl: HTMLDivElement | null = null;
+  private counterEl: HTMLDivElement | null = null;
+  private lootEl: HTMLDivElement | null = null;
+  private lootTimer = 0;
+
+  private ensure(cls: string): HTMLDivElement {
+    const el = document.createElement('div');
+    el.className = `${cls} hidden`;
+    this.root.appendChild(el);
+    return el;
+  }
+
+  /** Mission objective card (null hides). */
+  objective(title: string | null, step = '', extra = ''): void {
+    this.objectiveEl ??= this.ensure('card objective');
+    this.objectiveEl.classList.toggle('hidden', !title);
+    if (!title) return;
+    const html = `<div class="hand">${title}</div><div>${step}</div>${extra ? `<small>${extra}</small>` : ''}`;
+    if (this.objectiveEl.innerHTML !== html) this.objectiveEl.innerHTML = html;
+  }
+
+  /** Compass arrow toward a target: angle in degrees (0 = straight ahead), distance in metres. */
+  compass(angle: number | null, metres = 0): void {
+    this.compassEl ??= (() => {
+      const el = this.ensure('compass');
+      el.innerHTML = '<div class="arrow">▲</div><div class="dist"></div>';
+      return el;
+    })();
+    this.compassEl.classList.toggle('hidden', angle === null);
+    if (angle === null) return;
+    (this.compassEl.firstElementChild as HTMLElement).style.transform = `rotate(${angle.toFixed(0)}deg)`;
+    (this.compassEl.lastElementChild as HTMLElement).textContent = `${Math.round(metres)} m`;
+  }
+
+  /** Small counter chip (secrets found…). */
+  counter(text: string | null): void {
+    this.counterEl ??= this.ensure('counter-chip');
+    this.counterEl.classList.toggle('hidden', !text);
+    if (text && this.counterEl.textContent !== text) this.counterEl.textContent = text;
+  }
+
+  /** Loot reveal: rarity banner, item name, extras. */
+  lootCard(rarity: string, colour: string, title: string, detail: string): void {
+    this.lootEl ??= (() => {
+      const el = document.createElement('div');
+      el.className = 'card loot-card';
+      this.root.appendChild(el);
+      return el;
+    })();
+    this.lootEl.style.borderColor = colour;
+    this.lootEl.style.boxShadow = `0 0 0 3px ${colour}, 4px 6px 0 rgba(43,38,34,0.2)`;
+    this.lootEl.innerHTML = `<div class="rar" style="color:${colour}">${rarity}</div><div class="hand">${title}</div><div>${detail}</div>`;
+    this.lootEl.classList.add('show');
+    clearTimeout(this.lootTimer);
+    this.lootTimer = window.setTimeout(() => this.lootEl?.classList.remove('show'), 3200);
+  }
+
   private boardEl: HTMLDivElement | null = null;
 
   /** Live race standings card (null hides it). */

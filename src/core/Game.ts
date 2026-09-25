@@ -17,7 +17,7 @@ import { HumanController } from '../gameplay/HumanController';
 import { Autopilot } from '../gameplay/Autopilot';
 import type { PickupEvent, TonicId } from '../gameplay/Collectibles';
 import { MISSIONS, MissionTracker, type MissionDef } from '../gameplay/Missions';
-import { Profile } from '../gameplay/Profile';
+import { CATALOGUE, Profile } from '../gameplay/Profile';
 import { CameraRig } from '../camera/CameraRig';
 import { Director, type Shot } from '../camera/Director';
 import { AudioEngine } from '../audio/AudioEngine';
@@ -31,12 +31,17 @@ import { GhostPlayer, GhostRecorder, loadGhost, saveGhost } from '../gameplay/Gh
 import { checkTrophies } from '../gameplay/Trophies';
 import { Wildlife } from '../world/Wildlife';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
+import { City } from '../world/City';
+import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
+import { buildBeacon, buildChest, buildPaintPot } from '../models/CityProps';
+import { openChest, RARITY_COLOURS, RARITY_NAMES } from '../gameplay/Loot';
+import { CHAINS, CITY_MISSIONS, FreeMissionTracker, type MissionEvent } from '../gameplay/CityMissions';
 import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
 import { TouchControls } from '../ui/TouchControls';
 import { TRIAL_VERSION, TrialSim, encodeInputs, quantizeInput, type TrialConfig } from '../gameplay/TrialSim';
 import { submitRun } from '../net/Leaderboard';
 import { HUB_S_OFFSET } from '../net/RemotePlayers';
-import { t } from './i18n';
+import { t, type StringKey } from './i18n';
 import type { RoverInput } from '../gameplay/RoverController';
 import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
@@ -136,8 +141,16 @@ export class Game {
   private saveTimer = 0;
   private resumeSnapshot: { s: number; x: number; v: number; mode: PawnMode; hs: number; hx: number; hub?: HubSpot } | null = null;
   // Harbour Town (free roam).
-  private hub: Hub | null = null;
+  private readonly areas = new Map<string, FreeRoamArea>();
+  private area: FreeRoamArea | null = null;
   private inHub = false;
+  private readonly freeMissions = new FreeMissionTracker();
+  private readonly beacons: THREE.Mesh[] = [];
+  private readonly pickupMaterial = new PaintMaterial({ vertexColors: true, flat: true });
+  /** Sim speed in free roam (slow motion during stunt jumps). */
+  private timeScale = 1;
+  private stuntAir: StuntJump | null = null;
+  private stuntCam = 0;
   private pausedFrom: GameState = 'play';
   private readonly hubCar = new FreeCar({ ...tuningFor('rover') });
   private readonly hubWalker = new FreeWalker();
@@ -208,7 +221,12 @@ export class Game {
       openStudio: () => this.studio.toggle(),
       openControls: () => this.hud.show('screenHelp', true),
       watchIntro: () => this.startIntro(),
-      enterHub: () => this.enterHub(),
+      enterHub: () => this.enterHub(undefined, 'harbour'),
+      enterCity: () => this.enterHub(undefined, 'city'),
+      startCityMission: (id) => this.startCityMission(id),
+      cancelCityMission: () => this.freeMissions.cancel(),
+      cityMission: () => this.freeMissions.mission?.id ?? null,
+      uiSound: () => this.audio.uiClick(),
       startTrial: (id) => this.startTrial(id),
       startRace: (id) => this.startRaceForAll(id),
       handling: () => this.options.handling,
@@ -363,7 +381,7 @@ export class Game {
 
   private playerInfo(): PlayerInfo {
     const id = this.profile.data.vehicle;
-    return { name: this.profile.data.name, look: this.profile.data.look, vehicle: id, vlook: this.profile.vehicleLook(id), chapter: this.inHub ? 'hub' : this.world.chapter.id };
+    return { name: this.profile.data.name, look: this.profile.data.look, vehicle: id, vlook: this.profile.vehicleLook(id), chapter: this.inHub ? (this.area?.id === 'city' ? 'city' : 'hub') : this.world.chapter.id };
   }
 
   private applySettings(): void {
@@ -386,6 +404,7 @@ export class Game {
     this.audio.noteVolume = s.musicBox;
     this.audio.engineVolume = s.engineHum;
     this.audio.windVolume = s.wind;
+    this.audio.ambienceVolume = s.ambience;
     this.applyOptions();
     this.pipeline.setSize(window.innerWidth, window.innerHeight);
   }
@@ -467,7 +486,7 @@ export class Game {
     this.race = null;
     this.hud.raceBoard(null);
     if (this.inHub) {
-      this.resumeSnapshot = { s: 8, x: 0, v: 0, mode: 'drive', hs: 0, hx: 0, hub: { x: this.hubCar.x, z: this.hubCar.z, heading: this.hubCar.heading, foot: this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : null } };
+      this.resumeSnapshot = { s: 8, x: 0, v: 0, mode: 'drive', hs: 0, hx: 0, hub: { x: this.hubCar.x, z: this.hubCar.z, heading: this.hubCar.heading, foot: this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : null, area: this.area?.id } };
       this.hud.show('screenPause', false);
       this.input.releasePointerLock();
       void this.audio.ctx?.resume();
@@ -644,7 +663,7 @@ export class Game {
     this.rig.snap();
     this.hud.setCameraLabel(this.rig.footMode === 'first' ? 'First' : 'Third');
     this.updateHeadVisibility();
-    this.audio.blip(520, 0.08, 'triangle', 0.06);
+    this.audio.door();
   }
 
   private enterRover(force = false): void {
@@ -657,7 +676,7 @@ export class Game {
     this.updateHeadVisibility();
     this.rig.snap();
     this.hud.setCameraLabel(this.rig.driveMode.charAt(0).toUpperCase() + this.rig.driveMode.slice(1));
-    this.audio.blip(660, 0.08, 'triangle', 0.06);
+    this.audio.door();
   }
 
   // ————— missions —————
@@ -1024,7 +1043,7 @@ export class Game {
     this.handleGlobalInput(dt);
 
     if (this.state !== 'paused' && this.state !== 'loading' && this.state !== 'photo') {
-      this.accumulator += dt;
+      this.accumulator += this.state === 'hub' ? dt * this.timeScale : dt;
       let steps = 0;
       while (this.accumulator >= SIM_DT && steps < 5) {
         if (this.state === 'play') this.simStep(SIM_DT);
@@ -1168,7 +1187,7 @@ export class Game {
   }
 
   private render(dt: number, alpha: number): void {
-    if (this.inHub && (this.state === 'hub' || this.state === 'paused')) {
+    if (this.inHub && (this.state === 'hub' || this.state === 'paused' || this.state === 'photo')) {
       this.renderHub(dt, alpha);
       return;
     }
@@ -1278,6 +1297,15 @@ export class Game {
     } else this.hud.setPlayers([], 'offline');
 
     this.audio.update(this.mode === 'drive' ? this.rover.v : this.human.speed, this.rover.boosting, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y, this.rover.handling === 'realistic' ? this.rover.rpm : undefined);
+    const dstyle = this.world.districts[this.district]?.style ?? '';
+    this.audio.setAmbience({
+      night: paintShared.uNight.value,
+      rain: this.env.rain,
+      nature: /tea|jungle|sigiriya|machu|beach|ella|park|garden|coil|petal/.test(dstyle) ? 0.9 : 0.45,
+      coast: clamp(1 - Math.max(0, focus.y - 3) / 45, 0, 1) * (/beach|galleface|coil|lighthouse|spiral/.test(dstyle) ? 1 : 0.5),
+      city: /street|town|galleface|lotus|colosseum/.test(dstyle) ? 0.6 : 0.1,
+    });
+    this.audioFrame(this.mode === 'drive' && playing, this.rover.v, this.rover.boosting, this.mode === 'drive' && playing ? this.input.throttle() : 0, this.mode === 'drive' && (this.rover.sliding || this.rover.drifting) && this.rover.grounded ? 1 : 0);
     this.updateHud(dt, f.up);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);
@@ -1581,6 +1609,21 @@ export class Game {
     this.startTrial(chapter);
   }
 
+  // ————— audio mix —————
+
+  private wasBoosting = false;
+
+  /** Music intensity and muffling, engine load, tyre screech, boost ignition. */
+  private audioFrame(driving: boolean, speed: number, boosting: boolean, throttle: number, screech: number): void {
+    const a = this.audio;
+    const target = this.state === 'menu' || this.state === 'intro' ? 0.2 : clamp(Math.abs(speed) / 45 + (boosting ? 0.35 : 0) + (this.race && !this.race.finished ? 0.3 : 0), 0, 1);
+    a.intensity += (target - a.intensity) * 0.03;
+    a.musicOpen = this.state === 'paused' ? 0.15 : this.state === 'menu' || this.state === 'photo' ? 0.45 : 1;
+    a.vehicleExtras(driving ? throttle : 0, driving ? screech : 0, Math.abs(speed));
+    if (boosting && !this.wasBoosting) a.boostStart();
+    this.wasBoosting = boosting;
+  }
+
   // ————— onboarding —————
 
   /** First-time tips, each shown once per profile (docs/10 §8). */
@@ -1597,7 +1640,7 @@ export class Game {
       return true;
     };
     if (this.state === 'hub') {
-      tip('hub', touch ? t('tip.hubTouch') : t('tip.hub'));
+      if (!tip('hub', touch ? t('tip.hubTouch') : t('tip.hub')) && this.area?.id === 'city') tip('city', t('tip.city'));
       return;
     }
     const r = this.rover;
@@ -1610,13 +1653,46 @@ export class Game {
     if (this.lapTime > 90) tip('settings', t('tip.settings'));
   }
 
-  // ————— Harbour Town (free-roam hub) —————
+  // ————— free roam: Harbour Town and Serendib City —————
 
-  private enterHub(at?: HubSpot): void {
-    if (!this.hub) {
-      this.hub = new Hub(this.hud.labels);
-      this.scene.add(this.hub.group);
+  /** Build an area the first time it is visited. */
+  private areaFor(id: string): FreeRoamArea {
+    let area = this.areas.get(id);
+    if (area) return area;
+    area = id === 'city' ? new City(this.hud.labels) : new Hub(this.hud.labels);
+    this.scene.add(area.group);
+    area.show(false);
+    // Areas without their own pickup models get painted pots and chests.
+    for (const s of area.secrets) {
+      if (s.mesh) continue;
+      s.mesh = new THREE.Mesh(buildPaintPot(), this.pickupMaterial);
+      s.mesh.position.set(s.x, s.y, s.z);
+      area.group.add(s.mesh);
     }
+    for (const c of area.chests) {
+      if (c.mesh) continue;
+      c.mesh = new THREE.Mesh(buildChest(c.tier), this.pickupMaterial);
+      c.mesh.position.set(c.x, 0, c.z);
+      c.mesh.castShadow = true;
+      area.group.add(c.mesh);
+    }
+    this.areas.set(id, area);
+    return area;
+  }
+
+  /** Hide pots already found and chests already opened today. */
+  private refreshPickups(area: FreeRoamArea): void {
+    const seen = this.profile.data.seen;
+    for (const s of area.secrets) if (s.mesh) s.mesh.visible = !seen.includes(`secret:${s.id}`);
+    const day = todayKey();
+    for (const c of area.chests) if (c.mesh) c.mesh.visible = !seen.includes(`chest:${c.id}:${day}`);
+  }
+
+  private enterHub(at?: HubSpot, areaId?: string): void {
+    const id = areaId ?? at?.area ?? this.area?.id ?? 'harbour';
+    if (this.area && this.area.id !== id) this.area.show(false);
+    const area = this.areaFor(id);
+    this.area = area;
     this.menu.show('none');
     this.setShowcase(null);
     this.hud.letterbox(false);
@@ -1627,13 +1703,15 @@ export class Game {
     this.world.group.visible = false;
     this.rover.v = 0;
     if (this.ghostModel) this.ghostModel.root.visible = false;
-    this.hub.show(true);
+    area.show(true);
+    this.refreshPickups(area);
     this.inHub = true;
     this.state = 'hub';
     this.hud.setPlaying(true);
     this.hud.setHub(true);
     this.hubCar.tuning = tuningFor(this.profile.data.vehicle);
-    const sp = this.hub.spawn;
+    this.wireCarEvents();
+    const sp = area.spawn;
     this.hubCar.place(at?.x ?? sp.x, at?.z ?? sp.z, at?.heading ?? sp.heading);
     this.mode = 'drive';
     if (at?.foot) {
@@ -1645,48 +1723,205 @@ export class Game {
     this.hubCam.snap = true;
     this.hubCam.yaw = this.hubCar.heading;
     this.particles.clear();
-    this.wildlife.reset(new THREE.Vector3(0, HUB_Y, 0));
+    this.wildlife.reset(new THREE.Vector3(sp.x, HUB_Y, sp.z));
     this.unlockAudio();
-    this.hud.showDistrictTitle(t('hub.kicker'), t('hub.name'), t('hub.poem'));
-    this.profile.markSeen('hub');
+    const title = area.title();
+    this.hud.showDistrictTitle(title.kicker, title.name, title.poem);
+    this.profile.markSeen(id === 'harbour' ? 'hub' : `area:${id}`);
+    this.timeScale = 1;
+    this.stuntAir = null;
     this.remotes.clear();
     if (this.net.connected) this.net.sendHello(this.playerInfo());
   }
 
-  /** Hide the hub and show the chapter world again (portals, menu, play). */
+  /** Drive (or walk) through a road sign to another area. */
+  private travelTo(areaId: string): void {
+    if (this.area?.id === areaId) return;
+    this.freeMissions.cancel();
+    this.splash = 1;
+    this.audio.whoosh();
+    this.enterHub(undefined, areaId);
+  }
+
+  /** Hide the area and show the chapter world again (portals, menu, play). */
   private leaveHub(): void {
     if (!this.inHub) return;
     this.inHub = false;
-    this.hub?.show(false);
+    this.area?.show(false);
     this.world.group.visible = true;
     this.hud.setHub(false);
     this.hud.setPrompt(null);
+    this.hud.objective(null);
+    this.hud.compass(null);
+    this.hud.counter(null);
+    for (const b of this.beacons) b.visible = false;
+    this.timeScale = 1;
     this.remotes.clear();
     if (this.net.connected) this.net.sendHello(this.playerInfo());
     if (this.state === 'hub') this.state = 'menu';
   }
 
+  /** Mini-turbos, boost pads and stunt jumps talk back through the car. */
+  private wireCarEvents(): void {
+    const car = this.hubCar;
+    car.onMiniTurbo = (charge) => {
+      this.audio.boostStart();
+      this.popAtPawn(charge > 0.9 ? t('fun.superTurbo') : t('fun.miniTurbo'), 'good');
+      this.profile.addStat('miniTurbos');
+    };
+    car.onPad = () => {
+      this.audio.boostStart();
+      this.splash = Math.max(this.splash, 0.35);
+    };
+    car.onRamp = (ramp) => {
+      const stunt = this.area?.stunts.find((s) => s.ramp === ramp) ?? null;
+      this.stuntAir = stunt;
+      if (stunt) this.popAtPawn(`${stunt.name}!`, 'info');
+    };
+    car.onLand = (air) => {
+      this.timeScale = 1;
+      const stunt = this.stuntAir;
+      this.stuntAir = null;
+      this.profile.recordStat('bestAir', air);
+      if (!stunt) {
+        if (air > 0.8) this.popAtPawn(t('fun.air', { s: air.toFixed(1) }), 'info');
+        return;
+      }
+      const d = Math.hypot(car.x - stunt.land.x, car.z - stunt.land.z);
+      if (d > stunt.land.r) {
+        this.popAtPawn(t('fun.missed'), 'info');
+        return;
+      }
+      const first = this.profile.markSeen(`stunt:${stunt.id}`);
+      const ink = first ? 150 : 25;
+      this.profile.earn(ink);
+      this.profile.addStat('stunts');
+      this.audio.secret();
+      this.audio.cheer();
+      this.splash = 1;
+      this.hud.lootCard(t('fun.stunt'), '#f4d23b', stunt.name, `+${ink} ink${first ? ` · ${t('fun.firstTime')}` : ''}`);
+      this.missionEvents(this.freeMissions.onStunt(stunt.id));
+    };
+  }
+
   private hubStep(dt: number): void {
     const inp = this.input;
-    const hub = this.hub!;
+    const area = this.area!;
+    // Traffic and people are solid.
+    const bodies = area.dynamicBodies();
+    for (const b of bodies) area.world.colliders.push({ type: 'circle', x: b.x, z: b.z, r: b.r });
     if (this.mode === 'drive') {
       const steer = clamp(inp.steer() * this.options.steerSensitivity, -1, 1);
-      this.hubCar.step(dt, { throttle: inp.throttle(), brake: inp.brake(), steer, hop: inp.consume('hop'), boost: inp.held('boost') }, hub.world);
+      const v0 = this.hubCar.v;
+      this.hubCar.step(dt, { throttle: inp.throttle(), brake: inp.brake(), steer, hop: inp.consume('hop'), boost: inp.held('boost'), drift: inp.held('drift') }, area.world);
+      if (Math.abs(v0) > 9 && Math.abs(this.hubCar.v) < Math.abs(v0) * 0.6) {
+        this.audio.bump();
+        this.splash = Math.max(this.splash, 0.3);
+      }
       this.profile.addStat('distance', Math.abs(this.hubCar.v) * dt);
-      // Drive into a painted gate to enter its chapter.
-      const z = hub.zoneAt(this.hubCar.x, this.hubCar.z);
-      if (z?.kind === 'portal' && this.hubCar.v > 2 && z.chapter) {
+      if (this.hubCar.drifting) this.profile.addStat('driftTime', dt);
+      // Slow motion on the way down from a stunt ramp.
+      this.timeScale = this.stuntAir && !this.hubCar.grounded && this.hubCar.airTime > 0.25 && !this.settings.reducedMotion ? 0.45 : 1;
+    } else {
+      // The parked car is solid while walking.
+      area.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: 1.4 });
+      const move = inp.moveAxes();
+      this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, area.world);
+      area.world.colliders.pop();
+    }
+    area.world.colliders.length -= bodies.length;
+    const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+    // Drive into a painted gate to enter its chapter, or a road sign to travel.
+    const z = area.zoneAt(p.x, p.z);
+    if (this.mode === 'drive' && z && this.hubCar.v > 2) {
+      if (z.kind === 'portal' && z.chapter) {
         this.play(z.chapter);
         return;
       }
-    } else {
-      // The parked car is solid while walking.
-      hub.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: 1.4 });
-      const move = inp.moveAxes();
-      this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, hub.world);
-      hub.world.colliders.pop();
+      if (z.kind === 'area' && z.area) {
+        this.travelTo(z.area);
+        return;
+      }
     }
+    this.checkPickups(area, p.x, p.z);
+    this.missionEvents(this.freeMissions.update(dt, p.x, p.z, this.mode === 'foot'));
     this.trackStats(dt);
+  }
+
+  /** Golden paint pots (found once) and loot chests (once a day each). */
+  private checkPickups(area: FreeRoamArea, x: number, z: number): void {
+    for (const s of area.secrets) {
+      if (!s.mesh?.visible || Math.hypot(x - s.x, z - s.z) > 2.6) continue;
+      s.mesh.visible = false;
+      if (!this.profile.markSeen(`secret:${s.id}`)) continue;
+      this.profile.earn(100);
+      this.profile.addStat('secrets');
+      this.audio.secret();
+      const found = area.secrets.filter((q) => this.profile.data.seen.includes(`secret:${q.id}`)).length;
+      this.hud.lootCard(t('loot.secret'), '#f4d23b', t('loot.secretFound', { n: found, total: area.secrets.length }), `+100 ink · ${s.hint}`);
+      this.checkTrophies();
+    }
+    const day = todayKey();
+    for (const c of area.chests) {
+      if (!c.mesh?.visible || Math.hypot(x - c.x, z - c.z) > 3) continue;
+      c.mesh.visible = false;
+      const tag = `chest:${c.id}:${day}`;
+      // Forget chests opened on earlier days.
+      this.profile.data.seen = this.profile.data.seen.filter((s) => !s.startsWith('chest:') || s.endsWith(`:${day}`));
+      if (!this.profile.markSeen(tag)) continue;
+      const loot = openChest(this.profile, c.tier);
+      this.audio.loot(loot.rarity);
+      const name = t(`rarity.${RARITY_NAMES[loot.rarity].toLowerCase()}` as StringKey);
+      const what = loot.item ? loot.item.name : `+${loot.ink} ink`;
+      this.hud.lootCard(name, RARITY_COLOURS[loot.rarity], what, [loot.item ? `+${loot.ink} ink` : '', loot.tonic ? `+1 ${loot.tonic}` : ''].filter(Boolean).join(' · '));
+      this.splash = Math.max(this.splash, 0.6);
+      this.checkTrophies();
+    }
+  }
+
+  /** React to open-world mission progress. */
+  private missionEvents(events: MissionEvent[]): void {
+    if (!events.length) return;
+    const tr = this.freeMissions;
+    for (const e of events) {
+      if (e === 'target') this.audio.checkpoint();
+      else if (e === 'step') {
+        this.audio.chime(72);
+        if (tr.current) this.popAtPawn(tr.current.text, 'info');
+      } else if (e === 'failed') {
+        this.audio.blip(180, 0.3, 'sawtooth', 0.05);
+        this.popAtPawn(t('cm.failed'), 'info');
+      }
+    }
+    if (events.includes('complete') && tr.mission) {
+      const m = tr.mission;
+      tr.cancel();
+      const first = this.profile.markSeen(`cm:${m.id}`);
+      const ink = first ? m.reward.ink : Math.round(m.reward.ink / 4);
+      this.profile.earn(ink);
+      let detail = `+${ink} ink`;
+      if (first && m.reward.item && !this.profile.owns(m.reward.item)) {
+        this.profile.data.owned.push(m.reward.item);
+        const item = CATALOGUE.find((i) => i.id === m.reward.item);
+        if (item) detail += ` · ${item.name}`;
+      }
+      this.profile.addStat('cityMissions');
+      this.profile.save();
+      this.audio.fanfare();
+      this.hud.lootCard(t('cm.complete'), '#6fbf73', m.title, detail);
+      this.checkTrophies();
+    }
+  }
+
+  /** Start an open-world mission (from the city mission board). */
+  private startCityMission(id: string): void {
+    const m = CITY_MISSIONS.find((q) => q.id === id);
+    if (!m) return;
+    const snap = this.resumeSnapshot?.hub;
+    this.enterHub(snap?.area === 'city' ? snap : undefined, 'city');
+    this.freeMissions.start(m);
+    this.hud.lootCard(CHAINS.find((c) => c.id === m.chain)?.name ?? '', '#4a90c9', m.title, m.intro);
+    this.audio.chime(67);
   }
 
   private hubInput(dt: number): void {
@@ -1700,12 +1935,19 @@ export class Game {
         this.hud.chatLine(this.profile.data.name, text);
       });
     }
+    if (inp.consume('photo')) {
+      this.enterPhoto();
+      return;
+    }
     if (inp.consume('respawn')) {
+      const area = this.area!;
       this.mode = 'drive';
       this.seatHuman();
-      this.hubCar.place(this.hub!.spawn.x, this.hub!.spawn.z, this.hub!.spawn.heading);
+      this.hubCar.place(area.spawn.x, area.spawn.z, area.spawn.heading);
       this.hubCam.snap = true;
       this.splash = 1;
+      this.timeScale = 1;
+      this.stuntAir = null;
     }
     if (inp.consume('interact')) {
       const zone = this.hubZone;
@@ -1720,14 +1962,14 @@ export class Game {
           this.hubCam.yaw = this.hubCar.heading;
           this.seatHuman();
           this.updateHeadVisibility();
-          this.audio.blip(520, 0.08, 'triangle', 0.06);
+          this.audio.door();
         }
       } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4) {
         this.mode = 'drive';
         this.input.releasePointerLock();
         this.seatHuman();
         this.updateHeadVisibility();
-        this.audio.blip(660, 0.08, 'triangle', 0.06);
+        this.audio.door();
       }
     }
     const look = inp.takeLook(dt);
@@ -1739,15 +1981,56 @@ export class Game {
 
   private useZone(zone: HubZone): void {
     if (zone.kind === 'portal' && zone.chapter) this.play(zone.chapter);
+    else if (zone.kind === 'area' && zone.area) this.travelTo(zone.area);
     else if (zone.kind === 'garage') this.openMenu('garage');
     else if (zone.kind === 'wardrobe') this.openMenu('wardrobe');
     else if (zone.kind === 'shop') this.openMenu('shop');
-    else if (zone.kind === 'missions') this.openMenu('missions');
+    else if (zone.kind === 'missions') this.openMenu(this.area?.id === 'city' ? 'citymissions' : 'missions');
     else if (zone.kind === 'trophies') this.openMenu('trophies');
   }
 
+  /** Beacons over mission targets, the compass and the objective card. */
+  private updateMissionHud(px: number, pz: number, cam: THREE.PerspectiveCamera): void {
+    const tr = this.freeMissions;
+    const targets = tr.targets();
+    for (let i = 0; i < Math.max(targets.length, this.beacons.length); i++) {
+      let b = this.beacons[i];
+      if (!b && targets[i]) {
+        b = new THREE.Mesh(buildBeacon('#f4d23b'), this.pickupMaterial);
+        this.scene.add(b);
+        this.beacons.push(b);
+      }
+      if (!b) continue;
+      const tg = targets[i];
+      b.visible = !!tg && this.state !== 'photo';
+      if (tg) {
+        b.position.set(tg.x, HUB_Y, tg.z);
+        b.scale.set(tg.r / 6, 1 + Math.sin(this.time * 3 + i) * 0.05, tg.r / 6);
+        b.rotation.y = this.time * 0.6;
+      }
+    }
+    const step = tr.current;
+    if (!tr.mission || !step) {
+      this.hud.objective(null);
+      this.hud.compass(null);
+      return;
+    }
+    const total = step.targets.length;
+    const extra = [step.time ? `⏱ ${Math.max(0, tr.timeLeft).toFixed(0)} s` : '', total > 1 ? `${tr.done.size} / ${total}` : '', t('cm.cancelHint')].filter(Boolean).join(' · ');
+    this.hud.objective(tr.mission.title, step.text, extra);
+    let best = targets[0];
+    for (const tg of targets) if (Math.hypot(tg.x - px, tg.z - pz) < Math.hypot(best.x - px, best.z - pz)) best = tg;
+    if (!best) {
+      this.hud.compass(null);
+      return;
+    }
+    const dir = cam.getWorldDirection(_v);
+    const bearing = Math.atan2(best.x - px, -(best.z - pz)) - Math.atan2(dir.x, -dir.z);
+    this.hud.compass((bearing * 180) / Math.PI, Math.hypot(best.x - px, best.z - pz));
+  }
+
   private renderHub(dt: number, alpha: number): void {
-    const hub = this.hub!;
+    const area = this.area!;
     const vm = this.vehicle;
     const car = this.hubCar.lerp(alpha);
     const cam = this.rig.camera;
@@ -1757,7 +2040,7 @@ export class Game {
     for (const p of vm.steerPivots) p.rotation.y = -steer * 0.45;
     vm.roll(this.hubCar.v * dt);
     vm.body.rotation.z = clamp(this.hubCar.slip * 0.03, -0.07, 0.07);
-    vm.body.rotation.x = this.hubCar.braking ? -0.035 : 0;
+    vm.body.rotation.x = this.hubCar.braking ? -0.035 : this.hubCar.grounded ? 0 : clamp(-this.hubCar.vy * 0.03, -0.3, 0.3);
     vm.setBrakeLights(this.hubCar.braking);
     vm.setHeadlights(paintShared.uNight.value);
     vm.horn.scale.setScalar(1 + this.audio.beatPulse * 0.08);
@@ -1788,27 +2071,34 @@ export class Game {
       desired.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist).add(look);
     } else {
       this.humanModel.animate(dt, vm.def.seatPose, 0, this.time);
-      const back = 8 * this.rig.zoom;
-      desired.copy(vm.root.position).addScaledVector(fwd, -back).add(_v4.set(0, 3.2 * this.rig.zoom, 0));
-      look.copy(vm.root.position).addScaledVector(fwd, 4).add(_v4.set(0, 1.3, 0));
+      // Pull back and up during a stunt so the landing is in view.
+      const stunt = this.stuntAir && !this.hubCar.grounded ? 1 : 0;
+      this.stuntCam += (stunt - this.stuntCam) * Math.min(1, dt * 3);
+      const back = (8 + this.stuntCam * 6) * this.rig.zoom;
+      desired.copy(vm.root.position).addScaledVector(fwd, -back).add(_v4.set(0, (3.2 + this.stuntCam * 4) * this.rig.zoom, 0));
+      look.copy(vm.root.position).addScaledVector(fwd, 4 + this.stuntCam * 8).add(_v4.set(0, 1.3, 0));
       this.hubCam.yaw = car.heading;
     }
-    // Keep the lens out of buildings.
-    const lens = { x: desired.x, z: desired.z };
-    if (desired.y < HUB_Y + 14) hub.world.resolve(lens, 0.6);
-    desired.x = lens.x;
-    desired.z = lens.z;
-    desired.y = Math.max(desired.y, HUB_Y + 0.6);
-    const k = this.hubCam.snap ? 1 : 1 - Math.exp(-(this.mode === 'foot' ? 14 : 5) * dt);
-    this.hubCam.pos.lerp(desired, k);
-    this.hubCam.look.lerp(look, this.hubCam.snap ? 1 : 1 - Math.exp(-10 * dt));
-    this.hubCam.snap = false;
-    cam.position.copy(this.hubCam.pos);
-    cam.up.set(0, 1, 0);
-    cam.fov = this.settings.fov + Math.min(10, Math.max(0, this.hubCar.v - 18) * 0.5);
-    cam.updateProjectionMatrix();
-    cam.lookAt(this.hubCam.look);
-    cam.updateMatrixWorld();
+    if (this.state === 'photo') this.updatePhotoCamera(dt);
+    else {
+      // Keep the lens out of buildings.
+      const lens = { x: desired.x, z: desired.z };
+      if (desired.y < HUB_Y + 14) area.world.resolve(lens, 0.6);
+      desired.x = lens.x;
+      desired.z = lens.z;
+      desired.y = Math.max(desired.y, HUB_Y + 0.6);
+      const k = this.hubCam.snap ? 1 : 1 - Math.exp(-(this.mode === 'foot' ? 14 : 5) * dt);
+      this.hubCam.pos.lerp(desired, k);
+      this.hubCam.look.lerp(look, this.hubCam.snap ? 1 : 1 - Math.exp(-10 * dt));
+      this.hubCam.snap = false;
+      cam.position.copy(this.hubCam.pos);
+      cam.up.set(0, 1, 0);
+      const burst = this.hubCar.burst > 0 ? 8 : 0;
+      cam.fov += (this.settings.fov + Math.min(10, Math.max(0, this.hubCar.v - 18) * 0.5) + burst - cam.fov) * Math.min(1, dt * 6);
+      cam.updateProjectionMatrix();
+      cam.lookAt(this.hubCam.look);
+      cam.updateMatrixWorld();
+    }
 
     this.sky.position.copy(cam.position);
     this.env.update(dt, focus, cam, this.settings.reducedMotion || this.options.calmLighting);
@@ -1816,13 +2106,17 @@ export class Game {
     skyUniforms.uTime.value = this.time;
     waterUniforms.uTime.value = this.time;
     const player = this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : { x: this.hubCar.x, z: this.hubCar.z };
-    hub.update(dt, this.time, player, cam);
+    area.update(dt * this.timeScale, this.time, player, cam);
+    // Pots bob and spin; chests shimmer.
+    for (const s of area.secrets) if (s.mesh?.visible) s.mesh.rotation.y = this.time * 1.5;
     if (this.state === 'hub') {
       const back = _v5.copy(fwd).negate();
       const rear = _v6.copy(vm.root.position).addScaledVector(back, 1.7).add(_v4.set(0, 0.3, 0));
-      if (this.mode === 'drive' && Math.abs(this.hubCar.slip) > 1.2 && this.hubCar.grounded) this.particles.emit('smoke', rear, _v4.set(0, 0.5, 0), 30 * dt, 1.2);
+      const skid = this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting);
+      if (skid) this.particles.emit('smoke', rear, _v4.set(0, 0.5, 0), (this.hubCar.drifting ? 50 : 30) * dt, 1.2);
+      if (this.hubCar.drifting && this.hubCar.driftCharge > 0.35) this.particles.emit('spark', rear, _v4.set((Math.random() - 0.5) * 3, 2, (Math.random() - 0.5) * 3), (this.hubCar.driftCharge > 0.9 ? 40 : 20) * dt, 0.5);
       if (this.mode === 'drive' && this.env.rain > 0.4 && Math.abs(this.hubCar.v) > 8) this.particles.emit('splash', rear, _v4.set(0, 2.5, 0), 14 * dt, 1.4);
-      if (this.hubCar.boosting) this.particles.emit('exhaust', rear, back.multiplyScalar(6), 40 * dt, 0.6);
+      if (this.hubCar.boosting || this.hubCar.burst > 0) this.particles.emit('exhaust', rear, back.multiplyScalar(6), 40 * dt, 0.6);
       if (paintShared.uNight.value > 0.6) this.particles.emit('firefly', _v4.copy(focus).add(_v5.set((Math.random() - 0.5) * 40, 1.5 + Math.random() * 3, (Math.random() - 0.5) * 40)), _v5.set(0, 0.2, 0), 6 * dt, 1);
     }
     this.particles.update(dt, this.pipeline.size.height, cam);
@@ -1830,40 +2124,49 @@ export class Game {
     this.updateHeadlights(vm, cam);
 
     // Zones and prompts.
-    this.hubZone = hub.zoneAt(player.x, player.z);
+    this.hubZone = area.zoneAt(player.x, player.z);
     const nearCar = this.mode === 'foot' && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
-    const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' ? t('prompt.enter', { place: this.hubZone.label.replace('→ ', '') }) : `E · ${hub.zoneLabel(this.hubZone)}`) : null;
-    this.hud.setPrompt(zoneText ?? (nearCar ? t('prompt.getIn') : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? t('prompt.getOut') : null));
-    // Multiplayer in the hub: everyone in the same room and in Harbour Town sees each other.
+    const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t('prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
+    this.hud.setPrompt(this.state === 'photo' ? null : zoneText ?? (nearCar ? t('prompt.getIn') : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? t('prompt.getOut') : null));
+    this.updateMissionHud(player.x, player.z, cam);
+    if (area.secrets.length) {
+      const found = area.secrets.filter((s) => this.profile.data.seen.includes(`secret:${s.id}`)).length;
+      this.hud.counter(this.state === 'photo' ? null : `🗝 ${found} / ${area.secrets.length}`);
+    } else this.hud.counter(null);
+    // Multiplayer: everyone in the same room and the same area sees each other.
     if (this.net.connected) {
       const foot = this.mode === 'foot';
+      const chapter = area.id === 'harbour' ? 'hub' : area.id;
       const st: PlayerState = foot
-        ? { chapter: 'hub', mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? 'wave' : undefined }
-        : { chapter: 'hub', mode: 'drive', s: this.hubCar.z + HUB_S_OFFSET, x: this.hubCar.x, h: this.hubCar.y, yaw: this.hubCar.heading, v: this.hubCar.v };
+        ? { chapter, mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? 'wave' : undefined }
+        : { chapter, mode: 'drive', s: this.hubCar.z + HUB_S_OFFSET, x: this.hubCar.x, h: this.hubCar.y, yaw: this.hubCar.heading, v: this.hubCar.v };
       this.net.update(dt, st, this.playerInfo());
-      this.remotes.update(dt, this.time, this.net, this.world.path, 'hub', cam, HUB_Y);
+      this.remotes.update(dt, this.time, this.net, this.world.path, chapter, cam, HUB_Y);
       this.hud.setPlayers([...this.net.peers.values()].map((p) => p.info?.name ?? '…'), this.net.status);
     } else this.hud.setPlayers([], 'offline');
     this.hud.update(dt);
     this.hud.setClock(this.env.clockText(), this.env.bandLabel(), this.env.presetId, this.env.auto, this.env.weatherLabel);
     this.hud.setInk(this.profile.data.ink);
     const kmh = this.mode === 'drive' ? this.hubCar.speedKmh : this.hubWalker.speed * 3.6;
-    this.hud.setSpeed(displaySpeed(kmh, this.options.units), this.hubCar.boostMeter, this.hubCar.boosting, 'Harbour Town', 0, 'down is down', this.mode === 'foot', this.options.units === 'mph' ? 'mph' : 'km/h');
+    const title = area.title();
+    this.hud.setSpeed(displaySpeed(kmh, this.options.units), this.hubCar.boostMeter, this.hubCar.boosting || this.hubCar.burst > 0, title.name, 0, 'down is down', this.mode === 'foot', this.options.units === 'mph' ? 'mph' : 'km/h');
     const st = this.audio.station;
     this.hud.setRadio(st.freq, st.name, `track ${String(this.audio.trackIndex + 1).padStart(2, '0')} / ${String(st.tracks).padStart(2, '0')}`, this.audio.trackProgress, this.audio.radioOn);
-    this.audio.update(this.mode === 'drive' ? Math.abs(this.hubCar.v) : this.hubWalker.speed, this.hubCar.boosting, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y);
+    this.audio.update(this.mode === 'drive' ? Math.abs(this.hubCar.v) : this.hubWalker.speed, this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y);
+    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...area.ambienceAt(player.x, player.z) });
+    this.audioFrame(this.mode === 'drive' && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);
     this.borderPulse = Math.max(0, this.borderPulse - dt * 0.8);
     this.lastFx = {
       fogColor: this.env.fogColor,
       rain: this.env.rain,
-      speedLines: 0,
+      speedLines: this.hubCar.burst > 0 || this.timeScale < 1 ? 0.6 : 0,
       borderPulse: this.borderPulse + this.splash * 0.4,
       splash: this.splash * 0.8,
       sunDir: this.env.sunDirection,
       sunColor: this.env.sunColour,
-      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.settings.drawDistance),
+      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.settings.drawDistance) * (area.id === 'city' ? 0.5 : 1),
       flash: this.env.flash,
       dofFocus: 10,
       dofAmount: 0,
@@ -1872,12 +2175,31 @@ export class Game {
   }
 
   debugHubInfo(): Record<string, unknown> {
-    return { state: this.state, inHub: this.inHub, mode: this.mode, car: { x: +this.hubCar.x.toFixed(2), z: +this.hubCar.z.toFixed(2), v: +this.hubCar.v.toFixed(2) }, walker: { x: +this.hubWalker.x.toFixed(2), z: +this.hubWalker.z.toFixed(2) }, zone: this.hubZone?.kind ?? null, menu: this.menu.screen };
+    return {
+      state: this.state,
+      inHub: this.inHub,
+      area: this.area?.id ?? null,
+      mode: this.mode,
+      car: { x: +this.hubCar.x.toFixed(2), z: +this.hubCar.z.toFixed(2), y: +this.hubCar.y.toFixed(2), v: +this.hubCar.v.toFixed(2), drifting: this.hubCar.drifting, burst: +this.hubCar.burst.toFixed(2) },
+      walker: { x: +this.hubWalker.x.toFixed(2), z: +this.hubWalker.z.toFixed(2) },
+      zone: this.hubZone?.kind ?? null,
+      menu: this.menu.screen,
+      mission: this.freeMissions.mission ? { id: this.freeMissions.mission.id, step: this.freeMissions.step, done: this.freeMissions.done.size } : null,
+      ink: this.profile.data.ink,
+      stats: { stunts: this.profile.stat('stunts'), chests: this.profile.stat('chests'), secrets: this.profile.stat('secrets'), miniTurbos: this.profile.stat('miniTurbos'), cityMissions: this.profile.stat('cityMissions') },
+      timeScale: this.timeScale,
+      fps: Math.round(this.fps),
+      calls: this.renderer.info.render.calls,
+    };
   }
 
-  debugHub(x?: number, z?: number, heading?: number): void {
+  debugHub(x?: number, z?: number, heading?: number, area?: string): void {
     if (this.state === 'splash') this.profile.data.seenIntro = true;
-    this.enterHub(x !== undefined ? { x, z: z ?? 0, heading: heading ?? 0, foot: null } : undefined);
+    this.enterHub(x !== undefined ? { x, z: z ?? 0, heading: heading ?? 0, foot: null, area } : undefined, area);
+  }
+
+  debugCityMission(id: string): void {
+    this.startCityMission(id);
   }
 
   // ————— ghosts —————
@@ -1918,7 +2240,7 @@ export class Game {
   // ————— photo mode —————
 
   private enterPhoto(): void {
-    if (this.state !== 'play') return;
+    if (this.state !== 'play' && this.state !== 'hub') return;
     const cam = this.rig.camera;
     this.state = 'photo';
     this.hud.setPlaying(false);
@@ -1935,7 +2257,7 @@ export class Game {
   private exitPhoto(): void {
     if (this.state !== 'photo') return;
     this.photo.close();
-    this.state = 'play';
+    this.state = this.inHub ? 'hub' : 'play';
     this.hud.setPlaying(true);
     this.vehicle.root.visible = true;
     this.humanModel.root.visible = true;
@@ -1993,6 +2315,10 @@ export class Game {
     this.splash = 0;
     this.borderPulse = 0.2;
     this.profile.addStat('photos');
+    if (this.inHub) {
+      const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+      this.missionEvents(this.freeMissions.onPhoto(p.x, p.z));
+    }
     this.checkTrophies();
     this.hud.pop(`Saved ${W}×${H}`, window.innerWidth / 2, window.innerHeight * 0.3, 'good');
   }
@@ -2132,6 +2458,13 @@ interface HubSpot {
   z: number;
   heading: number;
   foot: { x: number; z: number } | null;
+  area?: string;
+}
+
+/** Local calendar day, for daily chests. */
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }
 
 const _m = new THREE.Matrix4();

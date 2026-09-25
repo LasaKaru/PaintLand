@@ -16,6 +16,9 @@ export const LIMITS = {
 
 const MODES = new Set(['drive', 'foot']);
 
+/** Free-roam areas by chapter id → half-width in metres (Harbour Town, Serendib City). */
+export const FREE_ROAM = { hub: 130, city: 660 };
+
 const finite = (v) => typeof v === 'number' && Number.isFinite(v);
 
 /**
@@ -32,10 +35,11 @@ export function validateState(msg, prev, now) {
   if (!MODES.has(msg.mode)) return { ok: false, reason: 'bad mode' };
   if (Math.abs(msg.v) > LIMITS.maxSpeed) return { ok: false, reason: 'too fast' };
   if (msg.s < 0 || msg.s > LIMITS.maxS) return { ok: false, reason: 'off the route' };
-  // Hubs are open ground (x is metres across the town, s is metres along it + 200).
-  const hub = msg.chapter === 'hub';
-  if (Math.abs(msg.x) > (hub ? 130 : LIMITS.maxX)) return { ok: false, reason: 'too far sideways' };
-  if (hub && Math.abs(msg.v) > 45) return { ok: false, reason: 'too fast for the hub' };
+  // Free-roam areas are open ground (x is metres across, s is metres along + 1000).
+  const halfWidth = FREE_ROAM[msg.chapter];
+  const hub = halfWidth !== undefined;
+  if (Math.abs(msg.x) > (hub ? halfWidth : LIMITS.maxX)) return { ok: false, reason: 'too far sideways' };
+  if (hub && Math.abs(msg.v) > 60) return { ok: false, reason: 'too fast for free roam' };
   if (msg.h < LIMITS.minH || msg.h > LIMITS.maxH) return { ok: false, reason: 'too high' };
   if (prev && prev.chapter === msg.chapter) {
     const dt = Math.max(0.001, (now - prev.at) / 1000);

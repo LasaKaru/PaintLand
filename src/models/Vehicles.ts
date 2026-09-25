@@ -10,6 +10,11 @@ export interface VehicleLook {
   accent: string;
   hubs: string;
   roofLoad: 'gramophone' | 'boombox' | 'flowers' | 'surfboard' | 'none';
+  /** Paint job over the body colour (loot / shop). */
+  decal?: 'none' | 'stripes' | 'flames' | 'dots' | 'checker';
+  spoiler?: 'none' | 'lip' | 'wing';
+  /** Neon under the car (a colour), glowing at night. */
+  glow?: string | null;
 }
 
 export type VehicleId = 'rover' | 'tuktuk' | 'coupe' | 'buggy' | 'van' | 'scooter';
@@ -308,9 +313,26 @@ export class VehicleModel {
     this.root.name = def.id;
     this.root.add(this.body);
     const mat = new PaintMaterial({ vertexColors: true, flat: true, gloss: 0.7 });
-    const bodyMesh = new THREE.Mesh(def.build(look), mat);
+    const bodyGeo = def.build(look);
+    const bodyMesh = new THREE.Mesh(bodyGeo, mat);
     bodyMesh.castShadow = true;
     this.body.add(bodyMesh);
+    // Custom parts fitted to the body's bounds: decals on the sides, a spoiler at the back, underglow.
+    bodyGeo.computeBoundingBox();
+    const bb = bodyGeo.boundingBox!;
+    const extras = buildBodyExtras(look, bb);
+    if (extras) {
+      const m = new THREE.Mesh(extras, mat);
+      m.castShadow = true;
+      this.body.add(m);
+    }
+    if (look.glow) {
+      const w = bb.max.x - bb.min.x;
+      const d = bb.max.z - bb.min.z;
+      const glow = new THREE.Mesh(new THREE.PlaneGeometry(w * 1.1, d * 1.05).rotateX(-Math.PI / 2), new PaintMaterial({ color: look.glow, emissive: 1 }));
+      glow.position.set((bb.min.x + bb.max.x) / 2, 0.06, (bb.min.z + bb.max.z) / 2);
+      this.root.add(glow);
+    }
 
     for (const p of def.brakeLights) {
       const b = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.14, 0.06), this.brakeMat);
@@ -381,6 +403,47 @@ function buildWheel(r: number, width: number, hubs: string): THREE.BufferGeometr
   k.cylinder(r * 0.55, r * 0.55, width + 0.02, 10, hubs, { rotation: [0, 0, Math.PI / 2], position: [-0.01, 0, 0] });
   k.cylinder(r * 0.18, r * 0.18, width + 0.06, 6, INK, { rotation: [0, 0, Math.PI / 2], position: [-0.02, 0, 0] });
   return k.build(0.005, Math.round(r * 100));
+}
+
+/** Decals and spoilers, placed from the body's bounding box so they fit every vehicle. */
+function buildBodyExtras(look: VehicleLook, bb: THREE.Box3): THREE.BufferGeometry | null {
+  const k = new ModelKit();
+  const w = bb.max.x - bb.min.x;
+  const h = bb.max.y - bb.min.y;
+  const d = bb.max.z - bb.min.z;
+  const midZ = (bb.min.z + bb.max.z) / 2;
+  const y = bb.min.y + h * 0.42;
+  const accent = look.accent;
+  const sides = [bb.min.x - 0.012, bb.max.x + 0.012];
+  switch (look.decal ?? 'none') {
+    case 'stripes':
+      for (const x of sides) for (const dy of [-0.1, 0.1]) k.box(0.02, 0.07, d * 0.8, accent, { position: [x, y + dy, midZ] });
+      for (const dx of [-0.18, 0.18]) k.box(0.14, 0.02, d * 0.9, accent, { position: [(bb.min.x + bb.max.x) / 2 + dx, bb.max.y + 0.012, midZ] });
+      break;
+    case 'flames':
+      for (const x of sides) for (let i = 0; i < 5; i++) k.box(0.02, 0.1 + i * 0.03, 0.34, i % 2 ? '#f4d23b' : '#f08a2e', { position: [x, y + i * 0.02, bb.min.z + 0.3 + i * 0.28], rotation: [0.5, 0, 0] });
+      break;
+    case 'dots':
+      for (const x of sides) for (let i = 0; i < 4; i++) k.cylinder(0.1, 0.1, 0.02, 10, accent, { position: [x, y + (i % 2) * 0.12, bb.min.z + d * (0.2 + i * 0.2)], rotation: [0, 0, Math.PI / 2] });
+      break;
+    case 'checker':
+      for (const x of sides) for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2 === 0) k.box(0.02, 0.1, 0.14, '#2b2622', { position: [x, y + j * 0.1, bb.min.z + d * 0.2 + i * 0.14] });
+      break;
+    default:
+      break;
+  }
+  switch (look.spoiler ?? 'none') {
+    case 'lip':
+      k.box(w * 0.8, 0.05, 0.25, accent, { position: [(bb.min.x + bb.max.x) / 2, bb.min.y + h * 0.62, bb.max.z - 0.05], rotation: [-0.25, 0, 0] });
+      break;
+    case 'wing':
+      for (const s of [-0.35, 0.35]) k.box(0.06, 0.4, 0.08, '#2b2622', { position: [(bb.min.x + bb.max.x) / 2 + s * w, bb.min.y + h * 0.7, bb.max.z - 0.15] });
+      k.box(w * 1.02, 0.06, 0.45, accent, { position: [(bb.min.x + bb.max.x) / 2, bb.min.y + h * 0.7 + 0.22, bb.max.z - 0.1], rotation: [0.12, 0, 0] });
+      break;
+    default:
+      break;
+  }
+  return k.isEmpty ? null : k.build(0.005);
 }
 
 function buildRoofLoad(look: VehicleLook): THREE.BufferGeometry | null {

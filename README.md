@@ -60,6 +60,7 @@ npm run dev        # open http://localhost:5173
 | `npm run server` | Builds the run verifier (`npm run build:server`) and starts the relay: multiplayer rooms on `ws://localhost:8787` and the time-trial leaderboard on `http://localhost:8787/leaderboard` |
 | `node tools/race-test.mjs` | Run from the repo root: two browser windows join a room over the relay, one starts a live race, both drive the lap, and both must show two finishes verified by server re-simulation |
 | `node tools/trial-test.mjs` | Run from the repo root: starts the relay, drives a full time-trial lap in the browser, checks that the server re-simulated and ranked it, and that a faked time is rejected |
+| `node tools/city-test.mjs` | Drives from Harbour Town into Serendib City through the road sign, opens a loot chest, finds a secret pot, lands the "Over the bus" stunt, charges a drift mini-turbo, starts a city mission and opens the mission board. Screenshots go to `tools/out/city-*.png` |
 | `node tools/hub-test.mjs` | Drives and walks around Harbour Town with real keys, opens the garage from its ring, resumes, drives through a chapter gate, and checks the touch controls on a phone-sized screen |
 
 Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
@@ -80,7 +81,19 @@ Also: **P** photo mode · **.** / **,** gear up / down (realistic handling, manu
 
 Every key can be rebound in **Menu → Settings → Controls**. On phones and tablets, touch controls appear on the first touch: a floating stick, GO / BRAKE pedals, HOP, BOOST, DRIFT, E, camera and photo buttons, and drag-to-look.
 
-## What is new in milestone 6 · "Around the world"
+## What is new in milestone 7 · "Serendib City"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **Serendib City**: a second, much larger free-roam area, 1.3 × 1.15 km. Reach it from the main menu (🏙 Serendib City) or by driving through the road sign on Harbour Town's east side. It has 7 districts: a skyscraper downtown with the Lotus Tower, an old-town market, a lake park with elephants, a stunt park, suburbs, a beach with a pier and lighthouse, and tea hills topped by a white stupa. The streets have working traffic (cars stop for you and for each other), 28 pedestrians, traffic lights, bus stops, billboards, food carts, market umbrellas, statues and parked cars | ✅ | `src/world/City.ts`, `src/models/CityProps.ts` |
+| **More fun to drive**: hold **Ctrl** while turning to drift and charge a mini-turbo, then release to fire it (a super turbo if fully charged; the sparks show the charge). There are boost pads, and 6 named stunt jumps with landing circles, slow motion in the air and a pulled-back camera. Landing a stunt pays ink, more the first time. Bumping into traffic makes a crunch | ✅ | `src/gameplay/FreeRoam.ts`, `src/core/Game.ts` |
+| **Secrets and loot**: 23 golden paint pots are hidden across both areas (a 🗝 counter shows found / total), plus 19 loot chests in 4 tiers that refill daily. Chests roll Common, Rare, Epic or Legendary loot, with a reveal card and a sound that grows with rarity. Loot-only items can't be bought | ✅ | `src/gameplay/Loot.ts` |
+| **New customisation**: vehicle decals (stripes, polka dots, flames, a chequered flag), a lip spoiler and a big wing, and underglow in 4 colours; crown, helmet and flower-garland hats; capes and wings | ✅ | `src/models/Vehicles.ts`, `src/models/Human.ts`, `src/gameplay/Profile.ts` |
+| **Mission chains that flow**: 4 stories with 3 missions each (Tuk-Tuk Tales, The Painter's Palette, Stunt School, City Secrets). Each one unlocks the next. Steps can be: drive somewhere, collect, checkpoints against the clock, timed delivery, land a stunt, take a photo, or go on foot. Glowing beacons, a compass arrow with distance, and an objective card guide you. Start missions from the city mission board ring or Menu | ✅ | `src/gameplay/CityMissions.ts` |
+| **Soundscape**: layered nature sounds that follow where you are. Waves near the coast, wind in the leaves and birdsong (4 species) in parks and hills, gulls at the beach, crickets and frogs at night, a city hum and distant horns downtown. A new station, 101.4 Serendib Beat (hand drums and marimba), joins the others. Music ducks and opens with speed and when paused. The engine has a sub layer and intake roar, tyres screech in drifts, and there are sounds for doors, boosts, checkpoints, loot, secrets, stunt cheers, fanfares and menu clicks. An **Ambience** volume slider is in Settings → Audio | ✅ | `src/audio/Ambience.ts`, `src/audio/AudioEngine.ts` |
+| Multiplayer works in the city (the validator knows the city bounds), and every new string is translated into all 24 languages | ✅ | `server/validate.mjs`, `src/core/locales/` |
+
+## What was new in milestone 6 · "Around the world"
 
 | System | Status | Where |
 | --- | --- | --- |
@@ -207,4 +220,4 @@ Reference material:
 | Phase 3 · On-foot prototype | ✅ Done on ribbon roads (hubs next) |
 | Phase 4 · Vertical slice | 🚧 In progress: 3 chapters, menus, customisation, missions |
 | Phase 5 · Multiplayer | ✅ Tab and relay rooms, hub multiplayer, peer interpolation, chat, ghosts, server-side validation, determinism tests, leaderboards verified by re-simulation |
-| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), touch controls, onboarding done; Hub 2 and closed alpha next; languages started (en, si, ta) |
+| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), Hub 2 (Serendib City: open world, loot, secrets, mission chains, stunts), soundscape, touch controls, onboarding and 24 languages done; closed alpha next |

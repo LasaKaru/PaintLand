@@ -1,4 +1,5 @@
 import type { Profile, ShopItem } from '../gameplay/Profile';
+import { CHAINS, CITY_MISSIONS, missionUnlocked } from '../gameplay/CityMissions';
 import { CATALOGUE, MAX_TONICS, PALETTE } from '../gameplay/Profile';
 import type { ChapterDef } from '../world/Chapters';
 import type { MissionDef } from '../gameplay/Missions';
@@ -15,7 +16,7 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost {
@@ -35,6 +36,12 @@ export interface MenuHost {
   openControls(): void;
   watchIntro(): void;
   enterHub(): void;
+  enterCity(): void;
+  startCityMission(id: string): void;
+  cancelCityMission(): void;
+  /** Id of the open-world mission in progress, if any. */
+  cityMission(): string | null;
+  uiSound(): void;
   startTrial(chapterId: string): void;
   startRace(chapterId: string): void;
   handling(): 'arcade' | 'realistic';
@@ -100,6 +107,7 @@ export class Menu {
       main: () => this.main(),
       chapters: () => this.chaptersScreen(),
       missions: () => this.missionsScreen(),
+      citymissions: () => this.cityMissionsScreen(),
       wardrobe: () => this.wardrobe(),
       garage: () => this.garage(),
       shop: () => this.shop(),
@@ -152,6 +160,7 @@ export class Menu {
         ${this.host.canResume() ? `<button class="menu-item primary" data-nav="resume">${t('menu.resume')}</button>` : ''}
         <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">${t('menu.play', { chapter: ch.name })}</button>
         <button class="menu-item" data-nav="hub">${t('menu.hub')}</button>
+        <button class="menu-item" data-nav="city">${t('menu.city')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
         <button class="menu-item" data-nav="race">${t('menu.race')}</button>
@@ -194,6 +203,29 @@ export class Menu {
     return `<div class="menu-panel wide">${this.header('Chapters')}<div class="chapter-grid">${cards}</div></div>`;
   }
 
+  private cityMissionsScreen(): string {
+    const done = this.host.profile.data.seen.filter((s) => s.startsWith('cm:')).map((s) => s.slice(3));
+    const current = this.host.cityMission();
+    const chains = CHAINS.map((c) => {
+      const rows = CITY_MISSIONS.filter((m) => m.chain === c.id)
+        .map((m) => {
+          const isDone = done.includes(m.id);
+          const open = missionUnlocked(m, done);
+          const btn = !open
+            ? `<span class="label">🔒 ${t('cm.locked')}</span>`
+            : `<button class="btn ${isDone ? '' : 'primary'}" data-citymission="${m.id}">${m.id === current ? '▶' : isDone ? t('cm.replay') : t('cm.start')}</button>`;
+          return `<div class="card mission-card ${isDone ? 'done' : ''}">
+            <div class="mission-top"><span class="hand">${isDone ? '✓ ' : ''}${m.title}</span><span class="reward">💧 ${m.reward.ink}${m.reward.item ? ` + ${itemName(m.reward.item)}` : ''}</span></div>
+            <div class="label">${m.giver}</div>
+            <p>${m.intro}</p>${btn}</div>`;
+        })
+        .join('');
+      return `<h3 class="hand">${c.icon} ${c.name}</h3><p class="menu-hint">${c.blurb}</p><div class="mission-grid">${rows}</div>`;
+    }).join('');
+    const cancel = current ? `<button class="btn" data-citymission="cancel">${t('cm.cancel')}</button>` : '';
+    return `<div class="menu-panel wide">${this.header(t('cm.title'))}<p class="menu-hint">${t('cm.intro')} (${done.length} / ${CITY_MISSIONS.length})</p>${cancel}${chains}</div>`;
+  }
+
   private missionsScreen(): string {
     const done = new Set(this.host.profile.data.missionsDone);
     const ch = this.host.currentChapter();
@@ -222,7 +254,8 @@ export class Menu {
     return `<div class="item-grid">${CATALOGUE.filter((i) => i.category === category)
       .map((i) => {
         const owned = this.host.profile.owns(i.id);
-        return `<button class="item ${i.value === current ? 'on' : ''} ${owned ? '' : 'locked'}" data-item="${i.id}" data-field="${field}">${i.name}${owned ? '' : `<small>💧 ${i.price}</small>`}</button>`;
+        const tag = owned ? '' : i.loot ? '<small>🎁 loot chests</small>' : `<small>💧 ${i.price}</small>`;
+        return `<button class="item ${i.value === current ? 'on' : ''} ${owned ? '' : 'locked'} ${i.rarity !== undefined ? `rarity-${i.rarity}` : ''}" data-item="${i.id}" data-field="${field}">${i.name}${tag}</button>`;
       })
       .join('')}</div>`;
   }
@@ -267,6 +300,9 @@ export class Menu {
         <h4>Accent</h4>${this.swatches('v:accent', PALETTE.paint, look.accent)}
         <h4>Hubs</h4>${this.swatches('v:hubs', PALETTE.paint, look.hubs)}
         <h4>Roof load</h4>${this.items('roof', look.roofLoad, 'roofLoad')}
+        <h4>Decals</h4>${this.items('decal', look.decal ?? 'none', 'decal')}
+        <h4>Spoiler</h4>${this.items('spoiler', look.spoiler ?? 'none', 'spoiler')}
+        <h4>Underglow</h4>${this.items('glow', look.glow ?? 'none', 'glow')}
       </div>
     </div>`;
   }
@@ -460,7 +496,8 @@ export class Menu {
       ${this.slider('s.musicVolume', 'Radio', 0, 1, 0.01, pct)}
       ${this.slider('s.musicBox', 'Music-box notes', 0, 1, 0.01, pct)}
       ${this.slider('s.engineHum', 'Engine', 0, 1, 0.01, pct)}
-      ${this.slider('s.wind', 'Wind and weather', 0, 1, 0.01, pct)}`;
+      ${this.slider('s.wind', 'Wind and weather', 0, 1, 0.01, pct)}
+      ${this.slider('s.ambience', 'Nature and city ambience (birds, sea, crickets, traffic)', 0, 1, 0.01, pct)}`;
   }
 
   private accessTab(): string {
@@ -568,6 +605,7 @@ export class Menu {
   private onClick(e: MouseEvent): void {
     const el = (e.target as HTMLElement).closest<HTMLElement>('button, [data-nav]');
     if (!el) return;
+    this.host.uiSound();
     const d = el.dataset;
     const p = this.host.profile;
     if (d.nav) {
@@ -576,8 +614,16 @@ export class Menu {
         this.show('main');
       } else if (d.nav === 'intro') this.host.watchIntro();
       else if (d.nav === 'hub') this.host.enterHub();
+      else if (d.nav === 'city') this.host.enterCity();
       else if (d.nav === 'resume') this.host.resume();
       else this.show(d.nav as MenuScreen);
+      return;
+    }
+    if (d.citymission) {
+      if (d.citymission === 'cancel') {
+        this.host.cancelCityMission();
+        this.show('citymissions');
+      } else this.host.startCityMission(d.citymission);
       return;
     }
     if (d.race) {
@@ -655,13 +701,18 @@ export class Menu {
     }
     if (d.item && d.field) {
       const item = CATALOGUE.find((i) => i.id === d.item)!;
+      if (!p.owns(item.id) && item.loot) {
+        this.toast('🎁 Found only in loot chests — explore Serendib City');
+        return;
+      }
       if (!p.owns(item.id)) {
         const r = p.buy(item);
         this.toast(r === 'ok' ? `Bought ${item.name}!` : r === 'poor' ? `Need ${item.price} ink` : '');
         if (r !== 'ok') return;
       }
-      if (d.field === 'roofLoad') {
-        p.setVehicleLook(p.data.vehicle, { roofLoad: item.value as never });
+      if (d.field === 'roofLoad' || d.field === 'decal' || d.field === 'spoiler' || d.field === 'glow') {
+        const value = d.field === 'glow' && item.value === 'none' ? null : item.value;
+        p.setVehicleLook(p.data.vehicle, { [d.field]: value } as never);
         this.host.vehicleChanged();
       } else {
         (p.data.look as unknown as Record<string, string>)[d.field] = item.value;

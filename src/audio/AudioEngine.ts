@@ -1,10 +1,11 @@
 import { SCALES, type DistrictDef } from '../world/Districts';
+import { Ambience, type AmbienceParams } from './Ambience';
 
 /** Radio stations (docs/07 §4). Each is a procedural arrangement style. */
 export interface Station {
   freq: string;
   name: string;
-  style: 'lofi' | 'acoustic' | 'ambient';
+  style: 'lofi' | 'acoustic' | 'ambient' | 'island';
   tracks: number;
 }
 
@@ -12,6 +13,7 @@ export const STATIONS: Station[] = [
   { freq: '88.3', name: 'Paper Kite FM', style: 'lofi', tracks: 8 },
   { freq: '92.1', name: 'Harbour Hum', style: 'acoustic', tracks: 8 },
   { freq: '97.7', name: 'Midnight Ink', style: 'ambient', tracks: 6 },
+  { freq: '101.4', name: 'Serendib Beat', style: 'island', tracks: 8 },
 ];
 
 const midiToHz = (m: number): number => 440 * Math.pow(2, (m - 69) / 12);
@@ -48,6 +50,18 @@ export class AudioEngine {
   private windGain!: GainNode;
   private windFilter!: BiquadFilterNode;
   private rainGain!: GainNode;
+  private musicFilter!: BiquadFilterNode;
+  private engineSub!: OscillatorNode;
+  private intakeFilter!: BiquadFilterNode;
+  private intakeGain!: GainNode;
+  private screechGain!: GainNode;
+  private screechFilter!: BiquadFilterNode;
+  private ambience: Ambience | null = null;
+  /** 0..1 how intense the music plays (speed, races, boosts). */
+  intensity = 0;
+  /** 1 = full, lower = muffled (menus, pause, under bridges). */
+  musicOpen = 1;
+  ambienceVolume = 0.7;
 
   radioOn = true;
   stationIndex = 0;
@@ -99,7 +113,11 @@ export class AudioEngine {
     this.reverb.connect(reverbGain).connect(this.master);
 
     this.musicBus = ctx.createGain();
-    this.musicBus.connect(this.master);
+    // Music goes through a low-pass that opens with intensity (and closes in menus).
+    this.musicFilter = ctx.createBiquadFilter();
+    this.musicFilter.type = 'lowpass';
+    this.musicFilter.frequency.value = 9000;
+    this.musicBus.connect(this.musicFilter).connect(this.master);
     this.musicBus.connect(this.reverb);
     this.noteBus = ctx.createGain();
     this.noteBus.connect(this.master);
@@ -127,6 +145,35 @@ export class AudioEngine {
     this.engineFilter.connect(this.engineGain).connect(this.sfxBus);
     this.engineOsc.start();
     this.engineOsc2.start();
+    // A sub-octave for weight and a noisy intake that opens up with throttle.
+    this.engineSub = ctx.createOscillator();
+    this.engineSub.type = 'sine';
+    const subGain = ctx.createGain();
+    subGain.gain.value = 0.6;
+    this.engineSub.connect(subGain).connect(this.engineFilter);
+    this.engineSub.start();
+    const intake = ctx.createBufferSource();
+    intake.buffer = this.noise;
+    intake.loop = true;
+    this.intakeFilter = ctx.createBiquadFilter();
+    this.intakeFilter.type = 'bandpass';
+    this.intakeFilter.Q.value = 4;
+    this.intakeGain = ctx.createGain();
+    this.intakeGain.gain.value = 0;
+    intake.connect(this.intakeFilter).connect(this.intakeGain).connect(this.sfxBus);
+    intake.start();
+    // Tyre screech: squeezed noise with a warble, only while sliding.
+    const screech = ctx.createBufferSource();
+    screech.buffer = this.noise;
+    screech.loop = true;
+    this.screechFilter = ctx.createBiquadFilter();
+    this.screechFilter.type = 'bandpass';
+    this.screechFilter.frequency.value = 1500;
+    this.screechFilter.Q.value = 9;
+    this.screechGain = ctx.createGain();
+    this.screechGain.gain.value = 0;
+    screech.connect(this.screechFilter).connect(this.screechGain).connect(this.sfxBus);
+    screech.start();
 
     // Wind and rain beds from looped noise.
     const wind = ctx.createBufferSource();
@@ -153,8 +200,28 @@ export class AudioEngine {
     rain.connect(rainFilter).connect(this.rainGain).connect(this.sfxBus);
     rain.start();
 
+    // The living world: birds, crickets, sea, city.
+    const ambBus = ctx.createGain();
+    ambBus.connect(this.master);
+    this.ambience = new Ambience(ctx, ambBus, this.noise, this.reverb);
+
     this.nextStepTime = ctx.currentTime + 0.1;
     this.timer = window.setInterval(() => this.schedule(), 25);
+  }
+
+  /** Where the player is, for the ambience beds (see Ambience). */
+  setAmbience(p: Omit<AmbienceParams, 'volume'>): void {
+    this.ambience?.set({ ...p, volume: this.ambienceVolume });
+  }
+
+  /** Engine load and tyre screech, every frame while driving. */
+  vehicleExtras(throttle: number, screech: number, speed: number): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.intakeGain.gain.setTargetAtTime(this.engineVolume * 0.05 * throttle * Math.min(1, 0.3 + speed / 40), t, 0.08);
+    this.screechGain.gain.setTargetAtTime(this.engineVolume * 0.09 * screech, t, 0.05);
+    this.screechFilter.frequency.setTargetAtTime(1300 + Math.sin(t * 23) * 180 + speed * 6, t, 0.03);
   }
 
   /** Change key and tempo at the next bar line (docs/07 §2). */
@@ -246,9 +313,24 @@ export class AudioEngine {
       if (s16 % 2 === 0) this.pluck(midiToHz(this.degreeMidi(chord[[0, 2, 1, 2, 3, 2, 1, 2][s16 / 2]], 0)), t, 0.05, 'triangle');
       if (s16 === 0) this.bass(midiToHz(this.degreeMidi(chord[0], -2)), t, 0.8);
       if (s16 % 4 === 2) this.shaker(t);
+    } else if (style === 'island') {
+      // Serendib Beat: a four-on-the-floor with rabana-style hand drums and a bright arpeggio.
+      if (s16 % 4 === 0) this.kick(t);
+      if (s16 === 4 || s16 === 12) this.clap(t);
+      if (s16 % 2 === 1) this.hat(t, 0.04);
+      if ([0, 3, 6, 10, 13].includes(s16)) this.handDrum(t, s16 === 0 || s16 === 10 ? 'low' : 'high');
+      if (s16 % 4 === 0 || s16 === 7 || s16 === 14) this.bass(midiToHz(this.degreeMidi(chord[s16 === 14 ? 2 : 0], -2)), t, 0.22);
+      const arp = [0, 1, 2, 3, 2, 1, 2, 3];
+      if (s16 % 2 === 0) this.pluck(midiToHz(this.degreeMidi(chord[arp[(s16 / 2 + bar) % 8]], 1)), t, 0.03, 'square', 0.25);
     } else {
       if (s16 === 0 || s16 === 8) this.pluck(midiToHz(this.degreeMidi(chord[bar % 4] + 7, 0)), t, 0.03, 'sine', 2.5);
     }
+    // Intensity layers: extra drive when the ride gets fast (any station).
+    if (this.intensity > 0.55 && style !== 'island') {
+      if (s16 % 2 === 1) this.hat(t, 0.025 * this.intensity);
+      if (s16 % 8 === 4) this.handDrum(t, 'high');
+    }
+    if (this.intensity > 0.8 && s16 % 4 === 0 && style === 'ambient') this.kick(t);
   }
 
   /** Time of the next 1/8 beat (with 1/16 fallback when the slot is taken). */
@@ -364,6 +446,98 @@ export class AudioEngine {
     o.connect(g).connect(this.musicBus);
     o.start(t);
     o.stop(t + 0.3);
+  }
+
+  private clap(t: number): void {
+    for (const d of [0, 0.012, 0.024]) this.noiseHit(t + d, 'bandpass', 1400, 0.09 * this.musicVolume, 0.12);
+  }
+
+  /** A rabana / tabla-like hand drum: a pitched thump with a skin slap. */
+  private handDrum(t: number, kind: 'low' | 'high'): void {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator();
+    const f0 = kind === 'low' ? 110 : 260;
+    o.frequency.setValueAtTime(f0 * 1.6, t);
+    o.frequency.exponentialRampToValueAtTime(f0, t + 0.04);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.18 * this.musicVolume, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + (kind === 'low' ? 0.35 : 0.16));
+    o.connect(g).connect(this.musicBus);
+    o.start(t);
+    o.stop(t + 0.4);
+    this.noiseHit(t, 'highpass', 3000, 0.03 * this.musicVolume, 0.04);
+  }
+
+  // ————— game SFX (milestone 7) —————
+
+  /** Car door: a latch click and a thud. */
+  door(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noiseHit(t, 'highpass', 2500, 0.06, 0.03, this.sfxBus);
+    this.noiseHit(t + 0.03, 'lowpass', 280, 0.22, 0.18, this.sfxBus);
+  }
+
+  /** Loot chest: a sparkle that grows with rarity (0 common … 3 legendary). */
+  loot(rarity: number): void {
+    const base = [72, 74, 76, 79][rarity] ?? 72;
+    const steps = [0, 4, 7, 12, 16, 19].slice(0, 3 + rarity);
+    steps.forEach((iv, i) => setTimeout(() => this.playNote(base + iv, 0.7 + rarity * 0.1), i * (rarity >= 3 ? 90 : 70)));
+    if (rarity >= 2 && this.ctx) this.noiseHit(this.ctx.currentTime + 0.3, 'highpass', 6000, 0.05, 0.8, this.sfxBus);
+  }
+
+  /** A secret found: a little mysterious motif. */
+  secret(): void {
+    [0, 3, 7, 10, 14].forEach((iv, i) => setTimeout(() => this.playNote(69 + iv, 0.8), i * 110));
+  }
+
+  /** Checkpoint passed. */
+  checkpoint(): void {
+    this.blip(988, 0.07, 'square', 0.05);
+    setTimeout(() => this.blip(1319, 0.1, 'square', 0.05), 70);
+  }
+
+  /** Boost ignition: whoosh plus a rising tone. */
+  boostStart(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    this.noiseHit(t, 'bandpass', 1200, 0.15, 0.6, this.sfxBus);
+    const o = ctx.createOscillator();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(200, t);
+    o.frequency.exponentialRampToValueAtTime(900, t + 0.4);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.03, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.45);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + 0.5);
+  }
+
+  /** A crowd-ish burst of claps (stunts). */
+  cheer(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    for (let i = 0; i < 14; i++) this.noiseHit(t + Math.random() * 0.6, 'bandpass', 1200 + Math.random() * 900, 0.05, 0.1, this.sfxBus);
+  }
+
+  /** Bumping into something solid. */
+  bump(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noiseHit(t, 'lowpass', 220, 0.3, 0.25, this.sfxBus);
+    this.noiseHit(t, 'bandpass', 2400, 0.05, 0.08, this.sfxBus);
+  }
+
+  /** Mission complete: a short rising fanfare. */
+  fanfare(): void {
+    [[60, 0], [64, 120], [67, 240], [72, 380], [76, 380], [79, 380]].forEach(([n, d]) => setTimeout(() => this.playNote(n, 0.9), d));
+  }
+
+  /** Soft click for menus. */
+  uiClick(): void {
+    this.blip(1500, 0.025, 'triangle', 0.03);
   }
 
   private noiseHit(t: number, type: BiquadFilterType, freq: number, level: number, dur: number, bus?: GainNode): void {
@@ -507,6 +681,8 @@ export class AudioEngine {
     const f = rpm !== undefined ? 28 + rpm * 0.013 + (boosting ? 20 : 0) : 38 + speed * 1.6 + (boosting ? 30 : 0);
     this.engineOsc.frequency.setTargetAtTime(f, t, 0.08);
     this.engineOsc2.frequency.setTargetAtTime(f * 0.5 + 1.5, t, 0.08);
+    this.engineSub.frequency.setTargetAtTime(f * 0.25, t, 0.08);
+    this.intakeFilter.frequency.setTargetAtTime(f * 6, t, 0.08);
     this.engineFilter.frequency.setTargetAtTime(300 + speed * 12 + (boosting ? 500 : 0), t, 0.1);
     const windLevel = this.windVolume * (Math.min(1, speed / 60) * 0.12 + Math.min(1, height / 250) * 0.05);
     this.windGain.gain.setTargetAtTime(windLevel, t, 0.3);
@@ -514,6 +690,13 @@ export class AudioEngine {
     this.rainGain.gain.setTargetAtTime(rain * 0.06, t, 0.5);
     this.musicBus.gain.setTargetAtTime(1, t, 0.3);
     this.noteBus.gain.setTargetAtTime(1, t, 0.3);
+    // Music opens up as the ride gets intense; muffled when musicOpen drops (menus, pause).
+    this.musicFilter.frequency.setTargetAtTime((1200 + this.intensity * 9000) * this.musicOpen + 250, t, 0.4);
+    this.ambience?.update(1 / 60);
+    if (!driving) {
+      this.intakeGain.gain.setTargetAtTime(0, t, 0.1);
+      this.screechGain.gain.setTargetAtTime(0, t, 0.05);
+    }
 
     // Beat pulse for the gramophone horn.
     const beat = 60 / this.bpm;

@@ -12,8 +12,28 @@ import type { HumanPose } from '../models/Human';
 
 export type Collider = { type: 'circle'; x: number; z: number; r: number } | { type: 'box'; x: number; z: number; hx: number; hz: number };
 
+/** A boost pad on the ground: drive over it for a burst of speed. */
+export interface Pad {
+  x: number;
+  z: number;
+  r: number;
+}
+
+/** A ramp: approach roughly along `heading` to launch; `stunt` ramps are scored jumps. */
+export interface Ramp {
+  x: number;
+  z: number;
+  heading: number;
+  halfWidth: number;
+  halfLength: number;
+  power: number;
+  stunt: boolean;
+}
+
 export class FreeWorld {
   readonly colliders: Collider[] = [];
+  readonly pads: Pad[] = [];
+  readonly ramps: Ramp[] = [];
   constructor(
     readonly bounds: { minX: number; maxX: number; minZ: number; maxZ: number },
     readonly groundY = 0,
@@ -94,6 +114,7 @@ export interface FreeCarInput {
   steer: number;
   hop: boolean;
   boost: boolean;
+  drift?: boolean;
 }
 
 /** A car on flat ground: bicycle-model steering, a little slip, hops, bumps. */
@@ -116,6 +137,18 @@ export class FreeCar {
   prevY = 0;
   prevHeading = 0;
   onBump: ((impact: number) => void) | null = null;
+  /** Mini-turbo after a drift (charge 0..1), pad boosts, ramp launches, landings. */
+  onMiniTurbo: ((charge: number) => void) | null = null;
+  onPad: (() => void) | null = null;
+  onRamp: ((ramp: Ramp) => void) | null = null;
+  onLand: ((airTime: number) => void) | null = null;
+  drifting = false;
+  driftCharge = 0;
+  airTime = 0;
+  /** Seconds of pad/turbo boost left. */
+  burst = 0;
+  private padCooldown = 0;
+  lastRamp: Ramp | null = null;
   readonly radius = 1.35;
   /** Hubs are slow places: a speed limit below the route top speed. */
   topSpeed = 26;
@@ -129,6 +162,8 @@ export class FreeCar {
     this.heading = this.prevHeading = heading;
     this.v = this.slip = this.vy = 0;
     this.grounded = true;
+    this.drifting = false;
+    this.driftCharge = this.burst = 0;
   }
 
   step(dt: number, input: FreeCarInput, world: FreeWorld): void {
@@ -139,11 +174,13 @@ export class FreeCar {
     this.prevHeading = this.heading;
 
     const top = Math.min(this.topSpeed, T.topSpeed);
-    this.boosting = input.boost && this.boostMeter > 0 && this.v > 2;
+    this.burst = Math.max(0, this.burst - dt);
+    this.padCooldown = Math.max(0, this.padCooldown - dt);
+    this.boosting = (input.boost && this.boostMeter > 0 && this.v > 2) || this.burst > 0;
     this.braking = input.brake > 0.05 && this.v > 0.5;
     if (this.boosting) {
-      this.v = Math.min(top * 1.35, this.v + T.boostAccel * 0.7 * dt);
-      this.boostMeter = Math.max(0, this.boostMeter - T.boostDrain * dt);
+      this.v = Math.min(top * (this.burst > 0 ? 1.55 : 1.35), this.v + T.boostAccel * (this.burst > 0 ? 1.2 : 0.7) * dt);
+      if (this.burst <= 0) this.boostMeter = Math.max(0, this.boostMeter - T.boostDrain * dt);
     } else if (input.throttle > 0.05) {
       this.v += T.accel * 0.8 * input.throttle * Math.max(0, 1 - this.v / top) * dt;
     }
@@ -161,10 +198,24 @@ export class FreeCar {
     // Bicycle steering: yaw rate = v / wheelbase · tan(steer angle); the angle narrows with speed.
     const wheelbase = 2.6;
     const maxAngle = 0.62 / (1 + Math.abs(this.v) / 18);
-    const yawRate = (this.v / wheelbase) * Math.tan(clamp(input.steer, -1, 1) * maxAngle) * (this.grounded ? 1 : 0.3);
+    // Drift: hold the drift key while turning at speed to slide wide and charge a mini-turbo.
+    const wantDrift = !!input.drift && this.grounded && this.v > 12 && Math.abs(input.steer) > 0.25;
+    if (wantDrift) {
+      this.drifting = true;
+      this.driftCharge = Math.min(1, this.driftCharge + dt / 1.6);
+    } else if (this.drifting) {
+      this.drifting = false;
+      if (this.driftCharge > 0.35) {
+        this.burst = 0.4 + this.driftCharge * 0.8;
+        this.onMiniTurbo?.(this.driftCharge);
+      }
+      this.driftCharge = 0;
+    }
+    const yawRate = (this.v / wheelbase) * Math.tan(clamp(input.steer, -1, 1) * maxAngle * (this.drifting ? 1.45 : 1)) * (this.grounded ? 1 : 0.3);
     this.heading = wrapAngle(this.heading - yawRate * dt);
-    // Slip builds in fast turns and decays (a little drift).
-    this.slip += (yawRate * this.v * 0.02 - this.slip * 3) * dt;
+    // Slip builds in fast turns and decays (a little drift; a lot while drifting).
+    this.slip += (yawRate * this.v * (this.drifting ? 0.06 : 0.02) - this.slip * (this.drifting ? 1.2 : 3)) * dt;
+    if (this.drifting) this.v -= 1.2 * dt;
 
     const fx = -Math.sin(this.heading);
     const fz = -Math.cos(this.heading);
@@ -174,14 +225,46 @@ export class FreeCar {
     if (input.hop && this.grounded) {
       this.vy = T.hopSpeed * 0.9;
       this.grounded = false;
+      this.airTime = 0;
+    }
+    // Boost pads and ramps.
+    if (this.grounded && this.padCooldown <= 0) {
+      for (const p of world.pads) {
+        if (Math.hypot(this.x - p.x, this.z - p.z) < p.r) {
+          this.burst = 1.2;
+          this.padCooldown = 1;
+          this.onPad?.();
+          break;
+        }
+      }
+    }
+    if (this.grounded && this.v > 8) {
+      for (const r of world.ramps) {
+        const dx = this.x - r.x;
+        const dz = this.z - r.z;
+        // Ramp-local coordinates: along = distance along the ramp's heading.
+        const along = -Math.sin(r.heading) * dx - Math.cos(r.heading) * dz;
+        const across = Math.cos(r.heading) * dx - Math.sin(r.heading) * dz;
+        if (Math.abs(along) < r.halfLength && Math.abs(across) < r.halfWidth && Math.cos(wrapAngle(this.heading - r.heading)) > 0.5) {
+          this.vy = r.power + this.v * 0.18;
+          this.grounded = false;
+          this.airTime = 0;
+          this.lastRamp = r;
+          this.onRamp?.(r);
+          break;
+        }
+      }
     }
     if (!this.grounded) {
       this.vy -= T.gravity * dt;
       this.y += this.vy * dt;
+      this.airTime += dt;
       if (this.y <= 0) {
         this.y = 0;
         this.vy = 0;
         this.grounded = true;
+        this.onLand?.(this.airTime);
+        this.lastRamp = null;
       }
     }
 

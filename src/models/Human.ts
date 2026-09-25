@@ -5,9 +5,9 @@ import { PaintMaterial } from '../render/PaintMaterial';
 export type HairStyle = 'bob' | 'bun' | 'short' | 'curly' | 'long' | 'ponytail' | 'braids' | 'bald';
 export type TopStyle = 'tee' | 'shirt' | 'hoodie' | 'dress' | 'sari';
 export type BottomStyle = 'trousers' | 'shorts' | 'skirt' | 'sarong';
-export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie';
+export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie' | 'crown' | 'helmet' | 'flowers';
 export type GlassesStyle = 'none' | 'round' | 'sun';
-export type BackStyle = 'none' | 'backpack' | 'satchel' | 'guitar';
+export type BackStyle = 'none' | 'backpack' | 'satchel' | 'guitar' | 'cape' | 'wings';
 
 /** Character creator values (docs/08 §1). */
 export interface HumanLook {
@@ -115,6 +115,16 @@ export class HumanModel {
     } else if (back === 'guitar') {
       torso.blob(0.2, '#c8955a', { position: [0.05, 0.05, 0.2], scale: [1, 1.2, 0.35], detail: 1 });
       torso.box(0.06, 0.6, 0.05, '#7a4a2a', { position: [0.05, 0.5, 0.2], rotation: [0, 0, 0.1] });
+    } else if (back === 'cape') {
+      // A flowing painter's cape (loot).
+      torso.box(0.46, 0.9, 0.04, '#9a2a4a', { position: [0, 0.12, 0.2], rotation: [0.18, 0, 0] });
+      torso.box(0.5, 0.06, 0.2, '#f4c542', { position: [0, 0.55, 0.1] });
+    } else if (back === 'wings') {
+      // Paper-craft wings (legendary loot).
+      for (const s of [-1, 1]) {
+        torso.box(0.5, 0.28, 0.03, '#f6f0e4', { position: [s * 0.3, 0.38, 0.22], rotation: [0, s * -0.4, s * 0.35], nightGlow: 1 });
+        torso.box(0.38, 0.2, 0.03, '#bfd9e8', { position: [s * 0.36, 0.18, 0.22], rotation: [0, s * -0.4, s * -0.2], nightGlow: 1 });
+      }
     }
     this.chest.add(mesh(torso.build(0.012, 2)));
 
@@ -295,6 +305,25 @@ function addHair(k: ModelKit, look: HumanLook): void {
     case 'beanie':
       k.blob(0.21, '#f08a2e', { position: [0, 0.38, 0.02], scale: [1.02, 0.8, 1.02], detail: 1, roughness: 0.02 });
       k.blob(0.06, '#f6f0e4', { position: [0, 0.55, 0.02], detail: 0 });
+      break;
+    case 'crown':
+      k.cylinder(0.19, 0.2, 0.1, 10, '#f4c542', { position: [0, 0.47, 0], pattern: Pattern.Glass });
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        k.cylinder(0.0, 0.04, 0.1, 4, '#f4c542', { position: [Math.cos(a) * 0.18, 0.56, Math.sin(a) * 0.18] });
+        k.blob(0.025, '#e8559a', { position: [Math.cos(a) * 0.195, 0.47, Math.sin(a) * 0.195], detail: 0, nightGlow: 1 });
+      }
+      break;
+    case 'helmet':
+      k.blob(0.24, '#f6f0e4', { position: [0, 0.36, 0.02], scale: [1.04, 0.95, 1.08], detail: 1, roughness: 0 });
+      k.box(0.3, 0.08, 0.02, '#3e9fd8', { position: [0, 0.3, -0.24], pattern: Pattern.Glass });
+      k.box(0.04, 0.04, 0.48, '#d8463a', { position: [0, 0.6, 0.02] });
+      break;
+    case 'flowers':
+      for (let i = 0; i < 8; i++) {
+        const a = (i / 8) * Math.PI * 2;
+        k.blob(0.05, ['#e8559a', '#f4d23b', '#f6f0e4', '#9a5bd6'][i % 4], { position: [Math.cos(a) * 0.19, 0.44, Math.sin(a) * 0.19], detail: 0 });
+      }
       break;
     default:
       break;

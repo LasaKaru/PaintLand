@@ -6,9 +6,13 @@ import type { TonicId } from './Collectibles';
 export interface ShopItem {
   id: string;
   name: string;
-  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic';
+  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow';
   price: number;
   value: string;
+  /** 0 common, 1 rare, 2 epic, 3 legendary (loot drops). */
+  rarity?: 0 | 1 | 2 | 3;
+  /** Only found in loot chests, never sold. */
+  loot?: boolean;
 }
 
 /** The shop catalogue (docs/06 §7, docs/08 §1–2). Colours are always free. */
@@ -43,6 +47,25 @@ export const CATALOGUE: ShopItem[] = [
   { id: 'roof:boombox', name: 'Boombox', category: 'roof', price: 100, value: 'boombox' },
   { id: 'roof:flowers', name: 'Flower pots', category: 'roof', price: 80, value: 'flowers' },
   { id: 'roof:surfboard', name: 'Surfboard', category: 'roof', price: 120, value: 'surfboard' },
+  // Milestone 7: vehicle parts and loot-only treasures.
+  { id: 'decal:none', name: 'Plain paint', category: 'decal', price: 0, value: 'none' },
+  { id: 'decal:stripes', name: 'Racing stripes', category: 'decal', price: 120, value: 'stripes', rarity: 0 },
+  { id: 'decal:dots', name: 'Polka dots', category: 'decal', price: 150, value: 'dots', rarity: 1 },
+  { id: 'decal:flames', name: 'Hot flames', category: 'decal', price: 200, value: 'flames', rarity: 1 },
+  { id: 'decal:checker', name: 'Chequered flag', category: 'decal', price: 0, value: 'checker', rarity: 2, loot: true },
+  { id: 'spoiler:none', name: 'No spoiler', category: 'spoiler', price: 0, value: 'none' },
+  { id: 'spoiler:lip', name: 'Lip spoiler', category: 'spoiler', price: 150, value: 'lip', rarity: 0 },
+  { id: 'spoiler:wing', name: 'Big wing', category: 'spoiler', price: 0, value: 'wing', rarity: 1, loot: true },
+  { id: 'glow:none', name: 'No underglow', category: 'glow', price: 0, value: 'none' },
+  { id: 'glow:cyan', name: 'Cyan underglow', category: 'glow', price: 0, value: '#3ef0ff', rarity: 1, loot: true },
+  { id: 'glow:pink', name: 'Pink underglow', category: 'glow', price: 0, value: '#ff4fa0', rarity: 1, loot: true },
+  { id: 'glow:green', name: 'Lime underglow', category: 'glow', price: 0, value: '#5dff7a', rarity: 2, loot: true },
+  { id: 'glow:gold', name: 'Golden underglow', category: 'glow', price: 0, value: '#ffcc33', rarity: 3, loot: true },
+  { id: 'hat:helmet', name: 'Racing helmet', category: 'hat', price: 90, value: 'helmet', rarity: 0 },
+  { id: 'hat:flowers', name: 'Flower crown', category: 'hat', price: 0, value: 'flowers', rarity: 1, loot: true },
+  { id: 'hat:crown', name: 'Golden crown', category: 'hat', price: 0, value: 'crown', rarity: 3, loot: true },
+  { id: 'back:cape', name: 'Painter’s cape', category: 'back', price: 0, value: 'cape', rarity: 2, loot: true },
+  { id: 'back:wings', name: 'Paper wings', category: 'back', price: 0, value: 'wings', rarity: 3, loot: true },
   { id: 'tonic:magnet', name: 'Magnet tonic', category: 'tonic', price: 30, value: 'magnet' },
   { id: 'tonic:feather', name: 'Feather tonic', category: 'tonic', price: 40, value: 'feather' },
   { id: 'tonic:fizzy', name: 'Fizzy Ink', category: 'tonic', price: 35, value: 'fizzy' },

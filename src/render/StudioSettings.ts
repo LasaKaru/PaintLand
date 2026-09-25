@@ -37,6 +37,8 @@ export interface StudioSettings {
   engineHum: number;
   musicBox: number;
   musicVolume: number;
+  /** Birds, sea, crickets, city (the living world). */
+  ambience: number;
   // Vibe
   vibe: string;
 
@@ -103,6 +105,7 @@ export const DEFAULT_STUDIO: StudioSettings = {
   engineHum: 0.35,
   musicBox: 0.8,
   musicVolume: 0.7,
+  ambience: 0.7,
   vibe: 'sketchbook',
   artStyle: 'watercolour',
   realism: 0,

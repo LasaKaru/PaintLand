@@ -13,20 +13,11 @@ import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
 
+import { AREA_Y, type AreaZone, type Chest, type FreeRoamArea, type Place, type Secret, type StuntJump } from './FreeRoamArea';
+
 /** Ground height of the hub above the sea. */
-export const HUB_Y = 2;
-
-export type ZoneKind = 'portal' | 'garage' | 'wardrobe' | 'shop' | 'missions' | 'trophies' | 'settings';
-
-export interface HubZone {
-  kind: ZoneKind;
-  label: string;
-  x: number;
-  z: number;
-  r: number;
-  chapter?: string;
-  colour: string;
-}
+export const HUB_Y = AREA_Y;
+export type HubZone = AreaZone;
 
 interface Townsfolk {
   model: HumanModel;
@@ -45,7 +36,23 @@ const INK = '#2b2622';
  * and places to visit on foot or by car — garage, wardrobe, shop, mission
  * board, trophy hall. Free-roam physics (not the ribbon) with solid buildings.
  */
-export class Hub {
+export class Hub implements FreeRoamArea {
+  readonly id = 'harbour';
+  readonly secrets: Secret[] = [
+    { id: 'harbour-pier', x: 60, z: 112, y: 0.3, hint: 'At the end of the pier, under the lighthouse' },
+    { id: 'harbour-alley', x: -108, z: -104, y: 0, hint: 'The far corner behind the western houses' },
+    { id: 'harbour-fountain', x: 0, z: -2.8, y: 1.6, hint: 'Hop onto the fountain' },
+  ];
+  readonly chests: Chest[] = [
+    { id: 'harbour-c1', x: -60, z: 30, tier: 0 },
+    { id: 'harbour-c2', x: 90, z: -60, tier: 1 },
+    { id: 'harbour-c3', x: -95, z: 60, tier: 2 },
+  ];
+  readonly stunts: StuntJump[] = [];
+  readonly places: Place[] = [
+    { id: 'plaza', name: 'the fountain plaza', x: 0, z: 10 },
+    { id: 'pier', name: 'the pier', x: 60, z: 70 },
+  ];
   readonly group = new THREE.Group();
   readonly world: FreeWorld;
   readonly zones: HubZone[] = [];
@@ -330,6 +337,22 @@ export class Hub {
     this.put(statue, 0, 44);
     this.world.box(0, 44, 1.6, 1.6);
     this.zones.push({ kind: 'trophies', label: '🏆 Trophy hall', x: 0, z: 39, r: 3.5, colour: '#f4d23b' });
+    // The coast road east to Serendib City.
+    const sign = new ModelKit()
+      .box(0.3, 4, 0.3, '#7a5a3a', { position: [0, 2, 0] })
+      .box(6, 1.4, 0.2, '#2f8f86', { position: [0, 4, 0], nightGlow: 1 })
+      .box(0.8, 0.8, 0.25, '#f6f0e4', { position: [2.4, 4, 0.05], rotation: [0, 0, Math.PI / 4] })
+      .build(0.01);
+    this.put(sign, 104, 26, -Math.PI / 2);
+    this.world.circle(104, 26, 0.4);
+    this.zones.push({ kind: 'area', label: '🏙 Serendib City', x: 104, z: 40, r: 7, area: 'city', colour: '#2f8f86' });
+    // A kicker ramp on the harbour front and boost pads down the avenue.
+    this.world.ramps.push({ x: -40, z: 52, heading: Math.PI / 2, halfWidth: 3, halfLength: 2.2, power: 6, stunt: false });
+    this.put(new ModelKit().box(6, 1.3, 4.4, '#e4dccb', { position: [0, 0.15, 0], rotation: [0.3, 0, 0], pattern: Pattern.Planks }).build(0), -40, 52, Math.PI / 2);
+    for (const z of [-40, -70]) {
+      this.world.pads.push({ x: 0, z, r: 2.4 });
+      this.put(new ModelKit().box(4, 0.08, 5, '#3e9fd8', { position: [0, 0.07, 0], nightGlow: 1 }).box(0.8, 0.1, 2.6, '#f6f0e4', { position: [0, 0.1, 0], rotation: [0, Math.PI / 4, 0] }).build(0), 0, z);
+    }
 
     // Glowing rings on the ground and floating labels.
     for (const z of this.zones) {
@@ -369,8 +392,20 @@ export class Hub {
   }
 
   /** Zone label in the current language (portals keep the chapter name). */
+  title(): { kicker: string; name: string; poem: string } {
+    return { kicker: t('hub.kicker'), name: t('hub.name'), poem: t('hub.poem') };
+  }
+
+  ambienceAt(_x: number, z: number): { nature: number; coast: number; city: number } {
+    return { nature: 0.45, coast: Math.min(1, Math.max(0.2, (z + 20) / 90)), city: 0.2 };
+  }
+
+  dynamicBodies(): { x: number; z: number; r: number }[] {
+    return [];
+  }
+
   zoneLabel(z: HubZone): string {
-    return z.kind === 'portal' ? z.label : t(`zone.${z.kind}` as StringKey);
+    return z.kind === 'portal' || z.kind === 'area' ? z.label : t(`zone.${z.kind}` as StringKey);
   }
 
   zoneAt(x: number, z: number): HubZone | null {

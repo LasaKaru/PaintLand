@@ -5,8 +5,8 @@ import { HumanModel } from '../models/Human';
 import { VehicleModel, vehicleById } from '../models/Vehicles';
 import type { NetClient, RemotePeer } from './Net';
 
-/** Hub states: s = z + HUB_S_OFFSET, x = x, h = height above the hub ground, yaw = heading. */
-export const HUB_S_OFFSET = 200;
+/** Hub states: s = z + HUB_S_OFFSET (keeps s positive across Serendib City), x = x, h = height above the hub ground, yaw = heading. */
+export const HUB_S_OFFSET = 1000;
 
 interface Avatar {
   key: string;
