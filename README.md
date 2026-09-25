@@ -4,7 +4,61 @@
 
 *Paint the road. Then drive up it.*
 
-This repository currently holds the **complete design documentation** for the game. It has no code yet. It is written so a team can build the game from it, step by step.
+This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
+
+![Milestone 1 screenshots: title screen, tower climb, Petal Twist, Citrus Coil at night, Ribbon Gate in rain, on foot beside the rover](docs/screenshots/milestone-1.jpg)
+
+## Play it locally
+
+```bash
+npm install
+npm run dev        # open http://localhost:5173
+```
+
+| Command | What it does |
+| --- | --- |
+| `npm run dev` | Development server with hot reload |
+| `npm run build` | Typecheck and build a static site into `dist/` |
+| `npm run preview` | Serve the built site |
+| `npm test` | Unit tests (road maths, rover and walking physics, notes and phrases) |
+| `npm run typecheck` | TypeScript strict check |
+| `node tools/screenshot.mjs` | With `npm run dev` running: renders every district in headless Chromium into `tools/out/` |
+| `node tools/drive-test.mjs` | With `npm run dev` running: presses real keys (drive, brake, get out, walk) and checks for console errors |
+
+Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
+
+### Controls
+
+| | Driving | On foot |
+| --- | --- | --- |
+| Move | **W/S** throttle/brake · **A/D** steer | **WASD** |
+| **Space** | Hop | Jump |
+| **Shift** | Boost | Sprint |
+| **Ctrl** | Drift | Walk slowly |
+| **F / E** | Get out (when slow) | Get in (near the rover) |
+| **C / V** | Chase · Low · Drone · Cinema · Cockpit | Third ↔ first person |
+| Mouse | — | Look (click to lock the pointer) |
+
+Also: **scroll** zoom · **[ ]** field of view · **T** radio · **N** next song · **B** change station · **1–7** time of day · **8** auto day · **9** rain · **H** honk · **R** respawn · **`** or **F2** Studio panel · **U** hide HUD · **Esc** pause. Gamepads work too (stick, RT/LT, A hop, X boost, B drift, Y get in/out).
+
+## What is built (milestone 1 · "The Sketch")
+
+| System | Status | Where |
+| --- | --- | --- |
+| Watercolour renderer: toon + coloured shadows, ink lines with line boil, Kuwahara colour bleed, pigment edge darkening, wet edges, granulation, paper, glow, torn sketchbook border, rain, speed lines | ✅ | `src/render/` |
+| Studio panel with every art value live, 8 vibe presets, auto resolution | ✅ | `src/ui/Studio.ts`, `src/render/StudioSettings.ts` |
+| Ribbon road engine: turtle track builder with exact up vectors, 0.5 m lookup table, chunked procedural road mesh | ✅ | `src/road/` |
+| Chapter 1 route: 8 districts, 3 km — town street, tower climb, ceiling street, corkscrew, drop, spiral over the sea, loop, twist | ✅ | `src/road/chapter1.ts`, `src/world/Districts.ts` |
+| Road-gravity rover: throttle, brake, cruise floor, drift, hop, boost, kerbs, ramps, speed pads | ✅ | `src/gameplay/RoverController.ts` |
+| On-foot human: walk / jog / sprint / jump on road gravity (walls and ceilings too), get in and out of the rover | ✅ | `src/gameplay/HumanController.ts` |
+| Cameras: chase, low, drone, cinema, cockpit, third person, first person, title orbit — with collision and a water clamp | ✅ | `src/camera/CameraRig.ts` |
+| Procedural models: rover (3 roof loads), character (4 hair styles, hats, outfits), houses, towers, stalls, kiosks, trees, lamps, flower arches, bunting, lighthouse, islands, clouds, crayons | ✅ | `src/models/` |
+| Seeded district dressing in the road frame (houses hang upside down on the ceiling automatically) | ✅ | `src/world/Decorator.ts` |
+| Notes from melodies, beat-quantised music box, phrases and the Songbook, tonics with drawbacks, crates, time trial with splits | ✅ | `src/gameplay/Collectibles.ts`, `src/core/Game.ts` |
+| Procedural radio (3 stations in the district's key and tempo), engine, wind, rain, SFX | ✅ | `src/audio/AudioEngine.ts` |
+| Time of day (7 presets + auto) and rain | ✅ | `src/world/Environment.ts` |
+| HUD and menus as paper cards: title, intro, pause, controls, radio, Songbook, speed card with gravity compass | ✅ | `src/ui/` |
+| Hubs, character creator screen, garage screen, photo mode, multiplayer, touch controls | ⏳ next milestones | see [docs/12](docs/12-production-plan.md) |
 
 ## How to read this
 
@@ -42,4 +96,8 @@ Reference material:
 | Area | Status |
 | --- | --- |
 | Design documentation | ✅ Complete (v1) |
-| Phase 0 · Look test | ⏳ Next |
+| Phase 0 · Look test | ✅ Done |
+| Phase 1 · Road and rover | ✅ Done |
+| Phase 2 · Music core | ✅ Done (procedural radio; commissioned music later) |
+| Phase 3 · On-foot prototype | ✅ Done on ribbon roads (hubs next) |
+| Phase 4 · Vertical slice | 🚧 In progress |
