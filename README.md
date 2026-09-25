@@ -6,7 +6,13 @@
 
 This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
 
+![Milestone 5 screenshots: the time-trial leaderboard with a verified run, two players meeting in Harbour Town, the main menu in Sinhala and Tamil, time trials in Sinhala, Harbour Town in Tamil](docs/screenshots/milestone-5.jpg)
+
+<details><summary>Milestone 4 screenshots</summary>
+
 ![Milestone 4 screenshots: Harbour Town in watercolour and realistic styles, the harbour front, a street, walking into the garage ring, touch controls on a phone](docs/screenshots/milestone-4.jpg)
+
+</details>
 
 <details><summary>Milestone 3 screenshots</summary>
 
@@ -45,6 +51,8 @@ npm run dev        # open http://localhost:5173
 | `node tools/landmarks.mjs <chapter> <count>` | Crane shots of every landmark in a chapter (`STYLE=realistic PRESET=golden`) |
 | `node tools/drive-test.mjs` | Presses real keys (menu → play, drive, brake, get out, photo mode, realistic handling, lap wrap) and checks for console errors |
 | `node tools/net-test.mjs` | Run from the repo root: starts the relay and checks chat, id rewriting, message filtering, and that speed hacks and teleports are dropped |
+| `npm run server` | Builds the run verifier (`npm run build:server`) and starts the relay: multiplayer rooms on `ws://localhost:8787` and the time-trial leaderboard on `http://localhost:8787/leaderboard` |
+| `node tools/trial-test.mjs` | Run from the repo root: starts the relay, drives a full time-trial lap in the browser, checks that the server re-simulated and ranked it, and that a faked time is rejected |
 | `node tools/hub-test.mjs` | Drives and walks around Harbour Town with real keys, opens the garage from its ring, resumes, drives through a chapter gate, and checks the touch controls on a phone-sized screen |
 
 Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
@@ -65,7 +73,17 @@ Also: **P** photo mode · **.** / **,** gear up / down (realistic handling, manu
 
 Every key can be rebound in **Menu → Settings → Controls**. On phones and tablets, touch controls appear on the first touch: a floating stick, GO / BRAKE pedals, HOP, BOOST, DRIFT, E, camera and photo buttons, and drag-to-look.
 
-## What is new in milestone 4 · "Home port"
+## What is new in milestone 5 · "On the board"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **Ranked time trials** (Menu → ⏱ Time trials): one lap from a standing start with no traffic or tonics. Every input is recorded at 60 Hz (4 bytes a step). The server **replays the run through the same simulation** and ranks the time only if the replay matches, so faked times, edited inputs and speed hacks are rejected. Each chapter has a board per handling model, alongside your local bests and ghost | ✅ | `src/gameplay/TrialSim.ts`, `src/server/verify.ts`, `server/relay.mjs`, `src/net/Leaderboard.ts` |
+| **Multiplayer in Harbour Town**: players in the same room see each other's cars and characters driving and walking around the hub, with name tags, chat and waves | ✅ | `src/net/RemotePlayers.ts`, `src/core/Game.ts` |
+| **Languages: English, සිංහල (Sinhala), தமிழ் (Tamil)**, chosen on the splash screen, the main menu or Settings → Accessibility. Detected from the browser on first run. Menus, prompts, tips, hub labels and trial messages are translated; district names and poems are still English | ✅ | `src/core/i18n.ts` |
+
+The Sinhala and Tamil text is a first draft and should be reviewed by native speakers before release.
+
+## What was new in milestone 4 · "Home port"
 
 | System | Status | Where |
 | --- | --- | --- |
@@ -127,7 +145,7 @@ Every key can be rebound in **Menu → Settings → Controls**. On phones and ta
 | Procedural radio (3 stations in the district's key and tempo), engine, wind, rain, SFX | ✅ | `src/audio/AudioEngine.ts` |
 | Time of day (7 presets + auto) and rain | ✅ | `src/world/Environment.ts` |
 | HUD and menus as paper cards: title, intro, pause, controls, radio, Songbook, speed card with gravity compass | ✅ | `src/ui/` |
-| More hubs (one per chapter), multiplayer in hubs, server-authoritative ranked races, commissioned music, hand-made model pass, localisation | ⏳ next milestones | see [docs/12](docs/12-production-plan.md) |
+| More hubs (one per chapter), live head-to-head races, commissioned music, hand-made model pass, more languages and translated district text | ⏳ next milestones | see [docs/12](docs/12-production-plan.md) |
 
 ## How to read this
 
@@ -170,5 +188,5 @@ Reference material:
 | Phase 2 · Music core | ✅ Done (procedural radio; commissioned music later) |
 | Phase 3 · On-foot prototype | ✅ Done on ribbon roads (hubs next) |
 | Phase 4 · Vertical slice | 🚧 In progress: 3 chapters, menus, customisation, missions |
-| Phase 5 · Multiplayer | 🚧 Tab and relay rooms, peer interpolation, chat, ghosts, server-side validation, determinism tests; ranked re-simulation next |
-| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), touch controls, onboarding done; Hub 2, localisation and closed alpha next |
+| Phase 5 · Multiplayer | ✅ Tab and relay rooms, hub multiplayer, peer interpolation, chat, ghosts, server-side validation, determinism tests, leaderboards verified by re-simulation |
+| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), touch controls, onboarding done; Hub 2 and closed alpha next; languages started (en, si, ta) |

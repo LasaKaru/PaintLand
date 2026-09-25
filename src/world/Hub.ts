@@ -11,6 +11,7 @@ import { buildOruwa, buildTukTukProp } from '../models/LandmarksSriLanka';
 import { HumanModel, randomLook } from '../models/Human';
 import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
+import { t, type StringKey } from '../core/i18n';
 
 /** Ground height of the hub above the sea. */
 export const HUB_Y = 2;
@@ -51,6 +52,7 @@ export class Hub {
   readonly spawn = { x: 0, z: 30, heading: 0 };
   readonly folk: Townsfolk[] = [];
   private readonly labels: HTMLDivElement[] = [];
+  private labelLang = '';
   private readonly zoneRings: THREE.Mesh[] = [];
   private readonly parts: THREE.BufferGeometry[] = [];
   private readonly nm = new THREE.Matrix3();
@@ -366,6 +368,11 @@ export class Hub {
     return { x: Math.cos(a) * rnd.range(7, 20), z: Math.sin(a) * rnd.range(7, 20) };
   }
 
+  /** Zone label in the current language (portals keep the chapter name). */
+  zoneLabel(z: HubZone): string {
+    return z.kind === 'portal' ? z.label : t(`zone.${z.kind}` as StringKey);
+  }
+
   zoneAt(x: number, z: number): HubZone | null {
     for (const zn of this.zones) if (Math.hypot(x - zn.x, z - zn.z) < zn.r) return zn;
     return null;
@@ -402,7 +409,12 @@ export class Hub {
       f.model.animate(dt, near ? 'wave' : f.body.pose, f.body.speed, time);
     }
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
-    // Labels.
+    // Labels (re-drawn when the language changes).
+    const langNow = document.documentElement.lang;
+    if (langNow !== this.labelLang) {
+      this.labelLang = langNow;
+      this.zones.forEach((z, i) => (this.labels[i].innerHTML = `<span>${this.zoneLabel(z)}</span>`));
+    }
     this.zones.forEach((z, i) => {
       const label = this.labels[i];
       this.v.set(z.x, HUB_Y + (z.kind === 'portal' ? 12.5 : 5), z.z).project(camera);

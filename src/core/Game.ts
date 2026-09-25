@@ -36,6 +36,7 @@ import { TouchControls } from '../ui/TouchControls';
 import { TRIAL_VERSION, TrialSim, encodeInputs, quantizeInput, type TrialConfig } from '../gameplay/TrialSim';
 import { submitRun } from '../net/Leaderboard';
 import { HUB_S_OFFSET } from '../net/RemotePlayers';
+import { t } from './i18n';
 import type { RoverInput } from '../gameplay/RoverController';
 import { RemotePlayers } from '../net/RemotePlayers';
 
@@ -621,7 +622,7 @@ export class Game {
 
   private exitRover(force = false): void {
     if (!force && Math.abs(this.rover.v) > 4) {
-      this.popAtPawn('Slow down to get out', 'info');
+      this.popAtPawn(t('prompt.slowDown'), 'info');
       return;
     }
     this.rover.v = 0;
@@ -1217,14 +1218,14 @@ export class Game {
       focus = this.humanModel.root.position;
       const giver = this.nearbyGiver();
       const nearCar = Math.abs(this.human.s - this.rover.s) < 4 && Math.abs(this.human.x - this.rover.x) < 4;
-      this.hud.setPrompt(giver ? `E · Talk to ${giver.giver.name}` : nearCar ? 'F · Get in' : null);
+      this.hud.setPrompt(giver ? t('prompt.talk', { name: giver.giver.name }) : nearCar ? t('prompt.getIn') : null);
     } else {
       this.humanModel.animate(dt, vm.def.seatPose, 0, this.time);
       if (playing) {
         const eye = vm.seat.getWorldPosition(new THREE.Vector3()).addScaledVector(f.up, 0.9);
         this.rig.updateDrive(dt, { s: r.s, x: r.x, h: r.h, yaw: r.yaw, speed: this.rover.v, boosting: this.rover.boosting, eye });
       }
-      this.hud.setPrompt(this.state === 'play' && Math.abs(this.rover.v) < 3 && this.lapTime > 2 ? 'F · Get out and walk' : null);
+      this.hud.setPrompt(this.state === 'play' && Math.abs(this.rover.v) < 3 && this.lapTime > 2 ? t('prompt.getOut') : null);
     }
     if (this.showcaseTarget === 'vehicle') {
       this.director.showcase = { target: vm.root.position.clone().addScaledVector(f.up, 1.2), distance: 7.5, height: 1.6, up: f.up.clone() };
@@ -1452,12 +1453,12 @@ export class Game {
     this.checkTrophies();
     const run = { ...cfg, name: this.profile.data.name, time, inputs: encodeInputs(trial.inputs), version: TRIAL_VERSION };
     this.endTrial();
-    this.hud.showLapBanner(`⏱ ${time.toFixed(2)}s${best ? ' · personal best!' : prev !== null ? ` · best ${prev.toFixed(2)}s` : ''} — checking with the server…`);
+    this.hud.showLapBanner(t('trial.checking', { time: time.toFixed(2), extra: best ? t('trial.pb') : prev !== null ? ` · best ${prev.toFixed(2)}s` : '' }));
     this.audio.chime(76);
     this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 2), _v.copy(this.frame.up).multiplyScalar(7), 70, 7, this.frame.up);
     void submitRun(run).then((res) => {
-      if (!res) this.hud.showLapBanner(`⏱ ${time.toFixed(2)}s saved on this device (leaderboard server offline)`);
-      else if (res.ok) this.hud.showLapBanner(`✓ Verified by re-simulation · ${res.best === false ? 'your best still stands' : `rank #${res.rank ?? '—'}`}`);
+      if (!res) this.hud.showLapBanner(t('trial.offline', { time: time.toFixed(2) }));
+      else if (res.ok) this.hud.showLapBanner(res.best === false ? `✓ ${time.toFixed(2)}s · your best still stands` : t('trial.verified', { rank: res.rank ?? '—' }));
       else this.hud.showLapBanner(`Server did not accept the run: ${res.reason ?? 'unknown'}`);
     });
     // Roll on in free play.
@@ -1489,23 +1490,23 @@ export class Game {
     const p = this.profile;
     const tip = (id: string, text: string): boolean => {
       if (!p.markSeen(`tip:${id}`)) return false;
-      this.hud.tip(text);
+      this.hud.tip(text, 6, t('tip.label'));
       this.tipClock = -5; // space tips out
       p.save();
       return true;
     };
     if (this.state === 'hub') {
-      tip('hub', touch ? 'Drive with the stick and GO · E at a glowing ring opens the garage, wardrobe or shop' : 'W A S D to drive · E at a glowing ring opens the garage, wardrobe or shop · drive through a painted gate to start a chapter');
+      tip('hub', touch ? t('tip.hubTouch') : t('tip.hub'));
       return;
     }
     const r = this.rover;
-    if (tip('drive', touch ? 'Hold GO to drive, steer with the stick' : 'Hold W to drive, A / D to steer — the rover keeps rolling on its own')) return;
-    if (this.mode === 'drive' && r.v > 15 && tip('notes', 'Drive through the floating notes: they play this street’s melody. A whole phrase gets sealed ✓')) return;
-    if (this.mode === 'drive' && r.v > 20 && this.lapTime > 20 && tip('hop', touch ? 'HOP over gaps and crates — clean landings give a speed kick' : 'Space to hop — clean landings give a speed kick')) return;
-    if (r.boostMeter > 0.6 && tip('boost', touch ? 'Your boost is full — hold BOOST' : 'Your boost is full — hold Shift')) return;
-    if (this.frame.up.y < 0.3 && tip('gravity', 'The road is your gravity: walls and ceilings are just more road. Hold on!')) return;
-    if (this.lapTime > 60 && tip('walk', touch ? 'Stop and press E to get out and walk' : 'Stop and press F to get out and walk. P opens photo mode')) return;
-    if (this.lapTime > 90) tip('settings', 'Menu → Settings: graphics quality, a realistic art style, realistic handling and key rebinding');
+    if (tip('drive', touch ? t('tip.driveTouch') : t('tip.drive'))) return;
+    if (this.mode === 'drive' && r.v > 15 && tip('notes', t('tip.notes'))) return;
+    if (this.mode === 'drive' && r.v > 20 && this.lapTime > 20 && tip('hop', t('tip.hop').replace('Space', touch ? 'HOP' : 'Space'))) return;
+    if (r.boostMeter > 0.6 && tip('boost', t('tip.boost').replace('Shift', touch ? 'BOOST' : 'Shift'))) return;
+    if (this.frame.up.y < 0.3 && tip('gravity', t('tip.gravity'))) return;
+    if (this.lapTime > 60 && tip('walk', t('tip.walk').replace('F', touch ? 'E' : 'F'))) return;
+    if (this.lapTime > 90) tip('settings', t('tip.settings'));
   }
 
   // ————— Harbour Town (free-roam hub) —————
@@ -1545,7 +1546,7 @@ export class Game {
     this.particles.clear();
     this.wildlife.reset(new THREE.Vector3(0, HUB_Y, 0));
     this.unlockAudio();
-    this.hud.showDistrictTitle('Home port', 'Harbour Town', 'Drive or walk anywhere · painted gates lead to every chapter');
+    this.hud.showDistrictTitle(t('hub.kicker'), t('hub.name'), t('hub.poem'));
     this.profile.markSeen('hub');
     this.remotes.clear();
     if (this.net.connected) this.net.sendHello(this.playerInfo());
@@ -1609,7 +1610,7 @@ export class Game {
       const zone = this.hubZone;
       if (zone) this.useZone(zone);
       else if (this.mode === 'drive') {
-        if (Math.abs(this.hubCar.v) > 4) this.popAtPawn('Slow down to get out', 'info');
+        if (Math.abs(this.hubCar.v) > 4) this.popAtPawn(t('prompt.slowDown'), 'info');
         else {
           this.hubCar.v = 0;
           this.mode = 'foot';
@@ -1730,8 +1731,8 @@ export class Game {
     // Zones and prompts.
     this.hubZone = hub.zoneAt(player.x, player.z);
     const nearCar = this.mode === 'foot' && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
-    const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' ? `E · Enter ${this.hubZone.label.replace('→ ', '')} (or drive through)` : `E · ${this.hubZone.label}`) : null;
-    this.hud.setPrompt(zoneText ?? (nearCar ? 'F · Get in' : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? 'F · Get out and walk' : null));
+    const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' ? t('prompt.enter', { place: this.hubZone.label.replace('→ ', '') }) : `E · ${hub.zoneLabel(this.hubZone)}`) : null;
+    this.hud.setPrompt(zoneText ?? (nearCar ? t('prompt.getIn') : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? t('prompt.getOut') : null));
     // Multiplayer in the hub: everyone in the same room and in Harbour Town sees each other.
     if (this.net.connected) {
       const foot = this.mode === 'foot';

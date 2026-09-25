@@ -8,6 +8,7 @@ import { randomLook, type HumanLook } from '../models/Human';
 import { fmt } from './Hud';
 import { TROPHIES } from '../gameplay/Trophies';
 import { fetchBoard } from '../net/Leaderboard';
+import { LANGS, lang, onLangChange, setLang, t, type Lang } from '../core/i18n';
 import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Input';
 import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
@@ -72,6 +73,7 @@ export class Menu {
     this.root.addEventListener('input', (e) => this.onInput(e));
     this.root.addEventListener('change', (e) => this.onInput(e));
     host.profile.onChange(() => this.refreshInk());
+    onLangChange(() => this.render());
     setInterval(() => {
       const el = this.root.querySelector('[data-id="stats"]');
       if (el) el.textContent = this.host.stats();
@@ -110,7 +112,7 @@ export class Menu {
   }
 
   private header(title: string, back = true): string {
-    return `<div class="menu-head">${back ? '<button class="btn" data-nav="main">← Back</button>' : ''}<div class="hand menu-title">${title}</div><div class="ink-badge" data-id="ink">💧 ${this.host.profile.data.ink} ink</div></div>`;
+    return `<div class="menu-head">${back ? `<button class="btn" data-nav="main">${t('menu.back')}</button>` : ''}<div class="hand menu-title">${title}</div><div class="ink-badge" data-id="ink">💧 ${this.host.profile.data.ink} ink</div></div>`;
   }
 
   private refreshInk(): void {
@@ -132,8 +134,9 @@ export class Menu {
   private splash(): string {
     return `<div class="splash">
       <div class="title-letters">${'PAINTLAND'.split('').map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}</div>
-      <div class="banner">Drive the song · walk the page · paint the world</div>
-      <button class="btn primary" data-nav="enter">Press any key to begin</button>
+      <div class="banner">${t('splash.banner')}</div>
+      <button class="btn primary" data-nav="enter">${t('splash.press')}</button>
+      <div class="lang-row">${this.langButtons()}</div>
     </div>`;
   }
 
@@ -142,28 +145,29 @@ export class Menu {
     const p = this.host.profile.data;
     return `<div class="menu-main">
       <div class="menu-logo"><div class="logo-mark big"></div><div><div class="hand logo-name big">PaintLand</div><div class="logo-sub">ink &amp; wash roads</div></div></div>
-      <div class="menu-now">Now showing · <b>${ch.name}</b></div>
+      <div class="menu-now">${t('menu.now')} · <b>${ch.name}</b></div>
       <nav class="menu-list">
-        ${this.host.canResume() ? '<button class="menu-item primary" data-nav="resume">▶ Resume</button>' : ''}
-        <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">▶ Play · ${ch.name}</button>
-        <button class="menu-item" data-nav="hub">⚓ Harbour Town · free roam</button>
-        <button class="menu-item" data-nav="chapters">Chapters</button>
-        <button class="menu-item" data-nav="trials">⏱ Time trials · leaderboard</button>
-        <button class="menu-item" data-nav="missions">Missions</button>
-        <button class="menu-item" data-nav="wardrobe">Wardrobe</button>
-        <button class="menu-item" data-nav="garage">Garage</button>
-        <button class="menu-item" data-nav="shop">Shop &amp; inventory</button>
-        <button class="menu-item" data-nav="multiplayer">Multiplayer</button>
-        <button class="menu-item" data-nav="trophies">Trophies · ${this.host.profile.data.trophies.length}/${TROPHIES.length}</button>
-        <button class="menu-item" data-nav="settings">Settings</button>
-        <button class="menu-item small" data-nav="intro">Watch the intro</button>
-        <button class="menu-item small" data-nav="credits">Credits</button>
+        ${this.host.canResume() ? `<button class="menu-item primary" data-nav="resume">${t('menu.resume')}</button>` : ''}
+        <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">${t('menu.play', { chapter: ch.name })}</button>
+        <button class="menu-item" data-nav="hub">${t('menu.hub')}</button>
+        <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
+        <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
+        <button class="menu-item" data-nav="missions">${t('menu.missions')}</button>
+        <button class="menu-item" data-nav="wardrobe">${t('menu.wardrobe')}</button>
+        <button class="menu-item" data-nav="garage">${t('menu.garage')}</button>
+        <button class="menu-item" data-nav="shop">${t('menu.shop')}</button>
+        <button class="menu-item" data-nav="multiplayer">${t('menu.multiplayer')}</button>
+        <button class="menu-item" data-nav="trophies">${t('menu.trophies', { n: this.host.profile.data.trophies.length, total: TROPHIES.length })}</button>
+        <button class="menu-item" data-nav="settings">${t('menu.settings')}</button>
+        <button class="menu-item small" data-nav="intro">${t('menu.intro')}</button>
+        <button class="menu-item small" data-nav="credits">${t('menu.credits')}</button>
       </nav>
       <div class="menu-foot">
         <span>🎨 ${escapeHtml(p.name)}</span>
         <span data-id="ink">💧 ${p.ink} ink</span>
-        <span>♪ ${this.host.profile.totalSealed()} phrases sealed</span>
+        <span>♪ ${t('menu.sealed', { n: this.host.profile.totalSealed() })}</span>
       </div>
+      <div class="lang-row">${this.langButtons()}</div>
     </div>`;
   }
 
@@ -304,7 +308,7 @@ export class Menu {
   }
 
   private settingsScreen(): string {
-    const tabs: [SettingsTab, string][] = [['graphics', 'Graphics'], ['look', 'Look'], ['controls', 'Controls'], ['driving', 'Driving'], ['audio', 'Audio'], ['access', 'Accessibility']];
+    const tabs: [SettingsTab, string][] = [['graphics', t('set.graphics')], ['look', t('set.look')], ['controls', t('set.controls')], ['driving', t('set.driving')], ['audio', t('set.audio')], ['access', t('set.access')]];
     const body = {
       graphics: () => this.graphicsTab(),
       look: () => this.lookTab(),
@@ -313,7 +317,7 @@ export class Menu {
       audio: () => this.audioTab(),
       access: () => this.accessTab(),
     }[this.settingsTab]();
-    return `<div class="menu-panel wide">${this.header('Settings')}
+    return `<div class="menu-panel wide">${this.header(t('title.settings'))}
       <div class="tabs">${tabs.map(([id, label]) => `<button class="tab ${this.settingsTab === id ? 'on' : ''}" data-stab="${id}">${label}</button>`).join('')}</div>
       <div class="settings-body">${body}</div>
     </div>`;
@@ -344,10 +348,10 @@ export class Menu {
   private graphicsTab(): string {
     const s = this.host.studio();
     const pct = (v: number): string => `${Math.round(v * 100)}%`;
-    const levels: [QualityLevel, string, string][] = [['low', 'Low', 'Laptops & phones'], ['medium', 'Medium', 'Balanced'], ['high', 'High', 'Recommended'], ['ultra', 'Ultra', 'Strong GPUs']];
+    const levels: [QualityLevel, string, string][] = [['low', t('q.low'), 'Laptops & phones'], ['medium', t('q.medium'), 'Balanced'], ['high', t('q.high'), 'Recommended'], ['ultra', t('q.ultra'), 'Strong GPUs']];
     return `
       <div class="quality-row">${levels.map(([id, name, sub]) => `<button class="quality ${s.quality === id ? 'on' : ''}" data-quality="${id}"><b>${name}</b><small>${sub}</small></button>`).join('')}
-        <div class="quality custom ${s.quality === 'custom' ? 'on' : ''}"><b>Custom</b><small>your mix</small></div></div>
+        <div class="quality custom ${s.quality === 'custom' ? 'on' : ''}"><b>${t('q.custom')}</b><small>your mix</small></div></div>
       <div class="grid2">
         <div>
           <h4>Resolution</h4>
@@ -375,7 +379,7 @@ export class Menu {
 
   private lookTab(): string {
     const s = this.host.studio();
-    const styles: [ArtStyle, string, string][] = [['watercolour', 'Watercolour', 'Ink, washes and paper — the sketchbook'], ['illustrated', 'Illustrated', 'Soft ink over lit colour'], ['realistic', 'Realistic', 'Filmic light, reflections, fog, depth of field']];
+    const styles: [ArtStyle, string, string][] = [['watercolour', t('art.watercolour'), 'Ink, washes and paper — the sketchbook'], ['illustrated', t('art.illustrated'), 'Soft ink over lit colour'], ['realistic', t('art.realistic'), 'Filmic light, reflections, fog, depth of field']];
     const f2 = (v: number): string => v.toFixed(2);
     return `
       <div class="quality-row">${styles.map(([id, name, sub]) => `<button class="quality art-${id} ${s.artStyle === id ? 'on' : ''}" data-art="${id}"><b>${name}</b><small>${sub}</small></button>`).join('')}</div>
@@ -458,6 +462,7 @@ export class Menu {
 
   private accessTab(): string {
     return `
+      <div class="field"><label>${t('menu.language')}</label><div class="lang-row">${this.langButtons()}</div></div>
       <div class="grid2">
         <div>
           ${this.toggle('s.reducedMotion', 'Reduced motion (no line boil, speed lines or camera roll)')}
@@ -490,9 +495,9 @@ export class Menu {
       const best = p.trialBest[`${ch.id}:${handling}`];
       return `<div class="card chapter-card chapter-${ch.id}">
         <div class="kicker">${ch.kicker}</div><div class="hand chapter-name">${ch.name}</div>
-        <div class="chapter-stats">Your best (${handling}): ${best !== undefined ? `${best.toFixed(2)} s` : '—'}</div>
+        <div class="chapter-stats">${t('trial.best', { handling })}: ${best !== undefined ? `${best.toFixed(2)} s` : '—'}</div>
         <ol class="board" data-board="${ch.id}"><li class="muted">Loading the leaderboard…</li></ol>
-        <button class="btn primary" data-trial="${ch.id}">⏱ Start time trial</button>
+        <button class="btn primary" data-trial="${ch.id}">${t('trial.start')}</button>
       </div>`;
     }).join('');
     // Fill the boards when the server answers.
@@ -506,10 +511,14 @@ export class Menu {
         else el.innerHTML = res.entries.map((e) => `<li><b>${escapeHtml(e.name)}</b> <span>${e.time.toFixed(2)} s</span> <small>${escapeHtml(e.vehicle)}</small></li>`).join('');
       });
     }
-    return `<div class="menu-panel wide">${this.header('Time trials')}
+    return `<div class="menu-panel wide">${this.header(t('title.trials'))}
       <p class="menu-hint">One lap from a standing start: no traffic, no tonics. Your inputs are recorded and the server replays them through the same physics — a time only counts if the replay matches. Handling: <b>${handling}</b> (change it in Settings → Driving; each handling model has its own board).</p>
       <div class="chapter-grid">${cards}</div>
     </div>`;
+  }
+
+  private langButtons(): string {
+    return LANGS.map((l) => `<button class="seg-btn ${lang() === l.id ? 'on' : ''}" data-lang="${l.id}">${l.name}</button>`).join('');
   }
 
   private trophiesScreen(): string {
@@ -522,7 +531,7 @@ export class Menu {
       return `<div class="card trophy ${done ? 'done' : ''}"><div class="trophy-icon">${t.icon}</div><div><div class="hand">${t.name}</div><small>${t.text}</small>
         <div class="bar"><i style="width:${Math.round((Math.min(a, b) / b) * 100)}%"></i></div><small>${done ? `Unlocked · +${t.reward} ink` : `${Math.floor(a)} / ${b} · ${t.reward} ink`}</small></div></div>`;
     }).join('');
-    return `<div class="menu-panel wide">${this.header(`Trophies · ${p.data.trophies.length} of ${TROPHIES.length}`)}
+    return `<div class="menu-panel wide">${this.header(t('title.trophies', { n: p.data.trophies.length, total: TROPHIES.length }))}
       <div class="stat-line">🛣 ${km} km · 🏁 ${st.laps ?? 0} laps · ♪ ${st.notes ?? 0} notes · 🪁 best air ${(st.maxAir ?? 0).toFixed(1)} s · 💨 top ${Math.round(st.maxSpeed ?? 0)} km/h · 🙃 ${Math.round(st.upsideDown ?? 0)} s upside down · 📷 ${st.photos ?? 0} photos</div>
       <div class="trophy-grid">${cards}</div>
     </div>`;
@@ -551,6 +560,10 @@ export class Menu {
       else if (d.nav === 'hub') this.host.enterHub();
       else if (d.nav === 'resume') this.host.resume();
       else this.show(d.nav as MenuScreen);
+      return;
+    }
+    if (d.lang) {
+      setLang(d.lang as Lang);
       return;
     }
     if (d.trial) {

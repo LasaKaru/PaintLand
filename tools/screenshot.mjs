@@ -21,13 +21,15 @@ const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const logs = [];
 page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
+// LANG=si|ta|en starts the game in that language.
+if (process.env.LANG_UI) await page.addInitScript((l) => localStorage.setItem('paintland.lang', l), process.env.LANG_UI);
 await page.goto(url);
 await page.waitForFunction(() => window.__paintland, null, { timeout: 90000 });
 await page.waitForTimeout(3000);
 await page.screenshot({ path: `${out}00-splash.png` });
 // STYLE=realistic|illustrated|watercolour, QUALITY=low|medium|high|ultra
 if (process.env.STYLE || process.env.QUALITY) await page.evaluate(([st, q]) => window.__paintland.debugLook(st, q), [process.env.STYLE, process.env.QUALITY]);
-const tag = process.env.STYLE ? `-${process.env.STYLE}` : '';
+const tag = `${process.env.STYLE ? `-${process.env.STYLE}` : ''}${process.env.LANG_UI ? `-${process.env.LANG_UI}` : ''}`;
 
 for (const entry of (process.env.MENUS ?? '').split(',').filter(Boolean)) {
   // "settings/controls" opens a settings tab.

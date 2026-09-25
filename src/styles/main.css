@@ -9,9 +9,10 @@
   --teal: #2f8f86;
   --good: #3f9a52;
   --bad: #c8453a;
-  --hand: 'Permanent Marker', 'Comic Sans MS', cursive;
-  --script: 'Caveat', cursive;
-  --mono: 'Space Mono', ui-monospace, monospace;
+  /* Latin glyphs use the hand-drawn fonts; Sinhala and Tamil fall back to Noto per glyph. */
+  --hand: 'Permanent Marker', 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Comic Sans MS', cursive;
+  --script: 'Caveat', 'Noto Sans Sinhala', 'Noto Sans Tamil', cursive;
+  --mono: 'Space Mono', 'Noto Sans Sinhala', 'Noto Sans Tamil', ui-monospace, monospace;
   --hud-scale: 1;
 }
 
@@ -461,3 +462,9 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .board li span { float: right; font-weight: 700; }
 .board li small { color: var(--ink-soft); margin-left: 6px; }
 .board .muted { list-style: none; margin-left: -22px; color: var(--ink-soft); }
+
+/* Languages */
+.lang-row { display: flex; gap: 0; flex-wrap: wrap; margin-top: 10px; }
+.splash .lang-row { justify-content: center; }
+:root[lang='si'] .menu-item, :root[lang='ta'] .menu-item { font-size: 1.45em; }
+:root[lang='si'] .tab, :root[lang='ta'] .tab { text-transform: none; letter-spacing: 0; }

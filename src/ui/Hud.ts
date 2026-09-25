@@ -110,13 +110,13 @@ export class Hud {
   private tipTimer = 0;
 
   /** A short onboarding tip at the top of the screen (docs/10 §8). */
-  tip(text: string, seconds = 6): void {
+  tip(text: string, seconds = 6, label = 'Tip'): void {
     if (!this.tipEl) {
       this.tipEl = document.createElement('div');
       this.tipEl.className = 'tip-card';
       this.root.appendChild(this.tipEl);
     }
-    this.tipEl.innerHTML = `<b>Tip</b> ${text}`;
+    this.tipEl.innerHTML = `<b>${label}</b> ${text}`;
     this.tipEl.classList.add('show');
     clearTimeout(this.tipTimer);
     this.tipTimer = window.setTimeout(() => this.tipEl?.classList.remove('show'), seconds * 1000);

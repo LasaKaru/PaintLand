@@ -2,8 +2,15 @@ import '@fontsource/permanent-marker';
 import '@fontsource/caveat/700.css';
 import '@fontsource/space-mono/400.css';
 import '@fontsource/space-mono/700.css';
+import '@fontsource/noto-sans-sinhala/400.css';
+import '@fontsource/noto-sans-sinhala/700.css';
+import '@fontsource/noto-sans-tamil/400.css';
+import '@fontsource/noto-sans-tamil/700.css';
 import './styles/main.css';
 import { Game } from './core/Game';
+import { lang, setLang } from './core/i18n';
+
+setLang(lang());
 
 const app = document.getElementById('app');
 if (!app) throw new Error('#app missing');
