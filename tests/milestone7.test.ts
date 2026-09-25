@@ -71,6 +71,23 @@ describe('Free-roam fun: drift, pads, ramps', () => {
     expect(c.grounded).toBe(true);
   });
 
+  it('aimed stunt ramps land a fast car on the target, and a slow one short of it', () => {
+    const run = (speed: number): number => {
+      const c = car();
+      const w = open();
+      w.ramps.push({ x: 0, z: -120, heading: 0, halfWidth: 4, halfLength: 3.5, power: 9, stunt: true, reach: 48 });
+      let landedAt = NaN;
+      c.onLand = () => (landedAt = c.z);
+      // Hold the throttle only up to the chosen speed.
+      for (let t = 0; t < 12 && Number.isNaN(landedAt); t += DT) c.step(DT, { ...drive, throttle: c.v < speed ? 1 : 0 }, w);
+      return landedAt;
+    };
+    const fast = run(26);
+    expect(Math.abs(fast - (-120 - 48))).toBeLessThan(9);
+    const slow = run(15);
+    expect(slow).toBeGreaterThan(-120 - 48 + 9);
+  });
+
   it('a ramp approached sideways does nothing', () => {
     const c = car();
     const w = open();

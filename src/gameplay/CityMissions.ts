@@ -98,7 +98,7 @@ export const CITY_MISSIONS: ChainMission[] = [
   {
     id: 'ss-1', chain: 'stunts', title: 'Over the bus', giver: 'Ravi the stuntman',
     intro: 'Lesson one: hit the pink ramp in the stunt park at speed and land on the yellow circle.',
-    steps: [{ kind: 'stunt', text: 'Land the “Over the bus” jump', targets: [T(-520, 300, 9)], stunt: 'stunt-bus' }],
+    steps: [{ kind: 'stunt', text: 'Land the “Over the bus” jump', targets: [T(-520, 372, 9)], stunt: 'stunt-bus' }],
     reward: { ink: 150 },
   },
   {
@@ -109,8 +109,8 @@ export const CITY_MISSIONS: ChainMission[] = [
   },
   {
     id: 'ss-3', chain: 'stunts', title: 'Lake leap', giver: 'Ravi the stuntman', requires: 'ss-2',
-    intro: 'Final exam: jump the lake from the east ramp. Ravi will be watching. From very far away.',
-    steps: [{ kind: 'stunt', text: 'Land the “Lake leap”', targets: [T(540, -210, 9)], stunt: 'stunt-lake' }],
+    intro: 'Final exam: jump the lake from the west shore ramp — boost hard! Ravi will be watching. From very far away.',
+    steps: [{ kind: 'stunt', text: 'Land the “Lake leap”', targets: [T(570, -300, 9)], stunt: 'stunt-lake' }],
     reward: { ink: 400 },
   },
   // ————— City Secrets —————

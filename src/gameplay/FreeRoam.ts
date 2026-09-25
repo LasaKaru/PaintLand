@@ -28,6 +28,8 @@ export interface Ramp {
   halfLength: number;
   power: number;
   stunt: boolean;
+  /** Metres to the landing spot: the launch is aimed there for fast enough cars. */
+  reach?: number;
 }
 
 export class FreeWorld {
@@ -246,7 +248,8 @@ export class FreeCar {
         const along = -Math.sin(r.heading) * dx - Math.cos(r.heading) * dz;
         const across = Math.cos(r.heading) * dx - Math.sin(r.heading) * dz;
         if (Math.abs(along) < r.halfLength && Math.abs(across) < r.halfWidth && Math.cos(wrapAngle(this.heading - r.heading)) > 0.5) {
-          this.vy = r.power + this.v * 0.18;
+          // Aimed ramps pick the launch that lands on target (up to a limit, so slow cars fall short).
+          this.vy = r.reach ? clamp((T.gravity * r.reach) / (2 * this.v), r.power, r.power * 2.4) : r.power + this.v * 0.18;
           this.grounded = false;
           this.airTime = 0;
           this.lastRamp = r;

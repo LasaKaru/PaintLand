@@ -406,20 +406,22 @@ export class City implements FreeRoamArea {
 
   /** The stunt park: big ramps, a jump over a bus, kickers and pads. */
   private buildStuntPark(): void {
-    const ramp = (id: string, name: string, x: number, z: number, heading: number, power: number, landX: number, landZ: number): void => {
-      const r = { x, z, heading, halfWidth: 4, halfLength: 3.5, power, stunt: true };
+    const ramp = (id: string, name: string, x: number, z: number, heading: number, power: number, reach = 48): void => {
+      const r = { x, z, heading, halfWidth: 4, halfLength: 3.5, power, stunt: true, reach };
+      const landX = x - Math.sin(heading) * reach;
+      const landZ = z - Math.cos(heading) * reach;
       this.world.ramps.push(r);
       this.merge(new ModelKit().box(8, 2.2, 7.5, '#e8559a', { position: [0, 0.3, 0], rotation: [0.32, 0, 0] }).box(8.4, 0.2, 0.4, '#f4d23b', { position: [0, 2.6, -3.6], nightGlow: 1 }).build(0), x, z, heading);
       this.merge(new ModelKit().cylinder(7, 7, 0.1, 24, '#f4d23b', { position: [0, 0.08, 0], nightGlow: 1 }).cylinder(5.5, 5.5, 0.12, 24, '#2b2622', { position: [0, 0.09, 0] }).build(0), landX, landZ);
       this.stunts.push({ id, name, ramp: r, land: { x: landX, z: landZ, r: 9 } });
     };
-    ramp('stunt-bus', 'Over the bus', -520, 420, 0, 9, -520, 300);
-    this.merge(buildBusStop(new Random(4)), -520, 355, Math.PI / 2, 0, 2.2);
-    ramp('stunt-gap', 'Big gap', -420, 200, Math.PI / 2, 11, -560, 200);
-    ramp('stunt-lake', 'Lake leap', 400, -210, -Math.PI / 2, 12, 540, -210);
-    ramp('stunt-plaza', 'Lotus loop', -100, -60, Math.PI, 8, -100, 60);
-    ramp('stunt-pier', 'Beach kicker', 120, 470, Math.PI / 2, 9, 0, 470);
-    ramp('stunt-hill', 'Hill hop', -300, -540, Math.PI / 2, 10, -440, -540);
+    ramp('stunt-bus', 'Over the bus', -520, 420, 0, 9);
+    this.merge(buildBusStop(new Random(4)), -520, 396, Math.PI / 2, 0, 2.2);
+    ramp('stunt-gap', 'Big gap', -420, 200, Math.PI / 2, 11, 60);
+    ramp('stunt-lake', 'Lake leap', 420, -300, -Math.PI / 2, 20, 150);
+    ramp('stunt-plaza', 'Lotus loop', -100, -60, Math.PI, 8);
+    ramp('stunt-pier', 'Beach kicker', 120, 470, Math.PI / 2, 9);
+    ramp('stunt-hill', 'Hill hop', -300, -540, Math.PI / 2, 10);
     this.places.push({ id: 'stuntpark', name: 'the stunt park', x: -480, z: 300 });
   }
 
@@ -432,7 +434,7 @@ export class City implements FreeRoamArea {
       [630, 540, 0, 'The eastern end of the beach'],
       [440, -372, 0, 'Between the elephants'],
       [60, -582, 0, 'Beside the stupa'],
-      [-520, 300, 0, 'Where the bus jump lands'],
+      [-514, 372, 0, 'Where the bus jump lands'],
       [210, -30, 0, 'In a market courtyard'],
       [-400, -400, 0, 'A downtown alley'],
       [560, 400, 0, 'In a garden in the east suburbs'],
