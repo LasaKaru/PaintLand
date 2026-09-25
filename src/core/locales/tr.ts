@@ -158,5 +158,9 @@ const tr: Locale = {
   'brand.visit': 'E · {name} sitesini ziyaret et',
   'brand.advertise': 'Buraya reklam verin',
   'set.analytics': 'Anonim oyun istatistiklerini paylaş',
+  'village.kicker': "Üçüncü merkez",
+  'village.name': "Fener Köyü",
+  'village.poem': "İpek fenerler, bin kapı ve Fener Yolları’na giden yol",
+  'menu.village': "🏮 Fener Köyü",
 };
 export default tr;

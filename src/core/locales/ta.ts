@@ -158,5 +158,9 @@ const ta: Locale = {
   'brand.visit': 'E · {name} பார்வையிடு',
   'brand.advertise': 'இங்கே விளம்பரம் செய்யுங்கள்',
   'set.analytics': 'அநாமதேய விளையாட்டு புள்ளிவிவரங்களைப் பகிர்',
+  'village.kicker': "மூன்றாவது மையம்",
+  'village.name': "விளக்கு கிராமம்",
+  'village.poem': "பட்டு விளக்குகள், ஆயிரம் வாயில்கள், விளக்கு சாலைகளுக்கான பாதை",
+  'menu.village': "🏮 விளக்கு கிராமம்",
 };
 export default ta;

@@ -158,5 +158,9 @@ const fa: Locale = {
   'brand.visit': 'E · بازدید از {name}',
   'brand.advertise': 'تبلیغ شما اینجا',
   'set.analytics': 'اشتراک آمار ناشناس بازی',
+  'village.kicker': "مرکز سوم",
+  'village.name': "دهکده فانوس‌ها",
+  'village.poem': "فانوس‌های ابریشمی، هزار دروازه و راهی به جاده‌های فانوس",
+  'menu.village': "🏮 دهکده فانوس‌ها",
 };
 export default fa;

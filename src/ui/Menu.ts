@@ -43,6 +43,7 @@ export interface MenuHost {
   watchIntro(): void;
   enterHub(): void;
   enterCity(): void;
+  enterVillage(): void;
   startCityMission(id: string): void;
   cancelCityMission(): void;
   /** Id of the open-world mission in progress, if any. */
@@ -236,6 +237,7 @@ export class Menu {
         <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">${t('menu.play', { chapter: ch.name })}</button>
         <button class="menu-item" data-nav="hub">${t('menu.hub')}</button>
         <button class="menu-item" data-nav="city">${t('menu.city')}</button>
+        <button class="menu-item" data-nav="village">${t('menu.village')}</button>
         <button class="menu-item" data-nav="daily">${t('daily.menu')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
@@ -731,6 +733,7 @@ export class Menu {
       } else if (d.nav === 'intro') this.host.watchIntro();
       else if (d.nav === 'hub') this.host.enterHub();
       else if (d.nav === 'city') this.host.enterCity();
+      else if (d.nav === 'village') this.host.enterVillage();
       else if (d.nav === 'resume') this.host.resume();
       else this.show(d.nav as MenuScreen);
       return;

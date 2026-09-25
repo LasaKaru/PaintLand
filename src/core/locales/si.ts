@@ -158,5 +158,9 @@ const si: Locale = {
   'brand.visit': 'E · {name} බලන්න',
   'brand.advertise': 'මෙතැන දැන්වීම් කරන්න',
   'set.analytics': 'නිර්නාමික ක්‍රීඩා සංඛ්‍යාලේඛන බෙදාගන්න',
+  'village.kicker': "තුන්වන නිවහන",
+  'village.name': "පහන් ගම්මානය",
+  'village.poem': "සේද පහන්, දොරටු දහසක් සහ පහන් මාවතට යන පාර",
+  'menu.village': "🏮 පහන් ගම්මානය",
 };
 export default si;

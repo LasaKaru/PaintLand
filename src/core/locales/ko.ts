@@ -158,5 +158,9 @@ const ko: Locale = {
   'brand.visit': 'E · {name} 방문',
   'brand.advertise': '광고 문의',
   'set.analytics': '익명 플레이 통계 공유',
+  'village.kicker': "세 번째 허브",
+  'village.name': "등불 마을",
+  'village.poem': "비단 등불, 천 개의 도리이, 그리고 등불 길로 가는 길",
+  'menu.village': "🏮 등불 마을",
 };
 export default ko;

@@ -271,7 +271,7 @@ export class Hub implements FreeRoamArea {
     const rnd = this.rnd;
     // Painted gateways to each chapter at the ends of the avenues.
     const gates: [number, number, number][] = [[0, -108, 0], [-108, 0, Math.PI / 2], [108, 0, -Math.PI / 2]];
-    // Chapter 4's gate stands in Lantern Village (Hub 3).
+    // Chapter 4's gate stands in Lantern Village (Hub 3), down the western road.
     CHAPTERS.slice(0, gates.length).forEach((ch, i) => {
       const [x, z, yaw] = gates[i];
       const colour = ['#e8559a', '#f08a2e', '#3e9fd8'][i % 3];
@@ -348,6 +348,15 @@ export class Hub implements FreeRoamArea {
     this.put(sign, 104, 26, -Math.PI / 2);
     this.world.circle(104, 26, 0.4);
     this.zones.push({ kind: 'area', label: '🏙 Serendib City', x: 104, z: 40, r: 7, area: 'city', colour: '#2f8f86' });
+    // …and the lantern road west to Lantern Village.
+    const west = new ModelKit()
+      .box(0.3, 4, 0.3, '#7a5a3a', { position: [0, 2, 0] })
+      .box(6, 1.4, 0.2, '#e0432f', { position: [0, 4, 0], nightGlow: 1 })
+      .blob(0.5, '#f4a13b', { position: [0, 2.9, 0.2], scale: [1, 1.3, 1], detail: 1 })
+      .build(0.01);
+    this.put(west, -104, 26, Math.PI / 2);
+    this.world.circle(-104, 26, 0.4);
+    this.zones.push({ kind: 'area', label: '🏮 Lantern Village', x: -104, z: 40, r: 7, area: 'village', colour: '#e0432f' });
     // A kicker ramp on the harbour front and boost pads down the avenue.
     this.world.ramps.push({ x: -40, z: 52, heading: Math.PI / 2, halfWidth: 3, halfLength: 2.2, power: 6, stunt: false });
     this.put(new ModelKit().box(6, 1.3, 4.4, '#e4dccb', { position: [0, 0.15, 0], rotation: [0.3, 0, 0], pattern: Pattern.Planks }).build(0), -40, 52, Math.PI / 2);

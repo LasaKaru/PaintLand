@@ -158,5 +158,9 @@ const pl: Locale = {
   'brand.visit': 'E · Odwiedź {name}',
   'brand.advertise': 'Tu reklama',
   'set.analytics': 'Udostępniaj anonimowe statystyki gry',
+  'village.kicker': "Trzecie centrum",
+  'village.name': "Wioska Lampionów",
+  'village.poem': "Jedwabne lampiony, tysiąc bram i droga na Szlaki Lampionów",
+  'menu.village': "🏮 Wioska Lampionów",
 };
 export default pl;

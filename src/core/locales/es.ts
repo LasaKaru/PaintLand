@@ -158,5 +158,9 @@ const es: Locale = {
   'brand.visit': 'E · Visitar {name}',
   'brand.advertise': 'Anúnciate aquí',
   'set.analytics': 'Compartir estadísticas de juego anónimas',
+  'village.kicker': "Tercer centro",
+  'village.name': "Aldea de los Faroles",
+  'village.poem': "Faroles de seda, mil puertas y el camino a las Rutas de Faroles",
+  'menu.village': "🏮 Aldea de los Faroles",
 };
 export default es;

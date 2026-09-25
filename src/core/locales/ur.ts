@@ -158,5 +158,9 @@ const ur: Locale = {
   'brand.visit': 'E · {name} دیکھیں',
   'brand.advertise': 'یہاں اشتہار دیں',
   'set.analytics': 'گمنام کھیل کے اعداد و شمار شیئر کریں',
+  'village.kicker': "تیسرا مرکز",
+  'village.name': "لالٹین گاؤں",
+  'village.poem': "ریشمی لالٹینیں، ہزار دروازے اور لالٹین راہوں کا راستہ",
+  'menu.village': "🏮 لالٹین گاؤں",
 };
 export default ur;

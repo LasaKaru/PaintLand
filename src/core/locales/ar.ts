@@ -158,5 +158,9 @@ const ar: Locale = {
   'brand.visit': 'E · زيارة {name}',
   'brand.advertise': 'أعلن هنا',
   'set.analytics': 'مشاركة إحصاءات لعب مجهولة الهوية',
+  'village.kicker': "المحور الثالث",
+  'village.name': "قرية الفوانيس",
+  'village.poem': "فوانيس من حرير وألف بوابة والطريق إلى دروب الفوانيس",
+  'menu.village': "🏮 قرية الفوانيس",
 };
 export default ar;

@@ -158,5 +158,9 @@ const nl: Locale = {
   'brand.visit': 'E · {name} bezoeken',
   'brand.advertise': 'Adverteer hier',
   'set.analytics': 'Anonieme speelstatistieken delen',
+  'village.kicker': "Derde knooppunt",
+  'village.name': "Lantaarndorp",
+  'village.poem': "Zijden lantaarns, duizend poorten en de weg naar de Lantaarnwegen",
+  'menu.village': "🏮 Lantaarndorp",
 };
 export default nl;

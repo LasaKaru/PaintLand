@@ -30,6 +30,7 @@ import { PhotoMode } from '../ui/PhotoMode';
 import { GhostPlayer, GhostRecorder, loadGhost, saveGhost } from '../gameplay/Ghost';
 import { checkTrophies } from '../gameplay/Trophies';
 import { Wildlife } from '../world/Wildlife';
+import { Village } from '../world/Village';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
 import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
@@ -42,7 +43,7 @@ import { PHOTO_SUBJECTS, subjectsInFrame, type PhotoSubject } from '../gameplay/
 import { MapView, type MapMarker, type MapState } from '../ui/MapView';
 import { filterChat } from '../net/ChatFilter';
 import { BrandBoards, resetBrandTextures } from '../brand/BrandBoards';
-import { citySpots, hubSpots, routeSpots } from '../brand/BrandSpots';
+import { brandSpotsFor, routeSpots } from '../brand/BrandSpots';
 import { loadBrand, onBrandChange, type BrandLogo } from '../brand/Brand';
 import { clearPainted } from '../brand/Watercolour';
 import { analytics } from '../net/Analytics';
@@ -254,6 +255,7 @@ export class Game {
       watchIntro: () => this.startIntro(),
       enterHub: () => this.enterHub(undefined, 'harbour'),
       enterCity: () => this.enterHub(undefined, 'city'),
+      enterVillage: () => this.enterHub(undefined, 'village'),
       startCityMission: (id) => this.startCityMission(id),
       cancelCityMission: () => this.freeMissions.cancel(),
       cityMission: () => this.freeMissions.mission?.id ?? null,
@@ -440,7 +442,7 @@ export class Game {
 
   private playerInfo(): PlayerInfo {
     const id = this.profile.data.vehicle;
-    return { name: this.profile.data.name, look: this.profile.data.look, vehicle: id, vlook: this.profile.vehicleLook(id), chapter: this.inHub ? (this.area?.id === 'city' ? 'city' : 'hub') : this.world.chapter.id };
+    return { name: this.profile.data.name, look: this.profile.data.look, vehicle: id, vlook: this.profile.vehicleLook(id), chapter: this.inHub ? (this.area && this.area.id !== 'harbour' ? this.area.id : 'hub') : this.world.chapter.id };
   }
 
   private applySettings(): void {
@@ -1745,10 +1747,10 @@ export class Game {
   private areaFor(id: string): FreeRoamArea {
     let area = this.areas.get(id);
     if (area) return area;
-    area = id === 'city' ? new City(this.hud.labels) : new Hub(this.hud.labels);
+    area = id === 'city' ? new City(this.hud.labels) : id === 'village' ? new Village(this.hud.labels) : new Hub(this.hud.labels);
     this.scene.add(area.group);
     // Company and sponsor boards, with solid posts.
-    const spots = id === 'city' ? citySpots() : hubSpots();
+    const spots = brandSpotsFor(id);
     const boards = new BrandBoards(id, spots, id === 'city' ? 7 : 3);
     for (const sp of spots) {
       const yaw = sp.yaw ?? 0;
@@ -1839,7 +1841,15 @@ export class Game {
     this.freeMissions.cancel();
     this.splash = 1;
     this.audio.whoosh();
-    this.enterHub(undefined, areaId);
+    // Arrive at the road back to where we came from, pointing into the new area.
+    const from = this.area?.id;
+    const back = this.areaFor(areaId).zones.find((z) => z.kind === 'area' && z.area === from);
+    if (!back) return this.enterHub(undefined, areaId);
+    const len = Math.hypot(back.x, back.z) || 1;
+    const step = back.r + 5;
+    const x = back.x - (back.x / len) * step;
+    const z = back.z - (back.z / len) * step;
+    this.enterHub({ x, z, heading: Math.atan2(x, z), foot: null, area: areaId }, areaId);
   }
 
   /** Hide the area and show the chapter world again (portals, menu, play). */
@@ -2301,7 +2311,7 @@ export class Game {
       splash: this.splash * 0.8,
       sunDir: this.env.sunDirection,
       sunColor: this.env.sunColour,
-      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.settings.drawDistance) * (area.id === 'city' ? 0.5 : 1),
+      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.settings.drawDistance) * (area.id === 'city' ? 0.5 : area.id === 'village' ? 0.7 : 1),
       flash: this.env.flash,
       dofFocus: 10,
       dofAmount: 0,
@@ -2351,7 +2361,7 @@ export class Game {
 
   /** Board positions in an area (tests): face direction as yaw. */
   debugBrandSpots(id: string): { x: number; z: number; yaw: number }[] {
-    return (id === 'city' ? citySpots() : hubSpots()).map((s) => ({ x: s.x, z: s.z, yaw: s.yaw ?? 0 }));
+    return brandSpotsFor(id).map((s) => ({ x: s.x, z: s.z, yaw: s.yaw ?? 0 }));
   }
 
   debugMap(open: boolean): void {

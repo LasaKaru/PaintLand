@@ -158,5 +158,9 @@ const vi: Locale = {
   'brand.visit': 'E · Ghé thăm {name}',
   'brand.advertise': 'Quảng cáo tại đây',
   'set.analytics': 'Chia sẻ thống kê chơi ẩn danh',
+  'village.kicker': "Trạm thứ ba",
+  'village.name': "Làng Đèn Lồng",
+  'village.poem': "Đèn lồng lụa, nghìn cổng torii và con đường tới Đường Đèn Lồng",
+  'menu.village': "🏮 Làng Đèn Lồng",
 };
 export default vi;

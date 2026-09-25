@@ -158,5 +158,9 @@ const th: Locale = {
   'brand.visit': 'E · เยี่ยมชม {name}',
   'brand.advertise': 'ลงโฆษณาที่นี่',
   'set.analytics': 'แชร์สถิติการเล่นแบบไม่ระบุตัวตน',
+  'village.kicker': "ศูนย์กลางที่สาม",
+  'village.name': "หมู่บ้านโคมไฟ",
+  'village.poem': "โคมไฟผ้าไหม ประตูนับพัน และเส้นทางสู่ถนนโคมไฟ",
+  'menu.village': "🏮 หมู่บ้านโคมไฟ",
 };
 export default th;

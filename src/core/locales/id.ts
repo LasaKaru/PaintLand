@@ -158,5 +158,9 @@ const id: Locale = {
   'brand.visit': 'E · Kunjungi {name}',
   'brand.advertise': 'Pasang iklan di sini',
   'set.analytics': 'Bagikan statistik bermain anonim',
+  'village.kicker': "Pusat ketiga",
+  'village.name': "Desa Lampion",
+  'village.poem': "Lampion sutra, seribu gerbang, dan jalan menuju Jalur Lampion",
+  'menu.village': "🏮 Desa Lampion",
 };
 export default id;

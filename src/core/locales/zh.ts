@@ -158,5 +158,9 @@ const zh: Locale = {
   'brand.visit': 'E · 访问 {name}',
   'brand.advertise': '在此投放广告',
   'set.analytics': '分享匿名游戏统计',
+  'village.kicker': "第三枢纽",
+  'village.name': "灯笼村",
+  'village.poem': "丝绸灯笼、千座鸟居，以及通往灯笼之路的道路",
+  'menu.village': "🏮 灯笼村",
 };
 export default zh;

@@ -158,5 +158,9 @@ const de: Locale = {
   'brand.visit': 'E · {name} besuchen',
   'brand.advertise': 'Hier werben',
   'set.analytics': 'Anonyme Spielstatistiken teilen',
+  'village.kicker': "Dritter Knotenpunkt",
+  'village.name': "Laternendorf",
+  'village.poem': "Seidenlaternen, tausend Tore und der Weg zu den Laternenstraßen",
+  'menu.village': "🏮 Laternendorf",
 };
 export default de;

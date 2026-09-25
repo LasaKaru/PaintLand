@@ -158,5 +158,9 @@ const ja: Locale = {
   'brand.visit': 'E · {name} を見る',
   'brand.advertise': '広告募集中',
   'set.analytics': '匿名のプレイ統計を送信する',
+  'village.kicker': "第三のハブ",
+  'village.name': "ランタン村",
+  'village.poem': "絹の提灯、千本の鳥居、そしてランタンロードへの道",
+  'menu.village': "🏮 ランタン村",
 };
 export default ja;

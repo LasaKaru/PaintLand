@@ -27,6 +27,8 @@ export const PHOTO_SUBJECTS: PhotoSubject[] = [
   { id: 'busjump', area: 'city', name: 'The bus jump', icon: '🚌', x: -520, y: 2, z: 355, range: 70, ink: 60 },
   { id: 'skyline', area: 'city', name: 'The Fort skyline', icon: '🏙', x: -160, y: 30, z: -200, range: 700, ink: 70 },
   { id: 'fountain', area: 'harbour', name: 'The harbour fountain', icon: '⛲', x: 0, y: 2, z: 0, range: 50, ink: 40 },
+  { id: 'pagoda', area: 'village', name: 'The red pagoda', icon: '🏯', x: 45, y: 10, z: -45, range: 110, ink: 60 },
+  { id: 'torii', area: 'village', name: 'The thousand gates', icon: '⛩', x: 0, y: 4, z: -60, range: 70, ink: 60 },
   { id: 'harbour-light', area: 'harbour', name: 'The harbour lighthouse', icon: '🗼', x: 60, y: 8, z: 114, range: 140, ink: 40 },
   { id: 'perahera', area: 'city', name: 'The night perahera', icon: '🎆', x: 0, y: 3, z: 0, range: 60, ink: 150 },
 ];

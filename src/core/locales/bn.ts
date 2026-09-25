@@ -158,5 +158,9 @@ const bn: Locale = {
   'brand.visit': 'E · {name} দেখুন',
   'brand.advertise': 'এখানে বিজ্ঞাপন দিন',
   'set.analytics': 'বেনামি খেলার পরিসংখ্যান শেয়ার করুন',
+  'village.kicker': "তৃতীয় কেন্দ্র",
+  'village.name': "লণ্ঠন গ্রাম",
+  'village.poem': "রেশমি লণ্ঠন, হাজার তোরণ আর লণ্ঠন পথের দিকে রাস্তা",
+  'menu.village': "🏮 লণ্ঠন গ্রাম",
 };
 export default bn;

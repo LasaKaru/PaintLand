@@ -158,5 +158,9 @@ const sw: Locale = {
   'brand.visit': 'E · Tembelea {name}',
   'brand.advertise': 'Tangaza hapa',
   'set.analytics': 'Shiriki takwimu za mchezo bila majina',
+  'village.kicker': "Kitovu cha tatu",
+  'village.name': "Kijiji cha Taa",
+  'village.poem': "Taa za hariri, malango elfu, na njia ya kwenda Barabara za Taa",
+  'menu.village': "🏮 Kijiji cha Taa",
 };
 export default sw;

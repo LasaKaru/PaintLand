@@ -16,8 +16,8 @@ export const LIMITS = {
 
 const MODES = new Set(['drive', 'foot']);
 
-/** Free-roam areas by chapter id → half-width in metres (Harbour Town, Serendib City). */
-export const FREE_ROAM = { hub: 130, city: 660 };
+/** Free-roam areas by chapter id → half-width in metres (Harbour Town, Serendib City, Lantern Village). */
+export const FREE_ROAM = { hub: 130, city: 660, village: 130 };
 
 const finite = (v) => typeof v === 'number' && Number.isFinite(v);
 

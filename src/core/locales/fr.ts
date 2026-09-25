@@ -158,5 +158,9 @@ const fr: Locale = {
   'brand.visit': 'E · Visiter {name}',
   'brand.advertise': 'Votre pub ici',
   'set.analytics': 'Partager des statistiques de jeu anonymes',
+  'village.kicker': "Troisième village",
+  'village.name': "Village des Lanternes",
+  'village.poem': "Lanternes de soie, mille portiques et la route des Routes des Lanternes",
+  'menu.village': "🏮 Village des Lanternes",
 };
 export default fr;

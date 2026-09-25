@@ -158,5 +158,9 @@ const ru: Locale = {
   'brand.visit': 'E · Открыть {name}',
   'brand.advertise': 'Здесь может быть ваша реклама',
   'set.analytics': 'Отправлять анонимную статистику игры',
+  'village.kicker': "Третий хаб",
+  'village.name': "Деревня фонарей",
+  'village.poem': "Шёлковые фонари, тысяча ворот и путь к Дорогам фонарей",
+  'menu.village': "🏮 Деревня фонарей",
 };
 export default ru;

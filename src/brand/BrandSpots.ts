@@ -68,3 +68,20 @@ export function routeSpots(path: RoadPath): BoardSpot[] {
   }
   return out;
 }
+
+/** Lantern Village: the plaza corners, the waterfront and the torii avenue. */
+export function villageSpots(): BoardSpot[] {
+  const toward = (x: number, z: number, tx: number, tz: number, style: BoardSpot['style'] = 'billboard'): BoardSpot => ({ x, z, yaw: Math.atan2(tx - x, tz - z), style });
+  return [
+    toward(-14, 16, 0, 0),
+    toward(14, 16, 0, 0),
+    toward(-70, 56, -70, 62, 'banner'),
+    toward(70, 56, 70, 62, 'banner'),
+    toward(-12, -14, 0, -14),
+  ];
+}
+
+/** Board spots for a free-roam area by id. */
+export function brandSpotsFor(id: string): BoardSpot[] {
+  return id === 'city' ? citySpots() : id === 'village' ? villageSpots() : hubSpots();
+}

@@ -158,5 +158,9 @@ const hi: Locale = {
   'brand.visit': 'E · {name} देखें',
   'brand.advertise': 'यहाँ विज्ञापन दें',
   'set.analytics': 'अनाम खेल आँकड़े साझा करें',
+  'village.kicker': "तीसरा केंद्र",
+  'village.name': "लालटेन गाँव",
+  'village.poem': "रेशमी लालटेनें, हज़ार द्वार, और लालटेन राहों की ओर रास्ता",
+  'menu.village': "🏮 लालटेन गाँव",
 };
 export default hi;
