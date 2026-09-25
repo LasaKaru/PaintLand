@@ -19,7 +19,7 @@ export function serverHttpUrl(): string {
   } catch {
     /* storage blocked */
   }
-  const base = ws || `ws://${location.hostname || 'localhost'}:8787`;
+  const base = ws || import.meta.env.VITE_SERVER_WS || `ws://${location.hostname || 'localhost'}:8787`;
   return base.replace(/^ws(s?):\/\//, 'http$1://').replace(/\/$/, '');
 }
 

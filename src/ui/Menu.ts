@@ -435,7 +435,7 @@ export class Menu {
     const n = this.host.netStatus();
     const url = new URL(window.location.href);
     const room = n.room || url.searchParams.get('room') || randomRoom();
-    const serverSaved = localStorageGet('paintland.server') ?? 'ws://localhost:8787';
+    const serverSaved = localStorageGet('paintland.server') ?? (import.meta.env.VITE_SERVER_WS || 'ws://localhost:8787');
     return `<div class="menu-panel">${this.header('Multiplayer')}
       <p>Play together in the same painted world: see each other drive and walk, wave, and chat.</p>
       <div class="field"><label>Your name</label><input class="text-input" maxlength="20" value="${escapeHtml(this.host.profile.data.name)}" data-text="name"></div>

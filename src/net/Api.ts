@@ -8,9 +8,9 @@ const KEY = 'paintland.api';
 
 export function apiBase(): string {
   try {
-    return (localStorage.getItem(KEY) ?? '').replace(/\/$/, '');
+    return (localStorage.getItem(KEY) || import.meta.env.VITE_API_BASE || '').replace(/\/$/, '');
   } catch {
-    return '';
+    return import.meta.env.VITE_API_BASE ?? '';
   }
 }
 

@@ -84,7 +84,39 @@ Also: **M** map (free roam) · **P** photo mode · **.** / **,** gear up / down 
 
 Every key can be rebound in **Menu → Settings → Controls**. On phones and tablets, touch controls appear on the first touch: a floating stick, GO / BRAKE pedals, HOP, BOOST, DRIFT, E, camera and photo buttons, and drag-to-look.
 
-## What is new in milestone 9 · "Presented by HelaO2"
+## Releases and deployment (CI/CD)
+
+Every push to GitHub runs these workflows (`.github/workflows/`):
+
+| Workflow | When | What it does |
+| --- | --- | --- |
+| **CI** | every push and pull request | Typecheck, 116 unit tests, web and server builds, a live smoke test of the server (game page, branding, a refused admin login, analytics, leaderboard), the desktop shell's security tests, and `npm audit` for the game and the desktop app |
+| **CodeQL** | pushes to `main`, pull requests, weekly | GitHub's static security analysis (extended queries) over the game, server and desktop code |
+| **Web deploy and previews** | pushes to `main`; pull requests | Publishes the game to GitHub Pages. Every pull request from this repository gets its own preview at `…/previews/pr-<number>/`, linked in a comment and deleted when the pull request closes. Forks never get a write token |
+| **Desktop app (Windows)** | every push (and `v*` tags) | Builds **PaintLand-Setup-x.y.z.exe** (installer) and **PaintLand-Portable-x.y.z.exe**, checks the security fuses in the built exe, writes `SHA256SUMS.txt`, and signs build provenance. Download them from the run's **Artifacts**. A tag like `v1.0.0` also creates a **GitHub Release** with the files |
+| **Server image** | pushes to `main`, tags | Builds `ghcr.io/lasakaru/paintland` (the one-process server: game + multiplayer + leaderboard + admin + analytics) with an SBOM and provenance |
+| **Dependabot** | weekly | Update pull requests for npm (game and desktop), GitHub Actions and the Docker base image |
+
+**One-time setup on GitHub**
+1. Settings → Pages → *Deploy from a branch* → `gh-pages` / root (the first `main` deploy creates the branch).
+2. If you host the game server, add the repository **variables** `PAINTLAND_API_BASE` (e.g. `https://play.helao2.com`) and `PAINTLAND_SERVER_WS` (e.g. `wss://play.helao2.com`). The web and desktop builds then use it for the admin panel, branding, sponsors and multiplayer.
+3. Optional, recommended: code signing. Buy a Windows code-signing certificate and add the **secrets** `WIN_CSC_LINK` (the .pfx, base64-encoded) and `WIN_CSC_KEY_PASSWORD`. The desktop workflow then signs the exe automatically. Unsigned exes work, but Windows SmartScreen warns "unknown publisher" until they are signed.
+
+**Release a version:** `git tag v1.0.0 && git push origin v1.0.0` publishes the installer, the portable exe and the checksums as a GitHub Release.
+
+**Check a download:** compare `certutil -hashfile PaintLand-Setup-1.0.0.exe SHA256` with `SHA256SUMS.txt`, or run `gh attestation verify PaintLand-Setup-1.0.0.exe -R lasakaru/paintland` to prove it was built by this repository's workflow.
+
+**Host the server:** `docker run -d -p 8787:8787 -v paintland-data:/data -e ADMIN_PASSWORD='a long passphrase' ghcr.io/lasakaru/paintland:main`. Put it behind HTTPS (Caddy, nginx or a cloud load balancer). The image runs as a non-root user and keeps its data in `/data`.
+
+**How the desktop app is locked down** (`desktop/`):
+- The game runs in a sandboxed, context-isolated renderer with no Node.js.
+- It is served from a private `app://` scheme out of the ASAR archive, never `file://`, with a strict Content-Security-Policy: no inline or eval'd scripts, no plugins, no framing, no form posts.
+- It cannot navigate away, open windows or attach webviews. Links open in the system browser, and only `https:` and `mailto:`.
+- Every permission request is refused except pointer lock, fullscreen and copying to the clipboard.
+- There is a single instance, no menu and no DevTools in release builds.
+- Electron fuses are flipped in the exe: no RunAsNode, no `NODE_OPTIONS`, no `--inspect`, ASAR integrity checking, app loaded only from the ASAR, and cookie encryption on.
+
+ · "Presented by HelaO2"
 
 | System | Status | Where |
 | --- | --- | --- |

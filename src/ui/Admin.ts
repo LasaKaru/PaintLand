@@ -528,7 +528,7 @@ function lineChart(points: { x: string; y: number }[], unit: string): string {
   const Y = (v: number): number => T + (1 - v / max) * (H - T - B);
   const grid = [0, 0.5, 1].map((k) => `<line x1="${L}" x2="${W - R}" y1="${Y(max * k)}" y2="${Y(max * k)}" class="grid"/><text x="${L - 6}" y="${Y(max * k) + 4}" text-anchor="end" class="axis">${+(max * k).toFixed(2)}</text>`).join('');
   const labels = points
-    .map((p, i) => (i % 7 === 0 || i === points.length - 1 ? `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" class="axis">${p.x.slice(5)}</text>` : ''))
+    .map((p, i) => ((i % 7 === 0 && points.length - 1 - i >= 4) || i === points.length - 1 ? `<text x="${X(i)}" y="${H - 8}" text-anchor="middle" class="axis">${p.x.slice(5)}</text>` : ''))
     .join('');
   const path = points.map((p, i) => `${i ? 'L' : 'M'}${X(i).toFixed(1)},${Y(p.y).toFixed(1)}`).join(' ');
   const area = `${path} L${X(points.length - 1)},${Y(0)} L${X(0)},${Y(0)} Z`;

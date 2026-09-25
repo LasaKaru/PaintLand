@@ -1752,7 +1752,7 @@ export class Game {
     const boards = new BrandBoards(id, spots, id === 'city' ? 7 : 3);
     for (const sp of spots) {
       const yaw = sp.yaw ?? 0;
-      const half = (sp.style === 'banner' ? 2.4 : 1.9) * (sp.scale ?? 1);
+      const half = (sp.style === 'banner' ? 2.3 : 1.87) * (sp.scale ?? 1);
       for (const k of [-1, 1]) area.world.circle(sp.x + Math.cos(yaw) * half * k, sp.z - Math.sin(yaw) * half * k, 0.35);
     }
     if (id === 'city') boards.addBlimp(-100, -150, 240, 75);

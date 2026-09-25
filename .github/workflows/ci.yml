@@ -1,14 +1,25 @@
+# Every push and pull request: typecheck, tests, builds, a live server smoke test and dependency audits.
 name: CI
 
 on:
   push:
   pull_request:
 
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
-  check:
+  game:
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
       - uses: actions/setup-node@v4
         with:
           node-version: 22
@@ -17,3 +28,47 @@ jobs:
       - run: npm run typecheck
       - run: npm test
       - run: npm run build
+      - run: npm run build:server
+      - name: Server smoke test (game, admin API, analytics, leaderboard)
+        run: |
+          DATA_DIR="$RUNNER_TEMP/data" node server/relay.mjs > "$RUNNER_TEMP/relay.log" 2>&1 &
+          for i in $(seq 1 30); do curl -sf http://localhost:8787/api/config > /dev/null && break; sleep 0.5; done
+          curl -sf http://localhost:8787/ | grep -q 'id="app"'
+          curl -sf http://localhost:8787/api/config | grep -q '"company"'
+          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST http://localhost:8787/api/admin/login -d '{"email":"nobody@example.com","password":"nope"}')
+          test "$code" = 401
+          code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8787/api/admin/stats)
+          test "$code" = 401
+          curl -sf -X POST http://localhost:8787/api/analytics -d '{"pid":"ci-runner-0001","events":[{"type":"session","data":{"lang":"en"}}]}' | grep -q '"ok":true'
+          curl -sf "http://localhost:8787/leaderboard?chapter=sketch" | grep -q '"enabled":true'
+          cat "$RUNNER_TEMP/relay.log"
+      - name: Dependency audit (runtime dependencies)
+        run: npm audit --omit=dev --audit-level=high
+      - uses: actions/upload-artifact@v4
+        with:
+          name: paintland-web
+          path: dist
+          retention-days: 7
+
+  desktop-shell:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        working-directory: desktop
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: desktop/package-lock.json
+      - run: npm ci
+        env:
+          ELECTRON_SKIP_BINARY_DOWNLOAD: '1'
+      - name: Security unit tests (app:// paths, links, CSP)
+        run: npm test
+      - name: Dependency audit
+        run: npm audit --audit-level=high

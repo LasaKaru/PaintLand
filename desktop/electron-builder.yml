@@ -1,0 +1,39 @@
+# Windows installer (NSIS) and a portable .exe for PaintLand.
+appId: com.helao2.paintland
+productName: PaintLand
+copyright: Copyright © HelaO2
+directories:
+  output: release
+  buildResources: build
+files:
+  - main.cjs
+  - preload.cjs
+  - security.cjs
+  - app/**
+  - "!**/*.map"
+asar: true
+# No auto-update feed: updates come as new signed installers from GitHub Releases.
+publish: null
+afterPack: ./fuses.cjs
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+    - target: portable
+      arch: [x64]
+  icon: build/icon.png
+  # Code signing: set the WIN_CSC_LINK (base64 .pfx) and WIN_CSC_KEY_PASSWORD
+  # secrets in GitHub; electron-builder signs automatically when they exist.
+  signtoolOptions:
+    signingHashAlgorithms: [sha256]
+    rfc3161TimeStampServer: http://timestamp.digicert.com
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  createDesktopShortcut: true
+  createStartMenuShortcut: true
+  shortcutName: PaintLand
+  artifactName: PaintLand-Setup-${version}.${ext}
+portable:
+  artifactName: PaintLand-Portable-${version}.${ext}

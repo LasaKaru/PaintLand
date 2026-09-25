@@ -6,3 +6,6 @@ dist/
 tools/out/
 dist-server/
 server/data/
+desktop/node_modules/
+desktop/app/
+desktop/release/

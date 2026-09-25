@@ -5,7 +5,7 @@ import { brand, logoPool, pickLogo, type BrandLogo } from './Brand';
 import { paintCta, paintedLogo } from './Watercolour';
 import { analytics } from '../net/Analytics';
 
-export type BoardStyle = 'billboard' | 'banner';
+export type BoardStyle = 'billboard' | 'banner' | 'gantry';
 
 /** Where a board stands: position, and the direction its face looks (a yaw, or a full basis for tilted roads). */
 export interface BoardSpot {
@@ -16,6 +16,8 @@ export interface BoardSpot {
   basis?: THREE.Matrix4;
   style?: BoardStyle;
   scale?: number;
+  /** Gantries: distance from the road centre to each post. */
+  span?: number;
 }
 
 interface Board {
@@ -26,9 +28,10 @@ interface Board {
   seen: number;
   key: string;
   size: [number, number];
+  style: BoardStyle;
 }
 
-const TEX_SIZE: Record<BoardStyle | 'blimp', [number, number]> = { billboard: [512, 256], banner: [512, 192], blimp: [1024, 256] };
+const TEX_SIZE: Record<BoardStyle | 'blimp', [number, number]> = { billboard: [512, 256], banner: [512, 192], gantry: [640, 224], blimp: [1024, 256] };
 const textures = new Map<string, Promise<THREE.Texture | null>>();
 
 /** A watercolour texture for a logo at a board size (shared between boards). */
@@ -83,10 +86,19 @@ export class BrandBoards {
   private addBoard(spot: BoardSpot, i: number): void {
     const style = spot.style ?? 'billboard';
     const s = spot.scale ?? 1;
-    const [w, h] = style === 'billboard' ? [5.2 * s, 2.6 * s] : [4.4 * s, 1.65 * s];
-    const lift = style === 'billboard' ? 2.6 * s : 2.2 * s;
+    const span = spot.span ?? 6;
+    const [w, h] = style === 'billboard' ? [5.2 * s, 2.6 * s] : style === 'gantry' ? [Math.min(11, span * 1.3), Math.min(11, span * 1.3) * 0.35] : [4.4 * s, 1.65 * s];
+    const lift = style === 'billboard' ? 2.6 * s : style === 'gantry' ? 5.4 : 2.2 * s;
     const kit = new ModelKit();
-    if (style === 'billboard') {
+    if (style === 'gantry') {
+      // An arch over the road: two posts at the verges, a beam, the painted banner hanging from it.
+      for (const sx of [-1, 1]) {
+        kit.cylinder(0.14, 0.18, lift + h + 0.4, 6, '#7a5a3a', { position: [sx * span, (lift + h + 0.4) / 2, 0] });
+        kit.cylinder(0.02, 0.3, 0.7, 4, ['#d8463a', '#f4a13b'][i % 2], { position: [sx * span, lift + h + 0.75, 0], rotation: [0, 0, Math.PI] });
+      }
+      kit.box(span * 2 + 0.4, 0.22, 0.22, '#9a6a3a', { position: [0, lift + h + 0.25, 0] });
+      kit.box(w + 0.3, 0.12, 0.3, '#f4d23b', { position: [0, lift - 0.08, 0], nightGlow: 1 });
+    } else if (style === 'billboard') {
       for (const sx of [-1, 1]) kit.cylinder(0.12 * s, 0.14 * s, lift + h, 6, '#7a5a3a', { position: [sx * w * 0.36, (lift + h) / 2, 0] });
       kit.box(w + 0.35 * s, h + 0.35 * s, 0.16, '#9a6a3a', { position: [0, lift + h / 2, 0] });
       kit.box(w + 0.5 * s, 0.14 * s, 0.4, '#f4d23b', { position: [0, lift + h + 0.24 * s, 0], nightGlow: 1 });
@@ -119,7 +131,7 @@ export class BrandBoards {
     }
     this.group.add(root);
     root.updateMatrixWorld(true);
-    this.boards.push({ root, faces, centre: new THREE.Vector3(0, lift + h / 2, 0), logo: null, seen: 0, key: `${this.area}:${i}`, size: [w, h] });
+    this.boards.push({ root, faces, centre: new THREE.Vector3(0, lift + h / 2, 0), logo: null, seen: 0, key: `${this.area}:${i}`, size: [w, h], style });
   }
 
   /** A paper blimp towing a long banner in slow circles (good for the company logo). */
@@ -147,7 +159,7 @@ export class BrandBoards {
     const line = new ModelKit().box(0.05, 0.05, 11, '#2b2622', { position: [0, -0.8, 14] }).build(0);
     root.add(new THREE.Mesh(line, this.frameMaterial));
     this.group.add(root);
-    const banner: Board = { root, faces, centre: new THREE.Vector3(0, -1.5, 22), logo: null, seen: 0, key: `${this.area}:blimp`, size: [bw, bh] };
+    const banner: Board = { root, faces, centre: new THREE.Vector3(0, -1.5, 22), logo: null, seen: 0, key: `${this.area}:blimp`, size: [bw, bh], style: 'banner' };
     this.blimp = { root, banner, radius, height, cx, cz, speed: 0.022 };
   }
 
@@ -177,7 +189,7 @@ export class BrandBoards {
         }),
       );
     };
-    for (const b of this.boards) assign(b, b.size[1] / b.size[0] < 0.45 ? 'banner' : 'billboard', pickLogo(pool, rand()));
+    for (const b of this.boards) assign(b, b.style, pickLogo(pool, rand()));
     if (this.blimp) {
       // The blimp flies the company banner when there is one.
       const company = pool.find((l) => l.kind === 'company');
@@ -201,7 +213,7 @@ export class BrandBoards {
     for (const b of all) {
       if (!b.logo || b.logo.kind === 'cta') continue;
       const p = _v.copy(b.centre).applyMatrix4(b.root.matrixWorld);
-      const far = b === this.blimp?.banner ? 260 : 70;
+      const far = b === this.blimp?.banner ? 260 : b.style === 'gantry' ? 110 : 70;
       if (p.distanceTo(player) > far) {
         b.seen = 0;
         continue;

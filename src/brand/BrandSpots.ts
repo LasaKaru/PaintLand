@@ -28,7 +28,7 @@ export function citySpots(): BoardSpot[] {
       for (const [sx, sz] of [[1, 1], [-1, -1], [1, -1], [-1, 1]]) {
         const bx = x + sx * 10.5;
         const bz = z + sz * 10.5;
-        corners.push({ x: bx, z: bz, yaw: Math.atan2(x - bx, z - bz), style: 'billboard' });
+        corners.push({ x: bx, z: bz, yaw: Math.atan2(x - bx, z - bz), style: 'billboard', scale: 1.4 });
       }
     }
   const picked = shuffled(corners, 2026).slice(0, 30);
@@ -50,21 +50,21 @@ export function hubSpots(): BoardSpot[] {
 }
 
 /**
- * Chapter roads: a board every ~700 m on the left verge, facing the road and
- * following its tilt (skipped on walls, loops and ceilings).
+ * Chapter roads: a banner arch over the road every ~700 m, facing oncoming
+ * drivers (skipped where the road climbs walls, loops or runs upside down).
  */
 export function routeSpots(path: RoadPath): BoardSpot[] {
   const out: BoardSpot[] = [];
   const f = createFrame();
   const m = new THREE.Matrix4();
-  for (let s = 220; s < path.length - 100; s += 700) {
+  const back = new THREE.Vector3();
+  for (let s = 260; s < path.length - 100; s += 700) {
     path.sample(s, f);
-    if (f.up.y < 0.9) continue;
-    const off = f.width / 2 + f.plaza + 3.2;
-    const p = f.position.clone().addScaledVector(f.right, -off);
-    // Local +z (the face) points along `right`, toward the road from the left verge.
-    m.makeBasis(f.tangent, f.up, f.right);
-    out.push({ x: p.x, y: p.y, z: p.z, basis: m.clone(), style: out.length % 3 === 2 ? 'banner' : 'billboard', scale: 1.2 });
+    if (f.up.y < 0.92) continue;
+    // Local x across the road, y up, +z (the face) back toward the driver.
+    back.copy(f.tangent).negate();
+    m.makeBasis(f.right, f.up, back);
+    out.push({ x: f.position.x, y: f.position.y, z: f.position.z, basis: m.clone(), style: 'gantry', span: f.width / 2 + 0.8 });
   }
   return out;
 }
