@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { paintShared } from './PaintMaterial';
 
 const mrtHeader = /* glsl */ `
 layout(location = 0) out highp vec4 gColor;
@@ -21,6 +22,8 @@ export const skyUniforms = {
   uNight: { value: 0 },
   uTime: { value: 0 },
   uCloudCover: { value: 0.5 },
+  uRealism: paintShared.uRealism,
+  uFlash: paintShared.uFlash,
 };
 
 /** Painted sky dome: gradient, brushy clouds with lavender undersides, sun, stars. */
@@ -41,30 +44,47 @@ export function createSky(): THREE.Mesh {
       ${mrtHeader}
       uniform vec3 uTop; uniform vec3 uHorizon; uniform vec3 uSunDirWorld; uniform vec3 uSunColor;
       uniform vec3 uCloudLit; uniform vec3 uCloudShade; uniform float uNight; uniform float uTime; uniform float uCloudCover;
+      uniform float uRealism; uniform float uFlash;
       varying vec3 vDir;
       void main() {
         vec3 d = normalize(vDir);
         float h = clamp(d.y, -0.2, 1.0);
-        vec3 col = mix(uHorizon, uTop, smoothstep(-0.02, 0.32, h));
-        // Wash banding like layered watercolour.
-        col *= 0.97 + 0.03 * smoothstep(0.4, 0.6, fract(h * 5.0 + fbm(d.xz * 3.0) * 0.6));
-
-        // Sun disc and halo.
         float sd = max(dot(d, uSunDirWorld), 0.0);
-        col = mix(col, uSunColor, smoothstep(0.9975, 0.999, sd) * (1.0 - uNight * 0.3));
-        col += uSunColor * pow(sd, 18.0) * 0.18;
+        // Painted: flat washes with banding.
+        vec3 paint = mix(uHorizon, uTop, smoothstep(-0.02, 0.32, h));
+        paint *= 0.97 + 0.03 * smoothstep(0.4, 0.6, fract(h * 5.0 + fbm(d.xz * 3.0) * 0.6));
+        paint = mix(paint, uSunColor, smoothstep(0.9975, 0.999, sd) * (1.0 - uNight * 0.3));
+        paint += uSunColor * pow(sd, 18.0) * 0.18;
+        // Realistic: deeper zenith, bright hazy horizon, Mie glow around the sun, HDR disc.
+        vec3 zenith = uTop * vec3(0.78, 0.88, 1.0);
+        vec3 real = mix(uHorizon * 1.04, zenith, pow(smoothstep(-0.03, 0.85, h), 0.55));
+        real = mix(real, uHorizon * 0.8 + uSunColor * 0.2, (1.0 - smoothstep(0.0, 0.12, abs(h))) * 0.35);
+        real += uSunColor * (pow(sd, 6.0) * 0.18 + pow(sd, 48.0) * 0.45) * (1.0 - uNight * 0.7);
+        real += uSunColor * smoothstep(0.9993, 0.9997, sd) * 5.0 * (1.0 - uNight * 0.85);
+        vec3 col = mix(paint, real, uRealism);
 
         // Clouds on a flattened dome.
         vec2 p = d.xz / max(d.y + 0.08, 0.05) * 0.9 + vec2(uTime * 0.004, 0.0);
         float c = fbm(p * 0.8);
-        float cover = smoothstep(0.62 - uCloudCover * 0.25, 0.8 - uCloudCover * 0.2, c);
-        float shade = smoothstep(0.35, 0.9, fbm(p * 0.8 + vec2(0.06, 0.09)));
-        vec3 cloud = mix(uCloudLit, uCloudShade, shade * 0.8);
+        float lo = 0.62 - uCloudCover * 0.25;
+        float hi = 0.8 - uCloudCover * 0.2;
+        float cover = smoothstep(lo, mix(hi, hi + 0.12, uRealism), c);
         float fade = smoothstep(0.0, 0.18, d.y);
-        col = mix(col, cloud, cover * fade);
-        // Ink-ish cloud rims.
+        float shade = smoothstep(0.35, 0.9, fbm(p * 0.8 + vec2(0.06, 0.09)));
+        vec3 cloudPaint = mix(uCloudLit, uCloudShade, shade * 0.8);
+        // Realistic clouds: thicker = darker underneath, lit toward the sun, silver lining at thin edges.
+        vec2 toSun = normalize(uSunDirWorld.xz + 1e-4) * 0.08;
+        float sunward = fbm(p * 0.8 + toSun) - c;
+        float thick = smoothstep(lo, hi + 0.25, c);
+        vec3 cloudReal = mix(uCloudLit * 1.08, uCloudShade * 0.82, thick * 0.75);
+        cloudReal *= 1.0 - clamp(sunward * 2.5, -0.25, 0.35);
+        cloudReal += uSunColor * pow(sd, 10.0) * (1.0 - thick) * 0.9;
+        cloudReal = mix(cloudReal, cloudReal * 0.55, smoothstep(0.6, 1.0, uCloudCover) * thick);
+        col = mix(col, mix(cloudPaint, cloudReal, uRealism), cover * fade);
+        // Ink-ish cloud rims (painted look only).
         float rim = smoothstep(0.02, 0.0, abs(c - (0.66 - uCloudCover * 0.22))) * fade;
-        col = mix(col, uCloudShade * 0.8, rim * 0.35);
+        col = mix(col, uCloudShade * 0.8, rim * 0.35 * (1.0 - uRealism));
+        col += vec3(0.85, 0.9, 1.0) * uFlash * (0.6 + cover);
 
         // Stars at night.
         vec2 sp = d.xz / max(d.y, 0.1) * 60.0;
@@ -92,6 +112,9 @@ export const waterUniforms = {
   uTime: { value: 0 },
   uNight: skyUniforms.uNight,
   uRain: { value: 0 },
+  uRealism: paintShared.uRealism,
+  uTop: skyUniforms.uTop,
+  uHorizon: skyUniforms.uHorizon,
 };
 
 /** The painted sea: flat teal with scrolling scribble ripples and foam doodles. */
@@ -112,9 +135,13 @@ export function createWater(): THREE.Mesh {
     fragmentShader: /* glsl */ `
       ${mrtHeader}
       uniform vec3 uDeep; uniform vec3 uShallow; uniform vec3 uFoam; uniform vec3 uSunDirWorld; uniform vec3 uSunColor;
-      uniform float uTime; uniform float uNight; uniform float uRain;
+      uniform float uTime; uniform float uNight; uniform float uRain; uniform float uRealism;
+      uniform vec3 uTop; uniform vec3 uHorizon;
       varying vec3 vWorld;
       varying vec3 vViewNormal;
+      float waves(vec2 p) {
+        return fbm(p * 0.045 + vec2(uTime * 0.05, uTime * 0.03)) * 1.2 + vnoise(p * 0.35 + vec2(-uTime * 0.4, uTime * 0.25)) * 0.22;
+      }
       void main() {
         vec2 p = vWorld.xz;
         float dist = length(vWorld - cameraPosition);
@@ -148,7 +175,30 @@ export function createWater(): THREE.Mesh {
         col += uSunColor * glint * sparkle * 0.8 * (1.0 - uNight);
 
         col *= mix(1.0, 0.45, uNight);
-        gColor = vec4(col, glint * sparkle * 0.3);
+
+        // Realistic sea: wave normals, Fresnel sky reflection, sun highlight.
+        float bright = 0.0;
+        if (uRealism > 0.001) {
+          float e = 0.6;
+          float h0 = waves(p);
+          vec2 grad = vec2(waves(p + vec2(e, 0.0)) - h0, waves(p + vec2(0.0, e)) - h0) / e;
+          float strength = mix(2.2, 0.35, smoothstep(40.0, 900.0, dist)) * (1.0 + uRain * 0.8);
+          vec3 N = normalize(vec3(-grad.x * strength, 1.0, -grad.y * strength));
+          vec3 V = normalize(cameraPosition - vWorld);
+          float fres = 0.02 + 0.98 * pow(1.0 - max(dot(N, V), 0.0), 5.0);
+          vec3 R = reflect(-V, N);
+          vec3 sky = mix(uHorizon, uTop * vec3(0.8, 0.9, 1.0), smoothstep(0.0, 0.6, R.y));
+          vec3 body = mix(uDeep * 0.55, uShallow * 0.7, smoothstep(0.3, 0.8, n)) * (0.85 + 0.3 * h0);
+          vec3 real = mix(body, sky, clamp(fres * 1.15, 0.0, 1.0));
+          float sunSpec = pow(max(dot(R, uSunDirWorld), 0.0), 900.0) * 14.0 + pow(max(dot(R, uSunDirWorld), 0.0), 60.0) * 0.35;
+          real += uSunColor * sunSpec * (1.0 - uNight * 0.8);
+          // Whitecaps on wave crests.
+          real = mix(real, uFoam, smoothstep(0.93, 1.1, h0) * 0.35 * (1.0 - smoothstep(80.0, 500.0, dist)));
+          real *= mix(1.0, 0.4, uNight);
+          col = mix(col, real, uRealism);
+          bright = min(1.0, sunSpec * 0.08) * uRealism;
+        }
+        gColor = vec4(col, max(glint * sparkle * 0.3 * (1.0 - uRealism), bright));
         gNormal = vec4(normalize(vViewNormal) * 0.5 + 0.5, 0.013);
       }
     `,

@@ -73,7 +73,9 @@ export class Hud {
     const rain = document.createElement('button');
     rain.className = 'pill';
     rain.dataset.preset = 'rain';
-    rain.textContent = '☂ Rain';
+    rain.dataset.id = 'weatherPill';
+    rain.title = 'Weather (9)';
+    rain.textContent = '☀ Clear';
     rain.addEventListener('click', cb.onRain);
     pills.append(auto, rain);
 
@@ -115,12 +117,17 @@ export class Hud {
     if (label) label.textContent = text;
   }
 
-  setClock(time: string, band: string, presetId: string, auto: boolean, rain: boolean): void {
+  setClock(time: string, band: string, presetId: string, auto: boolean, weather: string): void {
     this.el.clock.textContent = time;
     this.el.clockBand.textContent = band;
     this.root.querySelectorAll<HTMLElement>('[data-preset]').forEach((b) => {
       const p = b.dataset.preset;
-      b.classList.toggle('active', (p === presetId && !auto) || (p === 'auto' && auto) || (p === 'rain' && rain));
+      b.classList.toggle('active', (p === presetId && !auto) || (p === 'auto' && auto) || (p === 'rain' && weather !== 'Clear'));
+      if (p === 'rain') {
+        const icon = { Clear: '☀', Cloudy: '☁', Fog: '≋', Rain: '☂', Storm: '⚡' }[weather] ?? '☂';
+        const text = `${icon} ${weather}`;
+        if (b.textContent !== text) b.textContent = text;
+      }
     });
   }
 
@@ -199,9 +206,10 @@ export class Hud {
     this.el.songbook.innerHTML = cards.join('');
   }
 
-  setSpeed(kmh: number, boost: number, boosting: boolean, district: string, gravityAngle: number, gravityLabel: string, onFoot: boolean): void {
-    this.el.speed.textContent = String(Math.round(Math.abs(kmh))).padStart(3, '0');
-    this.el.speedUnit.textContent = onFoot ? 'on foot · km/h' : 'km/h';
+  setSpeed(speed: number, boost: number, boosting: boolean, district: string, gravityAngle: number, gravityLabel: string, onFoot: boolean, unit = 'km/h', gear?: string): void {
+    this.el.speed.textContent = String(Math.round(Math.abs(speed))).padStart(3, '0');
+    const u = onFoot ? `on foot · ${unit}` : gear ? `${unit} · gear ${gear}` : unit;
+    if (this.el.speedUnit.textContent !== u) this.el.speedUnit.textContent = u;
     this.el.boostBar.style.width = `${Math.round(boost * 100)}%`;
     this.el.boostBar.parentElement?.classList.toggle('boosting', boosting);
     this.el.district.textContent = district;
@@ -477,7 +485,7 @@ function template(): string {
       <div class="legend">
         <b>W/S</b> throttle · <b>A/D</b> steer · <b>Space</b> hop · <b>Shift</b> boost · <b>Ctrl</b> drift · <b>F</b> get in/out ·
         <b>C</b> camera · <b>scroll</b> zoom · <b>[ ]</b> field of view · <b>T</b> radio · <b>N</b> next song · <b>B</b> band ·
-        <b>1–7</b> time of day · <b>9</b> rain · <b>H</b> honk · <b>R</b> respawn · <b>\`</b> studio · <b>U</b> hide HUD · <b>Esc</b> pause
+        <b>1–7</b> time of day · <b>9</b> weather · <b>H</b> honk · <b>R</b> respawn · <b>\`</b> studio · <b>U</b> hide HUD · <b>Esc</b> pause
       </div>
     </div>
   </div>
@@ -507,7 +515,7 @@ function template(): string {
         <tr><td>Mouse</td><td>—</td><td>Look (click to lock)</td></tr>
         <tr><td>Scroll · [ ]</td><td colspan="2">Zoom · field of view</td></tr>
         <tr><td>T · N · B</td><td colspan="2">Radio on/off · next song · change station</td></tr>
-        <tr><td>1–7 · 8 · 9</td><td colspan="2">Time of day · auto day cycle · rain</td></tr>
+        <tr><td>1–7 · 8 · 9</td><td colspan="2">Time of day · auto day cycle · weather (clear, cloudy, fog, rain, storm)</td></tr>
         <tr><td>H · R</td><td colspan="2">Honk (plays a note) · respawn</td></tr>
         <tr><td>\` / F2 · U · Esc</td><td colspan="2">Studio panel · hide HUD · pause</td></tr>
         <tr><td>Gamepad</td><td colspan="2">Stick steer/move · RT/LT throttle/brake · A hop · X boost · B drift · Y get in/out · R3 camera</td></tr>

@@ -244,7 +244,7 @@ export function buildCloud(rnd: Random): THREE.BufferGeometry {
     const t = i / (n - 1);
     const x = (t - 0.5) * rnd.range(30, 44);
     const r = rnd.range(6, 11) * (1 - Math.abs(t - 0.5) * 0.9);
-    k.blob(r, '#fbfaf4', { position: [x + rnd.jitter(3), r * 0.35 + rnd.range(0, 3), rnd.jitter(5)], scale: [1.2, 0.85, 1], detail: 1, roughness: 0.1, seed: i });
+    k.blob(r, '#fbfaf4', { position: [x + rnd.jitter(3), r * 0.35 + rnd.range(0, 3), rnd.jitter(5)], scale: [1.2, 0.85, 1], detail: 1, roughness: 0.1, seed: i, pattern: Pattern.Cloud });
   }
   const g = k.build(0.3, rnd.int(0, 999));
   // Flatten the underside.

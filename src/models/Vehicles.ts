@@ -50,9 +50,9 @@ function buildRover(look: VehicleLook): THREE.BufferGeometry {
   k.box(2.06, 0.62, 4.0, look.body, { position: [0, 1.02, 0], pattern: Pattern.Planks });
   k.box(1.96, 0.22, 1.5, look.body, { position: [0, 1.38, -1.2], rotation: [0.06, 0, 0] });
   k.box(1.9, 0.72, 2.2, look.body, { position: [0, 1.72, 0.55] });
-  k.box(1.7, 0.46, 0.06, GLASS, { position: [0, 1.76, -0.57], rotation: [-0.25, 0, 0] });
-  k.box(0.05, 0.42, 1.8, GLASS, { position: [-0.96, 1.78, 0.55] });
-  k.box(0.05, 0.42, 1.8, GLASS, { position: [0.96, 1.78, 0.55] });
+  k.box(1.7, 0.46, 0.06, GLASS, { pattern: Pattern.Glass, position: [0, 1.76, -0.57], rotation: [-0.25, 0, 0] });
+  k.box(0.05, 0.42, 1.8, GLASS, { pattern: Pattern.Glass, position: [-0.96, 1.78, 0.55] });
+  k.box(0.05, 0.42, 1.8, GLASS, { pattern: Pattern.Glass, position: [0.96, 1.78, 0.55] });
   k.box(2.1, 0.1, 4.05, look.trim, { position: [0, 0.86, 0] });
   k.box(2.1, 0.08, 0.08, INK, { position: [0, 1.2, 0.2] });
   k.box(2.2, 0.3, 0.3, INK, { position: [0, 0.78, -2.12] });
@@ -63,7 +63,7 @@ function buildRover(look: VehicleLook): THREE.BufferGeometry {
   for (const x of [-1.15, 1.15]) k.box(0.08, 0.36, 0.7, look.accent, { position: [x, 2.2, 1.85] });
   k.box(1.7, 0.06, 1.9, INK, { position: [0, 2.12, 0.55] });
   for (const x of [-0.85, 0.85]) k.box(0.06, 0.18, 1.9, INK, { position: [x, 2.2, 0.55] });
-  k.cylinder(0.42, 0.42, 0.28, 10, TYRE, { position: [0, 1.25, 2.28], rotation: [Math.PI / 2, 0, 0] });
+  k.cylinder(0.42, 0.42, 0.28, 10, TYRE, { pattern: Pattern.Matte, position: [0, 1.25, 2.28], rotation: [Math.PI / 2, 0, 0] });
   k.cylinder(0.2, 0.2, 0.3, 8, look.hubs, { position: [0, 1.25, 2.32], rotation: [Math.PI / 2, 0, 0] });
   k.box(0.3, 0.45, 0.2, '#d8463a', { position: [-0.72, 2.4, 1.3] });
   for (const x of [-0.5, -0.17, 0.17, 0.5]) k.cylinder(0.1, 0.1, 0.12, 8, '#fff3c4', { position: [x, 2.22, -0.45], rotation: [Math.PI / 2, 0, 0], nightGlow: 1 });
@@ -78,7 +78,7 @@ function buildTukTuk(look: VehicleLook): THREE.BufferGeometry {
   k.box(1.5, 0.9, 1.9, look.body, { position: [0, 0.85, 0.45] });
   k.box(1.5, 0.12, 1.95, look.trim, { position: [0, 0.42, 0.45] });
   k.add(new THREE.CylinderGeometry(0.45, 0.72, 1.3, 4, 1).rotateY(Math.PI / 4).rotateX(-Math.PI / 2), look.body, { position: [0, 0.9, -1.0], scale: [1.35, 1, 1] });
-  k.box(1.3, 0.8, 0.07, GLASS, { position: [0, 1.65, -0.55], rotation: [-0.28, 0, 0] });
+  k.box(1.3, 0.8, 0.07, GLASS, { pattern: Pattern.Glass, position: [0, 1.65, -0.55], rotation: [-0.28, 0, 0] });
   k.box(1.34, 0.12, 0.12, INK, { position: [0, 2.05, -0.62] });
   k.box(1.6, 0.14, 2.3, INK, { position: [0, 2.15, 0.3] });
   k.box(1.62, 0.12, 2.32, look.accent, { position: [0, 2.26, 0.3] });
@@ -96,7 +96,7 @@ function buildCoupe(look: VehicleLook): THREE.BufferGeometry {
   const k = new ModelKit();
   k.blob(1, look.body, { position: [0, 0.95, 0.1], scale: [1.05, 0.55, 2.0], detail: 2, roughness: 0.02 });
   k.blob(1, look.body, { position: [0, 1.4, 0.35], scale: [0.85, 0.55, 1.1], detail: 2, roughness: 0.02 });
-  k.blob(1, GLASS, { position: [0, 1.48, 0.35], scale: [0.8, 0.45, 1.02], detail: 1, roughness: 0 });
+  k.blob(1, GLASS, { pattern: Pattern.Glass, position: [0, 1.48, 0.35], scale: [0.8, 0.45, 1.02], detail: 1, roughness: 0 });
   k.box(1.9, 0.14, 3.9, look.trim, { position: [0, 0.7, 0.05] });
   for (const z of [-1.85, 1.95]) k.box(2.0, 0.18, 0.2, '#c8c8d0', { position: [0, 0.62, z] });
   for (const [x, z] of [[-0.8, -1.2], [0.8, -1.2], [-0.8, 1.35], [0.8, 1.35]] as const) k.blob(0.45, look.body, { position: [x, 0.62, z], scale: [0.6, 0.75, 1.3], detail: 1, roughness: 0.02 });
@@ -130,8 +130,8 @@ function buildVan(look: VehicleLook): THREE.BufferGeometry {
   k.box(2.0, 1.0, 4.1, look.trim, { position: [0, 2.15, 0.1] });
   k.box(2.04, 0.12, 4.36, '#f6f0e4', { position: [0, 1.65, 0] });
   k.box(2.02, 0.3, 4.2, look.accent, { position: [0, 2.7, 0.1] });
-  for (const x of [-0.48, 0.48]) k.box(0.85, 0.7, 0.06, GLASS, { position: [x, 2.15, -2.0], rotation: [-0.1, 0, 0] });
-  for (let i = 0; i < 4; i++) for (const x of [-1.01, 1.01]) k.box(0.05, 0.6, 0.75, GLASS, { position: [x, 2.2, -1.2 + i * 0.95], nightGlow: i % 2 });
+  for (const x of [-0.48, 0.48]) k.box(0.85, 0.7, 0.06, GLASS, { pattern: Pattern.Glass, position: [x, 2.15, -2.0], rotation: [-0.1, 0, 0] });
+  for (let i = 0; i < 4; i++) for (const x of [-1.01, 1.01]) k.box(0.05, 0.6, 0.75, GLASS, { pattern: Pattern.Glass, position: [x, 2.2, -1.2 + i * 0.95], nightGlow: i % 2 });
   k.add(new THREE.CircleGeometry(0.35, 12), '#f6f0e4', { position: [0, 1.3, -2.16], rotation: [0, Math.PI, 0] });
   k.box(2.2, 0.28, 0.25, INK, { position: [0, 0.7, -2.2] });
   k.box(2.2, 0.28, 0.25, INK, { position: [0, 0.7, 2.2] });
@@ -307,7 +307,7 @@ export class VehicleModel {
   constructor(readonly def: VehicleDef, look: VehicleLook = def.defaultLook) {
     this.root.name = def.id;
     this.root.add(this.body);
-    const mat = new PaintMaterial({ vertexColors: true, flat: true });
+    const mat = new PaintMaterial({ vertexColors: true, flat: true, gloss: 0.7 });
     const bodyMesh = new THREE.Mesh(def.build(look), mat);
     bodyMesh.castShadow = true;
     this.body.add(bodyMesh);
@@ -371,11 +371,11 @@ export class VehicleModel {
 
 function buildWheel(r: number, width: number, hubs: string): THREE.BufferGeometry {
   const k = new ModelKit();
-  k.cylinder(r, r, width, 12, TYRE, { rotation: [0, 0, Math.PI / 2] });
+  k.cylinder(r, r, width, 12, TYRE, { pattern: Pattern.Matte, rotation: [0, 0, Math.PI / 2] });
   if (r > 0.4) {
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
-      k.box(width + 0.02, 0.12, 0.18, TYRE, { position: [0, Math.cos(a) * r, Math.sin(a) * r], rotation: [a, 0, 0] });
+      k.box(width + 0.02, 0.12, 0.18, TYRE, { pattern: Pattern.Matte, position: [0, Math.cos(a) * r, Math.sin(a) * r], rotation: [a, 0, 0] });
     }
   }
   k.cylinder(r * 0.55, r * 0.55, width + 0.02, 10, hubs, { rotation: [0, 0, Math.PI / 2], position: [-0.01, 0, 0] });

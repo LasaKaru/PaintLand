@@ -6,6 +6,11 @@ import { VEHICLES, type VehicleId } from '../models/Vehicles';
 import { ROVER_TUNING } from '../gameplay/RoverController';
 import { randomLook, type HumanLook } from '../models/Human';
 import { fmt } from './Hud';
+import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Input';
+import type { GameOptions } from '../core/Options';
+import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
+
+type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
 export type MenuScreen = 'splash' | 'main' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'settings' | 'credits' | 'none';
 
@@ -27,8 +32,13 @@ export interface MenuHost {
   openControls(): void;
   watchIntro(): void;
   unlockAudio(): void;
-  settings(): { music: number; notes: number; engine: number; reducedMotion: boolean; calmLighting: boolean; hudScale: number };
-  setSetting(key: string, value: number | boolean): void;
+  /** Art + graphics values (mutable; call settingsChanged after editing). */
+  studio(): StudioSettings;
+  /** Controls, driving, accessibility (mutable). */
+  options(): GameOptions;
+  settingsChanged(): void;
+  input(): Input;
+  stats(): string;
   resume(): void;
   canResume(): boolean;
 }
@@ -44,6 +54,9 @@ export class Menu {
   readonly root: HTMLDivElement;
   screen: MenuScreen = 'none';
   private wardrobeTab = 'hair';
+  private settingsTab: SettingsTab = 'graphics';
+  private listening: ActionName | null = null;
+  private readonly formatters = new Map<string, (v: number) => string>();
   private toastTimer = 0;
 
   constructor(parent: HTMLElement, private readonly host: MenuHost) {
@@ -52,10 +65,16 @@ export class Menu {
     parent.appendChild(this.root);
     this.root.addEventListener('click', (e) => this.onClick(e));
     this.root.addEventListener('input', (e) => this.onInput(e));
+    this.root.addEventListener('change', (e) => this.onInput(e));
     host.profile.onChange(() => this.refreshInk());
+    setInterval(() => {
+      const el = this.root.querySelector('[data-id="stats"]');
+      if (el) el.textContent = this.host.stats();
+    }, 500);
   }
 
   show(screen: MenuScreen): void {
+    this.cancelListening();
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' ? 'vehicle' : null);
@@ -275,18 +294,183 @@ export class Menu {
   }
 
   private settingsScreen(): string {
-    const s = this.host.settings();
-    const slider = (key: string, label: string, v: number, min = 0, max = 1, step = 0.01): string => `<div class="field"><label>${label}</label><input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-setting="${key}"></div>`;
-    const toggle = (key: string, label: string, v: boolean): string => `<label class="check"><input type="checkbox" ${v ? 'checked' : ''} data-setting="${key}"> ${label}</label>`;
-    return `<div class="menu-panel">${this.header('Settings')}
-      ${slider('music', 'Radio volume', s.music)}
-      ${slider('notes', 'Music-box notes', s.notes)}
-      ${slider('engine', 'Engine hum', s.engine)}
-      ${slider('hudScale', 'HUD size', s.hudScale, 0.7, 1.4, 0.05)}
-      ${toggle('reducedMotion', 'Reduced motion (no line boil, speed lines or camera roll)', s.reducedMotion)}
-      ${toggle('calmLighting', 'Calm lighting (slow time-of-day blends)', s.calmLighting)}
-      <div class="row wrap"><button class="btn" data-action="studio">Open the Studio (art sliders)</button><button class="btn" data-action="controls">Controls</button></div>
+    const tabs: [SettingsTab, string][] = [['graphics', 'Graphics'], ['look', 'Look'], ['controls', 'Controls'], ['driving', 'Driving'], ['audio', 'Audio'], ['access', 'Accessibility']];
+    const body = {
+      graphics: () => this.graphicsTab(),
+      look: () => this.lookTab(),
+      controls: () => this.controlsTab(),
+      driving: () => this.drivingTab(),
+      audio: () => this.audioTab(),
+      access: () => this.accessTab(),
+    }[this.settingsTab]();
+    return `<div class="menu-panel wide">${this.header('Settings')}
+      <div class="tabs">${tabs.map(([id, label]) => `<button class="tab ${this.settingsTab === id ? 'on' : ''}" data-stab="${id}">${label}</button>`).join('')}</div>
+      <div class="settings-body">${body}</div>
     </div>`;
+  }
+
+  // Small builders. `k` is "s.key" (studio/graphics) or "o.key" (options).
+  private val(k: string): unknown {
+    const [scope, key] = k.split('.');
+    const obj = (scope === 's' ? this.host.studio() : this.host.options()) as unknown as Record<string, unknown>;
+    return obj[key];
+  }
+
+  private slider(k: string, label: string, min: number, max: number, step: number, fmtFn: (v: number) => string = (v) => String(v)): string {
+    const v = Number(this.val(k));
+    this.formatters.set(k, fmtFn);
+    return `<div class="field"><label>${label}</label><input type="range" min="${min}" max="${max}" step="${step}" value="${v}" data-opt="${k}"><output>${fmtFn(v)}</output></div>`;
+  }
+
+  private toggle(k: string, label: string): string {
+    return `<label class="check"><input type="checkbox" ${this.val(k) ? 'checked' : ''} data-opt="${k}"> ${label}</label>`;
+  }
+
+  private choice(k: string, label: string, options: [string | number, string][]): string {
+    const v = this.val(k);
+    return `<div class="field"><label>${label}</label><div class="seg">${options.map(([ov, ol]) => `<button class="seg-btn ${String(v) === String(ov) ? 'on' : ''}" data-set="${k}" data-value="${ov}" data-num="${typeof ov === 'number' ? 1 : 0}">${ol}</button>`).join('')}</div></div>`;
+  }
+
+  private graphicsTab(): string {
+    const s = this.host.studio();
+    const pct = (v: number): string => `${Math.round(v * 100)}%`;
+    const levels: [QualityLevel, string, string][] = [['low', 'Low', 'Laptops & phones'], ['medium', 'Medium', 'Balanced'], ['high', 'High', 'Recommended'], ['ultra', 'Ultra', 'Strong GPUs']];
+    return `
+      <div class="quality-row">${levels.map(([id, name, sub]) => `<button class="quality ${s.quality === id ? 'on' : ''}" data-quality="${id}"><b>${name}</b><small>${sub}</small></button>`).join('')}
+        <div class="quality custom ${s.quality === 'custom' ? 'on' : ''}"><b>Custom</b><small>your mix</small></div></div>
+      <div class="grid2">
+        <div>
+          <h4>Resolution</h4>
+          ${this.slider('s.renderScale', 'Render scale', 0.5, 1, 0.05, pct)}
+          ${this.toggle('s.autoResolution', 'Auto-balance to hold 60 fps')}
+          ${this.choice('s.maxPixelRatio', 'Sharpness on high-DPI screens', [[1, '1×'], [1.5, '1.5×'], [2, '2×']])}
+          ${this.toggle('s.fxaa', 'Anti-aliasing (FXAA)')}
+          ${this.choice('s.fpsCap', 'Frame rate limit', [[0, 'Off'], [30, '30'], [60, '60'], [120, '120']])}
+          <h4>Distance</h4>
+          ${this.slider('s.drawDistance', 'Draw distance', 1500, 6000, 100, (v) => `${(v / 1000).toFixed(1)} km`)}
+        </div>
+        <div>
+          <h4>Lighting</h4>
+          ${this.choice('s.shadowQuality', 'Shadows', [[0, 'Off'], [1, 'Low'], [2, 'High'], [3, 'Ultra']])}
+          ${this.slider('s.shadowDistance', 'Shadow distance', 40, 160, 5, (v) => `${v} m`)}
+          ${this.toggle('s.softShadows', 'Soft shadow edges')}
+          ${this.choice('s.aoQuality', 'Ambient occlusion', [[0, 'Off'], [1, 'On'], [2, 'High']])}
+          ${this.choice('s.bloomQuality', 'Glow / bloom', [[0, 'Off'], [1, 'On'], [2, 'Wide']])}
+          ${this.toggle('s.shafts', 'Sun shafts (god rays)')}
+          ${this.toggle('s.hdr', 'HDR lighting (needs float render targets)')}
+        </div>
+      </div>
+      <div class="perf-line" data-id="stats">${this.host.stats()}</div>`;
+  }
+
+  private lookTab(): string {
+    const s = this.host.studio();
+    const styles: [ArtStyle, string, string][] = [['watercolour', 'Watercolour', 'Ink, washes and paper — the sketchbook'], ['illustrated', 'Illustrated', 'Soft ink over lit colour'], ['realistic', 'Realistic', 'Filmic light, reflections, fog, depth of field']];
+    const f2 = (v: number): string => v.toFixed(2);
+    return `
+      <div class="quality-row">${styles.map(([id, name, sub]) => `<button class="quality art-${id} ${s.artStyle === id ? 'on' : ''}" data-art="${id}"><b>${name}</b><small>${sub}</small></button>`).join('')}</div>
+      <div class="grid2">
+        <div>
+          ${this.slider('s.realism', 'Realism (blend painted ↔ real)', 0, 1, 0.01, f2)}
+          ${this.slider('s.exposure', 'Exposure', 0.5, 2, 0.01, f2)}
+          ${this.slider('s.contrast', 'Contrast', 0.7, 1.4, 0.01, f2)}
+          ${this.slider('s.saturation', 'Saturation', 0, 1.5, 0.01, f2)}
+          ${this.slider('s.warmth', 'Warmth', -1, 1, 0.01, f2)}
+          ${this.slider('s.vignette', 'Vignette', 0, 1, 0.01, f2)}
+        </div>
+        <div>
+          ${this.slider('s.inkStrength', 'Ink outlines', 0, 1, 0.01, f2)}
+          ${this.slider('s.aoStrength', 'Ambient occlusion strength', 0, 1.5, 0.01, f2)}
+          ${this.slider('s.sunShafts', 'Sun shafts strength', 0, 1.5, 0.01, f2)}
+          ${this.slider('s.glow', 'Glow strength', 0, 2, 0.01, f2)}
+          ${this.slider('s.cinematicDof', 'Cinematic depth of field', 0, 1, 0.01, f2)}
+          ${this.slider('s.fov', 'Field of view', 55, 110, 1, (v) => `${v}°`)}
+          <div class="field"><label>Watercolour vibe</label><select data-vibe>${Object.keys(VIBES).map((v) => `<option ${s.vibe === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+        </div>
+      </div>
+      <div class="row wrap"><button class="btn" data-action="studio">Open the Studio (every art slider)</button></div>`;
+  }
+
+  private controlsTab(): string {
+    const input = this.host.input();
+    const groups = [...new Set(ACTION_INFO.map((a) => a.group))];
+    const rows = groups.map((g) => `<h4>${g}</h4>${ACTION_INFO.filter((a) => a.group === g).map((a) => {
+      const keys = input.bindings[a.action];
+      const listening = this.listening === a.action;
+      return `<div class="bind-row"><span>${a.label}</span><span class="keys">${keys.map((k) => `<kbd>${escapeHtml(keyLabel(k))}</kbd>`).join(' ') || '<i>none</i>'}</span><button class="btn small ${listening ? 'listening' : ''}" data-bind="${a.action}">${listening ? 'Press a key… (Esc cancels)' : 'Change'}</button></div>`;
+    }).join('')}`).join('');
+    return `
+      <div class="grid2">
+        <div class="bind-list">${rows}<div class="row"><button class="btn" data-action="reset-binds">Reset keys to defaults</button></div></div>
+        <div>
+          <h4>Mouse</h4>
+          ${this.slider('o.mouseSensitivity', 'Look sensitivity', 0.2, 3, 0.05, (v) => `${v.toFixed(2)}×`)}
+          ${this.toggle('o.invertY', 'Invert vertical look')}
+          <h4>Gamepad</h4>
+          ${this.slider('o.padLookSensitivity', 'Stick look sensitivity', 0.2, 3, 0.05, (v) => `${v.toFixed(2)}×`)}
+          ${this.slider('o.padDeadzone', 'Stick deadzone', 0.02, 0.4, 0.01, (v) => v.toFixed(2))}
+          ${this.toggle('o.vibration', 'Vibration')}
+          <p class="menu-hint">Pad: RT throttle · LT brake · A hop · X boost · B drift · Y get in/out · Start pause · Back photo mode.</p>
+        </div>
+      </div>`;
+  }
+
+  private drivingTab(): string {
+    return `
+      <div class="grid2">
+        <div>
+          ${this.choice('o.handling', 'Handling model', [['arcade', 'Arcade'], ['realistic', 'Realistic']])}
+          <p class="menu-hint">Realistic: a 6-speed gearbox with engine rpm, air drag and engine braking, less steering at speed, and tyres that slide past their grip.</p>
+          ${this.choice('o.gearbox', 'Gearbox (realistic)', [['auto', 'Automatic'], ['manual', 'Manual']])}
+          <p class="menu-hint">Manual: <kbd>. period</kbd> gear up, <kbd>, comma</kbd> gear down (rebind in Controls).</p>
+          ${this.toggle('o.autoCruise', 'Auto-cruise (keeps rolling on flat road)')}
+          ${this.choice('o.units', 'Speed units', [['kmh', 'km/h'], ['mph', 'mph']])}
+        </div>
+        <div>
+          ${this.slider('o.steerSensitivity', 'Steering sensitivity', 0.4, 1.6, 0.05, (v) => `${v.toFixed(2)}×`)}
+          ${this.slider('o.steerSmoothing', 'Steering smoothing', 0, 1, 0.05, (v) => v.toFixed(2))}
+          ${this.slider('o.steerAssist', 'Lane assist (centres when you let go)', 0, 1, 0.05, (v) => v.toFixed(2))}
+          ${this.slider('s.cameraRoll', 'Camera roll in loops', 0, 1, 0.05, (v) => v.toFixed(2))}
+          ${this.slider('s.cameraShake', 'Camera shake', 0, 1, 0.05, (v) => v.toFixed(2))}
+          ${this.toggle('o.showGhost', 'Show my best-lap ghost')}
+        </div>
+      </div>`;
+  }
+
+  private audioTab(): string {
+    const pct = (v: number): string => `${Math.round(v * 100)}%`;
+    return `
+      ${this.slider('s.musicVolume', 'Radio', 0, 1, 0.01, pct)}
+      ${this.slider('s.musicBox', 'Music-box notes', 0, 1, 0.01, pct)}
+      ${this.slider('s.engineHum', 'Engine', 0, 1, 0.01, pct)}
+      ${this.slider('s.wind', 'Wind and weather', 0, 1, 0.01, pct)}`;
+  }
+
+  private accessTab(): string {
+    return `
+      <div class="grid2">
+        <div>
+          ${this.toggle('s.reducedMotion', 'Reduced motion (no line boil, speed lines or camera roll)')}
+          ${this.toggle('o.calmLighting', 'Calm lighting (slow time-of-day blends)')}
+          ${this.slider('o.hudScale', 'HUD size', 0.7, 1.4, 0.05, (v) => `${Math.round(v * 100)}%`)}
+          ${this.choice('o.colourBlind', 'Colour-vision assist', [['none', 'Off'], ['protan', 'Protan'], ['deutan', 'Deutan'], ['tritan', 'Tritan']])}
+        </div>
+        <div>
+          ${this.toggle('o.autoWeather', 'Weather changes by itself')}
+          ${this.slider('o.dayMinutes', 'Length of an auto day', 4, 40, 1, (v) => `${v} min`)}
+          <div class="row wrap"><button class="btn" data-action="controls">Controls card</button></div>
+        </div>
+      </div>`;
+  }
+
+  /** Write a settings value from a control, mark graphics as Custom when a tier key moves. */
+  private writeOpt(k: string, value: unknown): void {
+    const [scope, key] = k.split('.');
+    const obj = (scope === 's' ? this.host.studio() : this.host.options()) as unknown as Record<string, unknown>;
+    obj[key] = value;
+    if (scope === 's' && (QUALITY_KEYS as readonly string[]).includes(key)) this.host.studio().quality = 'custom';
+    if (scope === 's' && key === 'realism') this.host.studio().artStyle = value === 0 ? 'watercolour' : value === 1 ? 'realistic' : 'illustrated';
+    this.host.settingsChanged();
   }
 
   private credits(): string {
@@ -325,6 +509,44 @@ export class Menu {
     if (d.tab) {
       this.wardrobeTab = d.tab;
       this.render();
+      return;
+    }
+    if (d.stab) {
+      this.settingsTab = d.stab as SettingsTab;
+      this.cancelListening();
+      this.render();
+      return;
+    }
+    if (d.set) {
+      this.writeOpt(d.set, d.num === '1' ? Number(d.value) : d.value);
+      this.render();
+      return;
+    }
+    if (d.quality) {
+      applyQuality(this.host.studio(), d.quality as QualityLevel);
+      this.host.settingsChanged();
+      this.render();
+      this.toast(`Graphics: ${d.quality}`);
+      return;
+    }
+    if (d.art) {
+      applyArtStyle(this.host.studio(), d.art as ArtStyle);
+      this.host.settingsChanged();
+      this.render();
+      return;
+    }
+    if (d.bind) {
+      const action = d.bind as ActionName;
+      this.listening = action;
+      this.render();
+      this.host.input().captureNextKey((code) => {
+        this.listening = null;
+        if (code !== 'Escape') {
+          this.host.input().bindPrimary(action, code);
+          this.toast(`${keyLabel(code)} → ${ACTION_INFO.find((a) => a.action === action)?.label ?? action}`);
+        }
+        this.render();
+      });
       return;
     }
     if (d.look !== undefined && d.value !== undefined) {
@@ -425,6 +647,11 @@ export class Menu {
       case 'controls':
         this.host.openControls();
         break;
+      case 'reset-binds':
+        this.host.input().resetBindings();
+        this.toast('Keys reset');
+        this.render();
+        break;
     }
   }
 
@@ -440,7 +667,26 @@ export class Menu {
       p.data.name = el.value.slice(0, 20) || 'Painter';
       p.save();
     }
-    if (el.dataset.setting) this.host.setSetting(el.dataset.setting, el.type === 'checkbox' ? el.checked : Number(el.value));
+    if (el.dataset.opt && (e.type === 'input' || el.type === 'checkbox')) {
+      if (el.type === 'checkbox' && e.type === 'input') return; // handled on change
+      this.writeOpt(el.dataset.opt, el.type === 'checkbox' ? el.checked : Number(el.value));
+      const out = el.nextElementSibling;
+      if (out?.tagName === 'OUTPUT') out.textContent = (this.formatters.get(el.dataset.opt) ?? String)(Number(el.value));
+      const q = this.root.querySelector('.quality.custom');
+      if (q && this.host.studio().quality === 'custom') {
+        this.root.querySelectorAll('.quality').forEach((b) => b.classList.remove('on'));
+        q.classList.add('on');
+      }
+    }
+    if (el.dataset.vibe !== undefined && e.type === 'change') {
+      applyVibe(this.host.studio(), (el as unknown as HTMLSelectElement).value);
+      this.host.settingsChanged();
+    }
+  }
+
+  private cancelListening(): void {
+    if (this.listening) this.host.input().captureNextKey(null);
+    this.listening = null;
   }
 }
 

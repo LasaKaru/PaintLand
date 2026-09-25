@@ -65,7 +65,7 @@ export class HumanModel {
 
   constructor(readonly look: HumanLook = DEFAULT_HUMAN_LOOK) {
     this.root.name = 'human';
-    const mat = new PaintMaterial({ vertexColors: true, flat: true });
+    const mat = new PaintMaterial({ vertexColors: true, flat: true, gloss: 0.08 });
     const mesh = (g: THREE.BufferGeometry): THREE.Mesh => {
       const m = new THREE.Mesh(g, mat);
       m.castShadow = true;

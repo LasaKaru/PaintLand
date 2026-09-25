@@ -14,7 +14,8 @@ export type ActionName =
   | 'radio' | 'nextSong' | 'band'
   | 'respawn' | 'pause' | 'studio' | 'photo' | 'hud'
   | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather'
-  | 'drink' | 'cycleTonic' | 'emote' | 'chat';
+  | 'drink' | 'cycleTonic' | 'emote' | 'chat'
+  | 'shiftUp' | 'shiftDown';
 
 export type Bindings = Record<ActionName, string[]>;
 
@@ -56,7 +57,55 @@ export const DEFAULT_BINDINGS: Bindings = {
   cycleTonic: ['KeyZ'],
   emote: ['KeyG'],
   chat: ['Enter'],
+  shiftUp: ['Period'],
+  shiftDown: ['Comma'],
 };
+
+/** Names and groups for the Controls screen. */
+export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' | 'On foot' | 'Camera' | 'World' | 'Game' }[] = [
+  { action: 'forward', label: 'Throttle / walk forward', group: 'Driving' },
+  { action: 'back', label: 'Brake / reverse / walk back', group: 'Driving' },
+  { action: 'left', label: 'Steer / walk left', group: 'Driving' },
+  { action: 'right', label: 'Steer / walk right', group: 'Driving' },
+  { action: 'hop', label: 'Hop / jump', group: 'Driving' },
+  { action: 'boost', label: 'Boost', group: 'Driving' },
+  { action: 'drift', label: 'Drift / handbrake', group: 'Driving' },
+  { action: 'shiftUp', label: 'Gear up (manual gearbox)', group: 'Driving' },
+  { action: 'shiftDown', label: 'Gear down (manual gearbox)', group: 'Driving' },
+  { action: 'honk', label: 'Horn', group: 'Driving' },
+  { action: 'respawn', label: 'Respawn', group: 'Driving' },
+  { action: 'sprint', label: 'Sprint', group: 'On foot' },
+  { action: 'crouch', label: 'Walk slowly', group: 'On foot' },
+  { action: 'interact', label: 'Get in / out · talk', group: 'On foot' },
+  { action: 'emote', label: 'Wave', group: 'On foot' },
+  { action: 'camera', label: 'Change camera', group: 'Camera' },
+  { action: 'fovDown', label: 'Narrower view', group: 'Camera' },
+  { action: 'fovUp', label: 'Wider view', group: 'Camera' },
+  { action: 'photo', label: 'Photo mode', group: 'Camera' },
+  { action: 'hud', label: 'Hide HUD', group: 'Camera' },
+  { action: 'weather', label: 'Change weather', group: 'World' },
+  { action: 'time8', label: 'Auto day cycle', group: 'World' },
+  { action: 'radio', label: 'Radio on/off', group: 'World' },
+  { action: 'nextSong', label: 'Next song', group: 'World' },
+  { action: 'band', label: 'Change station', group: 'World' },
+  { action: 'drink', label: 'Drink tonic', group: 'Game' },
+  { action: 'cycleTonic', label: 'Next tonic', group: 'Game' },
+  { action: 'chat', label: 'Chat', group: 'Game' },
+  { action: 'studio', label: 'Studio panel', group: 'Game' },
+  { action: 'pause', label: 'Pause / menu', group: 'Game' },
+];
+
+/** Short label for a KeyboardEvent.code. */
+export function keyLabel(code: string): string {
+  if (code.startsWith('Key')) return code.slice(3);
+  if (code.startsWith('Digit')) return code.slice(5);
+  if (code.startsWith('Arrow')) return { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' }[code] ?? code;
+  const names: Record<string, string> = {
+    Space: 'Space', ShiftLeft: 'L-Shift', ShiftRight: 'R-Shift', ControlLeft: 'L-Ctrl', ControlRight: 'R-Ctrl', AltLeft: 'L-Alt', AltRight: 'R-Alt',
+    Escape: 'Esc', Enter: 'Enter', Backquote: '`', BracketLeft: '[', BracketRight: ']', Period: '. period', Comma: ', comma', Slash: '/', Semicolon: ';', Quote: "'", Minus: '-', Equal: '=', Tab: 'Tab', Backspace: '⌫',
+  };
+  return names[code] ?? code;
+}
 
 /** Standard-mapping gamepad button indices per action. */
 const PAD_BUTTONS: Partial<Record<ActionName, number[]>> = {
@@ -88,6 +137,12 @@ export class Input {
   private mouseDY = 0;
   private wheel = 0;
   private pointerLocked = false;
+  private capture: ((code: string) => void) | null = null;
+  mouseSensitivity = 1;
+  invertY = false;
+  padLookSensitivity = 1;
+  deadzone = 0.14;
+  vibration = true;
   /** Last device the player touched, for button prompts. */
   lastDevice: 'keyboard' | 'gamepad' = 'keyboard';
 
@@ -112,6 +167,15 @@ export class Input {
   }
 
   private onKeyDown = (e: KeyboardEvent): void => {
+    if (this.capture) {
+      // Rebinding: the next key goes to the Controls screen, not the game.
+      e.preventDefault();
+      e.stopPropagation();
+      const cb = this.capture;
+      this.capture = null;
+      cb(e.code);
+      return;
+    }
     if (isTyping(e.target)) return;
     this.lastDevice = 'keyboard';
     if (!this.down.has(e.code)) {
@@ -163,7 +227,8 @@ export class Input {
       this.padMoveX = this.padMoveY = this.padLookX = this.padLookY = this.padThrottle = this.padBrake = 0;
       return;
     }
-    const dz = (v: number): number => (Math.abs(v) < 0.14 ? 0 : (v - Math.sign(v) * 0.14) / 0.86);
+    const d = this.deadzone;
+    const dz = (v: number): number => (Math.abs(v) < d ? 0 : (v - Math.sign(v) * d) / (1 - d));
     this.padMoveX = dz(pad.axes[0] ?? 0);
     this.padMoveY = dz(pad.axes[1] ?? 0);
     this.padLookX = dz(pad.axes[2] ?? 0);
@@ -234,8 +299,8 @@ export class Input {
 
   /** Mouse movement (pixels) plus scaled right-stick, since the last call. */
   takeLook(dt: number): { dx: number; dy: number } {
-    const dx = this.mouseDX + this.padLookX * 900 * dt;
-    const dy = this.mouseDY + this.padLookY * 600 * dt;
+    const dx = this.mouseDX * this.mouseSensitivity + this.padLookX * 900 * dt * this.padLookSensitivity;
+    const dy = (this.mouseDY * this.mouseSensitivity + this.padLookY * 600 * dt * this.padLookSensitivity) * (this.invertY ? -1 : 1);
     this.mouseDX = this.mouseDY = 0;
     return { dx, dy };
   }
@@ -248,6 +313,38 @@ export class Input {
 
   rebind(action: ActionName, codes: string[]): void {
     this.bindings[action] = codes;
+    this.saveBindings();
+  }
+
+  /** Bind `code` as the primary key for `action`, taking it away from any other action. */
+  bindPrimary(action: ActionName, code: string): void {
+    for (const a of Object.keys(this.bindings) as ActionName[]) {
+      if (a !== action) this.bindings[a] = this.bindings[a].filter((c) => c !== code || sharedOk(a, action));
+    }
+    const rest = this.bindings[action].filter((c) => c !== code).slice(0, 1);
+    this.bindings[action] = [code, ...rest];
+    this.saveBindings();
+  }
+
+  resetBindings(): void {
+    this.bindings = structuredClone(DEFAULT_BINDINGS);
+    this.saveBindings();
+  }
+
+  /** Send the next key press to `cb` (Controls screen "press a key"). */
+  captureNextKey(cb: ((code: string) => void) | null): void {
+    this.capture = cb;
+  }
+
+  /** Gamepad rumble, if the pad supports it. */
+  rumble(strength: number, ms: number): void {
+    if (!this.vibration) return;
+    const pad = navigator.getGamepads?.().find((p) => p && p.connected);
+    const act = (pad as (Gamepad & { vibrationActuator?: { playEffect?: (t: string, p: object) => Promise<unknown> } }) | undefined)?.vibrationActuator;
+    void act?.playEffect?.('dual-rumble', { duration: ms, strongMagnitude: Math.min(1, strength), weakMagnitude: Math.min(1, strength * 0.6) }).catch(() => undefined);
+  }
+
+  private saveBindings(): void {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(this.bindings));
     } catch {
@@ -265,6 +362,12 @@ function loadBindings(): Bindings {
     /* ignore corrupt or blocked storage */
   }
   return result;
+}
+
+/** Pairs that share keys on purpose (Shift boosts in the car and sprints on foot). */
+function sharedOk(a: ActionName, b: ActionName): boolean {
+  const pairs = [['boost', 'sprint'], ['drift', 'crouch']];
+  return pairs.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
 }
 
 function isTyping(target: EventTarget | null): boolean {

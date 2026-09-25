@@ -14,6 +14,19 @@ export const paintShared = {
   uTime: { value: 0 },
   uNight: { value: 0 },
   uWet: { value: 0 },
+  /** 0 = watercolour toon, 1 = realistic lighting (Art style). */
+  uRealism: { value: 0 },
+  /** World up in view space (hemisphere ambient, reflections). */
+  uUpView: { value: new THREE.Vector3(0, 1, 0) },
+  uSkyHorizon: { value: new THREE.Color('#f3efe0') },
+  /** Sun strength in the realistic look (HDR). */
+  uSunIntensity: { value: 1.35 },
+  /** Player headlights (view space). */
+  uHeadPos: { value: new THREE.Vector3() },
+  uHeadDir: { value: new THREE.Vector3(0, 0, -1) },
+  uHeadOn: { value: 0 },
+  /** Lightning flash 0..1. */
+  uFlash: { value: 0 },
 };
 
 export interface PaintOptions {
@@ -31,6 +44,10 @@ export interface PaintOptions {
   side?: THREE.Side;
   /** Stable id so outlines are drawn between touching objects of the same colour. */
   objectId?: number;
+  /** 0..1 shininess in the realistic look (car paint ~0.8, cloth ~0.05). */
+  gloss?: number;
+  /** Screen-door see-through (time-trial ghosts). */
+  ghost?: boolean;
 }
 
 let nextObjectId = 1;
@@ -41,6 +58,8 @@ varying vec3 vWorldPos;
 varying float vInstance;
 attribute float pattern;
 varying float vPattern;
+attribute vec3 smoothNormal;
+varying vec3 vSmoothN;
 #ifdef USE_ROAD
   attribute vec4 roadInfo;
   varying vec4 vRoadInfo;
@@ -87,6 +106,12 @@ void main() {
   #endif
   vWorldPos = (modelMatrix * wp).xyz;
   vPattern = pattern;
+  vec3 sn = smoothNormal;
+  #ifdef USE_INSTANCING
+    mat3 sim = mat3(instanceMatrix);
+    sn = sim * (sn / vec3(dot(sim[0], sim[0]), dot(sim[1], sim[1]), dot(sim[2], sim[2])));
+  #endif
+  vSmoothN = normalMatrix * sn;
 
   #ifdef USE_ROAD
     vRoadInfo = roadInfo;
@@ -111,11 +136,21 @@ uniform float uHatch;
 uniform float uTime;
 uniform float uNight;
 uniform float uWet;
+uniform float uRealism;
+uniform vec3 uUpView;
+uniform vec3 uSkyHorizon;
+uniform float uSunIntensity;
+uniform vec3 uHeadPos;
+uniform vec3 uHeadDir;
+uniform float uHeadOn;
+uniform float uFlash;
+uniform float uGloss;
 
 varying vec3 vViewPosition;
 varying vec3 vWorldPos;
 varying float vInstance;
 varying float vPattern;
+varying vec3 vSmoothN;
 #ifdef USE_ROAD
   varying vec4 vRoadInfo;
   varying vec2 vRoadUv;
@@ -254,6 +289,7 @@ vec3 roadPattern(vec3 base, vec2 uv, vec4 info) {
 // 1 brick/stucco · 2 roof tiles · 3 planks · 4 stone blocks · 5 leaves · 6 tea rows
 // 7 thatch · 8 grass · 9 sandstone strata · 10 marble
 vec3 surfacePattern(vec3 base, float kind, vec3 p, vec3 nW, float dist) {
+  if (kind > 10.5) return base; // 11 matte, 12 glass: gloss only, no pattern
   bool broad = kind > 5.5 && kind < 6.5 || kind > 7.5 && kind < 9.5;
   float fade = 1.0 - smoothstep(broad ? 400.0 : 70.0, broad ? 1200.0 : 260.0, dist);
   if (fade <= 0.0 || kind < 0.5) return base;
@@ -311,7 +347,29 @@ vec3 surfacePattern(vec3 base, float kind, vec3 p, vec3 nW, float dist) {
   return mix(base, col, fade);
 }
 
+// Gloss per surface pattern in the realistic look.
+float patternGloss(float kind) {
+  if (kind < 0.5) return -1.0;
+  if (kind < 1.5) return 0.08;  // brick / stucco
+  if (kind < 2.5) return 0.22;  // glazed roof tiles
+  if (kind < 3.5) return 0.12;  // planks
+  if (kind < 4.5) return 0.1;   // stone
+  if (kind < 5.5) return 0.18;  // leaves (waxy)
+  if (kind < 6.5) return 0.1;   // tea
+  if (kind < 7.5) return 0.02;  // thatch
+  if (kind < 8.5) return 0.05;  // grass
+  if (kind < 9.5) return 0.06;  // sandstone
+  if (kind < 10.5) return 0.6;  // marble
+  if (kind < 11.5) return 0.03; // matte (rubber, cloth)
+  if (kind < 12.5) return 0.95; // glass, chrome
+  return 0.0;                   // cloud
+}
+
 void main() {
+  #ifdef GHOST
+    // Screen-door transparency: every other pixel in a moving pattern.
+    if (mod(floor(gl_FragCoord.x) + floor(gl_FragCoord.y), 2.0) < 1.0) discard;
+  #endif
   vec3 base = diffuse;
   float nightMask = 0.0;
   #if defined( USE_COLOR ) || defined( USE_COLOR_ALPHA )
@@ -321,12 +379,15 @@ void main() {
     #endif
   #endif
 
+  float dist = length(vViewPosition);
   #ifdef USE_ROAD
+    // Realistic roads: the painted lavender cools toward real stone and tarmac.
+    base = mix(base, vec3(dot(base, vec3(0.3, 0.55, 0.15))) * vec3(0.95, 0.96, 1.02), uRealism * 0.5 * step(vRoadInfo.x, 0.5));
     base = roadPattern(base, vRoadUv, vRoadInfo);
   #else
     if (vPattern > 0.5) {
       vec3 nW = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));
-      base = surfacePattern(base, vPattern, vWorldPos, nW, length(vViewPosition));
+      base = surfacePattern(base, vPattern, vWorldPos, nW, dist);
     }
   #endif
 
@@ -335,28 +396,104 @@ void main() {
   #else
     vec3 n = normalize(vNormal) * (gl_FrontFacing ? 1.0 : -1.0);
   #endif
+  vec3 faceN = n;
 
   float ndl = dot(n, uSunDir);
   float shadow = getShadowMask();
   float lit = smoothstep(0.02, 0.14, ndl) * shadow;
   float highlight = smoothstep(0.62, 0.7, ndl) * shadow;
 
-  // Coloured shadows (never grey) with a little sky fill.
+  // ————— Watercolour: coloured shadows (never grey) with a little sky fill. —————
   vec3 shadowCol = base * uShadowTint + uSkyTint * 0.05;
   vec3 litCol = base * uSunColor;
-  vec3 col = mix(shadowCol, litCol, lit);
-  col += base * highlight * 0.07;
-
+  vec3 toon = mix(shadowCol, litCol, lit);
+  toon += base * highlight * 0.07;
   // Brushed hatching inside shadows, in world space so it sticks to surfaces.
   float stroke = vnoise(vec2(dot(vWorldPos, vec3(0.7, 0.35, 0.6)) * 1.3, dot(vWorldPos, vec3(-0.3, 0.9, 0.2)) * 0.18));
-  col *= 1.0 - (1.0 - lit) * uHatch * (stroke - 0.5) * 0.35;
+  toon *= 1.0 - (1.0 - lit) * uHatch * (stroke - 0.5) * 0.35;
+  toon *= 1.0 - uWet * 0.12 * (1.0 - lit * 0.5);
 
-  // Wet surfaces darken a little in rain.
-  col *= 1.0 - uWet * 0.12 * (1.0 - lit * 0.5);
+  vec3 col = toon;
+  if (uRealism > 0.001) {
+    // ————— Realistic: smooth normals, soft sun, sky/ground ambient, specular, reflections. —————
+    if (dot(vSmoothN, vSmoothN) > 1e-6) {
+      vec3 sN = normalize(vSmoothN) * (gl_FrontFacing ? 1.0 : -1.0);
+      // Keep the smooth normal on the visible side of the face.
+      if (dot(sN, faceN) < 0.2) sN = normalize(sN + faceN * (0.2 - dot(sN, faceN)));
+      n = normalize(mix(faceN, sN, uRealism));
+    }
+    // Weathering: large soft stains and small grain so flat colours stop looking like plastic.
+    float grime = vnoise(vWorldPos.xz * 0.21 + vWorldPos.y * 0.37) * 0.6 + vnoise(vWorldPos.xy * 1.7 + vWorldPos.z * 0.9) * 0.4;
+    float detailFade = 1.0 - smoothstep(60.0, 220.0, dist);
+    vec3 albedo = base * (1.0 + (grime - 0.5) * 0.16 * detailFade * uRealism);
+
+    vec3 V = normalize(vViewPosition);
+    vec3 L = uSunDir;
+    float ndlR = max(dot(n, L), 0.0);
+    float wrap = max((dot(n, L) + 0.25) / 1.25, 0.0);
+    float sunTerm = mix(ndlR, wrap, 0.35) * shadow;
+    float up = dot(n, uUpView);
+    float hemi = up * 0.5 + 0.5;
+    // Bounce light from below: warm ground plus the bright sea and sky around floating roads.
+    vec3 groundBounce = mix(vec3(0.5, 0.45, 0.4), mix(uSkyHorizon, uSunColor, 0.4), 0.55);
+    vec3 ambient = mix(groundBounce * 0.62, mix(uSkyHorizon, uSkyTint, 0.6) * 0.74, hemi);
+    ambient *= mix(0.9, 1.0, smoothstep(-0.6, 0.4, up));
+
+    float gloss = uGloss;
+    #ifndef USE_ROAD
+      float pg = patternGloss(vPattern);
+      if (pg >= 0.0) gloss = pg;
+    #endif
+    // Windows and lanterns (night-glow parts) are glass.
+    gloss = mix(gloss, 0.9, step(0.5, nightMask));
+    // Rain: upward-facing surfaces get wet and mirror-like.
+    float wetUp = uWet * smoothstep(0.35, 0.8, up);
+    gloss = mix(gloss, 0.85, wetUp);
+    vec3 wetAlbedo = albedo * mix(1.0, 0.62, wetUp);
+
+    vec3 H = normalize(L + V);
+    float ndh = max(dot(n, H), 0.0);
+    float shininess = exp2(mix(3.0, 10.0, gloss));
+    float fres = 0.04 + 0.96 * pow(1.0 - max(dot(n, V), 0.0), 5.0);
+    float spec = pow(ndh, shininess) * (shininess + 8.0) / 25.0 * mix(0.04, 1.0, fres) * gloss;
+    vec3 R = reflect(-V, n);
+    float ry = dot(R, uUpView);
+    vec3 env = mix(uSkyHorizon, uSkyTint, smoothstep(-0.05, 0.6, ry));
+    env = mix(env * 0.45, env, smoothstep(-0.25, 0.05, ry)); // below the horizon: darker ground
+    vec3 real = wetAlbedo * (uSunColor * uSunIntensity * sunTerm + ambient);
+    real += uSunColor * uSunIntensity * spec * sunTerm * 1.2;
+    real += env * fres * gloss * 0.8;
+    #ifndef USE_ROAD
+      if (vPattern > 12.5) {
+        // Clouds scatter light: bright everywhere, warm where the sun hits, no highlights.
+        real = base * (mix(uSkyHorizon, uSkyTint, 0.3) * 0.75 + uSunColor * uSunIntensity * (0.35 + 0.4 * wrap));
+      }
+    #endif
+    col = mix(toon, real, uRealism);
+  }
+
+  // Headlights: a warm cone from the player's vehicle after dark.
+  if (uHeadOn > 0.001) {
+    vec3 fragPos = -vViewPosition;
+    vec3 toFrag = fragPos - uHeadPos;
+    float d = length(toFrag);
+    vec3 dir = toFrag / max(d, 1e-3);
+    float cone = smoothstep(0.8, 0.95, dot(dir, uHeadDir));
+    float atten = 1.0 / (1.0 + d * d * 0.004) * (1.0 - smoothstep(45.0, 80.0, d));
+    float lam = max(dot(n, -dir), 0.0);
+    col += base * vec3(1.0, 0.92, 0.78) * cone * atten * lam * uHeadOn * 1.8;
+  }
+  // Lightning lights everything for an instant.
+  col += base * uFlash * 0.7;
 
   float glow = uEmissive * mix(1.0, uNight, uGlowAtNight) + nightMask * uNight;
   vec3 glowCol = mix(base, vec3(1.0, 0.86, 0.5), nightMask);
-  col = mix(col, glowCol * 1.15, clamp(glow, 0.0, 1.0));
+  col = mix(col, glowCol * mix(1.15, 2.2, uRealism), clamp(glow, 0.0, 1.0));
+
+  #ifdef GHOST
+    col = mix(col, vec3(0.75, 0.9, 1.0), 0.45);
+    glow = max(glow, 0.25);
+  #endif
 
   gColor = vec4(col, clamp(glow, 0.0, 1.0));
   gNormal = vec4(n * 0.5 + 0.5, fract(uObjectId + vInstance * 0.6180339));
@@ -373,6 +510,7 @@ export class PaintMaterial extends THREE.ShaderMaterial {
         uEmissive: { value: opts.emissive ?? 0 },
         uGlowAtNight: { value: opts.glowAtNight ? 1 : 0 },
         uObjectId: { value: opts.objectId ?? fract(nextObjectId++ * 0.3819661) },
+        uGloss: { value: opts.gloss ?? (opts.road ? 0.28 : 0.15) },
       },
     ]);
     Object.assign(uniforms, paintShared);
@@ -388,6 +526,7 @@ export class PaintMaterial extends THREE.ShaderMaterial {
         ...(opts.road ? { USE_ROAD: '' } : {}),
         // Faceted low-poly look: normals from screen derivatives (three's own chunks honour this define).
         ...(opts.flat ? { FLAT_SHADED: '' } : {}),
+        ...(opts.ghost ? { GHOST: '' } : {}),
       },
     });
   }

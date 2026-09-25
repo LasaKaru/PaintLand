@@ -25,11 +25,17 @@ await page.goto(url);
 await page.waitForFunction(() => window.__paintland, null, { timeout: 90000 });
 await page.waitForTimeout(3000);
 await page.screenshot({ path: `${out}00-splash.png` });
+// STYLE=realistic|illustrated|watercolour, QUALITY=low|medium|high|ultra
+if (process.env.STYLE || process.env.QUALITY) await page.evaluate(([st, q]) => window.__paintland.debugLook(st, q), [process.env.STYLE, process.env.QUALITY]);
+const tag = process.env.STYLE ? `-${process.env.STYLE}` : '';
 
-for (const screen of (process.env.MENUS ?? '').split(',').filter(Boolean)) {
+for (const entry of (process.env.MENUS ?? '').split(',').filter(Boolean)) {
+  // "settings/controls" opens a settings tab.
+  const [screen, tab] = entry.split('/');
   await page.evaluate((s) => window.__paintland.debugMenu(s), screen);
+  if (tab) await page.click(`[data-stab="${tab}"]`);
   await page.waitForTimeout(wait);
-  await page.screenshot({ path: `${out}menu-${screen}.png` });
+  await page.screenshot({ path: `${out}menu-${screen}${tab ? `-${tab}` : ''}${tag}.png` });
 }
 if (process.env.INTRO) {
   await page.evaluate(() => window.__paintland.debugIntro());
@@ -39,11 +45,11 @@ if (process.env.INTRO) {
 const defaults = 'sketch:20:morning,sketch:650:golden';
 for (const shot of (process.env.SHOTS ?? defaults).split(',').filter(Boolean)) {
   const [chapter, s, preset, rain] = shot.split(':');
-  await page.evaluate(([c, s, p, r]) => window.__paintland.debugJump(Number(s), p, r === 'rain', c), [chapter, s, preset, rain]);
+  await page.evaluate(([c, s, p, r]) => window.__paintland.debugJump(Number(s), p, r || 'clear', c), [chapter, s, preset, rain]);
   await page.waitForTimeout(wait);
   const info = await page.evaluate(() => window.__paintland.debugInfo());
   logs.push(`[shot ${shot}] ${JSON.stringify(info)}`);
-  await page.screenshot({ path: `${out}${chapter}-${String(s).padStart(4, '0')}-${preset}${rain ? '-rain' : ''}.png` });
+  await page.screenshot({ path: `${out}${chapter}-${String(s).padStart(4, '0')}-${preset}${rain ? `-${rain}` : ''}${tag}.png` });
 }
 if (process.env.WALK) {
   await page.evaluate(() => window.__paintland.debugWalk());

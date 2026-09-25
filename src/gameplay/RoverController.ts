@@ -29,7 +29,14 @@ export interface RoverInput {
   hop: boolean;
   boost: boolean;
   drift: boolean;
+  shiftUp?: boolean;
+  shiftDown?: boolean;
 }
+
+/** Gear tops as a fraction of top speed (realistic handling, 6 speeds). */
+export const GEAR_TOPS = [0.2, 0.36, 0.52, 0.68, 0.84, 1.0];
+export const IDLE_RPM = 900;
+export const REDLINE_RPM = 7200;
 
 /** Temporary buffs with drawbacks (docs/06 §3). */
 export interface RoverModifiers {
@@ -45,7 +52,10 @@ export interface RoverEvents {
   onLand?: (airTime: number) => void;
   onBump?: (side: number) => void;
   onLap?: () => void;
+  onShift?: (gear: number) => void;
 }
+
+export type HandlingModel = 'arcade' | 'realistic';
 
 /**
  * The rover on the ribbon (docs/05 §4.1). State is road-relative:
@@ -73,6 +83,20 @@ export class RoverController {
   squash = 0;
   wobbleTime = 0;
 
+  /** Arcade (forgiving, cruise floor) or realistic (gears, grip, drag). */
+  handling: HandlingModel = 'arcade';
+  gearbox: 'auto' | 'manual' = 'auto';
+  /** Hold a minimum speed on flat road once moving. Always on for walls and ceilings. */
+  autoCruise = true;
+  /** 1..6 in realistic handling. */
+  gear = 1;
+  rpm = IDLE_RPM;
+  /** Longitudinal acceleration (m/s²), for body pitch. */
+  longAccel = 0;
+  /** Tyres past their grip (realistic): squeal and scrub. */
+  sliding = false;
+  private shiftTimer = 0;
+
   prevS = 0;
   prevX = 0;
   prevH = 0;
@@ -94,6 +118,9 @@ export class RoverController {
     this.grounded = true;
     this.airTime = 0;
     this.cruise = false;
+    this.gear = 1;
+    this.rpm = IDLE_RPM;
+    this.longAccel = 0;
   }
 
   get speedKmh(): number {
@@ -110,6 +137,8 @@ export class RoverController {
     const f = this.path.sample(this.s, this.frame);
     const upright = f.up.y > 0.6;
     const top = T.topSpeed * this.mods.speedMul;
+    const vBefore = this.v;
+    const real = this.handling === 'realistic';
 
     // Throttle, brake, cruise.
     if (input.throttle > 0.05) this.cruise = true;
@@ -122,10 +151,15 @@ export class RoverController {
       this.v = Math.min(this.v, T.boostSpeed * this.mods.speedMul);
       this.boostMeter = Math.max(0, this.boostMeter - T.boostDrain * dt);
     } else if (input.throttle > 0.05) {
-      this.v += T.accel * input.throttle * Math.max(0, 1 - this.v / top) * dt;
+      if (real) this.v += this.engineForce(input.throttle, top) * dt;
+      else this.v += T.accel * input.throttle * Math.max(0, 1 - this.v / top) * dt;
     } else if (this.v > 0) {
-      this.v = Math.max(0, this.v - T.coastDrag * dt); // coasting never reverses
+      // Coasting never reverses. Realistic: engine braking + rolling resistance.
+      const drag = real ? T.coastDrag + 1.6 + (this.gear <= 2 ? 1.2 : 0) : T.coastDrag;
+      this.v = Math.max(0, this.v - drag * dt);
     }
+    if (real && this.v > 0) this.v = Math.max(0, this.v - 0.0004 * this.v * this.v * dt); // air drag
+    if (real) this.updateGearbox(dt, input, top);
     if (this.v > top && !this.boosting) this.v = dampScalar(this.v, top, 1.5, dt);
     // Brakes only bite on upright road: on walls and ceilings the cruise floor wins,
     // so nobody can stall upside down (docs/05 §4.1).
@@ -140,8 +174,8 @@ export class RoverController {
     // Hills: uphill slows, downhill speeds up.
     this.v -= T.gravity * f.tangent.y * T.slopeFactor * dt;
 
-    // Cruise floor: always on steep or inverted road, otherwise while cruising.
-    const floor = !upright || (this.cruise && !this.braking) ? T.cruiseFloor : 0;
+    // Cruise floor: always on steep or inverted road, otherwise while cruising (if enabled).
+    const floor = !upright || (this.autoCruise && this.cruise && !this.braking) ? T.cruiseFloor : 0;
     if (this.v < floor) this.v = dampScalar(this.v, floor, upright ? 4 : 6, dt);
 
     // Steering and drift.
@@ -153,8 +187,24 @@ export class RoverController {
       steer += Math.sin(this.wobbleTime * 5.3) * 0.35;
     }
     const steerSpeed = (T.steerLow + (T.steerHigh - T.steerLow) * speedT) * (this.drifting ? 1.45 : 1) * (this.grounded ? 1 : 0.5);
-    const targetVx = steer * steerSpeed * Math.min(1, Math.abs(this.v) / 6 + 0.2);
-    this.vx = dampScalar(this.vx, targetVx, T.steerResponse, dt);
+    let targetVx = steer * steerSpeed * Math.min(1, Math.abs(this.v) / 6 + 0.2);
+    if (real) {
+      // Less steering at speed, and a grip limit: ask for more than the tyres give and you slide.
+      targetVx *= 1 / (1 + this.v / 45);
+      const before = this.vx;
+      this.vx = dampScalar(this.vx, targetVx, T.steerResponse * 0.65, dt);
+      const latAccel = Math.abs(this.vx - before) / dt + Math.abs(this.vx) * Math.abs(this.v) * 0.02;
+      const grip = 14 * (this.grounded ? 1 : 0.2);
+      this.sliding = this.grounded && latAccel > grip && this.v > 15;
+      if (this.sliding) {
+        this.v -= (latAccel - grip) * 0.12 * dt;
+        this.boostMeter = Math.min(1, this.boostMeter + 0.05 * dt);
+      }
+      this.v -= Math.abs(this.vx) * 0.05 * dt; // tyre scrub
+    } else {
+      this.sliding = false;
+      this.vx = dampScalar(this.vx, targetVx, T.steerResponse, dt);
+    }
     this.x += this.vx * dt;
     if (this.drifting) {
       this.v -= 1.5 * dt;
@@ -201,12 +251,47 @@ export class RoverController {
     const targetYaw = Math.atan2(this.vx, Math.max(Math.abs(this.v), 4)) + (this.drifting ? Math.sign(input.steer) * 0.4 : 0);
     this.yaw = dampScalar(this.yaw, targetYaw, 8, dt);
 
+    this.longAccel = dampScalar(this.longAccel, (this.v - vBefore) / dt, 6, dt);
     this.s += this.v * dt;
     if (this.s < 0) {
       this.s = 0;
       this.v = 0;
     }
     if (this.s >= this.path.length - 0.5) this.events.onLap?.();
+  }
+
+  /** Drive force from a torque curve: strong mid-range, falling off at the redline; low gears pull harder. */
+  private engineForce(throttle: number, top: number): number {
+    if (this.shiftTimer > 0) return 0;
+    const T = this.tuning;
+    const n = (this.rpm - IDLE_RPM) / (REDLINE_RPM - IDLE_RPM);
+    const torque = 0.65 + 0.45 * Math.sin(Math.PI * Math.min(1, n * 0.95 + 0.1));
+    const gearPull = 1.35 - this.gear * 0.1;
+    const gearTop = GEAR_TOPS[this.gear - 1] * top;
+    if (this.v >= gearTop) return 0; // limiter
+    return T.accel * throttle * torque * gearPull * Math.max(0.08, 1 - this.v / top);
+  }
+
+  private updateGearbox(dt: number, input: RoverInput, top: number): void {
+    this.shiftTimer = Math.max(0, this.shiftTimer - dt);
+    const shift = (d: number): void => {
+      const g = clamp(this.gear + d, 1, GEAR_TOPS.length);
+      if (g === this.gear) return;
+      this.gear = g;
+      this.shiftTimer = d > 0 ? 0.16 : 0.08;
+      this.events.onShift?.(g);
+    };
+    const gearTop = (g: number): number => GEAR_TOPS[g - 1] * top;
+    if (this.gearbox === 'manual') {
+      if (input.shiftUp) shift(1);
+      if (input.shiftDown) shift(-1);
+    } else if (this.shiftTimer <= 0) {
+      const ratio = Math.abs(this.v) / gearTop(this.gear);
+      if (ratio > 0.97 && input.throttle > 0.1) shift(1);
+      else if (this.gear > 1 && Math.abs(this.v) < gearTop(this.gear - 1) * 0.72) shift(-1);
+    }
+    const target = IDLE_RPM + (REDLINE_RPM - IDLE_RPM) * clamp(Math.abs(this.v) / gearTop(this.gear), 0, 1.02);
+    this.rpm = dampScalar(this.rpm, this.shiftTimer > 0 ? target * 0.85 : target, 14, dt);
   }
 
   /** Launch from a ramp panel. */

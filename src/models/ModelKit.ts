@@ -25,6 +25,12 @@ export const Pattern = {
   Grass: 8,
   Sandstone: 9,
   Marble: 10,
+  /** No pattern; matte in the realistic look (tyres, cloth). */
+  Matte: 11,
+  /** No pattern; glossy glass/chrome in the realistic look. */
+  Glass: 12,
+  /** Soft, bright, no specular in the realistic look (cloud puffs). */
+  Cloud: 13,
 } as const;
 
 /**
@@ -41,9 +47,15 @@ export class ModelKit {
   private readonly s = new THREE.Vector3();
   private readonly p = new THREE.Vector3();
   private readonly c = new THREE.Color();
+  private readonly nm = new THREE.Matrix3();
 
   add(geometry: THREE.BufferGeometry, colour: THREE.ColorRepresentation, opts: PartOptions = {}): this {
     let g = geometry.index ? geometry.toNonIndexed() : geometry.clone();
+    // Keep the primitive's own (smooth) normals as `smoothNormal`: the realistic
+    // renderer uses them to round off blobs, trunks and domes; the watercolour
+    // look keeps the faceted face normals.
+    const srcNormal = g.getAttribute('normal');
+    const smooth = srcNormal ? new THREE.BufferAttribute(Float32Array.from(srcNormal.array as ArrayLike<number>), 3) : null;
     for (const name of Object.keys(g.attributes)) if (name !== 'position') g.deleteAttribute(name);
     const pos = opts.position;
     if (Array.isArray(pos)) this.p.set(pos[0], pos[1], pos[2]);
@@ -55,6 +67,11 @@ export class ModelKit {
     if (typeof sc === 'number') this.s.setScalar(sc);
     else this.s.set(sc[0], sc[1], sc[2]);
     g.applyMatrix4(this.m.compose(this.p, this.q, this.s));
+    const count0 = g.attributes.position.count;
+    if (smooth && smooth.count === count0) {
+      smooth.applyNormalMatrix(this.nm.getNormalMatrix(this.m));
+      g.setAttribute('smoothNormal', smooth);
+    } else g.setAttribute('smoothNormal', new THREE.BufferAttribute(new Float32Array(count0 * 3), 3));
 
     this.c.set(colour);
     const count = g.attributes.position.count;
@@ -87,9 +104,13 @@ export class ModelKit {
     const rough = opts.roughness ?? 0.18;
     const seed = opts.seed ?? 0;
     const pos = g.attributes.position;
+    const nrm = g.attributes.normal;
     const v = new THREE.Vector3();
     for (let i = 0; i < pos.count; i++) {
       v.fromBufferAttribute(pos, i);
+      // Round (radial) normals even for low detail: the realistic look shades blobs as soft spheres.
+      const len = v.length() || 1;
+      nrm.setXYZ(i, v.x / len, v.y / len, v.z / len);
       const k = 1 + (hash3(v.x + seed, v.y, v.z) - 0.5) * 2 * rough;
       pos.setXYZ(i, v.x * k, v.y * k, v.z * k);
     }

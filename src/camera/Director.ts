@@ -200,6 +200,11 @@ export class Director {
     this.apply();
   }
 
+  /** Where the lens is looking (depth-of-field focus). */
+  get focusPoint(): THREE.Vector3 {
+    return this.look;
+  }
+
   forceCut(): void {
     this.cut = true;
   }

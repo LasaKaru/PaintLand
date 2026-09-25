@@ -1,5 +1,5 @@
 import GUI from 'lil-gui';
-import { DEFAULT_STUDIO, VIBES, applyVibe, saveStudio, type StudioSettings } from '../render/StudioSettings';
+import { DEFAULT_STUDIO, VIBES, applyArtStyle, applyVibe, saveStudio, type ArtStyle, type StudioSettings } from '../render/StudioSettings';
 
 export interface StudioHooks {
   onChange: () => void;
@@ -30,6 +30,20 @@ export class Studio {
       this.gui.controllersRecursive().forEach((c) => c.updateDisplay());
       save();
     });
+
+    const look = this.gui.addFolder('Art style & realism');
+    look.add(s, 'artStyle', ['watercolour', 'illustrated', 'realistic']).name('Art style').onChange((v: ArtStyle) => {
+      applyArtStyle(this.s, v);
+      this.refresh();
+      save();
+    });
+    look.add(s, 'realism', 0, 1, 0.01).name('Realism').onChange(save);
+    look.add(s, 'exposure', 0.5, 2, 0.01).name('Exposure').onChange(save);
+    look.add(s, 'contrast', 0.7, 1.4, 0.01).name('Contrast').onChange(save);
+    look.add(s, 'vignette', 0, 1, 0.01).name('Vignette').onChange(save);
+    look.add(s, 'aoStrength', 0, 1.5, 0.01).name('Ambient occlusion').onChange(save);
+    look.add(s, 'sunShafts', 0, 1.5, 0.01).name('Sun shafts').onChange(save);
+    look.add(s, 'cinematicDof', 0, 1, 0.01).name('Cinematic depth of field').onChange(save);
 
     const cam = this.gui.addFolder('Camera');
     cam.add(s, 'fov', 55, 110, 1).name('Field of view').onChange(save);
@@ -86,6 +100,11 @@ export class Studio {
     this.gui.add(actions, 'reset').name('Reset to default');
     this.gui.add(this.statsLine, 'fps').name('Frame').disable().listen();
     setInterval(() => (this.statsLine.fps = hooks.stats()), 500);
+  }
+
+  /** Re-read values changed elsewhere (Settings screens). */
+  refresh(): void {
+    this.gui.controllersRecursive().forEach((c) => c.updateDisplay());
   }
 
   toggle(): void {

@@ -1,12 +1,13 @@
 import * as THREE from 'three';
 import { Input } from './Input';
+import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Options';
 import { clamp } from './MathUtil';
 import { createFrame } from '../road/RoadPath';
 import { PaintPipeline } from '../render/PaintPipeline';
 import { paintShared } from '../render/PaintMaterial';
 import { createSky, createWater, waterUniforms, skyUniforms } from '../render/SkyWater';
-import { loadStudio, saveStudio, type StudioSettings } from '../render/StudioSettings';
-import { Environment, TIME_PRESETS } from '../world/Environment';
+import { applyArtStyle, applyQuality, loadStudio, saveStudio, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
+import { Environment, TIME_PRESETS, type WeatherId } from '../world/Environment';
 import { CHAPTERS, chapterById } from '../world/Chapters';
 import { World } from '../world/World';
 import { VehicleModel, vehicleById, tuningFor } from '../models/Vehicles';
@@ -46,10 +47,6 @@ const INTRO: Shot[] = [
   { kind: 'orbit', duration: 5, line: 'Paint the road. Then drive up it.' },
 ];
 
-interface GameSettings {
-  calmLighting: boolean;
-  hudScale: number;
-}
 
 /**
  * The game: owns the world, the pawns, the fixed-step simulation and the frame
@@ -60,7 +57,7 @@ export class Game {
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly settings: StudioSettings = loadStudio();
-  private readonly gameSettings: GameSettings = loadJson('paintland.settings.v1', { calmLighting: false, hudScale: 1 });
+  private readonly options: GameOptions = loadOptions();
   private readonly pipeline: PaintPipeline;
   private readonly input: Input;
   private readonly audio = new AudioEngine();
@@ -102,6 +99,7 @@ export class Game {
   private songLog: number[] = [];
   private readonly tonics = new Map<TonicId, number>();
   private selectedTonic: TonicId = 'magnet';
+  private steerSmoothed = 0;
   private splash = 0;
   private borderPulse = 0;
   private pendingLap = false;
@@ -163,8 +161,11 @@ export class Game {
       openControls: () => this.hud.show('screenHelp', true),
       watchIntro: () => this.startIntro(),
       unlockAudio: () => this.unlockAudio(),
-      settings: () => ({ music: this.settings.musicVolume, notes: this.settings.musicBox, engine: this.settings.engineHum, reducedMotion: this.settings.reducedMotion, calmLighting: this.gameSettings.calmLighting, hudScale: this.gameSettings.hudScale }),
-      setSetting: (k, v) => this.setSetting(k, v),
+      studio: () => this.settings,
+      options: () => this.options,
+      settingsChanged: () => this.settingsChanged(),
+      input: () => this.input,
+      stats: () => `${this.fps.toFixed(0)} fps · ${Math.round(this.pipeline.renderScale * 100)}% render scale · ${this.renderer.info.render.calls} draw calls · ${(this.renderer.info.render.triangles / 1e6).toFixed(2)} M triangles`,
       resume: () => this.resumeFromMenu(),
       canResume: () => this.resumeSnapshot !== null,
     });
@@ -194,6 +195,10 @@ export class Game {
     this.sky = createSky();
     this.scene.add(this.sky, createWater());
     this.env = new Environment(this.scene);
+    this.env.onThunder = (d) => {
+      this.audio.thunder(d);
+      this.rig?.addShake(0.12 / (0.5 + d));
+    };
     await step(0.15, 'sketching the chapter…');
     this.loadChapter(this.profile.data.chapter);
     await step(0.85, 'tuning the gramophone…');
@@ -234,11 +239,14 @@ export class Game {
       onBump: () => {
         this.audio.thud();
         this.rig.addShake(0.15);
+        this.input.rumble(0.5, 120);
       },
       onLap: () => (this.pendingLap = true),
+      onShift: () => this.audio.gearShift(),
     });
     this.rover.tuning = tuningFor(this.profile.data.vehicle);
     this.rover.reset(8);
+    this.applyOptions();
     this.human = new HumanController(this.world.path);
     this.mode = 'drive';
 
@@ -302,24 +310,49 @@ export class Game {
       this.rig.shake = s.reducedMotion ? 0 : s.cameraShake;
     }
     paintShared.uHatch.value = s.hatching;
+    paintShared.uRealism.value = s.realism;
+    this.env?.setShadows(s.shadowQuality, s.shadowDistance, s.softShadows);
+    if (this.rig) {
+      this.rig.camera.far = s.drawDistance;
+      this.rig.camera.updateProjectionMatrix();
+    }
+    // The sky dome sits just inside the far plane.
+    this.sky?.scale.setScalar((s.drawDistance * 0.9) / 3000);
     this.audio.musicVolume = s.musicVolume;
     this.audio.noteVolume = s.musicBox;
     this.audio.engineVolume = s.engineHum;
     this.audio.windVolume = s.wind;
-    document.documentElement.style.setProperty('--hud-scale', String(this.gameSettings.hudScale));
+    this.applyOptions();
     this.pipeline.setSize(window.innerWidth, window.innerHeight);
   }
 
-  private setSetting(key: string, value: number | boolean): void {
-    if (key === 'music') this.settings.musicVolume = value as number;
-    if (key === 'notes') this.settings.musicBox = value as number;
-    if (key === 'engine') this.settings.engineHum = value as number;
-    if (key === 'reducedMotion') this.settings.reducedMotion = value as boolean;
-    if (key === 'calmLighting') this.gameSettings.calmLighting = value as boolean;
-    if (key === 'hudScale') this.gameSettings.hudScale = value as number;
+  /** Controls, driving model, units, weather and accessibility (Settings → Controls / Driving / Access). */
+  private applyOptions(): void {
+    const o = this.options;
+    document.documentElement.style.setProperty('--hud-scale', String(o.hudScale));
+    this.input.mouseSensitivity = o.mouseSensitivity;
+    this.input.invertY = o.invertY;
+    this.input.padLookSensitivity = o.padLookSensitivity;
+    this.input.deadzone = o.padDeadzone;
+    this.input.vibration = o.vibration;
+    if (this.rover) {
+      this.rover.handling = o.handling;
+      this.rover.gearbox = o.gearbox;
+      this.rover.autoCruise = o.autoCruise;
+    }
+    if (this.env) {
+      this.env.autoWeather = o.autoWeather;
+      this.env.dayMinutes = o.dayMinutes;
+    }
+    this.pipeline.colourBlind = ['none', 'protan', 'deutan', 'tritan'].indexOf(o.colourBlind);
+  }
+
+  /** Save and apply everything the Settings screens touched. */
+  private settingsChanged(): void {
     saveStudio(this.settings);
-    saveJson('paintland.settings.v1', this.gameSettings);
+    saveOptions(this.options);
     this.applySettings();
+    this.studio?.refresh();
   }
 
   private resize(): void {
@@ -616,7 +649,8 @@ export class Game {
       this.rover.mods.highJumps = feather;
       this.rover.mods.speedMul = this.tonics.has('fizzy') ? 1.2 : 1;
       this.rover.mods.wobbly = this.tonics.has('fizzy');
-      if (!frozen) this.rover.step(dt, { throttle: inp.throttle(), brake: inp.brake(), steer: inp.steer(), hop: inp.consume('hop'), boost: inp.held('boost'), drift: inp.held('drift') });
+      if (!frozen) this.rover.step(dt, { throttle: inp.throttle(), brake: inp.brake(), steer: this.steering(dt), hop: inp.consume('hop'), boost: inp.held('boost'), drift: inp.held('drift'), shiftUp: inp.consume('shiftUp'), shiftDown: inp.consume('shiftDown') });
+      if (this.rover.sliding) this.input.rumble(0.15, 40);
       items.collect({ s: this.rover.s, x: this.rover.x, h: this.rover.h, radiusS: 2.4, radiusX: 1.9, magnet: this.tonics.has('magnet'), driving: true }, this.events);
       if (this.rover.boosting) this.missions.onBoost(this.district, dt);
       this.collideWithTraffic();
@@ -657,6 +691,19 @@ export class Game {
     if (d !== this.district) this.changeDistrict(d);
   }
 
+  /** Player steering with sensitivity, smoothing and the optional centring assist. */
+  private steering(dt: number): number {
+    const o = this.options;
+    const raw = clamp(this.input.steer() * o.steerSensitivity, -1, 1);
+    const rate = 40 - o.steerSmoothing * 34;
+    this.steerSmoothed += (raw - this.steerSmoothed) * Math.min(1, rate * dt);
+    let steer = this.steerSmoothed;
+    if (o.steerAssist > 0 && Math.abs(raw) < 0.05) {
+      steer += clamp((-this.rover.x / 6) * o.steerAssist, -0.35, 0.35);
+    }
+    return clamp(steer, -1, 1);
+  }
+
   /** AI cars and the Nine Arch train are solid: bump off them. */
   private collideWithTraffic(): void {
     const r = this.rover;
@@ -673,6 +720,7 @@ export class Game {
         if (ds < 0) r.v *= 0.85;
         this.audio.thud();
         this.rig.addShake(0.25);
+        this.input.rumble(0.8, 180);
       }
     }
   }
@@ -771,6 +819,7 @@ export class Game {
 
   private onLand(air: number): void {
     this.audio.land(Math.min(1, air));
+    if (this.state === 'play') this.input.rumble(Math.min(1, air * 0.5), 90);
     this.rig.addShake(Math.min(0.35, air * 0.2));
     if (this.state !== 'play') return;
     this.missions.onAir(air);
@@ -844,6 +893,8 @@ export class Game {
 
   private loop = (now: number): void => {
     requestAnimationFrame(this.loop);
+    const cap = this.settings.fpsCap;
+    if (cap > 0 && now - this.lastFrame < 1000 / cap - 2) return;
     const dt = Math.min(0.1, (now - this.lastFrame) / 1000);
     this.lastFrame = now;
     this.fps += (1 / Math.max(dt, 1e-4) - this.fps) * 0.05;
@@ -998,7 +1049,8 @@ export class Game {
     vm.roll(this.rover.v * dt);
     vm.body.position.y = -this.rover.squash * 0.18 + Math.sin(this.time * 18) * 0.012 * Math.min(1, this.rover.v / 20);
     vm.body.rotation.z = clamp(-this.rover.vx * 0.012, -0.08, 0.08);
-    vm.body.rotation.x = this.rover.braking ? -0.035 : this.rover.boosting ? 0.03 : 0;
+    // Weight transfer: the nose dips under braking and lifts under power.
+    vm.body.rotation.x = clamp(this.rover.longAccel * 0.0035, -0.06, 0.05) + (this.rover.boosting ? 0.02 : 0);
     vm.horn.scale.setScalar(1 + this.audio.beatPulse * 0.08);
     vm.antenna.rotation.x = Math.sin(this.time * 9) * 0.08 * Math.min(1, this.rover.v / 15) - this.rover.v * 0.003;
     vm.setBrakeLights(this.rover.braking);
@@ -1057,7 +1109,7 @@ export class Game {
 
     // World.
     this.sky.position.copy(cam.position);
-    this.env.update(dt, focus, cam, this.settings.reducedMotion || this.gameSettings.calmLighting);
+    this.env.update(dt, focus, cam, this.settings.reducedMotion || this.options.calmLighting);
     paintShared.uTime.value = this.time;
     skyUniforms.uTime.value = this.time;
     waterUniforms.uTime.value = this.time;
@@ -1077,26 +1129,53 @@ export class Game {
       this.hud.setPlayers([...this.net.peers.values()].map((p) => p.info?.name ?? '…'), this.net.status);
     } else this.hud.setPlayers([], 'offline');
 
-    this.audio.update(this.mode === 'drive' ? this.rover.v : this.human.speed, this.rover.boosting, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y);
+    this.audio.update(this.mode === 'drive' ? this.rover.v : this.human.speed, this.rover.boosting, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y, this.rover.handling === 'realistic' ? this.rover.rpm : undefined);
     this.updateHud(dt, f.up);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);
     this.borderPulse = Math.max(0, this.borderPulse - dt * 0.8);
     const speedLines = this.mode === 'drive' && playing ? clamp((this.rover.v - 38) / 20, 0, 1) + (this.rover.boosting ? 0.6 : 0) : 0;
+    this.updateHeadlights(vm, cam);
+    // Depth of field: cinematics focus on what the director looks at.
+    let dofAmount = 0;
+    let dofFocus = 10;
+    if (!playing && this.settings.cinematicDof > 0 && this.settings.realism > 0.2) {
+      dofAmount = this.settings.cinematicDof * 0.8;
+      dofFocus = cam.position.distanceTo(this.director.focusPoint);
+    }
+    // Short draw distances get thicker haze so the far plane never shows.
+    const hazeBoost = Math.max(1, 3000 / this.settings.drawDistance);
     this.pipeline.render(this.scene, cam, dt, this.time, {
       fogColor: this.env.fogColor,
       rain: this.env.rain,
       speedLines: Math.min(1, speedLines),
       borderPulse: this.borderPulse + this.splash * 0.4,
       splash: this.splash * 0.8,
+      sunDir: this.env.sunDirection,
+      sunColor: this.env.sunColour,
+      fogDensity: this.env.fogDensity * hazeBoost,
+      flash: this.env.flash,
+      dofFocus,
+      dofAmount,
     });
+  }
+
+  /** Headlight cone for the shader, in view space: on after dusk and in murky weather. */
+  private updateHeadlights(vm: VehicleModel, cam: THREE.PerspectiveCamera): void {
+    const on = Math.max(clamp((paintShared.uNight.value - 0.3) / 0.5, 0, 1), this.env.grey > 0.2 ? 0.6 : 0);
+    paintShared.uHeadOn.value = on;
+    if (on <= 0) return;
+    const fwd = _v.set(0, 0, -1).applyQuaternion(vm.root.quaternion);
+    const up = _v2.set(0, 1, 0).applyQuaternion(vm.root.quaternion);
+    paintShared.uHeadPos.value.copy(vm.root.position).addScaledVector(up, 0.9).addScaledVector(fwd, 2.3).applyMatrix4(cam.matrixWorldInverse);
+    paintShared.uHeadDir.value.copy(fwd).addScaledVector(up, -0.12).normalize().transformDirection(cam.matrixWorldInverse);
   }
 
   private updateHud(dt: number, roadUp: THREE.Vector3): void {
     const hud = this.hud;
     hud.update(dt);
     const totals = this.world.items.totals();
-    hud.setClock(this.env.clockText(), this.env.bandLabel(), this.env.presetId, this.env.auto, this.env.weather === 'rain');
+    hud.setClock(this.env.clockText(), this.env.bandLabel(), this.env.presetId, this.env.auto, this.env.weatherLabel);
     hud.setStatus(totals.notes, totals.noteTotal, this.env.bandLabel(), this.settings.vibe);
     const st = this.audio.station;
     hud.setRadio(st.freq, st.name, `track ${String(this.audio.trackIndex + 1).padStart(2, '0')} / ${String(st.tracks).padStart(2, '0')}`, this.audio.trackProgress, this.audio.radioOn);
@@ -1117,7 +1196,8 @@ export class Game {
     const angle = (Math.atan2(down.dot(camRight), down.dot(camUp)) * 180) / Math.PI;
     const label = roadUp.y > 0.7 ? 'down is down' : roadUp.y < -0.7 ? 'upside down' : 'sideways';
     const kmh = this.mode === 'drive' ? this.rover.speedKmh : this.human.speed * 3.6;
-    hud.setSpeed(kmh, this.rover.boostMeter, this.rover.boosting, defs[this.district].name, angle, label, this.mode === 'foot');
+    const gear = this.mode === 'drive' && this.rover.handling === 'realistic' ? `${this.rover.v < -0.3 ? 'R' : this.rover.gear} · ${Math.round(this.rover.rpm / 100) * 100} rpm` : undefined;
+    hud.setSpeed(displaySpeed(kmh, this.options.units), this.rover.boostMeter, this.rover.boosting, defs[this.district].name, angle, label, this.mode === 'foot', this.options.units === 'mph' ? 'mph' : 'km/h', gear);
     hud.setTonics([...this.tonics].map(([id, t]) => ({ buff: TONICS[id].buff, drawback: TONICS[id].drawback, remaining: t, total: TONICS[id].duration })));
   }
 
@@ -1136,7 +1216,7 @@ export class Game {
 
   // ————— development hooks (tools/*.mjs) —————
 
-  debugJump(s: number, preset?: string, rain?: boolean, chapter?: string): void {
+  debugJump(s: number, preset?: string, weather?: string | boolean, chapter?: string): void {
     if (chapter && chapter !== this.world.chapter.id) this.play(chapter);
     if (this.state !== 'play') this.play(this.world.chapter.id);
     if (this.mode === 'foot') this.enterRover(true);
@@ -1146,8 +1226,15 @@ export class Game {
     const d = this.world.path.districtAt(s);
     if (d !== this.district) this.changeDistrict(d);
     if (preset) this.env.setPreset(preset);
-    if (rain !== undefined && (this.env.weather === 'rain') !== rain) this.env.toggleRain();
+    if (weather !== undefined) this.env.setWeather(typeof weather === 'string' ? (weather as WeatherId) : weather ? 'rain' : 'clear');
     this.rig.snap();
+  }
+
+  /** Art style and graphics tier for screenshots (tools/screenshot.mjs STYLE=… QUALITY=…). */
+  debugLook(style?: string, quality?: string): void {
+    if (style) applyArtStyle(this.settings, style as ArtStyle);
+    if (quality) applyQuality(this.settings, quality as QualityLevel);
+    this.applySettings();
   }
 
   debugInfo(): Record<string, unknown> {
@@ -1202,21 +1289,3 @@ const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
 const _y = new THREE.Vector3(0, 1, 0);
-
-function loadJson<T>(key: string, fallback: T): T {
-  try {
-    const raw = localStorage.getItem(key);
-    if (raw) return { ...fallback, ...(JSON.parse(raw) as T) };
-  } catch {
-    /* storage blocked */
-  }
-  return structuredClone(fallback);
-}
-
-function saveJson(key: string, value: unknown): void {
-  try {
-    localStorage.setItem(key, JSON.stringify(value));
-  } catch {
-    /* storage blocked */
-  }
-}

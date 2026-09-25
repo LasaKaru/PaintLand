@@ -359,7 +359,33 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .menu-toast.show { opacity: 1; transform: translate(-50%, 0); }
 .menu input[type='range'] { width: 100%; accent-color: var(--terracotta); }
 
+/* Settings (milestone 3) */
+.settings-body { margin-top: 10px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 28px; }
+.quality-row { display: flex; gap: 8px; flex-wrap: wrap; margin: 6px 0 4px; }
+.quality { flex: 1 1 130px; text-align: left; display: flex; flex-direction: column; gap: 2px; background: #fffaf0; border: 1.5px solid var(--ink); border-radius: 6px; padding: 8px 12px; cursor: pointer; font-family: var(--mono); }
+.quality b { font-family: var(--hand); font-weight: 400; font-size: 1.35em; }
+.quality small { color: var(--ink-soft); }
+.quality.on { background: var(--ink); color: var(--paper); }
+.quality.on small { color: var(--paper); }
+.quality.custom { cursor: default; border-style: dashed; }
+.quality.art-realistic b { font-family: var(--mono); font-weight: 700; font-size: 1.1em; letter-spacing: 0.04em; }
+.seg { display: flex; flex-wrap: wrap; gap: 0; }
+.seg-btn { font-family: var(--mono); font-weight: 700; background: #fffaf0; border: 1.5px solid var(--ink); margin-left: -1.5px; padding: 5px 12px; cursor: pointer; }
+.seg-btn:first-child { border-radius: 5px 0 0 5px; margin-left: 0; }
+.seg-btn:last-child { border-radius: 0 5px 5px 0; }
+.seg-btn.on { background: var(--ink); color: var(--paper); }
+.field output { font-family: var(--mono); font-size: 0.8em; color: var(--ink-soft); align-self: flex-end; margin-top: -4px; }
+.field select { font-family: var(--mono); padding: 5px 8px; border: 1.5px solid var(--ink); border-radius: 5px; background: #fffaf0; }
+.perf-line { margin-top: 12px; font-family: var(--mono); font-size: 0.85em; color: var(--ink-soft); }
+.bind-list { max-height: 60vh; overflow: auto; padding-right: 8px; }
+.bind-row { display: grid; grid-template-columns: 1fr auto auto; gap: 8px; align-items: center; padding: 3px 0; border-bottom: 1px dashed rgba(43, 38, 34, 0.18); }
+.bind-row .keys { font-size: 0.95em; }
+.btn.small { padding: 3px 8px; font-size: 0.8em; }
+.btn.listening { background: var(--terracotta); color: #fff; }
+
 @media (max-width: 900px) {
+  .grid2 { grid-template-columns: 1fr; }
   .menu-main { width: 100%; background: rgba(247, 243, 232, 0.92); }
   .menu-item { font-size: 1.5em; }
   .menu-panel.side { right: 50%; transform: translateX(50%); top: auto; bottom: 10px; max-height: 55vh; }

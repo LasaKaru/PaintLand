@@ -440,6 +440,35 @@ export class AudioEngine {
     this.noiseHit(this.ctx.currentTime, 'bandpass', 900, 0.18, 0.5, this.sfxBus);
   }
 
+  /** Rolling thunder: low noise with a long tail, quieter and later when far away. */
+  thunder(distance: number): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    src.loop = true;
+    const f = ctx.createBiquadFilter();
+    f.type = 'lowpass';
+    f.frequency.setValueAtTime(900 / (1 + distance), t);
+    f.frequency.exponentialRampToValueAtTime(90, t + 2.5);
+    const g = ctx.createGain();
+    const level = 0.45 / (0.6 + distance);
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(level, t + 0.05 + distance * 0.1);
+    g.gain.exponentialRampToValueAtTime(level * 0.4, t + 0.8);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 3 + distance);
+    src.connect(f).connect(g).connect(this.sfxBus);
+    src.start(t, Math.random());
+    src.stop(t + 3.2 + distance);
+  }
+
+  /** A short clunk on a gear change (realistic handling). */
+  gearShift(): void {
+    if (!this.ctx) return;
+    this.noiseHit(this.ctx.currentTime, 'bandpass', 400, 0.05, 0.08, this.sfxBus);
+  }
+
   honk(midi: number): void {
     const ctx = this.ctx;
     if (!ctx) return;
@@ -468,13 +497,14 @@ export class AudioEngine {
   }
 
   /** Continuous beds, called every frame. */
-  update(speed: number, boosting: boolean, driving: boolean, rain: number, height: number): void {
+  update(speed: number, boosting: boolean, driving: boolean, rain: number, height: number, rpm?: number): void {
     const ctx = this.ctx;
     if (!ctx) return;
     const t = ctx.currentTime;
     const hum = driving ? this.engineVolume * 0.06 : 0;
     this.engineGain.gain.setTargetAtTime(hum * (0.5 + Math.min(1, speed / 50) * 0.7), t, 0.1);
-    const f = 38 + speed * 1.6 + (boosting ? 30 : 0);
+    // Realistic handling drives the pitch from engine rpm (gear changes drop it).
+    const f = rpm !== undefined ? 28 + rpm * 0.013 + (boosting ? 20 : 0) : 38 + speed * 1.6 + (boosting ? 30 : 0);
     this.engineOsc.frequency.setTargetAtTime(f, t, 0.08);
     this.engineOsc2.frequency.setTargetAtTime(f * 0.5 + 1.5, t, 0.08);
     this.engineFilter.frequency.setTargetAtTime(300 + speed * 12 + (boosting ? 500 : 0), t, 0.1);

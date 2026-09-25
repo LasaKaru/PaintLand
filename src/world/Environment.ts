@@ -29,7 +29,17 @@ export const TIME_PRESETS: { id: string; label: string; preset: LightPreset }[] 
   { id: 'deepnight', label: 'Deep night', preset: { hour: 3, skyTop: '#101433', skyHorizon: '#27365e', sunColor: '#8ea2d8', sunElevation: 30, shadowTint: '#333a78', fog: '#253455', cloudLit: '#3e4a80', cloudShade: '#1c2148', waterDeep: '#132c4c', waterShallow: '#1f4a66', night: 1 } },
 ];
 
-export type WeatherId = 'clear' | 'rain';
+export type WeatherId = 'clear' | 'cloudy' | 'fog' | 'rain' | 'storm';
+
+/** What each weather does to the world (docs/03 §6). */
+export const WEATHERS: Record<WeatherId, { label: string; cloud: number; rain: number; fog: number; storm: boolean; grey: number }> = {
+  clear: { label: 'Clear', cloud: 0.5, rain: 0, fog: 1, storm: false, grey: 0 },
+  cloudy: { label: 'Cloudy', cloud: 0.85, rain: 0, fog: 1.4, storm: false, grey: 0.15 },
+  fog: { label: 'Fog', cloud: 0.8, rain: 0, fog: 7, storm: false, grey: 0.25 },
+  rain: { label: 'Rain', cloud: 0.95, rain: 1, fog: 2, storm: false, grey: 0.3 },
+  storm: { label: 'Storm', cloud: 1.0, rain: 1, fog: 2.6, storm: true, grey: 0.45 },
+};
+export const WEATHER_ORDER: WeatherId[] = ['clear', 'cloudy', 'fog', 'rain', 'storm'];
 
 interface LiveColours {
   skyTop: THREE.Color;
@@ -56,6 +66,17 @@ export class Environment {
   weather: WeatherId = 'clear';
   rain = 0;
   presetId = 'morning';
+  /** Change weather on its own every few minutes. */
+  autoWeather = false;
+  /** Live weather values (blended). */
+  cloud = 0.5;
+  fogDensity = 1;
+  grey = 0;
+  flash = 0;
+  onThunder: ((distance: number) => void) | null = null;
+  private lightningTimer = 6;
+  private flashQueue: number[] = [];
+  private weatherTimer = 150;
 
   private current: LiveColours;
   private target: LightPreset;
@@ -95,8 +116,39 @@ export class Environment {
     this.auto = on;
   }
 
+  /** Cycle clear → cloudy → fog → rain → storm. */
   toggleRain(): void {
-    this.weather = this.weather === 'rain' ? 'clear' : 'rain';
+    this.setWeather(WEATHER_ORDER[(WEATHER_ORDER.indexOf(this.weather) + 1) % WEATHER_ORDER.length]);
+  }
+
+  setWeather(id: WeatherId): void {
+    this.weather = id;
+    this.lightningTimer = 3;
+  }
+
+  get weatherLabel(): string {
+    return WEATHERS[this.weather].label;
+  }
+
+  get wet(): boolean {
+    return WEATHERS[this.weather].rain > 0;
+  }
+
+  /** Shadow map resolution, coverage and softness from the graphics tier. */
+  setShadows(quality: number, distance: number, soft: boolean): void {
+    const size = quality >= 3 ? 4096 : quality === 2 ? 2048 : 1024;
+    this.sun.castShadow = quality > 0;
+    if (this.sun.shadow.mapSize.x !== size) {
+      this.sun.shadow.mapSize.set(size, size);
+      this.sun.shadow.map?.dispose();
+      this.sun.shadow.map = null;
+    }
+    const cam = this.sun.shadow.camera;
+    cam.left = cam.bottom = -distance;
+    cam.right = cam.top = distance;
+    cam.updateProjectionMatrix();
+    this.sun.shadow.radius = soft ? 2.5 : 1;
+    this.sun.shadow.normalBias = 0.03 + distance / 2000;
   }
 
   /** Name of the current time band shown on the clock (docs/01 §2). */
@@ -141,15 +193,30 @@ export class Environment {
     c.waterShallow.lerp(tmp.set(t.waterShallow), k);
     this.elevation = lerp(this.elevation, t.sunElevation, k);
     this.night = lerp(this.night, t.night, k);
-    this.rain = lerp(this.rain, this.weather === 'rain' ? 1 : 0, damp(1.2, dt));
+    const w = WEATHERS[this.weather];
+    const wk = damp(0.8, dt);
+    this.rain = lerp(this.rain, w.rain, damp(1.2, dt));
+    this.cloud = lerp(this.cloud, w.cloud, wk);
+    this.fogDensity = lerp(this.fogDensity, w.fog, wk);
+    this.grey = lerp(this.grey, w.grey, wk);
+    this.updateLightning(dt, w.storm);
+    if (this.autoWeather) {
+      this.weatherTimer -= dt;
+      if (this.weatherTimer <= 0) {
+        this.weatherTimer = 120 + Math.random() * 180;
+        // Mostly fair, sometimes wet, rarely a storm.
+        const r = Math.random();
+        this.setWeather(r < 0.35 ? 'clear' : r < 0.6 ? 'cloudy' : r < 0.72 ? 'fog' : r < 0.92 ? 'rain' : 'storm');
+      }
+    }
 
     // Sun direction: azimuth drifts with the hour so shadows swing through the day.
     const az = deg(55 + (this.hour - 12) * 10); // from behind-right in the morning, swinging right by evening
     const el = deg(clamp(this.elevation, 2, 85));
     this.sunDirWorld.set(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)).normalize();
 
-    // Rain greys the look down a little.
-    const wetGrey = this.rain * 0.3;
+    // Bad weather greys the look down.
+    const wetGrey = this.grey;
     this.fogColor.copy(c.fog).lerp(tmp.set('#b8bfd0'), wetGrey);
 
     paintShared.uSunColor.value.copy(c.sunColor).lerp(tmp.set('#d8dce8'), wetGrey * 0.6);
@@ -158,6 +225,10 @@ export class Environment {
     paintShared.uNight.value = this.night;
     paintShared.uWet.value = this.rain;
     paintShared.uSunDir.value.copy(this.sunDirWorld).transformDirection(camera.matrixWorldInverse);
+    paintShared.uUpView.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);
+    paintShared.uSkyHorizon.value.copy(c.skyHorizon).lerp(tmp.set('#c9cdd6'), wetGrey);
+    paintShared.uSunIntensity.value = 1.35 * (1 - this.night * 0.55) * (1 - Math.max(0, this.cloud - 0.5) * 0.9);
+    paintShared.uFlash.value = this.flash;
 
     skyUniforms.uTop.value.copy(c.skyTop).lerp(tmp.set('#9aa3b8'), wetGrey);
     skyUniforms.uHorizon.value.copy(c.skyHorizon).lerp(tmp.set('#c9cdd6'), wetGrey);
@@ -166,7 +237,7 @@ export class Environment {
     skyUniforms.uCloudLit.value.copy(c.cloudLit);
     skyUniforms.uCloudShade.value.copy(c.cloudShade);
     skyUniforms.uNight.value = this.night;
-    skyUniforms.uCloudCover.value = 0.5 + this.rain * 0.45;
+    skyUniforms.uCloudCover.value = this.cloud;
     waterUniforms.uDeep.value.copy(c.waterDeep);
     waterUniforms.uShallow.value.copy(c.waterShallow);
     waterUniforms.uRain.value = this.rain;
@@ -175,6 +246,35 @@ export class Environment {
     this.sun.position.copy(focus).addScaledVector(this.sunDirWorld, 250);
     this.sun.target.position.copy(focus);
     this.sun.target.updateMatrixWorld();
+  }
+
+  /** Storms: random flashes (a quick double flicker), thunder a moment later. */
+  private updateLightning(dt: number, storm: boolean): void {
+    this.flash = Math.max(0, this.flash - dt * 7);
+    if (this.flashQueue.length) {
+      this.flashQueue[0] -= dt;
+      if (this.flashQueue[0] <= 0) {
+        this.flashQueue.shift();
+        this.flash = 1;
+      }
+    }
+    if (!storm) return;
+    this.lightningTimer -= dt;
+    if (this.lightningTimer <= 0) {
+      this.lightningTimer = 5 + Math.random() * 9;
+      this.flashQueue.push(0, 0.12 + Math.random() * 0.1);
+      if (Math.random() < 0.5) this.flashQueue.push(0.25);
+      const distance = 0.3 + Math.random() * 2.5;
+      setTimeout(() => this.onThunder?.(distance), distance * 1000);
+    }
+  }
+
+  get sunDirection(): THREE.Vector3 {
+    return this.sunDirWorld;
+  }
+
+  get sunColour(): THREE.Color {
+    return this.current.sunColor;
   }
 }
 

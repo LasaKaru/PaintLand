@@ -178,3 +178,58 @@ describe('RoverController idle and reverse', () => {
     expect(rover.v).toBeGreaterThanOrEqual(-4);
   });
 });
+
+describe('RoverController · realistic handling', () => {
+  const realRover = (length = 4000): RoverController => {
+    const r = new RoverController(straightRoad(length));
+    r.handling = 'realistic';
+    r.autoCruise = false;
+    return r;
+  };
+
+  it('shifts up through the gears and reaches a sensible top speed', () => {
+    const rover = realRover();
+    const shifts: number[] = [];
+    (rover as unknown as { events: { onShift: (g: number) => void } }).events.onShift = (g) => shifts.push(g);
+    run(rover, 4, { throttle: 1 });
+    const at4 = rover.v;
+    expect(at4).toBeGreaterThan(15);
+    expect(at4).toBeLessThan(ROVER_TUNING.topSpeed);
+    run(rover, 30, { throttle: 1 });
+    expect(rover.gear).toBeGreaterThanOrEqual(5);
+    expect(shifts[0]).toBe(2);
+    expect(rover.v).toBeGreaterThan(ROVER_TUNING.topSpeed * 0.75);
+    expect(rover.v).toBeLessThanOrEqual(ROVER_TUNING.topSpeed + 0.01);
+    expect(rover.rpm).toBeGreaterThan(3000);
+  });
+
+  it('slows down on its own without auto-cruise, and downshifts', () => {
+    const rover = realRover();
+    run(rover, 12, { throttle: 1 });
+    const g = rover.gear;
+    run(rover, 20);
+    expect(rover.v).toBeLessThan(8);
+    expect(rover.gear).toBeLessThan(g);
+  });
+
+  it('manual gearbox holds the gear and hits the limiter', () => {
+    const rover = realRover();
+    rover.gearbox = 'manual';
+    run(rover, 8, { throttle: 1 });
+    expect(rover.gear).toBe(1);
+    expect(rover.v).toBeLessThan(ROVER_TUNING.topSpeed * 0.22);
+    rover.step(DT, { ...idle, throttle: 1, shiftUp: true });
+    expect(rover.gear).toBe(2);
+  });
+
+  it('slides when steering hard at speed', () => {
+    const rover = realRover();
+    run(rover, 14, { throttle: 1 });
+    let slid = false;
+    for (let t = 0; t < 1; t += DT) {
+      rover.step(DT, { ...idle, throttle: 1, steer: 1 });
+      slid ||= rover.sliding;
+    }
+    expect(slid).toBe(true);
+  });
+});
