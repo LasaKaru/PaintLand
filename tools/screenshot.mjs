@@ -51,6 +51,11 @@ for (const shot of (process.env.SHOTS ?? defaults).split(',').filter(Boolean)) {
   logs.push(`[shot ${shot}] ${JSON.stringify(info)}`);
   await page.screenshot({ path: `${out}${chapter}-${String(s).padStart(4, '0')}-${preset}${rain ? `-${rain}` : ''}${tag}.png` });
 }
+if (process.env.PHOTO) {
+  await page.evaluate(() => window.__paintland.debugPhoto());
+  await page.waitForTimeout(wait);
+  await page.screenshot({ path: `${out}photo${tag}.png` });
+}
 if (process.env.WALK) {
   await page.evaluate(() => window.__paintland.debugWalk());
   await page.waitForTimeout(1500);

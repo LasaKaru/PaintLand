@@ -6,13 +6,14 @@ import { VEHICLES, type VehicleId } from '../models/Vehicles';
 import { ROVER_TUNING } from '../gameplay/RoverController';
 import { randomLook, type HumanLook } from '../models/Human';
 import { fmt } from './Hud';
+import { TROPHIES } from '../gameplay/Trophies';
 import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Input';
 import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
-export type MenuScreen = 'splash' | 'main' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'settings' | 'credits' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost {
@@ -97,6 +98,7 @@ export class Menu {
       shop: () => this.shop(),
       multiplayer: () => this.multiplayer(),
       settings: () => this.settingsScreen(),
+      trophies: () => this.trophiesScreen(),
       credits: () => this.credits(),
     }[s]();
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
@@ -145,6 +147,7 @@ export class Menu {
         <button class="menu-item" data-nav="garage">Garage</button>
         <button class="menu-item" data-nav="shop">Shop &amp; inventory</button>
         <button class="menu-item" data-nav="multiplayer">Multiplayer</button>
+        <button class="menu-item" data-nav="trophies">Trophies · ${this.host.profile.data.trophies.length}/${TROPHIES.length}</button>
         <button class="menu-item" data-nav="settings">Settings</button>
         <button class="menu-item small" data-nav="intro">Watch the intro</button>
         <button class="menu-item small" data-nav="credits">Credits</button>
@@ -471,6 +474,22 @@ export class Menu {
     if (scope === 's' && (QUALITY_KEYS as readonly string[]).includes(key)) this.host.studio().quality = 'custom';
     if (scope === 's' && key === 'realism') this.host.studio().artStyle = value === 0 ? 'watercolour' : value === 1 ? 'realistic' : 'illustrated';
     this.host.settingsChanged();
+  }
+
+  private trophiesScreen(): string {
+    const p = this.host.profile;
+    const st = p.data.stats;
+    const km = ((st.distance ?? 0) / 1000).toFixed(1);
+    const cards = TROPHIES.map((t) => {
+      const [a, b] = t.progress(p);
+      const done = p.data.trophies.includes(t.id);
+      return `<div class="card trophy ${done ? 'done' : ''}"><div class="trophy-icon">${t.icon}</div><div><div class="hand">${t.name}</div><small>${t.text}</small>
+        <div class="bar"><i style="width:${Math.round((Math.min(a, b) / b) * 100)}%"></i></div><small>${done ? `Unlocked · +${t.reward} ink` : `${Math.floor(a)} / ${b} · ${t.reward} ink`}</small></div></div>`;
+    }).join('');
+    return `<div class="menu-panel wide">${this.header(`Trophies · ${p.data.trophies.length} of ${TROPHIES.length}`)}
+      <div class="stat-line">🛣 ${km} km · 🏁 ${st.laps ?? 0} laps · ♪ ${st.notes ?? 0} notes · 🪁 best air ${(st.maxAir ?? 0).toFixed(1)} s · 💨 top ${Math.round(st.maxSpeed ?? 0)} km/h · 🙃 ${Math.round(st.upsideDown ?? 0)} s upside down · 📷 ${st.photos ?? 0} photos</div>
+      <div class="trophy-grid">${cards}</div>
+    </div>`;
   }
 
   private credits(): string {

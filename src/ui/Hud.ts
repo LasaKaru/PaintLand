@@ -485,7 +485,7 @@ function template(): string {
       <div class="legend">
         <b>W/S</b> throttle · <b>A/D</b> steer · <b>Space</b> hop · <b>Shift</b> boost · <b>Ctrl</b> drift · <b>F</b> get in/out ·
         <b>C</b> camera · <b>scroll</b> zoom · <b>[ ]</b> field of view · <b>T</b> radio · <b>N</b> next song · <b>B</b> band ·
-        <b>1–7</b> time of day · <b>9</b> weather · <b>H</b> honk · <b>R</b> respawn · <b>\`</b> studio · <b>U</b> hide HUD · <b>Esc</b> pause
+        <b>1–7</b> time of day · <b>9</b> weather · <b>H</b> honk · <b>R</b> respawn · <b>\`</b> studio · <b>U</b> hide HUD · <b>P</b> photo mode · <b>Esc</b> pause
       </div>
     </div>
   </div>
@@ -517,8 +517,12 @@ function template(): string {
         <tr><td>T · N · B</td><td colspan="2">Radio on/off · next song · change station</td></tr>
         <tr><td>1–7 · 8 · 9</td><td colspan="2">Time of day · auto day cycle · weather (clear, cloudy, fog, rain, storm)</td></tr>
         <tr><td>H · R</td><td colspan="2">Honk (plays a note) · respawn</td></tr>
+        <tr><td>Q · Z · G · Enter</td><td colspan="2">Drink tonic · next tonic · wave · chat (online)</td></tr>
+        <tr><td>. · ,</td><td colspan="2">Gear up · down (realistic handling, manual gearbox)</td></tr>
+        <tr><td>P</td><td colspan="2">Photo mode: free camera, focus, blur, light · save PNG up to 4K</td></tr>
         <tr><td>\` / F2 · U · Esc</td><td colspan="2">Studio panel · hide HUD · pause</td></tr>
-        <tr><td>Gamepad</td><td colspan="2">Stick steer/move · RT/LT throttle/brake · A hop · X boost · B drift · Y get in/out · R3 camera</td></tr>
+        <tr><td>Gamepad</td><td colspan="2">Stick steer/move · RT/LT throttle/brake · A hop · X boost · B drift · Y get in/out · R3 camera · Back photo</td></tr>
+        <tr><td>Settings</td><td colspan="2">Menu → Settings: graphics quality, art style (watercolour ↔ realistic), key rebinding, handling</td></tr>
       </table>
       <button class="btn primary" data-action="closeHelp">Got it</button>
     </div>

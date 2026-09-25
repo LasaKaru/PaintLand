@@ -71,6 +71,12 @@ export interface ProfileData {
   missionsDone: string[];
   chapter: string;
   seenIntro: boolean;
+  /** Unlocked trophy ids. */
+  trophies: string[];
+  /** Lifetime counters and records for trophies (see Trophies.ts). */
+  stats: Record<string, number>;
+  /** Chapters, weathers and art styles tried, for "explorer" trophies. */
+  seen: string[];
 }
 
 const KEY = 'paintland.profile.v2';
@@ -90,6 +96,9 @@ function defaults(): ProfileData {
     missionsDone: [],
     chapter: 'sketch',
     seenIntro: false,
+    trophies: [],
+    stats: {},
+    seen: [],
   };
 }
 
@@ -179,6 +188,29 @@ export class Profile {
     if (list.includes(phrase)) return false;
     list.push(phrase);
     this.save();
+    return true;
+  }
+
+  /** Add to a lifetime counter. */
+  addStat(key: string, amount = 1): number {
+    this.data.stats[key] = (this.data.stats[key] ?? 0) + amount;
+    return this.data.stats[key];
+  }
+
+  /** Keep the highest value seen for a record. */
+  recordStat(key: string, value: number): number {
+    if (value > (this.data.stats[key] ?? 0)) this.data.stats[key] = value;
+    return this.data.stats[key];
+  }
+
+  stat(key: string): number {
+    return this.data.stats[key] ?? 0;
+  }
+
+  /** Remember that something was seen once (a chapter, a weather, an art style). */
+  markSeen(tag: string): boolean {
+    if (this.data.seen.includes(tag)) return false;
+    this.data.seen.push(tag);
     return true;
   }
 

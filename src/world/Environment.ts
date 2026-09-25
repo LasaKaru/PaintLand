@@ -116,6 +116,18 @@ export class Environment {
     this.auto = on;
   }
 
+  /** Jump straight to the target light and weather (no blend) — for cuts and screenshots. */
+  snap(): void {
+    this.current = toLive(this.target);
+    this.elevation = this.target.sunElevation;
+    this.night = this.target.night;
+    const w = WEATHERS[this.weather];
+    this.rain = w.rain;
+    this.cloud = w.cloud;
+    this.fogDensity = w.fog;
+    this.grey = w.grey;
+  }
+
   /** Cycle clear → cloudy → fog → rain → storm. */
   toggleRain(): void {
     this.setWeather(WEATHER_ORDER[(WEATHER_ORDER.indexOf(this.weather) + 1) % WEATHER_ORDER.length]);
@@ -215,23 +227,25 @@ export class Environment {
     const el = deg(clamp(this.elevation, 2, 85));
     this.sunDirWorld.set(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)).normalize();
 
-    // Bad weather greys the look down.
+    // Bad weather greys the look down (a darker grey after dark).
     const wetGrey = this.grey;
-    this.fogColor.copy(c.fog).lerp(tmp.set('#b8bfd0'), wetGrey);
+    const dim = 1 - this.night * 0.72;
+    const greyFog = tmp2.set('#b8bfd0').multiplyScalar(dim);
+    this.fogColor.copy(c.fog).lerp(greyFog, wetGrey);
 
-    paintShared.uSunColor.value.copy(c.sunColor).lerp(tmp.set('#d8dce8'), wetGrey * 0.6);
+    paintShared.uSunColor.value.copy(c.sunColor).lerp(tmp.set('#d8dce8').multiplyScalar(dim), wetGrey * 0.6);
     paintShared.uShadowTint.value.copy(c.shadowTint);
     paintShared.uSkyTint.value.copy(c.skyTop);
     paintShared.uNight.value = this.night;
     paintShared.uWet.value = this.rain;
     paintShared.uSunDir.value.copy(this.sunDirWorld).transformDirection(camera.matrixWorldInverse);
     paintShared.uUpView.value.set(0, 1, 0).transformDirection(camera.matrixWorldInverse);
-    paintShared.uSkyHorizon.value.copy(c.skyHorizon).lerp(tmp.set('#c9cdd6'), wetGrey);
-    paintShared.uSunIntensity.value = 1.35 * (1 - this.night * 0.55) * (1 - Math.max(0, this.cloud - 0.5) * 0.9);
+    paintShared.uSkyHorizon.value.copy(c.skyHorizon).lerp(tmp.set('#c9cdd6').multiplyScalar(dim), wetGrey);
+    paintShared.uSunIntensity.value = 1.35 * (1 - this.night * 0.7) * (1 - Math.max(0, this.cloud - 0.5) * 0.9);
     paintShared.uFlash.value = this.flash;
 
-    skyUniforms.uTop.value.copy(c.skyTop).lerp(tmp.set('#9aa3b8'), wetGrey);
-    skyUniforms.uHorizon.value.copy(c.skyHorizon).lerp(tmp.set('#c9cdd6'), wetGrey);
+    skyUniforms.uTop.value.copy(c.skyTop).lerp(tmp.set('#9aa3b8').multiplyScalar(dim), wetGrey);
+    skyUniforms.uHorizon.value.copy(c.skyHorizon).lerp(tmp.set('#c9cdd6').multiplyScalar(dim), wetGrey);
     skyUniforms.uSunDirWorld.value.copy(this.sunDirWorld);
     skyUniforms.uSunColor.value.copy(c.sunColor);
     skyUniforms.uCloudLit.value.copy(c.cloudLit);
@@ -279,6 +293,7 @@ export class Environment {
 }
 
 const tmp = new THREE.Color();
+const tmp2 = new THREE.Color();
 
 function toLive(p: LightPreset): LiveColours {
   return {

@@ -384,6 +384,29 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .btn.small { padding: 3px 8px; font-size: 0.8em; }
 .btn.listening { background: var(--terracotta); color: #fff; }
 
+/* Trophies */
+.stat-line { font-family: var(--mono); font-size: 0.85em; color: var(--ink-soft); margin-bottom: 10px; line-height: 1.7; }
+.trophy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
+.trophy { display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding: 10px 12px; opacity: 0.72; }
+.trophy.done { opacity: 1; background: linear-gradient(160deg, #fffaf0, #fbe7c8); }
+.trophy .hand { font-size: 1.25em; }
+.trophy small { color: var(--ink-soft); display: block; line-height: 1.4; }
+.trophy-icon { font-size: 30px; line-height: 44px; text-align: center; filter: grayscale(1); }
+.trophy.done .trophy-icon { filter: none; }
+.bar { height: 6px; border: 1px solid var(--ink); border-radius: 3px; overflow: hidden; margin: 6px 0 3px; }
+.bar i { display: block; height: 100%; background: var(--terracotta); }
+
+/* Photo mode */
+.photo-panel { position: fixed; top: 16px; right: 16px; width: min(340px, 92vw); max-height: calc(100vh - 32px); overflow: auto; z-index: 30;
+  background: rgba(247, 243, 232, 0.94); border: 1.5px solid var(--ink); border-radius: 6px; box-shadow: 4px 6px 0 rgba(43, 38, 34, 0.2); padding: 12px 16px; font-family: var(--mono); color: var(--ink); }
+.photo-panel.hidden { display: none; }
+.photo-panel .menu-title { font-size: 1.7em; }
+.photo-panel h4 { margin: 10px 0 4px; font-size: 0.8em; letter-spacing: 0.14em; text-transform: uppercase; color: var(--ink-soft); }
+.photo-panel input[type='range'] { width: 100%; accent-color: var(--terracotta); }
+.photo-panel .field { margin: 6px 0; }
+.photo-panel .seg-btn { padding: 3px 7px; font-size: 0.78em; }
+.seg.wrap { flex-wrap: wrap; row-gap: 3px; }
+
 @media (max-width: 900px) {
   .grid2 { grid-template-columns: 1fr; }
   .menu-main { width: 100%; background: rgba(247, 243, 232, 0.92); }

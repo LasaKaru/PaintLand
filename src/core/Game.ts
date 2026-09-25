@@ -4,7 +4,7 @@ import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Opti
 import { clamp } from './MathUtil';
 import { createFrame } from '../road/RoadPath';
 import { PaintPipeline } from '../render/PaintPipeline';
-import { paintShared } from '../render/PaintMaterial';
+import { PaintMaterial, paintShared } from '../render/PaintMaterial';
 import { createSky, createWater, waterUniforms, skyUniforms } from '../render/SkyWater';
 import { applyArtStyle, applyQuality, loadStudio, saveStudio, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 import { Environment, TIME_PRESETS, type WeatherId } from '../world/Environment';
@@ -25,9 +25,14 @@ import { Hud } from '../ui/Hud';
 import { Studio } from '../ui/Studio';
 import { Menu, type MenuScreen } from '../ui/Menu';
 import { NetClient, type PlayerInfo, type PlayerState } from '../net/Net';
+import { Particles } from '../render/Particles';
+import { PhotoMode } from '../ui/PhotoMode';
+import { GhostPlayer, GhostRecorder, loadGhost, saveGhost } from '../gameplay/Ghost';
+import { checkTrophies } from '../gameplay/Trophies';
+import { Wildlife } from '../world/Wildlife';
 import { RemotePlayers } from '../net/RemotePlayers';
 
-type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused';
+type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused' | 'photo';
 type PawnMode = 'drive' | 'foot';
 
 const SIM_DT = 1 / 60;
@@ -78,6 +83,16 @@ export class Game {
   private readonly demo = new Autopilot({ speed: 36, lane: 0, followNotes: true, showOff: true });
   private readonly missions = new MissionTracker();
   private sky!: THREE.Mesh;
+  private readonly particles = new Particles();
+  private readonly wildlife = new Wildlife();
+  private readonly photo: PhotoMode;
+  private readonly photoCam = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, anchor: new THREE.Vector3() };
+  private readonly ghostRec = new GhostRecorder();
+  private ghost: GhostPlayer | null = null;
+  private ghostModel: VehicleModel | null = null;
+  private lapClean = true;
+  private statTimer = 0;
+  private lastFx: import('../render/PaintPipeline').FrameFx | null = null;
 
   private state: GameState = 'loading';
   private mode: PawnMode = 'drive';
@@ -170,6 +185,14 @@ export class Game {
       canResume: () => this.resumeSnapshot !== null,
     });
     this.net.onChat = (name, text) => this.hud.chatLine(name, text);
+    this.photo = new PhotoMode(container, {
+      studio: () => this.settings,
+      studioChanged: () => this.settingsChanged(),
+      setTime: (id) => this.env.setPreset(id),
+      setWeather: (w) => this.env.setWeather(w),
+      capture: (m) => this.capturePhoto(m),
+      exit: () => this.exitPhoto(),
+    });
 
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('keydown', () => {
@@ -193,7 +216,7 @@ export class Game {
     };
     await step(0.05, 'mixing paint…');
     this.sky = createSky();
-    this.scene.add(this.sky, createWater());
+    this.scene.add(this.sky, createWater(), this.particles.points, this.wildlife.group);
     this.env = new Environment(this.scene);
     this.env.onThunder = (d) => {
       this.audio.thunder(d);
@@ -268,6 +291,9 @@ export class Game {
     this.district = 0;
     this.audio.setDistrict(chapter.districts[0]);
     this.remotes.clear();
+    this.particles.clear();
+    this.wildlife.reset(this.world.path.sample(8, this.frame).position);
+    this.loadGhostFor(chapter.id);
   }
 
   private buildPawnModels(): void {
@@ -498,6 +524,9 @@ export class Game {
     this.tonics.clear();
     this.world.items.resetLap();
     this.world.people.removeRival();
+    this.ghostRec.reset();
+    this.lapClean = true;
+    this.ghost?.at(0);
   }
 
   private restartLap(): void {
@@ -621,6 +650,7 @@ export class Game {
     if (!this.profile.data.missionsDone.includes(m.id)) this.profile.data.missionsDone.push(m.id);
     this.profile.save();
     this.hud.showLapBanner(`Mission complete! +${m.reward.ink} ink`);
+    this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 2), _v.copy(this.frame.up).multiplyScalar(7), 80, 7, this.frame.up);
     this.audio.chime(72);
     this.world.people.setGivers(this.world.missions, (id) => this.profile.data.missionsDone.includes(id));
     this.world.people.setMarkers(null, 0, 0);
@@ -686,6 +716,8 @@ export class Game {
 
     this.lapTime += dt;
     this.districtTime += dt;
+    if (this.mode === 'drive') this.ghostRec.record(this.lapTime, this.rover.s, this.rover.x, this.rover.h, this.rover.yaw);
+    this.trackStats(dt);
     const s = this.mode === 'drive' ? this.rover.s : this.human.s;
     const d = this.world.path.districtAt(s);
     if (d !== this.district) this.changeDistrict(d);
@@ -721,6 +753,7 @@ export class Game {
         this.audio.thud();
         this.rig.addShake(0.25);
         this.input.rumble(0.8, 180);
+        this.particles.emit('spark', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 0.8), _v.copy(this.frame.up).multiplyScalar(3), 18, 6, this.frame.up);
       }
     }
   }
@@ -786,6 +819,17 @@ export class Game {
     const cid = this.world.chapter.id;
     const prevBest = this.profile.data.bestLap[cid] ?? null;
     if (prevBest === null || lap < prevBest) this.profile.data.bestLap[cid] = lap;
+    this.profile.addStat('laps');
+    if (this.rover.handling === 'realistic') this.profile.addStat('realLaps');
+    if (this.ghost && this.lapClean && lap < this.ghost.run.time) this.profile.addStat('ghostBeaten');
+    // Save the ghost when this clean lap beats the stored one.
+    if (this.lapClean && this.ghostRec.length > 20 && (!this.ghost || lap < this.ghost.run.time)) {
+      saveGhost(this.ghostRec.finish(cid, this.profile.data.vehicle, lap));
+      this.loadGhostFor(cid);
+    }
+    this.ghostRec.reset();
+    this.lapClean = true;
+    this.checkTrophies();
     this.profile.earn(25);
     this.hud.showLapBanner(prevBest === null || lap < prevBest ? `New best lap! ${lap.toFixed(2)}s` : `Lap ${this.lapNo} · ${lap.toFixed(2)}s`);
     this.lapNo++;
@@ -813,6 +857,7 @@ export class Game {
       this.rover.cruise = true;
     }
     this.districtClean = false;
+    this.lapClean = false;
     this.splash = 1;
     this.rig.snap();
   }
@@ -821,7 +866,9 @@ export class Game {
     this.audio.land(Math.min(1, air));
     if (this.state === 'play') this.input.rumble(Math.min(1, air * 0.5), 90);
     this.rig.addShake(Math.min(0.35, air * 0.2));
+    if (air > 0.4) this.particles.emit('dust', this.vehicle.root.position, _v.copy(this.frame.up).multiplyScalar(1.5), Math.min(30, air * 14), 3, this.frame.up);
     if (this.state !== 'play') return;
+    this.profile.recordStat('maxAir', air);
     this.missions.onAir(air);
     if (air > 0.5) {
       const pts = Math.round(air * 20);
@@ -846,6 +893,7 @@ export class Game {
           this.score += 10 * this.combo;
           this.profile.data.ink += 1;
           this.missions.onNote(n.district);
+          this.profile.addStat('notes');
           break;
         }
         case 'sealed': {
@@ -857,6 +905,7 @@ export class Game {
           this.profile.markSealed(this.world.chapter.id, this.world.items.phrases.indexOf(e.phrase!));
           this.missions.onSeal();
           this.popAt(e.position, air ? `AIR ${this.rover.airTime.toFixed(1)}s · SEALED` : 'SEALED ✓', 'big');
+          this.particles.emit('confetti', e.position, _v.copy(this.frame.up).multiplyScalar(5), 30, 5, this.frame.up);
           break;
         }
         case 'bolt':
@@ -883,6 +932,8 @@ export class Game {
           this.rover.v *= 0.94;
           if (playing) this.popAt(e.position, 'CRASH', 'info');
           this.rig.addShake(0.2);
+          this.particles.emit('spark', e.position, _v.copy(this.frame.up).multiplyScalar(4), 24, 7, this.frame.up);
+          this.input.rumble(0.7, 150);
           break;
       }
     }
@@ -903,7 +954,7 @@ export class Game {
     this.input.poll();
     this.handleGlobalInput(dt);
 
-    if (this.state !== 'paused' && this.state !== 'loading') {
+    if (this.state !== 'paused' && this.state !== 'loading' && this.state !== 'photo') {
       this.accumulator += dt;
       let steps = 0;
       while (this.accumulator >= SIM_DT && steps < 5) {
@@ -966,6 +1017,10 @@ export class Game {
       }
       return;
     }
+    if (this.state === 'photo') {
+      if (inp.consume('pause') || inp.consume('photo')) this.exitPhoto();
+      return;
+    }
     if (inp.consume('studio')) this.studio.toggle();
     if (this.state !== 'play' && this.state !== 'paused') return;
     if (inp.consume('pause')) {
@@ -999,8 +1054,8 @@ export class Game {
       else this.enterRover();
     }
     if (inp.consume('photo')) {
-      this.hudHidden = !this.hudHidden;
-      this.hud.root.classList.toggle('hud-hidden', this.hudHidden);
+      this.enterPhoto();
+      return;
     }
     if (inp.consume('drink')) this.drinkTonic();
     if (inp.consume('cycleTonic')) {
@@ -1099,7 +1154,9 @@ export class Game {
     if (this.showcaseTarget === 'vehicle') {
       this.director.showcase = { target: vm.root.position.clone().addScaledVector(f.up, 1.2), distance: 7.5, height: 1.6, up: f.up.clone() };
     }
-    if (!playing) {
+    if (this.state === 'photo') {
+      this.updatePhotoCamera(dt);
+    } else if (!playing) {
       this.director.update(dt, this.time, { s: r.s, x: r.x, h: r.h, position: vm.root.position.clone() });
       if (this.state === 'intro') {
         this.hud.letterbox(true, this.director.currentLine ?? '');
@@ -1117,6 +1174,14 @@ export class Game {
     const focusS = this.mode === 'foot' ? this.human.s : r.s;
     this.world.items.update(dt, this.time, focusS, f.up);
     this.world.people.update(dt, this.time, focusS, this.mode === 'foot' ? this.human.x : r.x, alpha);
+    this.updateGhost();
+    if (this.state !== 'photo') {
+      this.emitParticles(dt);
+      // Fireflies after dark, drifting around the player.
+      if (paintShared.uNight.value > 0.6) this.particles.emit('firefly', _v.copy(focus).addScaledVector(this.frame.up, 1.5 + Math.random() * 3).add(_v2.set((Math.random() - 0.5) * 40, 0, (Math.random() - 0.5) * 40)), _v3.set(0, 0.2, 0), 6 * dt, 1);
+      this.particles.update(dt, this.pipeline.size.height, cam);
+      this.wildlife.update(dt, this.time, focus, paintShared.uNight.value);
+    }
 
     // Multiplayer.
     if (this.net.connected) {
@@ -1139,13 +1204,23 @@ export class Game {
     // Depth of field: cinematics focus on what the director looks at.
     let dofAmount = 0;
     let dofFocus = 10;
-    if (!playing && this.settings.cinematicDof > 0 && this.settings.realism > 0.2) {
+    if (this.state === 'photo') {
+      const ps = this.photo.state;
+      dofAmount = ps.blur;
+      if (ps.autoFocus) {
+        // Focus on whatever is under the centre of the frame (the player, or 30 m ahead).
+        const target = this.photo.state.hidePlayer ? cam.position.clone().addScaledVector(cam.getWorldDirection(_v), 30) : focus;
+        ps.focus = cam.position.distanceTo(target);
+        this.photo.showFocus(ps.focus);
+      }
+      dofFocus = ps.focus;
+    } else if (!playing && this.settings.cinematicDof > 0 && this.settings.realism > 0.2) {
       dofAmount = this.settings.cinematicDof * 0.8;
       dofFocus = cam.position.distanceTo(this.director.focusPoint);
     }
     // Short draw distances get thicker haze so the far plane never shows.
     const hazeBoost = Math.max(1, 3000 / this.settings.drawDistance);
-    this.pipeline.render(this.scene, cam, dt, this.time, {
+    this.lastFx = {
       fogColor: this.env.fogColor,
       rain: this.env.rain,
       speedLines: Math.min(1, speedLines),
@@ -1157,7 +1232,8 @@ export class Game {
       flash: this.env.flash,
       dofFocus,
       dofAmount,
-    });
+    };
+    this.pipeline.render(this.scene, cam, dt, this.time, this.lastFx);
   }
 
   /** Headlight cone for the shader, in view space: on after dusk and in murky weather. */
@@ -1214,6 +1290,173 @@ export class Game {
     this.popAt(target.clone().addScaledVector(this.frame.up, 3), text, kind);
   }
 
+  // ————— ghosts —————
+
+  private loadGhostFor(chapter: string): void {
+    this.ghostModel?.root.removeFromParent();
+    this.ghostModel = null;
+    const run = loadGhost(chapter);
+    this.ghost = run ? new GhostPlayer(run) : null;
+    if (!run) return;
+    const def = vehicleById(run.vehicle as never);
+    const model = new VehicleModel(def, def.defaultLook);
+    const ghostVC = new PaintMaterial({ vertexColors: true, flat: true, ghost: true });
+    const ghostPlain = new PaintMaterial({ color: '#cfe6ff', ghost: true });
+    model.root.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      mesh.material = mesh.geometry.getAttribute('color') ? ghostVC : ghostPlain;
+      mesh.castShadow = false;
+    });
+    model.root.visible = false;
+    this.scene.add(model.root);
+    this.ghostModel = model;
+  }
+
+  private updateGhost(): void {
+    const gm = this.ghostModel;
+    if (!gm) return;
+    const st = this.state === 'play' && this.mode === 'drive' && this.options.showGhost && this.ghost ? this.ghost.at(this.lapTime) : null;
+    gm.root.visible = !!st && Math.abs(st.s - this.rover.s) > 3;
+    if (!st || !gm.root.visible) return;
+    const f = this.world.path.sample(st.s, this.footFrame);
+    const basis = _m.makeBasis(f.right, f.up, _v.copy(f.tangent).negate());
+    gm.root.quaternion.setFromRotationMatrix(basis).multiply(_q.setFromAxisAngle(_y, -st.yaw));
+    gm.root.position.copy(f.position).addScaledVector(f.right, st.x).addScaledVector(f.up, st.h + 0.02);
+  }
+
+  // ————— photo mode —————
+
+  private enterPhoto(): void {
+    if (this.state !== 'play') return;
+    const cam = this.rig.camera;
+    this.state = 'photo';
+    this.hud.setPlaying(false);
+    this.input.releasePointerLock();
+    this.photoCam.pos.copy(cam.position);
+    const dir = cam.getWorldDirection(_v);
+    this.photoCam.yaw = Math.atan2(-dir.x, -dir.z);
+    this.photoCam.pitch = Math.asin(clamp(dir.y, -1, 1));
+    this.photoCam.anchor.copy(this.mode === 'drive' ? this.vehicle.root.position : this.humanModel.root.position);
+    this.photo.open(cam.fov);
+    this.audio.blip(880, 0.06, 'triangle', 0.05);
+  }
+
+  private exitPhoto(): void {
+    if (this.state !== 'photo') return;
+    this.photo.close();
+    this.state = 'play';
+    this.hud.setPlaying(true);
+    this.vehicle.root.visible = true;
+    this.humanModel.root.visible = true;
+    this.rig.snap();
+  }
+
+  /** Fly the photo camera: drag to look, WASD to move, Space/Ctrl up/down, Shift faster. */
+  private updatePhotoCamera(dt: number): void {
+    const inp = this.input;
+    const look = inp.takeLook(dt);
+    const pc = this.photoCam;
+    pc.yaw -= look.dx * 0.003;
+    pc.pitch = clamp(pc.pitch - look.dy * 0.003, -1.5, 1.5);
+    const fwd = _v.set(-Math.sin(pc.yaw) * Math.cos(pc.pitch), Math.sin(pc.pitch), -Math.cos(pc.yaw) * Math.cos(pc.pitch));
+    const right = _v2.set(Math.cos(pc.yaw), 0, -Math.sin(pc.yaw));
+    const speed = (inp.held('sprint') ? 24 : 7) * dt;
+    const m = inp.moveAxes();
+    pc.pos.addScaledVector(fwd, m.y * speed).addScaledVector(right, m.x * speed);
+    if (inp.held('hop')) pc.pos.y += speed;
+    if (inp.held('crouch')) pc.pos.y -= speed;
+    // Stay near the subject and above the sea.
+    const off = _v3.copy(pc.pos).sub(pc.anchor);
+    if (off.length() > 90) pc.pos.copy(pc.anchor).addScaledVector(off.normalize(), 90);
+    pc.pos.y = Math.max(pc.pos.y, 1.5);
+    const cam = this.rig.camera;
+    cam.position.copy(pc.pos);
+    cam.quaternion.setFromEuler(new THREE.Euler(pc.pitch, pc.yaw, (this.photo.state.roll * Math.PI) / 180, 'YXZ'));
+    cam.fov = this.photo.state.fov;
+    cam.updateProjectionMatrix();
+    cam.updateMatrixWorld();
+    const hide = this.photo.state.hidePlayer;
+    this.vehicle.root.visible = !hide;
+    this.humanModel.root.visible = !hide;
+    inp.clearUnconsumed();
+  }
+
+  /** Render one frame at 1×, 2× or 4K and download it as a PNG. */
+  private capturePhoto(mult: 1 | 2 | 4): void {
+    if (!this.lastFx) return;
+    const w0 = window.innerWidth;
+    const h0 = window.innerHeight;
+    const W = Math.round(mult === 4 ? 3840 : w0 * mult);
+    const H = Math.round((W * h0) / w0);
+    this.renderer.setSize(W, H, false);
+    this.pipeline.forceSize({ width: W, height: H });
+    this.pipeline.render(this.scene, this.rig.camera, 0, this.time, this.lastFx);
+    const url = this.renderer.domElement.toDataURL('image/png');
+    this.renderer.setSize(w0, h0, false);
+    this.pipeline.forceSize(null);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `paintland-${this.world.chapter.id}-${new Date().toISOString().replace(/[:.]/g, '-').slice(0, 19)}.png`;
+    a.click();
+    this.audio.blip(1200, 0.05, 'square', 0.04);
+    this.splash = 0;
+    this.borderPulse = 0.2;
+    this.profile.addStat('photos');
+    this.checkTrophies();
+    this.hud.pop(`Saved ${W}×${H}`, window.innerWidth / 2, window.innerHeight * 0.3, 'good');
+  }
+
+  // ————— stats and trophies —————
+
+  private trackStats(dt: number): void {
+    const p = this.profile;
+    if (this.mode === 'drive') {
+      const d = Math.abs(this.rover.v) * dt;
+      p.addStat('distance', d);
+      p.recordStat('maxSpeed', this.rover.speedKmh);
+      if (this.frame.up.y < -0.5) p.addStat('upsideDown', dt);
+      if (paintShared.uNight.value > 0.6 && this.env.rain > 0.5) p.addStat('nightRain', d);
+    }
+    this.statTimer -= dt;
+    if (this.statTimer > 0) return;
+    this.statTimer = 1;
+    p.markSeen(`chapter:${this.world.chapter.id}`);
+    if (this.mode === 'drive' && Math.abs(this.rover.v) > 5) p.markSeen(`weather:${this.env.weather}`);
+    p.markSeen(`style:${this.settings.realism >= 0.99 ? 'realistic' : this.settings.realism <= 0.01 ? 'watercolour' : 'illustrated'}`);
+    if (this.net.peers.size > 0) p.recordStat('multiplayer', 1);
+    this.checkTrophies();
+  }
+
+  private checkTrophies(): void {
+    for (const t of checkTrophies(this.profile)) {
+      this.hud.showLapBanner(`${t.icon} Trophy: ${t.name}  +${t.reward} ink`);
+      this.audio.chime(79);
+      this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 3), _v.copy(this.frame.up).multiplyScalar(6), 60, 6, this.frame.up);
+    }
+  }
+
+  // ————— particles —————
+
+  private emitParticles(dt: number): void {
+    const r = this.rover;
+    const vm = this.vehicle;
+    if (this.mode !== 'drive' || !vm.root.visible) return;
+    const f = this.frame;
+    const back = _v.set(0, 0, 1).applyQuaternion(vm.root.quaternion);
+    const side = _v2.set(1, 0, 0).applyQuaternion(vm.root.quaternion);
+    const rear = _v3.copy(vm.root.position).addScaledVector(back, 1.7).addScaledVector(f.up, 0.25);
+    const vel = _v4.copy(f.tangent).multiplyScalar(r.v * 0.35);
+    if (r.grounded && (r.drifting || r.sliding) && r.v > 12) {
+      for (const sx of [-0.9, 0.9]) this.particles.emit('smoke', _v5.copy(rear).addScaledVector(side, sx), vel, 26 * dt, 1.2, f.up);
+    }
+    if (r.grounded && f.paving === 5 && r.v > 8) this.particles.emit('dust', rear, vel, (r.v / 10) * 6 * dt, 1.5, f.up);
+    if (r.grounded && this.env.rain > 0.4 && r.v > 10) {
+      for (const sx of [-0.9, 0.9]) this.particles.emit('splash', _v5.copy(rear).addScaledVector(side, sx), _v6.copy(vel).addScaledVector(f.up, 2.5), (r.v / 15) * 12 * dt, 1.4, f.up);
+    }
+    if (r.boosting) this.particles.emit('exhaust', rear, _v6.copy(back).multiplyScalar(6).add(vel), 40 * dt, 0.6, f.up);
+  }
+
   // ————— development hooks (tools/*.mjs) —————
 
   debugJump(s: number, preset?: string, weather?: string | boolean, chapter?: string): void {
@@ -1227,6 +1470,7 @@ export class Game {
     if (d !== this.district) this.changeDistrict(d);
     if (preset) this.env.setPreset(preset);
     if (weather !== undefined) this.env.setWeather(typeof weather === 'string' ? (weather as WeatherId) : weather ? 'rain' : 'clear');
+    this.env.snap();
     this.rig.snap();
   }
 
@@ -1237,8 +1481,17 @@ export class Game {
     this.applySettings();
   }
 
+  debugHandling(model: 'arcade' | 'realistic'): void {
+    this.options.handling = model;
+    this.applyOptions();
+  }
+
+  debugPhoto(): void {
+    this.enterPhoto();
+  }
+
   debugInfo(): Record<string, unknown> {
-    return { state: this.state, chapter: this.world.chapter.id, s: this.rover.s, v: this.rover.v, mode: this.mode, district: this.district, fps: this.fps, calls: this.renderer.info.render.calls, tris: this.renderer.info.render.triangles, length: this.world.path.length, ink: this.profile.data.ink, mission: this.missions.statusText(), peers: this.net.peers.size };
+    return { state: this.state, chapter: this.world.chapter.id, s: this.rover.s, v: this.rover.v, mode: this.mode, district: this.district, fps: this.fps, calls: this.renderer.info.render.calls, tris: this.renderer.info.render.triangles, length: this.world.path.length, ink: this.profile.data.ink, mission: this.missions.statusText(), peers: this.net.peers.size, handling: this.rover.handling, gear: this.rover.gear, rpm: Math.round(this.rover.rpm), trophies: this.profile.data.trophies.length, weather: this.env.weather, realism: this.settings.realism };
   }
 
   debugWalk(): void {
@@ -1278,6 +1531,7 @@ export class Game {
     this.menu.show('none');
     this.hud.setPlaying(false);
     if (preset) this.env.setPreset(preset);
+    this.env.snap();
     this.director.script([{ kind: 'landmark', duration: 999, landmark: index }]);
     return this.world.decor.landmarks[index]?.name ?? '?';
   }
@@ -1288,4 +1542,7 @@ const _q = new THREE.Quaternion();
 const _v = new THREE.Vector3();
 const _v2 = new THREE.Vector3();
 const _v3 = new THREE.Vector3();
+const _v4 = new THREE.Vector3();
+const _v5 = new THREE.Vector3();
+const _v6 = new THREE.Vector3();
 const _y = new THREE.Vector3(0, 1, 0);

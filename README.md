@@ -2,11 +2,17 @@
 
 **PaintLand** (working title) is a browser 3D game built with Three.js that looks like a moving watercolour sketchbook. Roads peel off the ground and fold into the sky, up walls, across ceilings and through loops. Driving or walking through floating notes plays each street's melody. You can play alone or with friends, walk around as a customisable character in first or third person, and drive a little rover with a gramophone on its roof.
 
-*Paint the road. Then drive up it.*
+*Paint the road. Then drive up it.* Prefer it real? One slider turns the sketchbook into a realistically lit world with HDR light, reflections, fog and depth of field.
 
 This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
 
+![Milestone 3 screenshots: watercolour vs realistic Biscuit Row, realistic Galle Face Green, Lotus Tower, Taj Mahal, Sigiriya, a rainy night, a storm on the Great Wall, photo mode, graphics settings, art style settings, trophies](docs/screenshots/milestone-3.jpg)
+
+<details><summary>Milestone 2 screenshots</summary>
+
 ![Milestone 2 screenshots: Biscuit Row, Galle Face Green, Lotus Tower spiral, Sigiriya, Nine Arch Bridge, Great Wall, Colosseum, Taj Mahal, Christ the Redeemer, Chichen Itza, Petra, garage menu over the live demo](docs/screenshots/milestone-2.jpg)
+
+</details>
 
 <details><summary>Milestone 1 screenshots</summary>
 
@@ -29,9 +35,9 @@ npm run dev        # open http://localhost:5173
 | `npm test` | Unit tests (road maths for every chapter, rover and walking physics, notes, missions, profile and shop) |
 | `npm run typecheck` | TypeScript strict check |
 | `npm run server` | Multiplayer relay on `ws://localhost:8787` (rooms of 32). Without it, multiplayer still works between tabs of the same browser |
-| `node tools/screenshot.mjs` | With `npm run dev` running: renders districts in headless Chromium into `tools/out/` (`SHOTS="serendib:120:golden"`, `MENUS=1`, `INTRO=1`, `MISSION=1`, `WALK=1`) |
-| `node tools/landmarks.mjs <chapter> <count>` | Crane shots of every landmark in a chapter |
-| `node tools/drive-test.mjs` | Presses real keys (drive, brake, get out, walk) and checks for console errors |
+| `node tools/screenshot.mjs` | With `npm run dev` running: renders districts in headless Chromium into `tools/out/` (`SHOTS="serendib:120:golden:storm"`, `STYLE=realistic`, `QUALITY=ultra`, `MENUS="settings/controls,trophies"`, `PHOTO=1`, `INTRO=1`, `MISSION=…`, `WALK=1`) |
+| `node tools/landmarks.mjs <chapter> <count>` | Crane shots of every landmark in a chapter (`STYLE=realistic PRESET=golden`) |
+| `node tools/drive-test.mjs` | Presses real keys (menu → play, drive, brake, get out, photo mode, realistic handling, lap wrap) and checks for console errors |
 | `node tools/net-test.mjs` | Starts the relay and checks chat, id rewriting and message filtering |
 
 Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
@@ -48,9 +54,27 @@ Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
 | **C / V** | Chase · Low · Drone · Cinema · Cockpit | Third ↔ first person |
 | Mouse | — | Look (click to lock the pointer) |
 
-Also: **Q** drink the selected tonic · **Z** next tonic · **G** wave · **Enter** chat (multiplayer) · **scroll** zoom · **[ ]** field of view · **T** radio · **N** next song · **B** change station · **1–7** time of day · **8** auto day · **9** rain · **H** honk · **R** respawn · **`** or **F2** Studio panel · **U** hide HUD · **Esc** pause. Gamepads work too (stick, RT/LT, A hop, X boost, B drift, Y get in/out).
+Also: **P** photo mode · **.** / **,** gear up / down (realistic handling, manual gearbox) · **Q** drink the selected tonic · **Z** next tonic · **G** wave · **Enter** chat (multiplayer) · **scroll** zoom · **[ ]** field of view · **T** radio · **N** next song · **B** change station · **1–7** time of day · **8** auto day · **9** weather (clear → cloudy → fog → rain → storm) · **H** honk · **R** respawn · **`** or **F2** Studio panel · **U** hide HUD · **Esc** pause. Gamepads work too (stick, RT/LT, A hop, X boost, B drift, Y get in/out).
 
-## What is new in milestone 2 · "Serendib and the Wonders"
+Every key can be rebound in **Menu → Settings → Controls**.
+
+## What is new in milestone 3 · "Real light"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **Art style: Watercolour ↔ Illustrated ↔ Realistic**, and a Realism slider that blends between them. The realistic look has smooth normals on round shapes, sun, sky and ground lighting, specular highlights and sky reflections, glass and car paint, wet roads that mirror the sky in rain, headlights after dark, HDR, ambient occlusion, sun shafts, height fog with a sun-tinted haze, filmic tone mapping, vignette, FXAA and cinematic depth of field. It also has a physically lit sky with silver-lined clouds and a sea with waves, Fresnel reflections and a sun glint | ✅ | `src/render/` |
+| **Graphics quality: Low / Medium / High / Ultra / Custom**, detected for the device on first run. Settings: render scale, auto-balance to 60 fps, pixel ratio, FXAA, frame cap, draw distance, shadows (off to 4096², distance, soft edges), ambient occlusion, bloom, sun shafts, HDR. Live fps and draw-call readout | ✅ | `src/render/StudioSettings.ts`, Settings → Graphics |
+| **Settings screen** with tabs for Graphics, Look, Controls, Driving, Audio and Accessibility | ✅ | `src/ui/Menu.ts` |
+| **Controls:** rebind any action (press a key), mouse and stick sensitivity, invert Y, stick deadzone, gamepad vibration | ✅ | `src/core/Input.ts` |
+| **Realistic handling:** a 6-speed automatic or manual gearbox with rpm and a torque curve, air drag and engine braking, less steering at speed, and tyres that slide past their grip. Also steering sensitivity, smoothing and lane assist, auto-cruise on or off, km/h or mph. Engine sound follows rpm; gear and rpm show on the speed card | ✅ | `src/gameplay/RoverController.ts`, `src/core/Options.ts` |
+| **Weather:** clear, cloudy, fog, rain and storm, with lightning flashes and rolling thunder. Can change by itself | ✅ | `src/world/Environment.ts` |
+| **Photo mode (P):** frozen world, free camera, field of view, roll, auto or manual focus, background blur, time, weather, exposure and realism. Saves a PNG at 1×, 2× or 4K | ✅ | `src/ui/PhotoMode.ts` |
+| **Ghosts:** your best clean lap per chapter is saved and raced as a see-through car | ✅ | `src/gameplay/Ghost.ts` |
+| **Trophies:** 22 trophies with progress bars, ink rewards and lifetime stats (distance, air time, top speed, time upside down…) | ✅ | `src/gameplay/Trophies.ts`, Menu → Trophies |
+| **Particles:** tyre smoke, dust on earth roads, rain spray, sparks, boost exhaust, confetti and fireflies. **Birds** circle overhead by day and bats by night | ✅ | `src/render/Particles.ts`, `src/world/Wildlife.ts` |
+| **Accessibility:** colour-vision assist (protan, deutan, tritan), HUD size, reduced motion, calm lighting | ✅ | Settings → Accessibility |
+
+## What was new in milestone 2 · "Serendib and the Wonders"
 
 | System | Status | Where |
 | --- | --- | --- |
@@ -83,7 +107,7 @@ Also: **Q** drink the selected tonic · **Z** next tonic · **G** wave · **Ente
 | Procedural radio (3 stations in the district's key and tempo), engine, wind, rain, SFX | ✅ | `src/audio/AudioEngine.ts` |
 | Time of day (7 presets + auto) and rain | ✅ | `src/world/Environment.ts` |
 | HUD and menus as paper cards: title, intro, pause, controls, radio, Songbook, speed card with gravity compass | ✅ | `src/ui/` |
-| Walkable hubs, photo mode, touch controls, authoritative server, commissioned music | ⏳ next milestones | see [docs/12](docs/12-production-plan.md) |
+| Walkable hubs, touch controls, authoritative server, commissioned music, hand-made model pass | ⏳ next milestones | see [docs/12](docs/12-production-plan.md) |
 
 ## How to read this
 
@@ -126,4 +150,5 @@ Reference material:
 | Phase 2 · Music core | ✅ Done (procedural radio; commissioned music later) |
 | Phase 3 · On-foot prototype | ✅ Done on ribbon roads (hubs next) |
 | Phase 4 · Vertical slice | 🚧 In progress: 3 chapters, menus, customisation, missions |
-| Phase 5 · Multiplayer | 🚧 First pass: tab and relay rooms, peer interpolation, chat (no server authority yet) |
+| Phase 5 · Multiplayer | 🚧 First pass: tab and relay rooms, peer interpolation, chat, ghosts (no server authority yet) |
+| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers done; hubs and touch next |

@@ -287,7 +287,7 @@ export class RoverController {
       if (input.shiftDown) shift(-1);
     } else if (this.shiftTimer <= 0) {
       const ratio = Math.abs(this.v) / gearTop(this.gear);
-      if (ratio > 0.97 && input.throttle > 0.1) shift(1);
+      if (ratio > 0.97 && (input.throttle > 0.1 || ratio > 1.02)) shift(1);
       else if (this.gear > 1 && Math.abs(this.v) < gearTop(this.gear - 1) * 0.72) shift(-1);
     }
     const target = IDLE_RPM + (REDLINE_RPM - IDLE_RPM) * clamp(Math.abs(this.v) / gearTop(this.gear), 0, 1.02);
