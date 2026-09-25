@@ -61,6 +61,7 @@ export class MapView {
   private scale = 1;
   private hits: { x: number; y: number; r: number; travel: string }[] = [];
   private baseKey = '';
+  private sideHtml = '';
   open = false;
   onTravel: ((id: string) => void) | null = null;
   onClose: (() => void) | null = null;
@@ -146,7 +147,11 @@ export class MapView {
         .join('')}</div>` : ''}
       <div class="map-places">${places.map((p) => `<button class="btn small" data-travel="${p.travel}">${p.icon ?? '📍'} ${p.label}</button>`).join('')}</div>
       <button class="btn" data-close>✕ M</button>`;
-    if (this.side.innerHTML !== html) this.side.innerHTML = html;
+    // Compare with what we wrote last (the browser normalises innerHTML, so it never matches exactly).
+    if (html !== this.sideHtml) {
+      this.sideHtml = html;
+      this.side.innerHTML = html;
+    }
   }
 
   /** Heading-up minimap around the player. */

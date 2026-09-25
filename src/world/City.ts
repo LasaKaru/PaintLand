@@ -469,11 +469,13 @@ export class City implements FreeRoamArea {
       [-560, 470, 0, 'The corner of the stunt park'],
       [140, -470, 0, 'Where downtown meets the old town'],
       [0, 540, 0, 'At the water’s edge'],
+      [-545, -452, 0, 'On the road through the West Gardens'],
+      [-611, -60, 0, 'Along the far west road'],
     ];
     secrets.forEach(([x, z, y, hint], i) => this.secrets.push({ id: `city-secret-${i}`, x, z, y, hint }));
     const chestSpots: [number, number, 0 | 1 | 2 | 3][] = [
       [-40, 470, 0], [200, -300, 0], [-380, 260, 1], [560, -120, 1], [-250, -480, 0], [420, 300, 1], [-600, -300, 2], [600, 100, 2],
-      [100, -540, 1], [-160, -115, 3], [330, 480, 0], [-460, -40, 0], [250, 90, 1], [-10, -420, 2], [480, 460, 3], [-600, 420, 1],
+      [100, -540, 1], [-160, -115, 3], [330, 480, 0], [-460, -40, 0], [250, 90, 1], [-10, -420, 2], [480, 460, 3], [-600, 420, 1], [-611, -150, 1], [-540, 12, 0],
     ];
     chestSpots.forEach(([x, z, tier], i) => this.chests.push({ id: `city-chest-${i}`, x, z, tier }));
     for (const s of this.secrets) {
