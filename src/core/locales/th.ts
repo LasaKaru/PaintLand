@@ -188,5 +188,6 @@ const th: Locale = {
   'bench.result': "เฉลี่ย {avg} fps · เฟรมที่ช้าที่สุด {low} fps",
   'bench.recommend': "แนะนำ: {level}",
   'bench.apply': "ใช้ค่านี้",
+  'a11y.colour': "สี {n}",
 };
 export default th;

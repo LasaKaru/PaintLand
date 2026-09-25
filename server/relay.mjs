@@ -22,7 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
-import { LIMITS, Strikes, cleanText, validateState } from './validate.mjs';
+import { LIMITS, Strikes, cleanText, clientIp, validateState } from './validate.mjs';
 import { createAdmin } from './admin.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -102,7 +102,7 @@ function relayHttp(req, res, url) {
   }
   if (req.method === 'POST' && url.pathname === '/submit') {
     if (!verifyRun) return send(res, 503, { ok: false, reason: 'leaderboard disabled on this server' });
-    const ip = req.socket.remoteAddress ?? '?';
+    const ip = clientIp(req);
     const now = Date.now();
     if (now - (lastSubmit.get(ip) ?? 0) < 3000) return send(res, 429, { ok: false, reason: 'slow down' });
     lastSubmit.set(ip, now);

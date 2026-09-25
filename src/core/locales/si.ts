@@ -188,5 +188,6 @@ const si: Locale = {
   'bench.result': "සාමාන්‍යය {avg} fps · මන්දගාමීම රාමු {low} fps",
   'bench.recommend': "නිර්දේශිතය: {level}",
   'bench.apply': "එය භාවිත කරන්න",
+  'a11y.colour': "වර්ණය {n}",
 };
 export default si;

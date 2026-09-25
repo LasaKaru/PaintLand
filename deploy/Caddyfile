@@ -1,0 +1,31 @@
+# HTTPS front door for PaintLand. Caddy gets a certificate for {$DOMAIN} from
+# Let's Encrypt, redirects HTTP to HTTPS, and passes everything (the game, the
+# API and the multiplayer WebSocket) to the game server.
+{
+	email {$EMAIL}
+}
+
+{$DOMAIN} {
+	encode zstd gzip
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "DENY"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Microphone only for this site (voice chat); nothing else.
+		Permissions-Policy "camera=(), geolocation=(), payment=(), usb=(), microphone=(self)"
+		Cross-Origin-Opener-Policy "same-origin"
+		-Server
+	}
+
+	# Keep admin uploads and API bodies small at the edge too.
+	request_body {
+		max_size 3MB
+	}
+
+	reverse_proxy paintland:8787 {
+		# Replace, never append to, whatever X-Forwarded-For the client sent.
+		header_up X-Forwarded-For {remote_host}
+	}
+}

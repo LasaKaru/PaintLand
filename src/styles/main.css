@@ -4,9 +4,11 @@
   --paper-2: #f7f3e8;
   --ink: #2b2622;
   --ink-soft: #5b534c;
-  --terracotta: #d2643a;
+  /* Dark enough for small text and white-on-accent buttons (WCAG AA, 4.5:1). */
+  --terracotta: #b04d28;
   --lemon: #f4d23b;
   --teal: #2f8f86;
+  --teal-ink: #1f6f68;
   --good: #3f9a52;
   --bad: #c8453a;
   /* Latin glyphs use the hand-drawn fonts; every other script falls back to Noto per glyph. */
@@ -342,7 +344,7 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .vehicle-card { text-align: left; background: #fffaf0; border: 1.5px solid var(--ink); border-radius: 6px; padding: 8px 10px; cursor: pointer; display: flex; flex-direction: column; gap: 4px; font-family: var(--mono); }
 .vehicle-card b { font-family: var(--hand); font-size: 1.3em; font-weight: 400; }
 .vehicle-card small { color: var(--ink-soft); }
-.vehicle-card em { font-style: normal; font-weight: 700; color: var(--teal); }
+.vehicle-card em { font-style: normal; font-weight: 700; color: var(--teal-ink); }
 .vehicle-card.on { outline: 3px solid var(--terracotta); }
 .vehicle-card.locked { border-style: dashed; }
 .stats { font-size: 0.8em; display: grid; grid-template-columns: auto 1fr; gap: 2px 6px; align-items: center; }
@@ -389,7 +391,9 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 /* Trophies */
 .stat-line { font-family: var(--mono); font-size: 0.85em; color: var(--ink-soft); margin-bottom: 10px; line-height: 1.7; }
 .trophy-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 10px; }
-.trophy { display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding: 10px 12px; opacity: 0.72; }
+.trophy { display: grid; grid-template-columns: 44px 1fr; gap: 10px; padding: 10px 12px; }
+/* Locked trophies read as outlines (not faded text, which fails contrast). */
+.trophy:not(.done) { border-style: dashed; box-shadow: none; }
 .trophy.done { opacity: 1; background: linear-gradient(160deg, #fffaf0, #fbe7c8); }
 .trophy .hand { font-size: 1.25em; }
 .trophy small { color: var(--ink-soft); display: block; line-height: 1.4; }
@@ -636,5 +640,12 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 /* Livery painter (garage). */
 .livery-wrap { position: relative; margin: 6px 0 10px; }
 #app canvas.livery-canvas { display: block; width: 100%; max-width: 420px; aspect-ratio: 2 / 1; height: auto; border: 2px solid var(--ink, #2b2622); border-radius: 6px; cursor: crosshair; touch-action: none; image-rendering: pixelated; }
-.livery-front { font: 11px var(--mono); opacity: 0.6; margin-top: 3px; }
+.livery-front { font: 11px var(--mono); color: var(--ink-soft); margin-top: 3px; }
 .bench-result { margin-top: 8px; padding: 8px 10px; border: 2px dashed rgba(43, 38, 34, 0.35); border-radius: 8px; font-size: 13px; line-height: 1.6; }
+
+/* Keyboard focus: a clear ink ring on everything you can tab to (not on mouse clicks). */
+:where(button, a, input, select, textarea, [tabindex]):focus-visible { outline: 3px solid var(--ink); outline-offset: 2px; box-shadow: 0 0 0 5px var(--lemon); }
+.swatch:focus-visible { outline-offset: 3px; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+}

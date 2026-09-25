@@ -188,5 +188,6 @@ const id: Locale = {
   'bench.result': "Rata-rata {avg} fps · frame terlambat {low} fps",
   'bench.recommend': "Disarankan: {level}",
   'bench.apply': "Pakai ini",
+  'a11y.colour': "Warna {n}",
 };
 export default id;

@@ -188,5 +188,6 @@ const ru: Locale = {
   'bench.result': "В среднем {avg} fps · самые медленные кадры {low} fps",
   'bench.recommend': "Рекомендуется: {level}",
   'bench.apply': "Применить",
+  'a11y.colour': "Цвет {n}",
 };
 export default ru;

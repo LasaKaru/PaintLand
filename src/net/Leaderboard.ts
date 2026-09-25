@@ -12,6 +12,18 @@ export interface BoardEntry {
  * The server address comes from the Multiplayer screen (ws://host:port);
  * without one we try the page's own host on port 8787.
  */
+/**
+ * Where the multiplayer relay lives: the build setting if there is one; in
+ * development the relay beside the Vite server; otherwise the site itself
+ * (the relay serves the game, so behind HTTPS it is wss:// on the same host).
+ */
+export function defaultServer(): string {
+  if (import.meta.env.VITE_SERVER_WS) return import.meta.env.VITE_SERVER_WS;
+  const here = typeof location !== 'undefined' ? location : null;
+  if (import.meta.env.DEV || !here || !/^https?:$/.test(here.protocol)) return `ws://${here?.hostname || 'localhost'}:8787`;
+  return `${here.protocol === 'https:' ? 'wss' : 'ws'}://${here.host}`;
+}
+
 export function serverHttpUrl(): string {
   let ws: string | null = null;
   try {
@@ -19,7 +31,7 @@ export function serverHttpUrl(): string {
   } catch {
     /* storage blocked */
   }
-  const base = ws || import.meta.env.VITE_SERVER_WS || `ws://${location.hostname || 'localhost'}:8787`;
+  const base = ws || defaultServer();
   return base.replace(/^ws(s?):\/\//, 'http$1://').replace(/\/$/, '');
 }
 

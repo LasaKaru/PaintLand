@@ -1,4 +1,5 @@
 import { t } from '../core/i18n';
+import { accessible } from './a11y';
 import {
   decodeLivery, emptyLivery, encodeLivery, fillLivery, LIVERY_H, LIVERY_PALETTE, LIVERY_STAMPS, LIVERY_W, presetLivery, stampLivery,
 } from '../gameplay/Livery';
@@ -54,6 +55,7 @@ export class LiveryEditor {
     c.addEventListener('pointerup', end);
     c.addEventListener('pointercancel', end);
     root.addEventListener('click', (e) => this.onClick(e));
+    accessible(root);
     this.draw();
   }
 
@@ -80,7 +82,7 @@ export class LiveryEditor {
         <button class="btn small" data-laction="preset">🎲 ${t('lv.idea')}</button>
       </div>
       <h4>${t('lv.code')}</h4>
-      <div class="invite-row"><input class="text-input" data-id="lcode" maxlength="700" value="${encodeLivery(this.px)}" spellcheck="false">
+      <div class="invite-row"> <input class="text-input" data-id="lcode" aria-label="${t('lv.code')}" maxlength="700" value="${encodeLivery(this.px)}" spellcheck="false">
         <button class="btn small" data-laction="copy">${t('mp.copy')}</button>
         <button class="btn small" data-laction="load">${t('lv.load')}</button></div>
       <p class="menu-hint">${t('lv.hint')}</p>`;
@@ -138,6 +140,7 @@ export class LiveryEditor {
     const newWrap = holder.querySelector('.livery-wrap');
     if (oldWrap && newWrap) newWrap.replaceWith(oldWrap);
     this.root.replaceChildren(...holder.childNodes);
+    accessible(this.root);
     this.draw();
   }
 

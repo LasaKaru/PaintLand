@@ -188,5 +188,6 @@ const ta: Locale = {
   'bench.result': "சராசரி {avg} fps · மிக மெதுவான சட்டங்கள் {low} fps",
   'bench.recommend': "பரிந்துரை: {level}",
   'bench.apply': "இதைப் பயன்படுத்து",
+  'a11y.colour': "நிறம் {n}",
 };
 export default ta;

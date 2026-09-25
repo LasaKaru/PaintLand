@@ -188,5 +188,6 @@ const pt: Locale = {
   'bench.result': "Média {avg} fps · quadros mais lentos {low} fps",
   'bench.recommend': "Recomendado: {level}",
   'bench.apply': "Usar",
+  'a11y.colour': "Cor {n}",
 };
 export default pt;

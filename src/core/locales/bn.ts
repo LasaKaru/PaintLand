@@ -188,5 +188,6 @@ const bn: Locale = {
   'bench.result': "গড় {avg} fps · সবচেয়ে ধীর ফ্রেম {low} fps",
   'bench.recommend': "প্রস্তাবিত: {level}",
   'bench.apply': "এটি নিন",
+  'a11y.colour': "রং {n}",
 };
 export default bn;

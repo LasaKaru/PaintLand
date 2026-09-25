@@ -1,4 +1,6 @@
 import { LiveryEditor } from './LiveryEditor';
+import { accessible } from './a11y';
+import { defaultServer } from '../net/Leaderboard';
 import type { BenchmarkResult } from '../render/Benchmark';
 import type { Profile, ShopItem } from '../gameplay/Profile';
 import { brand, COMPANY_LOGO } from '../brand/Brand';
@@ -165,6 +167,7 @@ export class Menu {
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
     const lv = s === 'livery' ? this.root.querySelector<HTMLElement>('[data-id="livery"]') : null;
     if (lv) this.liveryEditor.mount(lv, this.host.profile.vehicleLook(this.host.profile.data.vehicle).livery);
+    accessible(this.root);
     this.paintBrandImages();
   }
 
@@ -453,7 +456,7 @@ export class Menu {
     const n = this.host.netStatus();
     const url = new URL(window.location.href);
     const room = n.room || url.searchParams.get('room') || randomRoom();
-    const serverSaved = localStorageGet('paintland.server') ?? (import.meta.env.VITE_SERVER_WS || 'ws://localhost:8787');
+    const serverSaved = localStorageGet('paintland.server') ?? defaultServer();
     return `<div class="menu-panel">${this.header('Multiplayer')}
       <p>Play together in the same painted world: see each other drive and walk, wave, and chat.</p>
       <div class="field"><label>Your name</label><input class="text-input" maxlength="20" value="${escapeHtml(this.host.profile.data.name)}" data-text="name"></div>

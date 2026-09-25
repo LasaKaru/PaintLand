@@ -9,3 +9,4 @@ server/data/
 desktop/node_modules/
 desktop/app/
 desktop/release/
+deploy/.env

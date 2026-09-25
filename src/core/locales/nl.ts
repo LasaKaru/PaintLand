@@ -188,5 +188,6 @@ const nl: Locale = {
   'bench.result': "Gemiddeld {avg} fps · traagste beelden {low} fps",
   'bench.recommend': "Aanbevolen: {level}",
   'bench.apply': "Gebruiken",
+  'a11y.colour': "Kleur {n}",
 };
 export default nl;

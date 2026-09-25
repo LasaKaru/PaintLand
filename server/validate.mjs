@@ -74,3 +74,18 @@ export class Strikes {
     return this.times.length >= this.limit;
   }
 }
+
+/**
+ * The client's address for rate limits. Behind one trusted reverse proxy
+ * (TRUST_PROXY=1, e.g. the Caddy in deploy/), use the address that proxy
+ * appended — the last X-Forwarded-For entry. Earlier entries come from the
+ * client and can be forged, so they are never used.
+ * @param {import('node:http').IncomingMessage} req
+ */
+export function clientIp(req, trustProxy = process.env.TRUST_PROXY === '1') {
+  const direct = req.socket?.remoteAddress ?? '?';
+  if (!trustProxy) return direct;
+  const header = req.headers?.['x-forwarded-for'];
+  const list = (Array.isArray(header) ? header.join(',') : header ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  return list.at(-1)?.slice(0, 64) ?? direct;
+}

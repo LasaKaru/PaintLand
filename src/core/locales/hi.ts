@@ -188,5 +188,6 @@ const hi: Locale = {
   'bench.result': "औसत {avg} fps · सबसे धीमे फ़्रेम {low} fps",
   'bench.recommend': "सुझाव: {level}",
   'bench.apply': "इसे अपनाएँ",
+  'a11y.colour': "रंग {n}",
 };
 export default hi;

@@ -5,3 +5,4 @@ export declare class Strikes {
   constructor(limit?: number, windowMs?: number);
   add(now: number): boolean;
 }
+export function clientIp(req: { socket?: { remoteAddress?: string }; headers?: Record<string, string | string[] | undefined> }, trustProxy?: boolean): string;

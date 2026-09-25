@@ -188,5 +188,6 @@ const zh: Locale = {
   'bench.result': "平均 {avg} fps · 最慢帧 {low} fps",
   'bench.recommend': "推荐：{level}",
   'bench.apply': "使用此设置",
+  'a11y.colour': "颜色 {n}",
 };
 export default zh;

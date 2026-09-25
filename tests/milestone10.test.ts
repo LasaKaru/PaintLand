@@ -144,3 +144,15 @@ describe('Adaptive quality and the benchmark', async () => {
     expect(scoreBenchmark([]).recommend).toBe('low');
   });
 });
+
+describe('Deploy: client address behind the HTTPS proxy', async () => {
+  const { clientIp } = await import('../server/validate.mjs');
+  const req = (xff?: string) => ({ socket: { remoteAddress: '172.18.0.3' }, headers: xff ? { 'x-forwarded-for': xff } : {} });
+  it('ignores X-Forwarded-For unless the proxy is trusted, then uses the entry the proxy added', () => {
+    expect(clientIp(req('1.2.3.4') as never, false)).toBe('172.18.0.3');
+    expect(clientIp(req('1.2.3.4') as never, true)).toBe('1.2.3.4');
+    // A client forging the header cannot pick its own address.
+    expect(clientIp(req('6.6.6.6, 1.2.3.4') as never, true)).toBe('1.2.3.4');
+    expect(clientIp(req() as never, true)).toBe('172.18.0.3');
+  });
+});

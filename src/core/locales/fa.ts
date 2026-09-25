@@ -188,5 +188,6 @@ const fa: Locale = {
   'bench.result': "میانگین {avg} fps · کندترین فریم‌ها {low} fps",
   'bench.recommend': "پیشنهادی: {level}",
   'bench.apply': "همین را بگذار",
+  'a11y.colour': "رنگ {n}",
 };
 export default fa;

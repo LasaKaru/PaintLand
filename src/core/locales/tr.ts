@@ -188,5 +188,6 @@ const tr: Locale = {
   'bench.result': "Ortalama {avg} fps · en yavaş kareler {low} fps",
   'bench.recommend': "Önerilen: {level}",
   'bench.apply': "Bunu kullan",
+  'a11y.colour': "Renk {n}",
 };
 export default tr;

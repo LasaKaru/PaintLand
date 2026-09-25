@@ -188,5 +188,6 @@ const ja: Locale = {
   'bench.result': "平均 {avg} fps · 最も遅いフレーム {low} fps",
   'bench.recommend': "おすすめ：{level}",
   'bench.apply': "これにする",
+  'a11y.colour': "色 {n}",
 };
 export default ja;

@@ -188,5 +188,6 @@ const sw: Locale = {
   'bench.result': "Wastani {avg} fps · fremu za polepole zaidi {low} fps",
   'bench.recommend': "Inapendekezwa: {level}",
   'bench.apply': "Tumia hii",
+  'a11y.colour': "Rangi {n}",
 };
 export default sw;

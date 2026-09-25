@@ -188,5 +188,6 @@ const ko: Locale = {
   'bench.result': "평균 {avg} fps · 가장 느린 프레임 {low} fps",
   'bench.recommend': "추천: {level}",
   'bench.apply': "적용",
+  'a11y.colour': "색 {n}",
 };
 export default ko;

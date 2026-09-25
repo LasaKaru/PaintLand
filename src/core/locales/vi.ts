@@ -188,5 +188,6 @@ const vi: Locale = {
   'bench.result': "Trung bình {avg} fps · khung chậm nhất {low} fps",
   'bench.recommend': "Đề xuất: {level}",
   'bench.apply': "Dùng mức này",
+  'a11y.colour': "Màu {n}",
 };
 export default vi;

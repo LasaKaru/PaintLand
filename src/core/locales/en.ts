@@ -109,6 +109,7 @@ const en = {
   'bench.result': 'Average {avg} fps · slowest frames {low} fps',
   'bench.recommend': 'Recommended: {level}',
   'bench.apply': 'Use it',
+  'a11y.colour': 'Colour {n}',
   'wr.eyes': 'Eyes',
   'wr.mouth': 'Mouth',
   'wr.details': 'Face details',

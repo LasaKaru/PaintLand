@@ -188,5 +188,6 @@ const ar: Locale = {
   'bench.result': "المتوسط {avg} fps · أبطأ الإطارات {low} fps",
   'bench.recommend': "المقترح: {level}",
   'bench.apply': "استخدمه",
+  'a11y.colour': "اللون {n}",
 };
 export default ar;

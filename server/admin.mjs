@@ -22,6 +22,7 @@
 import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
+import { clientIp } from './validate.mjs';
 
 // Default login (hash of the password chosen by the owner). Override with env vars or change it in the panel.
 export const DEFAULT_ADMIN = {
@@ -376,7 +377,7 @@ export function createAdmin({ dataDir, distDir, live }) {
     if (path.startsWith('/api/admin/')) {
       const route = path.slice('/api/admin/'.length);
       if (route === 'login' && method === 'POST') {
-        const ip = req.socket.remoteAddress ?? '?';
+        const ip = clientIp(req);
         const now = Date.now();
         const recent = (attempts.get(ip) ?? []).filter((t) => now - t < 10 * 60_000);
         if (recent.length >= 8) return send(res, 429, { ok: false, reason: 'Too many attempts. Try again in a few minutes.' }), true;

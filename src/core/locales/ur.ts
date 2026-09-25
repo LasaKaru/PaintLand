@@ -188,5 +188,6 @@ const ur: Locale = {
   'bench.result': "اوسط {avg} fps · سست ترین فریم {low} fps",
   'bench.recommend': "تجویز: {level}",
   'bench.apply': "یہ استعمال کریں",
+  'a11y.colour': "رنگ {n}",
 };
 export default ur;
