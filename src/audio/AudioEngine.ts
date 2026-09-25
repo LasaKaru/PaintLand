@@ -535,6 +535,65 @@ export class AudioEngine {
     [[60, 0], [64, 120], [67, 240], [72, 380], [76, 380], [79, 380]].forEach(([n, d]) => setTimeout(() => this.playNote(n, 0.9), d));
   }
 
+  /** Festival drums nearby (0..1): the perahera's davul and thammattama. */
+  festival = 0;
+  private festivalNext = 0;
+  private festivalStep = 0;
+
+  private festivalDrums(t: number): void {
+    const level = this.festival * this.ambienceVolume;
+    if (level < 0.02) {
+      this.festivalNext = t;
+      return;
+    }
+    // A driving 12/8 pattern: deep davul, sharp thammattama, a cymbal on the off-beats.
+    const step = 60 / 132 / 3;
+    if (this.festivalNext < t) this.festivalNext = t + 0.02;
+    while (this.festivalNext < t + 0.12) {
+      const at = this.festivalNext;
+      const i = this.festivalStep % 12;
+      if (i === 0 || i === 6 || i === 9) this.drumHit(at, 95, 0.32 * level, 0.35);
+      if (i === 3 || i === 5 || i === 8 || i === 11) this.drumHit(at, 330, 0.18 * level, 0.09);
+      if (i % 3 === 2) this.noiseHit(at, 'highpass', 6500, 0.05 * level, 0.18, this.sfxBus);
+      this.festivalNext += step;
+      this.festivalStep++;
+    }
+  }
+
+  private drumHit(t: number, f0: number, level: number, decay: number): void {
+    const ctx = this.ctx!;
+    const o = ctx.createOscillator();
+    o.frequency.setValueAtTime(f0 * 1.7, t);
+    o.frequency.exponentialRampToValueAtTime(f0, t + 0.05);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(level, t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + decay);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + decay + 0.05);
+    this.noiseHit(t, 'bandpass', f0 * 8, level * 0.25, 0.04, this.sfxBus);
+  }
+
+  /** Firework: a rising whistle, then a boom and crackle `delay` seconds later. */
+  firework(delay = 1.1): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const o = ctx.createOscillator();
+    o.type = 'triangle';
+    o.frequency.setValueAtTime(900, t);
+    o.frequency.exponentialRampToValueAtTime(2600, t + delay * 0.9);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.03, t + 0.1);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + delay);
+    o.connect(g).connect(this.sfxBus);
+    o.start(t);
+    o.stop(t + delay + 0.05);
+    this.noiseHit(t + delay, 'lowpass', 180, 0.4, 0.9, this.sfxBus);
+    for (let i = 0; i < 16; i++) this.noiseHit(t + delay + 0.15 + Math.random() * 0.9, 'highpass', 4000 + Math.random() * 3000, 0.04, 0.05, this.sfxBus);
+  }
+
   /** Soft click for menus. */
   uiClick(): void {
     this.blip(1500, 0.025, 'triangle', 0.03);
@@ -693,6 +752,7 @@ export class AudioEngine {
     // Music opens up as the ride gets intense; muffled when musicOpen drops (menus, pause).
     this.musicFilter.frequency.setTargetAtTime((1200 + this.intensity * 9000) * this.musicOpen + 250, t, 0.4);
     this.ambience?.update(1 / 60);
+    this.festivalDrums(t);
     if (!driving) {
       this.intakeGain.gain.setTargetAtTime(0, t, 0.1);
       this.screechGain.gain.setTargetAtTime(0, t, 0.05);

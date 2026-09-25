@@ -27,13 +27,16 @@ export class RemotePlayers {
   private readonly yq = new THREE.Quaternion();
   private readonly tmp = new THREE.Vector3();
 
+  /** Players to hide (the block list). */
+  hidden: ((name: string) => boolean) | null = null;
+
   constructor(private readonly scene: THREE.Scene, private readonly labels: HTMLElement) {}
 
   /** `hubY` set = everyone is in a free-roam hub (world coordinates), otherwise on `path`. */
   update(dt: number, time: number, net: NetClient, path: RoadPath, chapter: string, camera: THREE.PerspectiveCamera, hubY?: number): void {
     const seen = new Set<string>();
     for (const peer of net.peers.values()) {
-      if (!peer.info || peer.info.chapter !== chapter) continue;
+      if (!peer.info || peer.info.chapter !== chapter || this.hidden?.(peer.info.name)) continue;
       const snap = net.sample(peer);
       if (!snap || snap.chapter !== chapter) continue;
       seen.add(peer.id);

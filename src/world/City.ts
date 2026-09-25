@@ -15,6 +15,10 @@ import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { PALETTE } from '../gameplay/Profile';
 import { AREA_Y, type AreaZone, type Chest, type DynamicBody, type FreeRoamArea, type Place, type Secret, type StuntJump } from './FreeRoamArea';
 import { t, type StringKey } from '../core/i18n';
+import { paintShared } from '../render/PaintMaterial';
+import { CITY_DISTRICTS, type District } from '../gameplay/Restoration';
+import type { MapInfo } from '../ui/MapView';
+import { Perahera } from './Perahera';
 
 /** Road grid lines (centre lines, metres). */
 export const CITY_X = [-620, -460, -340, -220, -100, 20, 140, 260, 380, 500, 620];
@@ -61,7 +65,15 @@ export class City implements FreeRoamArea {
   readonly stunts: StuntJump[] = [];
   readonly places: Place[] = [];
   private readonly rnd = new Random(7_2026);
-  private readonly material = new PaintMaterial({ vertexColors: true, flat: true });
+  private readonly material = new PaintMaterial({ vertexColors: true, flat: true, washable: true });
+  readonly districts: District[] = CITY_DISTRICTS;
+  /** The night perahera walks a loop around Pettah's streets. */
+  readonly perahera = new Perahera([
+    { x: 140, z: -340 },
+    { x: 380, z: -340 },
+    { x: 380, z: -100 },
+    { x: 140, z: -100 },
+  ]);
   private readonly merged: THREE.BufferGeometry[] = [];
   private readonly instances = new Map<string, { geo: THREE.BufferGeometry; mats: THREE.Matrix4[]; shadow: boolean }>();
   private readonly nm = new THREE.Matrix3();
@@ -87,6 +99,15 @@ export class City implements FreeRoamArea {
     this.buildTraffic();
     this.buildWalkers();
     this.buildZones();
+    this.group.add(this.perahera.group);
+    this.places.push(
+      { id: 'beach', name: 'Galle Face Beach', x: -300, z: 505 },
+      { id: 'pier', name: 'the pier', x: 300, z: 560 },
+      { id: 'suburbs', name: 'Cinnamon Gardens', x: 260, z: 320 },
+      { id: 'westgardens', name: 'West Gardens', x: -560, z: -200 },
+      { id: 'teahills', name: 'the tea hills', x: -300, z: -585 },
+      { id: 'elephants', name: 'the elephant grove', x: 435, z: -372 },
+    );
     this.group.visible = false;
   }
 
@@ -580,10 +601,31 @@ export class City implements FreeRoamArea {
   }
 
   dynamicBodies(): DynamicBody[] {
-    return this.traffic.map((c) => ({ x: c.x, z: c.z, r: 1.6 }));
+    return [...this.traffic.map((c) => ({ x: c.x, z: c.z, r: 1.6 })), ...this.perahera.bodies()];
+  }
+
+  mapInfo(paint: (districtId: string) => number): MapInfo {
+    const roads: MapInfo['roads'] = [];
+    for (const x of CITY_X) roads.push({ x1: x, z1: CITY_Z[0], x2: x, z2: CITY_Z[CITY_Z.length - 1], w: ROAD });
+    for (const z of CITY_Z) roads.push({ x1: CITY_X[0], z1: z, x2: CITY_X[CITY_X.length - 1], z2: z, w: ROAD });
+    return {
+      id: this.id,
+      name: t('city.name'),
+      bounds: { minX: -660, maxX: 660, minZ: -640, maxZ: 660 },
+      regions: this.districts.map((d) => ({ id: d.id, name: d.name, rect: d.rect, colour: d.colour, paint: paint(d.id) })),
+      roads,
+      water: [{ x: 500, z: -300, r: 70 }],
+      seaZ: 550,
+      blocks: [
+        { x: -160, z: -160, w: 60, d: 60, colour: 'rgba(217,199,164,0.9)' },
+        { x: 60, z: -600, w: 30, d: 30, colour: 'rgba(246,240,228,0.95)' },
+        { x: 300, z: 600, w: 10, d: 90, colour: 'rgba(122,90,58,0.8)' },
+      ],
+    };
   }
 
   update(dt: number, time: number, player: { x: number; z: number }, camera: THREE.PerspectiveCamera): void {
+    this.perahera.update(dt, time, paintShared.uNight.value, player);
     // Traffic: follow the loop; wait if the player is just ahead.
     for (const car of this.traffic) {
       const a = car.loop[car.seg];
@@ -593,7 +635,7 @@ export class City implements FreeRoamArea {
       const dirZ = (b.z - a.z) / len;
       const aheadX = car.x + dirX * 9;
       const aheadZ = car.z + dirZ * 9;
-      const blocked = Math.hypot(player.x - aheadX, player.z - aheadZ) < 6 || this.traffic.some((o) => o !== car && Math.hypot(o.x - aheadX, o.z - aheadZ) < 5);
+      const blocked = Math.hypot(player.x - aheadX, player.z - aheadZ) < 6 || this.traffic.some((o) => o !== car && Math.hypot(o.x - aheadX, o.z - aheadZ) < 5) || this.perahera.distanceTo(aheadX, aheadZ) < 7;
       if (!blocked) car.t += (car.speed * dt) / len;
       if (car.t >= 1) {
         car.t -= 1;

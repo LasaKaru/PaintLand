@@ -60,6 +60,7 @@ npm run dev        # open http://localhost:5173
 | `npm run server` | Builds the run verifier (`npm run build:server`) and starts the relay: multiplayer rooms on `ws://localhost:8787` and the time-trial leaderboard on `http://localhost:8787/leaderboard` |
 | `node tools/race-test.mjs` | Run from the repo root: two browser windows join a room over the relay, one starts a live race, both drive the lap, and both must show two finishes verified by server re-simulation |
 | `node tools/trial-test.mjs` | Run from the repo root: starts the relay, drives a full time-trial lap in the browser, checks that the server re-simulated and ranked it, and that a faked time is rejected |
+| `node tools/m8-test.mjs` | Milestone 8: the city as a sketch, painting a district (wash and fireworks), the paper map and a fast travel from it, the night perahera, and the daily brushstrokes screen. Screenshots go to `tools/out/m8-*.png` |
 | `node tools/city-test.mjs` | Drives from Harbour Town into Serendib City through the road sign, opens a loot chest, finds a secret pot, lands the "Over the bus" stunt, charges a drift mini-turbo, starts a city mission and opens the mission board. Screenshots go to `tools/out/city-*.png` |
 | `node tools/hub-test.mjs` | Drives and walks around Harbour Town with real keys, opens the garage from its ring, resumes, drives through a chapter gate, and checks the touch controls on a phone-sized screen |
 
@@ -77,11 +78,26 @@ Needs a browser with WebGL2 (any current Chrome, Edge, Firefox or Safari).
 | **C / V** | Chase · Low · Drone · Cinema · Cockpit | Third ↔ first person |
 | Mouse | — | Look (click to lock the pointer) |
 
-Also: **P** photo mode · **.** / **,** gear up / down (realistic handling, manual gearbox) · **Q** drink the selected tonic · **Z** next tonic · **G** wave · **Enter** chat (multiplayer) · **scroll** zoom · **[ ]** field of view · **T** radio · **N** next song · **B** change station · **1–7** time of day · **8** auto day · **9** weather (clear → cloudy → fog → rain → storm) · **H** honk · **R** respawn · **`** or **F2** Studio panel · **U** hide HUD · **Esc** pause. Gamepads work too (stick, RT/LT, A hop, X boost, B drift, Y get in/out).
+Also: **M** map (free roam) · **P** photo mode · **.** / **,** gear up / down (realistic handling, manual gearbox) · **Q** drink the selected tonic · **Z** next tonic · **G** wave · **Enter** chat (multiplayer) · **scroll** zoom · **[ ]** field of view · **T** radio · **N** next song · **B** change station · **1–7** time of day · **8** auto day · **9** weather (clear → cloudy → fog → rain → storm) · **H** honk · **R** respawn · **`** or **F2** Studio panel · **U** hide HUD · **Esc** pause. Gamepads work too (stick, RT/LT, A hop, X boost, B drift, Y get in/out).
 
 Every key can be rebound in **Menu → Settings → Controls**. On phones and tablets, touch controls appear on the first touch: a floating stick, GO / BRAKE pedals, HOP, BOOST, DRIFT, E, camera and photo buttons, and drag-to-look.
 
-## What is new in milestone 7 · "Serendib City"
+## What is new in milestone 8 · "Colour the City"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **Colour the City**: Serendib City's 8 districts start as pencil sketches (the paint shader washes them to grey paper inside each district). Finding a district's golden pots, landing its stunts, opening its chests, photographing its sights and finishing missions there paints it in, blotch by blotch. At 60 % the district is restored with a fanfare, fireworks and 300 ink. Driving into a district shows its name and paint bar | ✅ | `src/gameplay/Restoration.ts`, `src/render/PaintMaterial.ts` |
+| **Paper map and minimap**: press **M** (or tap the minimap) for a hand-painted map showing districts and their paint, roads, the lake and sea, service rings, stunts, today's chests, found pots, mission targets, other players and the parade. A heading-up minimap sits in the corner and keeps mission targets pinned to its rim. Driving near a named place **discovers** it (+25 ink), and discovered places are fast-travel points (not during timed missions) | ✅ | `src/ui/MapView.ts` |
+| **Daily brushstrokes** (Menu → ☀ Today): three small challenges a day, the same for everyone, picked from 12 (drive, drift, mini-turbos, stunts, chests, photos, missions, notes, walking, discoveries, the perahera). Finishing all three grows a streak and opens a chest that gets better every day of the streak | ✅ | `src/gameplay/Challenges.ts` |
+| **Photo hunt**: 10 sights across both areas, including the night parade. A photo counts when the sight is near the middle of the frame and in range | ✅ | `src/gameplay/PhotoHunt.ts` |
+| **The night perahera**: after dark, a festival procession of three lit elephants in embroidered caparisons, flag bearers, drummers and fire dancers with flaming torches walks a loop of Pettah's streets. Traffic waits for it, and festival drums (davul, thammattama, cymbals) grow louder as you get close. Fireworks go up over it, and riding along for 20 seconds earns the perahera blessing once a night | ✅ | `src/world/Perahera.ts`, `src/audio/AudioEngine.ts` |
+| **Online safety**: a chat filter is on by default (it masks insults, including digit swaps and stretched letters). Chat can be set to filtered, unfiltered or off. Other players can be blocked from the multiplayer screen, which hides their chat and avatar. Invite links join the room straight away | ✅ | `src/net/ChatFilter.ts`, `src/ui/Menu.ts` |
+| **8 new trophies** for keen eyes, daredevils, streaks, the festival and painting the whole city | ✅ | `src/gameplay/Trophies.ts` |
+| Fixes: stunt ramps now aim at reachable landing circles, and loot-only items are no longer given away free with a new profile | ✅ | `src/gameplay/FreeRoam.ts`, `src/gameplay/Profile.ts` |
+
+Every new string is translated into all 24 languages. Place names, mission text and photo-hunt sights are still English data, like the chapter missions.
+
+## What was new in milestone 7 · "Serendib City"
 
 | System | Status | Where |
 | --- | --- | --- |
@@ -220,4 +236,4 @@ Reference material:
 | Phase 3 · On-foot prototype | ✅ Done on ribbon roads (hubs next) |
 | Phase 4 · Vertical slice | 🚧 In progress: 3 chapters, menus, customisation, missions |
 | Phase 5 · Multiplayer | ✅ Tab and relay rooms, hub multiplayer, peer interpolation, chat, ghosts, server-side validation, determinism tests, leaderboards verified by re-simulation |
-| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), Hub 2 (Serendib City: open world, loot, secrets, mission chains, stunts), soundscape, touch controls, onboarding and 24 languages done; closed alpha next |
+| Phase 6 · Alpha systems | 🚧 Photo mode, trophies, full settings, accessibility v1, quality tiers, Hub 1 (Harbour Town), Hub 2 (Serendib City: open world, loot, secrets, mission chains, stunts, Colour the City, map, perahera), daily challenges, chat safety, soundscape, touch controls, onboarding and 24 languages done; closed alpha next |

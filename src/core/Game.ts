@@ -4,7 +4,7 @@ import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Opti
 import { clamp } from './MathUtil';
 import { createFrame } from '../road/RoadPath';
 import { PaintPipeline } from '../render/PaintPipeline';
-import { PaintMaterial, paintShared } from '../render/PaintMaterial';
+import { PaintMaterial, paintShared, setWash } from '../render/PaintMaterial';
 import { createSky, createWater, waterUniforms, skyUniforms } from '../render/SkyWater';
 import { applyArtStyle, applyQuality, loadStudio, saveStudio, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 import { Environment, TIME_PRESETS, type WeatherId } from '../world/Environment';
@@ -36,6 +36,11 @@ import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
 import { buildBeacon, buildChest, buildPaintPot } from '../models/CityProps';
 import { openChest, RARITY_COLOURS, RARITY_NAMES } from '../gameplay/Loot';
 import { CHAINS, CITY_MISSIONS, FreeMissionTracker, type MissionEvent } from '../gameplay/CityMissions';
+import { districtProgress, inRect, type DistrictProgress, type Stroke } from '../gameplay/Restoration';
+import { CHALLENGES, bumpStreak, challengeAmount, challengeProgress, ensureDaily } from '../gameplay/Challenges';
+import { PHOTO_SUBJECTS, subjectsInFrame, type PhotoSubject } from '../gameplay/PhotoHunt';
+import { MapView, type MapMarker, type MapState } from '../ui/MapView';
+import { filterChat } from '../net/ChatFilter';
 import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
 import { TouchControls } from '../ui/TouchControls';
 import { TRIAL_VERSION, TrialSim, encodeInputs, quantizeInput, type TrialConfig } from '../gameplay/TrialSim';
@@ -151,6 +156,19 @@ export class Game {
   private timeScale = 1;
   private stuntAir: StuntJump | null = null;
   private stuntCam = 0;
+  // Milestone 8: Colour the City, map, daily brushstrokes, perahera.
+  private readonly mapView: MapView;
+  private readonly strokeCache = new Map<string, Stroke[]>();
+  private districtCache: { area: string; seen: number; list: DistrictProgress[] } | null = null;
+  private readonly washShown: number[] = [];
+  private districtHere = '';
+  private readonly fireworks: { x: number; z: number; y: number; vy: number; delay: number; whistle: boolean }[] = [];
+  private readonly torches: THREE.Vector3[] = [];
+  private discoverTimer = 0;
+  private dailyTimer = 0;
+  private peraheraTime = 0;
+  private peraheraAnnounced = false;
+  private peraheraFirework = 4;
   private pausedFrom: GameState = 'play';
   private readonly hubCar = new FreeCar({ ...tuningFor('rover') });
   private readonly hubWalker = new FreeWalker();
@@ -239,7 +257,12 @@ export class Game {
       resume: () => this.resumeFromMenu(),
       canResume: () => this.resumeSnapshot !== null,
     });
-    this.net.onChat = (name, text) => this.hud.chatLine(name, text);
+    this.net.onChat = (name, text) => this.incomingChat(name, text);
+    this.remotes.hidden = (name) => this.options.blocked.includes(name);
+    this.mapView = new MapView(container);
+    this.mapView.onTravel = (id) => this.fastTravel(id);
+    this.mapView.onClose = () => this.closeMap();
+    this.mapView.onOpen = () => this.openMap();
     this.net.onRace = (msg, from) => this.onRaceMessage(msg, from);
     this.photo = new PhotoMode(container, {
       studio: () => this.settings,
@@ -460,7 +483,11 @@ export class Game {
     if (this.state !== 'splash') return;
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
-    if (room) this.net.connect(room.replace(/[^a-zA-Z0-9_-]/g, ''), params.get('server'), this.playerInfo());
+    if (room) {
+      const clean = room.replace(/[^a-zA-Z0-9_-]/g, '');
+      this.net.connect(clean, params.get('server'), this.playerInfo());
+      this.hud.pop(t('mp.joining', { room: clean }), window.innerWidth / 2, window.innerHeight * 0.3, 'info');
+    }
     if (!this.profile.data.seenIntro) this.startIntro();
     else this.openMenu();
   }
@@ -1042,7 +1069,7 @@ export class Game {
     this.input.poll();
     this.handleGlobalInput(dt);
 
-    if (this.state !== 'paused' && this.state !== 'loading' && this.state !== 'photo') {
+    if (this.state !== 'paused' && this.state !== 'loading' && this.state !== 'photo' && !this.mapView.open) {
       this.accumulator += this.state === 'hub' ? dt * this.timeScale : dt;
       let steps = 0;
       while (this.accumulator >= SIM_DT && steps < 5) {
@@ -1059,6 +1086,11 @@ export class Game {
     this.input.clearUnconsumed(['hop', 'interact']);
     this.touchUi.setVisible(this.state === 'play' || this.state === 'hub');
     if (this.state === 'play' || this.state === 'hub') this.onboarding(dt);
+    this.dailyTimer -= dt;
+    if (this.dailyTimer <= 0 && (this.state === 'play' || this.state === 'hub')) {
+      this.dailyTimer = 1;
+      this.updateDaily();
+    }
     this.saveTimer -= dt;
     if (this.saveTimer <= 0) {
       this.saveTimer = 5;
@@ -1113,6 +1145,12 @@ export class Game {
       return;
     }
     if (inp.consume('studio')) this.studio.toggle();
+    if (this.mapView.open) {
+      if (inp.consume('map') || inp.consume('pause')) this.closeMap();
+      inp.takeLook(dt);
+      inp.clearUnconsumed();
+      return;
+    }
     if (this.state !== 'play' && this.state !== 'paused' && this.state !== 'hub') return;
     if (inp.consume('pause')) {
       if (this.mode === 'foot' && this.input.isPointerLocked) this.input.releasePointerLock();
@@ -1161,7 +1199,7 @@ export class Game {
       this.selectedTonic = order[(order.indexOf(this.selectedTonic) + 1) % order.length];
     }
     if (inp.consume('emote')) this.waveTimer = 2.2;
-    if (inp.consume('chat') && this.net.connected) {
+    if (inp.consume('chat') && this.net.connected && this.options.chat !== 'off') {
       this.input.releasePointerLock();
       this.hud.openChat((text) => {
         this.net.chat(text);
@@ -1640,7 +1678,9 @@ export class Game {
       return true;
     };
     if (this.state === 'hub') {
-      if (!tip('hub', touch ? t('tip.hubTouch') : t('tip.hub')) && this.area?.id === 'city') tip('city', t('tip.city'));
+      if (tip('hub', touch ? t('tip.hubTouch') : t('tip.hub'))) return;
+      if (tip('map', t('tip.map'))) return;
+      if (this.area?.id === 'city' && !tip('city', t('tip.city'))) tip('sketch', t('tip.sketch'));
       return;
     }
     const r = this.rover;
@@ -1755,6 +1795,11 @@ export class Game {
     this.hud.compass(null);
     this.hud.counter(null);
     for (const b of this.beacons) b.visible = false;
+    this.mapView.show(false);
+    this.mapView.showMini(false);
+    this.audio.festival = 0;
+    setWash([], []);
+    this.districtHere = '';
     this.timeScale = 1;
     this.remotes.clear();
     if (this.net.connected) this.net.sendHello(this.playerInfo());
@@ -1844,6 +1889,13 @@ export class Game {
       }
     }
     this.checkPickups(area, p.x, p.z);
+    if (this.mode === 'foot') this.profile.addStat('walked', this.hubWalker.speed * dt);
+    this.discoverTimer -= dt;
+    if (this.discoverTimer <= 0) {
+      this.discoverTimer = 0.5;
+      this.discover(area, p.x, p.z);
+    }
+    this.updatePerahera(area, p.x, p.z, dt);
     this.missionEvents(this.freeMissions.update(dt, p.x, p.z, this.mode === 'foot'));
     this.trackStats(dt);
   }
@@ -1869,6 +1921,7 @@ export class Game {
       // Forget chests opened on earlier days.
       this.profile.data.seen = this.profile.data.seen.filter((s) => !s.startsWith('chest:') || s.endsWith(`:${day}`));
       if (!this.profile.markSeen(tag)) continue;
+      this.profile.markSeen(`chestEver:${c.id}`);
       const loot = openChest(this.profile, c.tier);
       this.audio.loot(loot.rarity);
       const name = t(`rarity.${RARITY_NAMES[loot.rarity].toLowerCase()}` as StringKey);
@@ -1928,7 +1981,7 @@ export class Game {
     const inp = this.input;
     if (inp.consume('honk')) this.audio.honk(60);
     if (inp.consume('emote')) this.waveTimer = 2.2;
-    if (inp.consume('chat') && this.net.connected) {
+    if (inp.consume('chat') && this.net.connected && this.options.chat !== 'off') {
       this.input.releasePointerLock();
       this.hud.openChat((text) => {
         this.net.chat(text);
@@ -1937,6 +1990,10 @@ export class Game {
     }
     if (inp.consume('photo')) {
       this.enterPhoto();
+      return;
+    }
+    if (inp.consume('map')) {
+      this.openMap();
       return;
     }
     if (inp.consume('respawn')) {
@@ -2107,6 +2164,12 @@ export class Game {
     waterUniforms.uTime.value = this.time;
     const player = this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : { x: this.hubCar.x, z: this.hubCar.z };
     area.update(dt * this.timeScale, this.time, player, cam);
+    this.updateDistricts(area, player.x, player.z, dt);
+    this.updateFireworks(dt);
+    if (area.perahera?.active && this.state !== 'paused') {
+      const n = area.perahera.torches(this.torches);
+      for (let i = 0; i < n; i++) this.particles.emit('flame', this.torches[i], _v5.set(0, 1.2, 0), 30 * dt, 0.25);
+    }
     // Pots bob and spin; chests shimmer.
     for (const s of area.secrets) if (s.mesh?.visible) s.mesh.rotation.y = this.time * 1.5;
     if (this.state === 'hub') {
@@ -2129,6 +2192,11 @@ export class Game {
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t('prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
     this.hud.setPrompt(this.state === 'photo' ? null : zoneText ?? (nearCar ? t('prompt.getIn') : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? t('prompt.getOut') : null));
     this.updateMissionHud(player.x, player.z, cam);
+    this.mapView.setArea(area.mapInfo((id) => this.districtState(area).find((d) => d.district.id === id)?.paint ?? 1));
+    this.mapView.showMini(this.options.minimap && this.state === 'hub' && !this.hudHidden);
+    const ms = this.mapState(area);
+    this.mapView.drawMini(ms, this.time);
+    this.mapView.draw(ms, this.time);
     if (area.secrets.length) {
       const found = area.secrets.filter((s) => this.profile.data.seen.includes(`secret:${s.id}`)).length;
       this.hud.counter(this.state === 'photo' ? null : `🗝 ${found} / ${area.secrets.length}`);
@@ -2198,8 +2266,311 @@ export class Game {
     this.enterHub(x !== undefined ? { x, z: z ?? 0, heading: heading ?? 0, foot: null, area } : undefined, area);
   }
 
+  /** District paint for the current area, plus a way to mark strokes done (tests). */
+  debugDistricts(markDone?: string[]): { id: string; done: number; need: number; total: number; paint: number; shown: number }[] {
+    if (markDone) for (const tag of markDone) this.profile.markSeen(tag);
+    const area = this.area;
+    if (!area) return [];
+    return this.districtState(area).map((d, i) => ({ id: d.district.id, done: d.done, need: d.need, total: d.total, paint: d.paint, shown: +(this.washShown[i] ?? 0).toFixed(2) }));
+  }
+
+  /** Strokes still to do in a district (tags), for tests. */
+  debugStrokes(district: string): string[] {
+    const area = this.area;
+    const d = area?.districts?.find((q) => q.id === district);
+    if (!area || !d) return [];
+    return this.strokesFor(area).filter((s) => inRect(d.rect, s.x, s.z)).map((s) => s.tag);
+  }
+
+  debugMap(open: boolean): void {
+    if (open) this.openMap();
+    else this.closeMap();
+  }
+
+  debugTime(preset: string): void {
+    this.env.setPreset(preset);
+    this.env.snap();
+  }
+
+  debugDaily(): unknown {
+    this.updateDaily();
+    return { daily: this.profile.data.daily, streak: this.profile.data.streak };
+  }
+
+  debugPerahera(): { active: boolean; centre: { x: number; z: number } | null; festival: number } {
+    const pa = this.area?.perahera;
+    return { active: !!pa?.active, centre: pa?.active ? pa.centre() : null, festival: +this.audio.festival.toFixed(2) };
+  }
+
   debugCityMission(id: string): void {
     this.startCityMission(id);
+  }
+
+  // ————— Colour the City, map, discoveries, daily brushstrokes, photo hunt, perahera —————
+
+  /** Everything in an area that paints its districts, with the profile tag that marks it done. */
+  private strokesFor(area: FreeRoamArea): Stroke[] {
+    let list = this.strokeCache.get(area.id);
+    if (list) return list;
+    list = [
+      ...area.secrets.map((s) => ({ tag: `secret:${s.id}`, x: s.x, z: s.z })),
+      ...area.stunts.map((s) => ({ tag: `stunt:${s.id}`, x: s.ramp.x, z: s.ramp.z })),
+      ...area.chests.map((c) => ({ tag: `chestEver:${c.id}`, x: c.x, z: c.z })),
+      ...PHOTO_SUBJECTS.filter((p) => p.area === area.id && p.id !== 'perahera' && p.id !== 'skyline').map((p) => ({ tag: `photo:${p.id}`, x: p.x, z: p.z })),
+    ];
+    if (area.id === 'city')
+      for (const m of CITY_MISSIONS) {
+        const last = m.steps[m.steps.length - 1];
+        const tg = last.targets[last.targets.length - 1];
+        list.push({ tag: `cm:${m.id}`, x: tg.x, z: tg.z });
+      }
+    this.strokeCache.set(area.id, list);
+    return list;
+  }
+
+  private districtState(area: FreeRoamArea): DistrictProgress[] {
+    if (!area.districts) return [];
+    const seen = this.profile.data.seen;
+    if (this.districtCache && this.districtCache.area === area.id && this.districtCache.seen === seen.length) return this.districtCache.list;
+    const list = districtProgress(area.districts, this.strokesFor(area), seen);
+    this.districtCache = { area: area.id, seen: seen.length, list };
+    return list;
+  }
+
+  /** Per frame: blend the sketch wash, notice district changes and newly painted districts. */
+  private updateDistricts(area: FreeRoamArea, x: number, z: number, dt: number): void {
+    const list = this.districtState(area);
+    if (!list.length) {
+      setWash([], []);
+      return;
+    }
+    list.forEach((p, i) => {
+      const target = 1 - p.paint;
+      const cur = this.washShown[i] ?? target;
+      this.washShown[i] = cur + Math.sign(target - cur) * Math.min(Math.abs(target - cur), dt * 0.35);
+      if (p.restored && this.profile.markSeen(`restored:${area.id}:${p.district.id}`)) this.celebrate(p);
+    });
+    setWash(
+      list.map((p) => p.district.rect),
+      this.washShown,
+    );
+    const here = list.find((p) => inRect(p.district.rect, x, z));
+    if (here && here.district.id !== this.districtHere) {
+      this.districtHere = here.district.id;
+      this.hud.districtBanner(here.district.name, here.district.colour, here.paint, here.restored ? '✓' : `${t('district.progress', { n: here.done, total: here.need })} · ${t('district.sketch')}`);
+    }
+  }
+
+  private celebrate(p: DistrictProgress): void {
+    this.profile.earn(300);
+    this.profile.addStat('restored');
+    this.profile.save();
+    this.audio.fanfare();
+    this.hud.lootCard(t('district.painted', { name: p.district.name }), p.district.colour, '🎆', '+300 ink');
+    const [x0, z0, x1, z1] = p.district.rect;
+    const cx = (x0 + x1) / 2;
+    const cz = (z0 + z1) / 2;
+    for (let i = 0; i < 12; i++) this.launchFirework(cx + (Math.random() - 0.5) * 120, cz + (Math.random() - 0.5) * 120, i * 0.45);
+    this.checkTrophies();
+  }
+
+  private launchFirework(x: number, z: number, delay = 0): void {
+    this.fireworks.push({ x, z, y: 0, vy: 34 + Math.random() * 10, delay, whistle: false });
+  }
+
+  /** Rockets rise with a spark trail, then burst into a sphere of colour. */
+  private updateFireworks(dt: number): void {
+    for (let i = this.fireworks.length - 1; i >= 0; i--) {
+      const f = this.fireworks[i];
+      if (f.delay > 0) {
+        f.delay -= dt;
+        continue;
+      }
+      if (!f.whistle) {
+        f.whistle = true;
+        this.audio.firework(1.1);
+      }
+      f.vy -= 22 * dt;
+      f.y += f.vy * dt;
+      const at = _v4.set(f.x, HUB_Y + f.y, f.z);
+      this.particles.emit('spark', at, _v5.set(0, -2, 0), 60 * dt, 0.6);
+      if (f.vy < 3) {
+        for (let k = 0; k < 90; k++) {
+          const u = Math.random() * 2 - 1;
+          const a = Math.random() * Math.PI * 2;
+          const r = Math.sqrt(1 - u * u);
+          this.particles.emit('firework', at, _v5.set(r * Math.cos(a), u, r * Math.sin(a)).multiplyScalar(16 + Math.random() * 4), 1, 1.2);
+        }
+        this.fireworks.splice(i, 1);
+      }
+    }
+  }
+
+  /** Visit a named place to discover it (a fast-travel point on the map). */
+  private discover(area: FreeRoamArea, x: number, z: number): void {
+    for (const p of area.places) {
+      if (Math.hypot(p.x - x, p.z - z) > 40) continue;
+      if (!this.profile.markSeen(`place:${area.id}:${p.id}`)) continue;
+      this.profile.earn(25);
+      this.profile.addStat('discoveries');
+      this.audio.chime(76);
+      this.popAtPawn(`📍 ${t('map.discovered', { place: p.name })}`, 'good');
+    }
+  }
+
+  private openMap(): void {
+    if (!this.area || this.state !== 'hub') return;
+    this.mapView.show(true);
+    this.input.releasePointerLock();
+    this.audio.uiClick();
+  }
+
+  private closeMap(): void {
+    if (!this.mapView.open) return;
+    this.mapView.show(false);
+    this.audio.uiClick();
+  }
+
+  private fastTravel(id: string): void {
+    const area = this.area;
+    const place = area?.places.find((p) => p.id === id);
+    if (!area || !place || !this.profile.data.seen.includes(`place:${area.id}:${id}`)) return;
+    if (this.freeMissions.current?.time) {
+      this.popAtPawn(t('map.noTravel'), 'info');
+      return;
+    }
+    this.closeMap();
+    const spot = { x: place.x, z: place.z };
+    area.world.resolve(spot, 2);
+    this.mode = 'drive';
+    this.seatHuman();
+    this.updateHeadVisibility();
+    this.hubCar.place(spot.x, spot.z, this.hubCar.heading);
+    this.hubCam.snap = true;
+    this.splash = 1;
+    this.stuntAir = null;
+    this.timeScale = 1;
+    this.audio.whoosh();
+    this.popAtPawn(t('map.travelled', { place: place.name }), 'good');
+  }
+
+  /** Markers and progress for the map and minimap. */
+  private mapState(area: FreeRoamArea): MapState {
+    const seen = this.profile.data.seen;
+    const markers: MapMarker[] = [];
+    for (const p of area.places) {
+      const known = seen.includes(`place:${area.id}:${p.id}`);
+      markers.push(known ? { kind: 'place', x: p.x, z: p.z, label: p.name, icon: '📍', travel: p.id } : { kind: 'unknown', x: p.x, z: p.z });
+    }
+    for (const zn of area.zones) markers.push({ kind: 'zone', x: zn.x, z: zn.z, icon: [...zn.label][0] ?? '•' });
+    for (const s of area.stunts) markers.push({ kind: 'stunt', x: s.ramp.x, z: s.ramp.z });
+    for (const c of area.chests) if (c.mesh?.visible) markers.push({ kind: 'chest', x: c.x, z: c.z, colour: RARITY_COLOURS[c.tier] });
+    for (const s of area.secrets) if (seen.includes(`secret:${s.id}`)) markers.push({ kind: 'secret', x: s.x, z: s.z });
+    for (const tg of this.freeMissions.targets()) markers.push({ kind: 'mission', x: tg.x, z: tg.z });
+    if (area.perahera?.active) {
+      const c = area.perahera.centre();
+      markers.push({ kind: 'event', x: c.x, z: c.z, icon: '🐘' });
+    }
+    for (const peer of this.net.peers.values()) {
+      const snap = peer.info && this.net.sample(peer);
+      if (snap && snap.chapter === (area.id === 'harbour' ? 'hub' : area.id)) markers.push({ kind: 'peer', x: snap.x, z: snap.s - HUB_S_OFFSET, label: peer.info?.name });
+    }
+    const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+    const found = area.secrets.filter((s) => seen.includes(`secret:${s.id}`)).length;
+    const places = area.places.filter((q) => seen.includes(`place:${area.id}:${q.id}`)).length;
+    return {
+      player: { x: p.x, z: p.z, heading: this.mode === 'foot' ? this.hubCam.yaw : this.hubCar.heading },
+      markers,
+      districts: this.districtState(area).map((d) => ({ name: d.district.name, colour: d.district.colour, paint: d.paint, done: d.done, need: d.need })),
+      title: area.title().name,
+      subtitle: `📍 ${places}/${area.places.length} · 🗝 ${found}/${area.secrets.length} · ${t('map.hint')}`,
+    };
+  }
+
+  /** Daily brushstrokes: start the day, pay out finished ones, grow the streak. */
+  private updateDaily(): void {
+    const p = this.profile;
+    const day = todayKey();
+    const stat = (k: string): number => p.stat(k);
+    const state = ensureDaily(p.data.daily, day, stat);
+    p.data.daily = state;
+    for (const id of state.ids) {
+      if (state.claimed.includes(id)) continue;
+      const c = CHALLENGES.find((q) => q.id === id);
+      if (!c || challengeProgress(c, state, stat) < c.amount) continue;
+      state.claimed.push(id);
+      p.earn(c.ink);
+      this.audio.secret();
+      this.hud.lootCard(t('daily.done'), '#3f9a52', `${c.icon} ${t(`ch.${c.stat}` as StringKey, { n: challengeAmount(c, c.amount) })}`, `+${c.ink} ink`);
+      if (state.claimed.length === state.ids.length && p.data.streak.last !== day) {
+        p.data.streak = bumpStreak(p.data.streak, day);
+        // Streak reward: a better chest every day of the streak (up to legendary).
+        const loot = openChest(p, Math.min(3, p.data.streak.count - 1));
+        this.audio.loot(loot.rarity);
+        window.setTimeout(() => this.hud.lootCard(t('daily.allDone', { n: p.data.streak.count }), RARITY_COLOURS[loot.rarity], loot.item ? loot.item.name : `+${loot.ink} ink`, t(`rarity.${RARITY_NAMES[loot.rarity].toLowerCase()}` as StringKey)), 3400);
+      }
+      p.save();
+      this.checkTrophies();
+    }
+  }
+
+  /** Photo hunt: which listed sights are in this photo? */
+  private photoHunt(): void {
+    const area = this.area;
+    if (!this.inHub || !area) return;
+    const where = (s: PhotoSubject): { x: number; y: number; z: number } | null => {
+      if (s.id !== 'perahera') return s;
+      if (!area.perahera?.active) return null;
+      const c = area.perahera.centre();
+      return { x: c.x, y: s.y, z: c.z };
+    };
+    for (const s of subjectsInFrame(this.rig.camera, area.id, HUB_Y, where)) {
+      if (!this.profile.markSeen(`photo:${s.id}`)) continue;
+      this.profile.earn(s.ink);
+      this.audio.secret();
+      this.hud.lootCard(t('hunt.found'), '#4a90c9', `${s.icon} ${s.name}`, `+${s.ink} ink`);
+    }
+    this.checkTrophies();
+  }
+
+  /** The night perahera: drums get louder as you near it; ride along for its blessing. */
+  private updatePerahera(area: FreeRoamArea, x: number, z: number, dt: number): void {
+    const pa = area.perahera;
+    if (!pa?.active) {
+      this.peraheraAnnounced = false;
+      this.audio.festival += (0 - this.audio.festival) * Math.min(1, dt * 2);
+      return;
+    }
+    const d = pa.distanceTo(x, z);
+    this.audio.festival += (Math.max(0, 1 - d / 160) - this.audio.festival) * Math.min(1, dt * 2);
+    if (d < 150 && !this.peraheraAnnounced) {
+      this.peraheraAnnounced = true;
+      this.popAtPawn(`🐘 ${t('perahera.near')}`, 'good');
+    }
+    if (d < 22) {
+      this.peraheraTime += dt;
+      if (this.peraheraTime > 20 && this.profile.markSeen(`perahera:${todayKey()}`)) {
+        this.profile.earn(200);
+        this.profile.addStat('perahera');
+        this.audio.fanfare();
+        this.hud.lootCard(t('perahera.blessing'), '#f4a13b', '🐘 🥁 🔥', '+200 ink');
+        this.checkTrophies();
+      }
+    }
+    // Now and then a firework over the procession.
+    this.peraheraFirework -= dt;
+    if (this.peraheraFirework <= 0 && d < 250) {
+      this.peraheraFirework = 9 + Math.random() * 8;
+      const c = pa.centre();
+      this.launchFirework(c.x + (Math.random() - 0.5) * 40, c.z + (Math.random() - 0.5) * 40);
+    }
+  }
+
+  /** Chat line from another player, after the block list and chat setting. */
+  private incomingChat(name: string, text: string): void {
+    const o = this.options;
+    if (o.chat === 'off' || o.blocked.includes(name)) return;
+    this.hud.chatLine(name, o.chat === 'filtered' ? filterChat(text) : text);
   }
 
   // ————— ghosts —————
@@ -2318,6 +2689,7 @@ export class Game {
     if (this.inHub) {
       const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
       this.missionEvents(this.freeMissions.onPhoto(p.x, p.z));
+      this.photoHunt();
     }
     this.checkTrophies();
     this.hud.pop(`Saved ${W}×${H}`, window.innerWidth / 2, window.innerHeight * 0.3, 'good');

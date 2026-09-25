@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { paintShared } from './PaintMaterial';
 
-export type ParticleKind = 'smoke' | 'dust' | 'spark' | 'splash' | 'confetti' | 'firefly' | 'exhaust';
+export type ParticleKind = 'smoke' | 'dust' | 'spark' | 'splash' | 'confetti' | 'firework' | 'flame' | 'firefly' | 'exhaust';
 
 interface KindDef {
   life: [number, number];
@@ -20,6 +20,8 @@ const KINDS: Record<ParticleKind, KindDef> = {
   spark: { life: [0.25, 0.55], size: [0.08, 0.14], grow: 0.4, drag: 0.6, gravity: 14, glow: 1, colours: ['#ffd27a', '#ffb347', '#fff1c2'] },
   splash: { life: [0.35, 0.7], size: [0.12, 0.25], grow: 1.6, drag: 1.2, gravity: 9, glow: 0, colours: ['#e6f1f6', '#cfe3ec'] },
   confetti: { life: [1.6, 2.6], size: [0.16, 0.26], grow: 1, drag: 1.4, gravity: 3.5, glow: 0.35, colours: ['#e8559a', '#f4d23b', '#5dbb3f', '#3e9fd8', '#9a5bd6', '#f08a2e'] },
+  firework: { life: [1.3, 2.2], size: [0.55, 0.9], grow: 0.5, drag: 1.3, gravity: 3, glow: 1, colours: ['#ff5d8f', '#ffd23f', '#5dfdcb', '#7cb8ff', '#ff9f43', '#c56cff'] },
+  flame: { life: [0.25, 0.5], size: [0.18, 0.3], grow: 1.8, drag: 2, gravity: -4, glow: 1, colours: ['#ffb347', '#ff7a2e', '#ffe08a'] },
   firefly: { life: [3, 6], size: [0.1, 0.16], grow: 1, drag: 0.5, gravity: 0, glow: 1, colours: ['#e8ff8a', '#fff6a0'] },
   exhaust: { life: [0.2, 0.4], size: [0.25, 0.4], grow: 0.3, drag: 3, gravity: -1, glow: 0.9, colours: ['#7fc8ff', '#ffb35c', '#ffe08a'] },
 };

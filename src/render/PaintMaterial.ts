@@ -27,7 +27,20 @@ export const paintShared = {
   uHeadOn: { value: 0 },
   /** Lightning flash 0..1. */
   uFlash: { value: 0 },
+  /** Colour the City: up to 8 district rects (minX, minZ, maxX, maxZ) and how much of each is still a sketch. */
+  uWashRect: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, 0)) },
+  uWash: { value: new Array<number>(8).fill(0) },
 };
+
+/** Set the sketch wash for washable materials (district rects in world x/z; amount 0 painted … 1 sketch). */
+export function setWash(rects: readonly [number, number, number, number][], amounts: readonly number[]): void {
+  for (let i = 0; i < 8; i++) {
+    const r = rects[i];
+    if (r) paintShared.uWashRect.value[i].set(r[0], r[1], r[2], r[3]);
+    else paintShared.uWashRect.value[i].set(0, 0, 0, 0);
+    paintShared.uWash.value[i] = r ? (amounts[i] ?? 0) : 0;
+  }
+}
 
 export interface PaintOptions {
   color?: THREE.ColorRepresentation;
@@ -48,6 +61,8 @@ export interface PaintOptions {
   gloss?: number;
   /** Screen-door see-through (time-trial ghosts). */
   ghost?: boolean;
+  /** Turns to a pencil sketch inside unpainted districts (Colour the City). */
+  washable?: boolean;
 }
 
 let nextObjectId = 1;
@@ -145,6 +160,10 @@ uniform vec3 uHeadDir;
 uniform float uHeadOn;
 uniform float uFlash;
 uniform float uGloss;
+#ifdef WASHABLE
+  uniform vec4 uWashRect[8];
+  uniform float uWash[8];
+#endif
 
 varying vec3 vViewPosition;
 varying vec3 vWorldPos;
@@ -391,6 +410,25 @@ void main() {
     }
   #endif
 
+  #ifdef WASHABLE
+    // Colour the City: unpainted districts are pencil sketches on paper. As a district is
+    // restored, paint soaks in blotch by blotch (a big, slow noise threshold).
+    float wash = 0.0;
+    for (int i = 0; i < 8; i++) {
+      vec4 r = uWashRect[i];
+      vec2 q = vWorldPos.xz;
+      vec2 inside = step(r.xy, q) * step(q, r.zw);
+      wash = max(wash, inside.x * inside.y * uWash[i]);
+    }
+    if (wash > 0.001) {
+      float blot = vnoise(vWorldPos.xz * 0.018) * 0.6 + vnoise(vWorldPos.xz * 0.11 + 7.0) * 0.4;
+      float k = smoothstep(blot - 0.07, blot + 0.07, wash * 1.2 - 0.1);
+      float l = dot(base, vec3(0.3, 0.55, 0.15));
+      vec3 sketch = mix(vec3(l * 0.9 + 0.12), vec3(0.95, 0.92, 0.85), 0.35);
+      base = mix(base, sketch, k);
+    }
+  #endif
+
   #ifdef FLAT_SHADED
     vec3 n = normalize(cross(dFdx(vViewPosition), dFdy(vViewPosition)));
   #else
@@ -527,6 +565,7 @@ export class PaintMaterial extends THREE.ShaderMaterial {
         // Faceted low-poly look: normals from screen derivatives (three's own chunks honour this define).
         ...(opts.flat ? { FLAT_SHADED: '' } : {}),
         ...(opts.ghost ? { GHOST: '' } : {}),
+        ...(opts.washable ? { WASHABLE: '' } : {}),
       },
     });
   }

@@ -513,9 +513,9 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .counter-chip.hidden { display: none; }
 
 /* ————— Milestone 8: map, minimap, daily brushstrokes, photo hunt, district paint ————— */
-.minimap { position: absolute; right: 18px; top: 100px; width: 176px; height: 176px; border-radius: 50%; box-shadow: 3px 5px 0 rgba(43, 38, 34, 0.2); pointer-events: none; z-index: 2; }
-.minimap.hidden { display: none; }
-.hud-hidden .minimap { display: none; }
+#app canvas.minimap { position: absolute; right: 18px; top: 100px; left: auto; width: 176px; height: 176px; border-radius: 50%; box-shadow: 3px 5px 0 rgba(43, 38, 34, 0.2); cursor: pointer; z-index: 2; }
+#app canvas.minimap.hidden { display: none; }
+.hud-hidden ~ canvas.minimap { display: none; }
 .map-screen { position: absolute; inset: 0; background: rgba(43, 38, 34, 0.45); display: flex; align-items: center; justify-content: center; z-index: 20; }
 .map-screen.hidden { display: none; }
 .map-card { display: flex; gap: 18px; padding: 16px; max-width: calc(100vw - 32px); max-height: calc(100vh - 32px); }
@@ -549,7 +549,7 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .invite-row { display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
 .invite-row input { flex: 1; min-width: 200px; font-family: var(--mono); font-size: 12px; }
 @media (max-width: 760px) {
-  .minimap { width: 120px; height: 120px; top: 92px; right: 10px; }
+  #app canvas.minimap { width: 120px; height: 120px; top: 92px; right: 10px; }
   .map-card { flex-direction: column; overflow-y: auto; }
   .map-side { width: auto; }
 }

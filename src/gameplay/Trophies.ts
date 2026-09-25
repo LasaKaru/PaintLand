@@ -43,6 +43,14 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'friends', name: 'Painting Party', text: 'Drive with another player online.', icon: '👋', reward: 50, progress: stat('multiplayer', 1) },
   { id: 'wardrobe', name: 'Dressed Up', text: 'Own 10 clothing items that cost ink.', icon: '👒', reward: 60, progress: (p) => [Math.min(10, CATALOGUE.filter((i) => CLOTHES.has(i.category) && i.price > 0 && p.owns(i.id)).length), 10] },
   { id: 'garage', name: 'Collector', text: 'Own three vehicles.', icon: '🚗', reward: 100, progress: (p) => [Math.min(3, p.data.owned.filter((id) => id.startsWith('vehicle:')).length), 3] },
+  { id: 'secrets-20', name: 'Keen Eye', text: 'Find 20 golden paint pots.', icon: '🗝', reward: 200, progress: stat('secrets', 20) },
+  { id: 'stunts-6', name: 'Daredevil', text: 'Land all 6 stunt jumps in Serendib City.', icon: '🏁', reward: 250, progress: seenCount('stunt:', 6) },
+  { id: 'legendary-1', name: 'Lucky Dip', text: 'Open a chest with legendary loot.', icon: '🎁', reward: 100, progress: stat('legendary', 1) },
+  { id: 'city-missions-12', name: 'City Legend', text: 'Finish all 12 city missions.', icon: '🗺', reward: 500, progress: seenCount('cm:', 12) },
+  { id: 'restore-8', name: 'Painter of Serendib', text: 'Paint all 8 districts of Serendib City.', icon: '🖌', reward: 800, progress: seenCount('restored:city:', 8) },
+  { id: 'hunt-10', name: 'Shutterbug', text: 'Photograph all 10 sights of the photo hunt.', icon: '📸', reward: 300, progress: seenCount('photo:', 10) },
+  { id: 'streak-7', name: 'Seven Brushstrokes', text: 'Finish every daily brushstroke 7 days in a row.', icon: '☀', reward: 400, progress: (p) => [Math.min(7, p.data.streak?.count ?? 0), 7] },
+  { id: 'perahera-1', name: 'Festival Night', text: 'Ride along with the night perahera.', icon: '🐘', reward: 150, progress: stat('perahera', 1) },
 ];
 
 export function trophyUnlocked(p: Profile, t: TrophyDef): boolean {

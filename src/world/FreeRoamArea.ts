@@ -1,5 +1,8 @@
 import type * as THREE from 'three';
 import type { FreeWorld, Ramp } from '../gameplay/FreeRoam';
+import type { District } from '../gameplay/Restoration';
+import type { MapInfo } from '../ui/MapView';
+import type { Perahera } from './Perahera';
 
 /** Ground height of every free-roam area above the sea. */
 export const AREA_Y = 2;
@@ -84,5 +87,11 @@ export interface FreeRoamArea {
   ambienceAt(x: number, z: number): { nature: number; coast: number; city: number };
   /** Moving things (traffic) the player's car collides with this frame. */
   dynamicBodies(): DynamicBody[];
+  /** Districts that start as pencil sketches and are painted by play (Colour the City). */
+  readonly districts?: District[];
+  /** The night festival parade, if this area has one. */
+  readonly perahera?: Perahera;
+  /** Data for the paper map; `paint` gives each district's paint 0..1. */
+  mapInfo(paint: (districtId: string) => number): MapInfo;
   dispose(): void;
 }

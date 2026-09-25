@@ -28,6 +28,13 @@ export interface GameOptions {
   autoWeather: boolean;
   dayMinutes: number;
   showGhost: boolean;
+  // Online safety
+  /** Chat: filtered (default), unfiltered, or off. */
+  chat: 'filtered' | 'on' | 'off';
+  /** Player names whose chat and avatar are hidden. */
+  blocked: string[];
+  /** Show the minimap in free roam. */
+  minimap: boolean;
 }
 
 export const DEFAULT_OPTIONS: GameOptions = {
@@ -49,6 +56,9 @@ export const DEFAULT_OPTIONS: GameOptions = {
   autoWeather: false,
   dayMinutes: 12,
   showGhost: true,
+  chat: 'filtered',
+  blocked: [],
+  minimap: true,
 };
 
 const KEY = 'paintland.settings.v1';

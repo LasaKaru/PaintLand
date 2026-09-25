@@ -15,7 +15,7 @@ export type ActionName =
   | 'respawn' | 'pause' | 'studio' | 'photo' | 'hud'
   | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather'
   | 'drink' | 'cycleTonic' | 'emote' | 'chat'
-  | 'shiftUp' | 'shiftDown';
+  | 'shiftUp' | 'shiftDown' | 'map';
 
 export type Bindings = Record<ActionName, string[]>;
 
@@ -56,6 +56,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   drink: ['KeyQ'],
   cycleTonic: ['KeyZ'],
   emote: ['KeyG'],
+  map: ['KeyM'],
   chat: ['Enter'],
   shiftUp: ['Period'],
   shiftDown: ['Comma'],
@@ -91,6 +92,7 @@ export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' 
   { action: 'drink', label: 'Drink tonic', group: 'Game' },
   { action: 'cycleTonic', label: 'Next tonic', group: 'Game' },
   { action: 'chat', label: 'Chat', group: 'Game' },
+  { action: 'map', label: 'Map', group: 'Game' },
   { action: 'studio', label: 'Studio panel', group: 'Game' },
   { action: 'pause', label: 'Pause / menu', group: 'Game' },
 ];

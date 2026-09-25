@@ -1,4 +1,5 @@
 import { DEFAULT_HUMAN_LOOK, type HumanLook } from '../models/Human';
+import type { DailyState, Streak } from './Challenges';
 import { VEHICLES, type VehicleId, type VehicleLook } from '../models/Vehicles';
 import type { TonicId } from './Collectibles';
 
@@ -102,6 +103,9 @@ export interface ProfileData {
   seen: string[];
   /** Best time-trial lap per `chapter:handling`. */
   trialBest: Record<string, number>;
+  /** Today's daily brushstrokes. */
+  daily: DailyState | null;
+  streak: Streak;
 }
 
 const KEY = 'paintland.profile.v2';
@@ -110,7 +114,7 @@ function defaults(): ProfileData {
   return {
     name: `Painter${Math.floor(Math.random() * 900 + 100)}`,
     ink: 150,
-    owned: CATALOGUE.filter((i) => i.price === 0).map((i) => i.id),
+    owned: CATALOGUE.filter((i) => i.price === 0 && !i.loot).map((i) => i.id),
     look: { ...DEFAULT_HUMAN_LOOK },
     vehicle: 'rover',
     vehicleLooks: {},
@@ -123,8 +127,10 @@ function defaults(): ProfileData {
     seenIntro: false,
     trophies: [],
     stats: {},
-    seen: [],
+    seen: ['mig:loot'],
     trialBest: {},
+    daily: null,
+    streak: { last: '', count: 0 },
   };
 }
 
@@ -145,6 +151,12 @@ export class Profile {
         const saved = JSON.parse(raw) as Partial<ProfileData>;
         this.data = { ...this.data, ...saved, look: { ...this.data.look, ...saved.look }, tonics: { ...this.data.tonics, ...saved.tonics } };
         for (const id of defaults().owned) if (!this.data.owned.includes(id)) this.data.owned.push(id);
+        // Milestone 7 saves were handed every loot-only item by mistake: take them back once.
+        if (!this.data.seen.includes('mig:loot')) {
+          const loot = new Set(CATALOGUE.filter((i) => i.loot).map((i) => i.id));
+          this.data.owned = this.data.owned.filter((id) => !loot.has(id));
+          this.data.seen.push('mig:loot');
+        }
       }
     } catch {
       /* storage blocked or corrupt: start fresh */

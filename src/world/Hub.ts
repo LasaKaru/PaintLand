@@ -13,6 +13,7 @@ import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
 
+import type { MapInfo } from '../ui/MapView';
 import { AREA_Y, type AreaZone, type Chest, type FreeRoamArea, type Place, type Secret, type StuntJump } from './FreeRoamArea';
 
 /** Ground height of the hub above the sea. */
@@ -394,6 +395,26 @@ export class Hub implements FreeRoamArea {
   /** Zone label in the current language (portals keep the chapter name). */
   title(): { kicker: string; name: string; poem: string } {
     return { kicker: t('hub.kicker'), name: t('hub.name'), poem: t('hub.poem') };
+  }
+
+  mapInfo(): MapInfo {
+    return {
+      id: this.id,
+      name: t('hub.name'),
+      bounds: { minX: -125, maxX: 125, minZ: -125, maxZ: 90 },
+      regions: [{ id: 'harbour', name: t('hub.name'), rect: [-118, -118, 118, 68], colour: '#e9b8c8', paint: 1 }],
+      roads: [
+        { x1: 0, z1: -118, x2: 0, z2: 68, w: 16 },
+        { x1: -118, z1: 0, x2: 118, z2: 0, w: 16 },
+        { x1: -118, z1: 62, x2: 118, z2: 62, w: 12 },
+      ],
+      water: [],
+      seaZ: 70,
+      blocks: [
+        { x: 0, z: 0, w: 12, d: 12, colour: 'rgba(217,199,164,0.9)' },
+        { x: 60, z: 90, w: 8, d: 44, colour: 'rgba(122,90,58,0.8)' },
+      ],
+    };
   }
 
   ambienceAt(_x: number, z: number): { nature: number; coast: number; city: number } {

@@ -64,6 +64,7 @@ export class MapView {
   open = false;
   onTravel: ((id: string) => void) | null = null;
   onClose: (() => void) | null = null;
+  onOpen: (() => void) | null = null;
 
   constructor(container: HTMLElement) {
     this.root = document.createElement('div');
@@ -77,6 +78,8 @@ export class MapView {
     this.mini.width = this.mini.height = 176;
     container.appendChild(this.mini);
     this.canvas.addEventListener('click', (e) => this.click(e));
+    // Tap the minimap to open the full map (touch screens have no M key).
+    this.mini.addEventListener('click', () => this.onOpen?.());
     this.root.addEventListener('click', (e) => {
       const el = (e.target as HTMLElement).closest<HTMLElement>('[data-travel], [data-close]');
       if (el?.dataset.travel) this.onTravel?.(el.dataset.travel);

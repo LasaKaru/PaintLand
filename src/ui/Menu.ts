@@ -1,4 +1,6 @@
 import type { Profile, ShopItem } from '../gameplay/Profile';
+import { CHALLENGES, challengeAmount, challengeProgress, ensureDaily } from '../gameplay/Challenges';
+import { PHOTO_SUBJECTS } from '../gameplay/PhotoHunt';
 import { CHAINS, CITY_MISSIONS, missionUnlocked } from '../gameplay/CityMissions';
 import { CATALOGUE, MAX_TONICS, PALETTE } from '../gameplay/Profile';
 import type { ChapterDef } from '../world/Chapters';
@@ -9,14 +11,14 @@ import { randomLook, type HumanLook } from '../models/Human';
 import { fmt } from './Hud';
 import { TROPHIES } from '../gameplay/Trophies';
 import { fetchBoard } from '../net/Leaderboard';
-import { LANGS, lang, onLangChange, setLang, t, type Lang } from '../core/i18n';
+import { LANGS, lang, onLangChange, setLang, t, type Lang, type StringKey } from '../core/i18n';
 import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Input';
 import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost {
@@ -108,6 +110,7 @@ export class Menu {
       chapters: () => this.chaptersScreen(),
       missions: () => this.missionsScreen(),
       citymissions: () => this.cityMissionsScreen(),
+      daily: () => this.dailyScreen(),
       wardrobe: () => this.wardrobe(),
       garage: () => this.garage(),
       shop: () => this.shop(),
@@ -161,6 +164,7 @@ export class Menu {
         <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">${t('menu.play', { chapter: ch.name })}</button>
         <button class="menu-item" data-nav="hub">${t('menu.hub')}</button>
         <button class="menu-item" data-nav="city">${t('menu.city')}</button>
+        <button class="menu-item" data-nav="daily">${t('daily.menu')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
         <button class="menu-item" data-nav="race">${t('menu.race')}</button>
@@ -201,6 +205,35 @@ export class Menu {
       })
       .join('');
     return `<div class="menu-panel wide">${this.header('Chapters')}<div class="chapter-grid">${cards}</div></div>`;
+  }
+
+  private dailyScreen(): string {
+    const p = this.host.profile;
+    const day = todayKey();
+    const state = p.data.daily?.day === day ? p.data.daily : ensureDaily(null, day, (k) => p.stat(k));
+    const rows = state.ids
+      .map((id) => {
+        const c = CHALLENGES.find((q) => q.id === id)!;
+        const got = p.data.daily?.day === day ? challengeProgress(c, state, (k) => p.stat(k)) : 0;
+        const done = state.claimed.includes(id);
+        return `<div class="card daily-row ${done ? 'done' : ''}"><span class="icon">${done ? '✅' : c.icon}</span>
+          <div><div class="hand">${t(`ch.${c.stat}` as StringKey, { n: challengeAmount(c, c.amount) })}</div><div class="bar"><i style="width:${Math.round((got / c.amount) * 100)}%"></i></div></div>
+          <span class="reward">💧 ${c.ink} · ${challengeAmount(c, got)} / ${challengeAmount(c, c.amount)}</span></div>`;
+      })
+      .join('');
+    const seen = p.data.seen;
+    const hunt = PHOTO_SUBJECTS.map((s) => {
+      const done = seen.includes(`photo:${s.id}`);
+      return `<div class="card hunt-item ${done ? 'done' : ''}"><div class="icon">${done ? '✅' : s.icon}</div><div class="hand">${s.name}</div><small>💧 ${s.ink}</small></div>`;
+    }).join('');
+    const found = PHOTO_SUBJECTS.filter((s) => seen.includes(`photo:${s.id}`)).length;
+    return `<div class="menu-panel wide">${this.header(t('daily.title'))}
+      <p class="menu-hint">${t('daily.intro')} · <b>🔥 ${t('daily.streak', { n: p.data.streak?.count ?? 0 })}</b></p>
+      <div class="daily-list">${rows}</div>
+      <h3 class="hand">📷 ${t('hunt.title')} (${found} / ${PHOTO_SUBJECTS.length})</h3>
+      <p class="menu-hint">${t('hunt.intro')}</p>
+      <div class="hunt-grid">${hunt}</div>
+    </div>`;
   }
 
   private cityMissionsScreen(): string {
@@ -341,7 +374,14 @@ export class Menu {
         ${n.status !== 'offline' ? '<button class="btn" data-action="leave">Leave</button>' : ''}
       </div>
       <div class="net-status">Status: <b>${n.status}</b> ${n.players.length ? `· with ${n.players.map(escapeHtml).join(', ')}` : ''}</div>
-      ${n.status !== 'offline' ? `<div class="field"><label>Invite link</label><input class="text-input" readonly value="${escapeHtml(inviteLink(n.room))}" data-id="invite"><button class="btn" data-action="copy-invite">Copy</button></div>` : ''}
+      ${n.status !== 'offline' ? `<div class="field"><label>${t('mp.invite')}</label><div class="invite-row"><input class="text-input" readonly value="${escapeHtml(inviteLink(n.room))}" data-id="invite"><button class="btn" data-action="copy-invite">${t('mp.copy')}</button></div></div>` : ''}
+      ${n.players.length ? `<div class="field">${n.players
+        .map((name) => {
+          const blocked = this.host.options().blocked.includes(name);
+          return `<div class="player-row"><span>${blocked ? '🚫 ' : '🎨 '}${escapeHtml(name)}</span><button class="btn small" data-action="block" data-name="${escapeHtml(name)}">${blocked ? t('mp.unblock') : t('mp.block')}</button></div>`;
+        })
+        .join('')}</div>` : ''}
+      ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
       <p class="menu-hint">Online play needs the relay running: <code>npm run server</code>. In game, press <kbd>Enter</kbd> to chat and <kbd>G</kbd> to wave.</p>
     </div>`;
   }
@@ -512,6 +552,8 @@ export class Menu {
         </div>
         <div>
           ${this.toggle('o.autoWeather', 'Weather changes by itself')}
+          ${this.toggle('o.minimap', 'Minimap in free roam')}
+          ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
           ${this.slider('o.dayMinutes', 'Length of an auto day', 4, 40, 1, (v) => `${v} min`)}
           <div class="row wrap"><button class="btn" data-action="controls">Controls card</button></div>
         </div>
@@ -773,6 +815,14 @@ export class Menu {
         setTimeout(() => this.render(), 400);
         break;
       }
+      case 'block': {
+        const o = this.host.options();
+        const name = d.name ?? '';
+        o.blocked = o.blocked.includes(name) ? o.blocked.filter((b) => b !== name) : [...o.blocked, name];
+        this.host.settingsChanged();
+        this.render();
+        break;
+      }
       case 'leave':
         this.host.netDisconnect();
         this.render();
@@ -780,7 +830,7 @@ export class Menu {
       case 'copy-invite': {
         const input = $<HTMLInputElement>(this.root, '[data-id="invite"]');
         void navigator.clipboard?.writeText(input.value);
-        this.toast('Invite link copied');
+        this.toast(t('mp.copied'));
         break;
       }
       case 'studio':
@@ -870,4 +920,10 @@ function localStorageSet(key: string, value: string): void {
 
 export function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+}
+
+/** Local calendar day, for daily brushstrokes. */
+function todayKey(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
 }

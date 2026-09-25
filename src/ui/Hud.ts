@@ -180,6 +180,23 @@ export class Hud {
     this.lootTimer = window.setTimeout(() => this.lootEl?.classList.remove('show'), 3200);
   }
 
+  private bannerEl: HTMLDivElement | null = null;
+  private bannerTimer = 0;
+
+  /** District name with its paint bar, shown when you drive into a district. */
+  districtBanner(name: string, colour: string, paint: number, sub: string): void {
+    this.bannerEl ??= (() => {
+      const el = document.createElement('div');
+      el.className = 'district-banner';
+      this.root.appendChild(el);
+      return el;
+    })();
+    this.bannerEl.innerHTML = `<div class="hand" style="color:${colour}">${name}</div><div class="bar"><i style="width:${Math.round(paint * 100)}%;background:${colour}"></i></div><small>${sub}</small>`;
+    this.bannerEl.classList.add('show');
+    clearTimeout(this.bannerTimer);
+    this.bannerTimer = window.setTimeout(() => this.bannerEl?.classList.remove('show'), 3500);
+  }
+
   private boardEl: HTMLDivElement | null = null;
 
   /** Live race standings card (null hides it). */
