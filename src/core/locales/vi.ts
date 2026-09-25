@@ -149,5 +149,14 @@ const vi: Locale = {
   'ch.walked': 'Đi bộ {n} m',
   'ch.discoveries': 'Khám phá {n} địa điểm mới',
   'ch.perahera': 'Đi cùng lễ rước perahera ban đêm',
+  'brand.presents': 'giới thiệu',
+  'brand.by': '{name} giới thiệu',
+  'brand.coffee': 'Mời tôi một ly cà phê',
+  'brand.fund': 'Ủng hộ trò chơi',
+  'brand.sponsor': 'Trở thành nhà tài trợ',
+  'brand.advertiseLine': 'Thương hiệu của bạn trong PaintLand? Viết cho {email}',
+  'brand.visit': 'E · Ghé thăm {name}',
+  'brand.advertise': 'Quảng cáo tại đây',
+  'set.analytics': 'Chia sẻ thống kê chơi ẩn danh',
 };
 export default vi;

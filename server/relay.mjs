@@ -17,15 +17,16 @@
 // Run: npm run server   (PORT, MAX_ROOM and DATA_DIR env vars are optional)
 
 import { createServer } from 'node:http';
-import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
 import { LIMITS, Strikes, cleanText, validateState } from './validate.mjs';
+import { createAdmin } from './admin.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
-const MAX_ROOM = Number(process.env.MAX_ROOM ?? 32);
+const MAX_ROOM_ENV = process.env.MAX_ROOM ? Number(process.env.MAX_ROOM) : null;
 const MAX_MESSAGE = 4096;
 /** Race finishes carry the recorded inputs (4 bytes a step) for re-simulation. */
 const MAX_RACE_MESSAGE = 96_000;
@@ -66,8 +67,34 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+// Admin panel, branding, analytics and the built game (dist/) share this port.
+const DIST_DIR = process.env.DIST_DIR ?? join(here, '..', 'dist');
+const admin = createAdmin({
+  dataDir: DATA_DIR,
+  distDir: existsSync(join(DIST_DIR, 'index.html')) ? DIST_DIR : undefined,
+  live: () => {
+    const roomSizes = {};
+    let online = 0;
+    for (const [name, set] of rooms) {
+      roomSizes[name] = set.size;
+      online += set.size;
+    }
+    return { rooms: rooms.size, online, roomSizes };
+  },
+});
+const maxRoom = () => MAX_ROOM_ENV ?? admin.maxRoom();
+
 const http = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
+  admin
+    .handle(req, res, url)
+    .then((handled) => {
+      if (!handled) relayHttp(req, res, url);
+    })
+    .catch(() => send(res, 500, { ok: false }));
+});
+
+function relayHttp(req, res, url) {
   if (req.method === 'OPTIONS') return send(res, 204, {});
   if (req.method === 'GET' && url.pathname === '/leaderboard') {
     const list = boards[boardKey(url.searchParams.get('chapter'), url.searchParams.get('handling'))] ?? [];
@@ -115,7 +142,7 @@ const http = createServer((req, res) => {
     return;
   }
   send(res, 404, { ok: false, reason: 'not found' });
-});
+}
 
 const wss = new WebSocketServer({ server: http, maxPayload: MAX_RACE_MESSAGE });
 
@@ -127,7 +154,7 @@ wss.on('connection', (socket, req) => {
     members = new Set();
     rooms.set(room, members);
   }
-  if (members.size >= MAX_ROOM) {
+  if (members.size >= maxRoom()) {
     socket.close(4001, 'room full');
     return;
   }
@@ -139,6 +166,7 @@ wss.on('connection', (socket, req) => {
   let count = 0;
   let alive = true;
   let last = null;
+  let name = 'Painter';
   const strikes = new Strikes();
   const strike = (reason) => {
     if (strikes.add(Date.now())) {
@@ -187,9 +215,17 @@ wss.on('connection', (socket, req) => {
     }
     if (msg.t === 'chat') {
       msg.text = cleanText(msg.text);
-      if (!msg.text) return;
+      if (!msg.text || admin.isBanned(name)) return;
+      admin.logChat(room, name, msg.text);
     }
-    if (msg.t === 'hello') msg.name = cleanText(msg.name, LIMITS.name) ?? 'Painter';
+    if (msg.t === 'hello') {
+      msg.name = cleanText(msg.name, LIMITS.name) ?? 'Painter';
+      name = msg.name;
+      if (admin.isBanned(name)) {
+        socket.close(4004, 'banned');
+        return;
+      }
+    }
     msg.id = id; // never trust a client-provided id
     const out = JSON.stringify(msg);
     for (const peer of members) if (peer !== socket && peer.readyState === 1) peer.send(out);
@@ -213,4 +249,4 @@ wss.on('connection', (socket, req) => {
   socket.on('close', () => clearInterval(heartbeat));
 });
 
-http.listen(PORT, () => console.log(`PaintLand relay listening on ws://localhost:${PORT} (rooms of up to ${MAX_ROOM}) · leaderboard ${verifyRun ? 'on' : 'off'} at http://localhost:${PORT}/leaderboard`));
+http.listen(PORT, () => console.log(`PaintLand relay listening on ws://localhost:${PORT} (rooms of up to ${maxRoom()}) · leaderboard ${verifyRun ? 'on' : 'off'} at http://localhost:${PORT}/leaderboard`));

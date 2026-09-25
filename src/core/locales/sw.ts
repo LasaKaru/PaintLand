@@ -149,5 +149,14 @@ const sw: Locale = {
   'ch.walked': 'Tembea kwa miguu m {n}',
   'ch.discoveries': 'Gundua sehemu mpya {n}',
   'ch.perahera': 'Tembea na perahera ya usiku',
+  'brand.presents': 'inawasilisha',
+  'brand.by': 'Imewasilishwa na {name}',
+  'brand.coffee': 'Ninunulie kahawa',
+  'brand.fund': 'Changia mchezo',
+  'brand.sponsor': 'Kuwa mfadhili',
+  'brand.advertiseLine': 'Chapa yako ndani ya PaintLand? Andika kwa {email}',
+  'brand.visit': 'E · Tembelea {name}',
+  'brand.advertise': 'Tangaza hapa',
+  'set.analytics': 'Shiriki takwimu za mchezo bila majina',
 };
 export default sw;

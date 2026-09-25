@@ -149,5 +149,14 @@ const tr: Locale = {
   'ch.walked': 'Yürüyerek {n} m git',
   'ch.discoveries': '{n} yeni yer keşfet',
   'ch.perahera': 'Gece peraherasıyla birlikte ilerle',
+  'brand.presents': 'sunar',
+  'brand.by': '{name} sunar',
+  'brand.coffee': 'Bana bir kahve ısmarla',
+  'brand.fund': 'Oyunu destekle',
+  'brand.sponsor': 'Sponsor ol',
+  'brand.advertiseLine': 'Markanız PaintLand’de mi? {email} adresine yazın',
+  'brand.visit': 'E · {name} sitesini ziyaret et',
+  'brand.advertise': 'Buraya reklam verin',
+  'set.analytics': 'Anonim oyun istatistiklerini paylaş',
 };
 export default tr;

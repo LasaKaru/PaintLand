@@ -52,6 +52,7 @@ npm run dev        # open http://localhost:5173
 | `npm run preview` | Serve the built site |
 | `npm test` | Unit tests (road maths for every chapter, rover and walking physics, notes, missions, profile and shop) |
 | `npm run typecheck` | TypeScript strict check |
+| `npm start` | Builds the game and the run verifier, then serves **everything** on http://localhost:8787: the game, multiplayer, leaderboard, admin panel and analytics (data is kept in `server/data/`) |
 | `npm run server` | Multiplayer relay on `ws://localhost:8787` (rooms of 32). Without it, multiplayer still works between tabs of the same browser |
 | `node tools/screenshot.mjs` | With `npm run dev` running: renders districts in headless Chromium into `tools/out/` (`SHOTS="serendib:120:golden:storm"`, `STYLE=realistic`, `QUALITY=ultra`, `MENUS="settings/controls,trophies"`, `PHOTO=1`, `INTRO=1`, `MISSION=…`, `WALK=1`) |
 | `node tools/landmarks.mjs <chapter> <count>` | Crane shots of every landmark in a chapter (`STYLE=realistic PRESET=golden`) |
@@ -60,6 +61,7 @@ npm run dev        # open http://localhost:5173
 | `npm run server` | Builds the run verifier (`npm run build:server`) and starts the relay: multiplayer rooms on `ws://localhost:8787` and the time-trial leaderboard on `http://localhost:8787/leaderboard` |
 | `node tools/race-test.mjs` | Run from the repo root: two browser windows join a room over the relay, one starts a live race, both drive the lap, and both must show two finishes verified by server re-simulation |
 | `node tools/trial-test.mjs` | Run from the repo root: starts the relay, drives a full time-trial lap in the browser, checks that the server re-simulated and ranked it, and that a faked time is rejected |
+| `node tools/brand-test.mjs` | Milestone 9, with `npm run server` and the dev server running: the loading screen, the menu footer, the secret word, a wrong and a right login, the dashboard, a sponsor upload, and the watercolour boards in Harbour Town, the city (and blimp) and on a chapter road. Screenshots go to `tools/out/brand-*.png` |
 | `node tools/m8-test.mjs` | Milestone 8: the city as a sketch, painting a district (wash and fireworks), the paper map and a fast travel from it, the night perahera, and the daily brushstrokes screen. Screenshots go to `tools/out/m8-*.png` |
 | `node tools/city-test.mjs` | Drives from Harbour Town into Serendib City through the road sign, opens a loot chest, finds a secret pot, lands the "Over the bus" stunt, charges a drift mini-turbo, starts a city mission and opens the mission board. Screenshots go to `tools/out/city-*.png` |
 | `node tools/hub-test.mjs` | Drives and walks around Harbour Town with real keys, opens the garage from its ring, resumes, drives through a chapter gate, and checks the touch controls on a phone-sized screen |
@@ -82,7 +84,24 @@ Also: **M** map (free roam) · **P** photo mode · **.** / **,** gear up / down 
 
 Every key can be rebound in **Menu → Settings → Controls**. On phones and tablets, touch controls appear on the first touch: a floating stick, GO / BRAKE pedals, HOP, BOOST, DRIFT, E, camera and photo buttons, and drag-to-look.
 
-## What is new in milestone 8 · "Colour the City"
+## What is new in milestone 9 · "Presented by HelaO2"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **One application**: `npm start` builds the game and serves everything from one Node process on one port: the game itself, multiplayer rooms, the ranked leaderboard, the admin panel API, analytics and uploaded logos. In development, Vite forwards `/api` to the relay (`npm run server`) | ✅ | `server/relay.mjs`, `server/admin.mjs`, `vite.config.ts` |
+| **HelaO2 presents**: the loading screen paints the HelaO2 logo in like a watercolour wash (a spreading reveal, rough pigment edges, soft colour blooms), then "presents", then PaintLand | ✅ | `src/ui/Hud.ts`, `src/styles/main.css` |
+| **Secret admin panel**: type **kumara** on any menu screen (on touch screens, tap the PaintLand logo 5 times) to open the login. The server checks the email and password against a salted scrypt hash. Wrong attempts are rate-limited, sessions last 12 hours, and the password can be changed in the panel | ✅ | `src/ui/Admin.ts` |
+| **Dashboard**: players (all time, today, 7 days, returning), online now and multiplayer rooms, sessions and average length, hours played, 30-day charts of players and hours, sponsor board views and visits with visit rate, plus breakdowns by chapter, area, time by place, language, device, graphics quality, frame rate, missions, trophies and menu link clicks. Exportable as JSON | ✅ | `server/admin.mjs` |
+| **Branding and links**: company name, website, loading-screen words, sponsor contact email, company logo upload, how often the company logo appears, "Your brand here" boards on or off, and room size. Buy me a coffee, Fund the game, Become a sponsor and up to 8 more links appear in the main menu's footer | ✅ | `src/ui/Menu.ts` |
+| **Sponsors**: upload logos (PNG, JPEG or WebP, shrunk in the browser) with a name, link and weight, and switch them on or off. They appear in the menu footer and on boards in the world | ✅ | `src/ui/Admin.ts` |
+| **Logos as watercolour**: every logo is repainted before it goes into the world. White backgrounds are keyed out, pigment thins and granulates, a wet bleed spreads around the shapes, edges darken where paint pools, and it all sits on warm paper with blooms and an inked border. The painted picture then goes through the game's own paint shader (light, shadows, outlines) | ✅ | `src/brand/Watercolour.ts`, `src/render/PaintMaterial.ts` |
+| **Boards in the world**: 37 billboards and banners in Serendib City, 6 in Harbour Town and one every ~700 m along every chapter road, plus a paper blimp towing the company banner over the city. Logos are picked at random with the admin's weights. Empty slots say "Your brand here · support@helao2.com". On foot, press **E** at a board to visit the sponsor | ✅ | `src/brand/BrandBoards.ts`, `src/brand/BrandSpots.ts` |
+| **Moderation**: recent chat (in memory only), ban and unban player names (banned names cannot join rooms or chat) | ✅ | `server/admin.mjs` |
+| **Privacy**: statistics are anonymous (a random id per browser, no names, no IP addresses stored), and players can turn them off in Settings → Accessibility | ✅ | `src/net/Analytics.ts` |
+
+**Admin login.** The email is `lasantha@helao2.com`. The password you chose is stored only as a salted hash, not in plain text. It is short, so please change it in the panel (🔒 Security) before going live. You can also set `ADMIN_EMAIL` and `ADMIN_PASSWORD` when starting the server. The secret word only opens the login page; the server does the real check.
+
+## What was new in milestone 8 · "Colour the City"
 
 | System | Status | Where |
 | --- | --- | --- |

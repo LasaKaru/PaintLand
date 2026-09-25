@@ -149,5 +149,14 @@ const zh: Locale = {
   'ch.walked': '步行 {n} 米',
   'ch.discoveries': '发现 {n} 个新地点',
   'ch.perahera': '跟随夜间佩拉赫拉游行',
+  'brand.presents': '出品',
+  'brand.by': '由 {name} 呈现',
+  'brand.coffee': '请我喝杯咖啡',
+  'brand.fund': '资助这款游戏',
+  'brand.sponsor': '成为赞助商',
+  'brand.advertiseLine': '想让你的品牌出现在 PaintLand？请写信至 {email}',
+  'brand.visit': 'E · 访问 {name}',
+  'brand.advertise': '在此投放广告',
+  'set.analytics': '分享匿名游戏统计',
 };
 export default zh;

@@ -41,6 +41,12 @@ import { CHALLENGES, bumpStreak, challengeAmount, challengeProgress, ensureDaily
 import { PHOTO_SUBJECTS, subjectsInFrame, type PhotoSubject } from '../gameplay/PhotoHunt';
 import { MapView, type MapMarker, type MapState } from '../ui/MapView';
 import { filterChat } from '../net/ChatFilter';
+import { BrandBoards, resetBrandTextures } from '../brand/BrandBoards';
+import { citySpots, hubSpots, routeSpots } from '../brand/BrandSpots';
+import { loadBrand, onBrandChange, type BrandLogo } from '../brand/Brand';
+import { clearPainted } from '../brand/Watercolour';
+import { analytics } from '../net/Analytics';
+import { AdminPanel } from '../ui/Admin';
 import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
 import { TouchControls } from '../ui/TouchControls';
 import { TRIAL_VERSION, TrialSim, encodeInputs, quantizeInput, type TrialConfig } from '../gameplay/TrialSim';
@@ -158,6 +164,7 @@ export class Game {
   private stuntCam = 0;
   // Milestone 8: Colour the City, map, daily brushstrokes, perahera.
   private readonly mapView: MapView;
+  private readonly admin: AdminPanel;
   private readonly strokeCache = new Map<string, Stroke[]>();
   private districtCache: { area: string; seen: number; list: DistrictProgress[] } | null = null;
   private readonly washShown: number[] = [];
@@ -169,6 +176,12 @@ export class Game {
   private peraheraTime = 0;
   private peraheraAnnounced = false;
   private peraheraFirework = 4;
+  // Branding: company and sponsor boards in the world, and play statistics.
+  private readonly areaBoards = new Map<string, BrandBoards>();
+  private routeBoards: BrandBoards | null = null;
+  private nearBoard: BrandLogo | null = null;
+  private beatTimer = 60;
+  private readonly bootAt = performance.now();
   private pausedFrom: GameState = 'play';
   private readonly hubCar = new FreeCar({ ...tuningFor('rover') });
   private readonly hubWalker = new FreeWalker();
@@ -256,7 +269,9 @@ export class Game {
       stats: () => `${this.fps.toFixed(0)} fps · ${Math.round(this.pipeline.renderScale * 100)}% render scale · ${this.renderer.info.render.calls} draw calls · ${(this.renderer.info.render.triangles / 1e6).toFixed(2)} M triangles`,
       resume: () => this.resumeFromMenu(),
       canResume: () => this.resumeSnapshot !== null,
+      openAdmin: () => this.admin.show(),
     });
+    this.admin = new AdminPanel(container);
     this.net.onChat = (name, text) => this.incomingChat(name, text);
     this.remotes.hidden = (name) => this.options.blocked.includes(name);
     this.mapView = new MapView(container);
@@ -294,6 +309,21 @@ export class Game {
       await new Promise((r) => requestAnimationFrame(() => r(null)));
     };
     await step(0.05, 'mixing paint…');
+    analytics.enabled = this.options.analytics;
+    analytics.start({
+      lang: document.documentElement.lang,
+      device: matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
+      quality: this.settings.quality,
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
+    onBrandChange(() => {
+      clearPainted();
+      resetBrandTextures();
+      for (const b of this.areaBoards.values()) void b.refresh();
+      void this.routeBoards?.refresh();
+      this.menu.refreshBrand();
+    });
+    void loadBrand();
     this.sky = createSky();
     this.scene.add(this.sky, createWater(), this.particles.points, this.wildlife.group);
     this.env = new Environment(this.scene);
@@ -315,6 +345,9 @@ export class Game {
     await step(1, 'ready');
     this.director.update(0.016, 0, { s: this.rover.s, x: 0, h: 0, position: this.vehicle.root.position.clone() });
     this.renderer.compile(this.scene, this.rig.camera);
+    // Let the "presents" card finish painting in before the title.
+    const shown = performance.now() - this.bootAt;
+    if (shown < 2600) await new Promise((r) => setTimeout(r, 2600 - shown));
     this.hud.show('loading', false);
     this.hud.show('screenTitle', false);
     this.state = 'splash';
@@ -331,6 +364,9 @@ export class Game {
     this.world?.dispose();
     this.world = new World(chapter);
     this.scene.add(this.world.group);
+    this.routeBoards = new BrandBoards(`route:${chapter.id}`, routeSpots(this.world.path), chapter.id.length * 31 + 5);
+    this.world.group.add(this.routeBoards.group);
+    void this.routeBoards.refresh();
     this.profile.data.chapter = chapter.id;
     this.profile.save();
     this.env.setPreset(chapter.startPreset);
@@ -548,6 +584,7 @@ export class Game {
   }
 
   private play(chapterId: string): void {
+    analytics.track('play', { id: chapterId });
     this.leaveHub();
     this.loadChapter(chapterId);
     this.resumeSnapshot = null;
@@ -752,6 +789,7 @@ export class Game {
     this.profile.data.ink += m.reward.ink;
     if (m.reward.item && !this.profile.owns(m.reward.item)) this.profile.data.owned.push(m.reward.item);
     if (!this.profile.data.missionsDone.includes(m.id)) this.profile.data.missionsDone.push(m.id);
+    analytics.track('mission', { id: m.id });
     this.profile.save();
     this.hud.showLapBanner(`Mission complete! +${m.reward.ink} ink`);
     this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 2), _v.copy(this.frame.up).multiplyScalar(7), 80, 7, this.frame.up);
@@ -1086,6 +1124,11 @@ export class Game {
     this.input.clearUnconsumed(['hop', 'interact']);
     this.touchUi.setVisible(this.state === 'play' || this.state === 'hub');
     if (this.state === 'play' || this.state === 'hub') this.onboarding(dt);
+    this.beatTimer -= dt;
+    if (this.beatTimer <= 0) {
+      this.beatTimer = 60;
+      if (this.state === 'play' || this.state === 'hub' || this.state === 'paused' || this.state === 'photo') analytics.track('beat', { sec: 60, fps: Math.round(this.fps), where: this.inHub ? this.area?.id : this.world.chapter.id });
+    }
     this.dailyTimer -= dt;
     if (this.dailyTimer <= 0 && (this.state === 'play' || this.state === 'hub')) {
       this.dailyTimer = 1;
@@ -1350,6 +1393,7 @@ export class Game {
     this.borderPulse = Math.max(0, this.borderPulse - dt * 0.8);
     const speedLines = this.mode === 'drive' && playing ? clamp((this.rover.v - 38) / 20, 0, 1) + (this.rover.boosting ? 0.6 : 0) : 0;
     this.updateHeadlights(vm, cam);
+    this.routeBoards?.update(dt, this.time, cam, vm.root.position);
     // Depth of field: cinematics focus on what the director looks at.
     let dofAmount = 0;
     let dofFocus = 10;
@@ -1443,6 +1487,7 @@ export class Game {
   // ————— ranked time trials —————
 
   private startTrial(chapterId: string, countdown = 3.2): void {
+    analytics.track('trial', { id: chapterId });
     this.endTrial();
     this.play(chapterId);
     this.missions.cancel();
@@ -1557,6 +1602,7 @@ export class Game {
 
   /** Anyone in a room can start a race: everyone gets the same chapter and countdown. */
   private startRaceForAll(chapterId: string): void {
+    analytics.track('race', { id: chapterId });
     if (!this.net.connected) {
       this.menu.toast(t('race.needRoom'));
       return;
@@ -1701,6 +1747,18 @@ export class Game {
     if (area) return area;
     area = id === 'city' ? new City(this.hud.labels) : new Hub(this.hud.labels);
     this.scene.add(area.group);
+    // Company and sponsor boards, with solid posts.
+    const spots = id === 'city' ? citySpots() : hubSpots();
+    const boards = new BrandBoards(id, spots, id === 'city' ? 7 : 3);
+    for (const sp of spots) {
+      const yaw = sp.yaw ?? 0;
+      const half = (sp.style === 'banner' ? 2.4 : 1.9) * (sp.scale ?? 1);
+      for (const k of [-1, 1]) area.world.circle(sp.x + Math.cos(yaw) * half * k, sp.z - Math.sin(yaw) * half * k, 0.35);
+    }
+    if (id === 'city') boards.addBlimp(-100, -150, 240, 75);
+    area.group.add(boards.group);
+    this.areaBoards.set(id, boards);
+    void boards.refresh();
     area.show(false);
     // Areas without their own pickup models get painted pots and chests.
     for (const s of area.secrets) {
@@ -1767,6 +1825,7 @@ export class Game {
     this.unlockAudio();
     const title = area.title();
     this.hud.showDistrictTitle(title.kicker, title.name, title.poem);
+    analytics.track('area', { id });
     this.profile.markSeen(id === 'harbour' ? 'hub' : `area:${id}`);
     this.timeScale = 1;
     this.stuntAir = null;
@@ -1959,6 +2018,7 @@ export class Game {
         if (item) detail += ` · ${item.name}`;
       }
       this.profile.addStat('cityMissions');
+      analytics.track('cityMission', { id: m.id });
       this.profile.save();
       this.audio.fanfare();
       this.hud.lootCard(t('cm.complete'), '#6fbf73', m.title, detail);
@@ -2021,6 +2081,8 @@ export class Game {
           this.updateHeadVisibility();
           this.audio.door();
         }
+      } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) >= 4 && this.nearBoard) {
+        this.visitBrand(this.nearBoard);
       } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4) {
         this.mode = 'drive';
         this.input.releasePointerLock();
@@ -2189,8 +2251,13 @@ export class Game {
     // Zones and prompts.
     this.hubZone = area.zoneAt(player.x, player.z);
     const nearCar = this.mode === 'foot' && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
+    const boards = this.areaBoards.get(area.id);
+    const here = _v6.set(player.x, HUB_Y, player.z);
+    boards?.update(dt, this.time, cam, here);
+    this.nearBoard = this.mode === 'foot' && !nearCar && !this.hubZone ? boards?.nearest(here) ?? null : null;
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t('prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
-    this.hud.setPrompt(this.state === 'photo' ? null : zoneText ?? (nearCar ? t('prompt.getIn') : this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? t('prompt.getOut') : null));
+    const boardText = this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
+    this.hud.setPrompt(this.state === 'photo' ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? t('prompt.getOut') : null)));
     this.updateMissionHud(player.x, player.z, cam);
     this.mapView.setArea(area.mapInfo((id) => this.districtState(area).find((d) => d.district.id === id)?.paint ?? 1));
     this.mapView.showMini(this.options.minimap && this.state === 'hub' && !this.hudHidden);
@@ -2282,6 +2349,11 @@ export class Game {
     return this.strokesFor(area).filter((s) => inRect(d.rect, s.x, s.z)).map((s) => s.tag);
   }
 
+  /** Board positions in an area (tests): face direction as yaw. */
+  debugBrandSpots(id: string): { x: number; z: number; yaw: number }[] {
+    return (id === 'city' ? citySpots() : hubSpots()).map((s) => ({ x: s.x, z: s.z, yaw: s.yaw ?? 0 }));
+  }
+
   debugMap(open: boolean): void {
     if (open) this.openMap();
     else this.closeMap();
@@ -2364,6 +2436,7 @@ export class Game {
   private celebrate(p: DistrictProgress): void {
     this.profile.earn(300);
     this.profile.addStat('restored');
+    analytics.track('restore', { id: p.district.id });
     this.profile.save();
     this.audio.fanfare();
     this.hud.lootCard(t('district.painted', { name: p.district.name }), p.district.colour, '🎆', '+300 ink');
@@ -2566,6 +2639,14 @@ export class Game {
     }
   }
 
+  /** Open a board's link (company site, sponsor, or the advertising contact). */
+  private visitBrand(logo: BrandLogo): void {
+    if (!logo.url) return;
+    analytics.track('sponsor_click', { id: logo.id });
+    this.input.releasePointerLock();
+    window.open(logo.url, '_blank', 'noopener');
+  }
+
   /** Chat line from another player, after the block list and chat setting. */
   private incomingChat(name: string, text: string): void {
     const o = this.options;
@@ -2718,6 +2799,7 @@ export class Game {
 
   private checkTrophies(): void {
     for (const t of checkTrophies(this.profile)) {
+      analytics.track('trophy', { id: t.id });
       this.hud.showLapBanner(`${t.icon} Trophy: ${t.name}  +${t.reward} ink`);
       this.audio.chime(79);
       this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 3), _v.copy(this.frame.up).multiplyScalar(6), 60, 6, this.frame.up);

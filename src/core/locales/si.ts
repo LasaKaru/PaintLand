@@ -149,5 +149,14 @@ const si: Locale = {
   'ch.walked': 'පයින් මීටර් {n} ක් ඇවිදින්න',
   'ch.discoveries': 'නව ස්ථාන {n} ක් සොයාගන්න',
   'ch.perahera': 'රාත්‍රී පෙරහැර සමඟ ගමන් කරන්න',
+  'brand.presents': 'ඉදිරිපත් කරයි',
+  'brand.by': 'ඉදිරිපත් කරන්නේ {name}',
+  'brand.coffee': 'මට කෝපි එකක් ගන්න',
+  'brand.fund': 'ක්‍රීඩාවට අරමුදල් දෙන්න',
+  'brand.sponsor': 'අනුග්‍රාහකයෙක් වන්න',
+  'brand.advertiseLine': 'PaintLand තුළ ඔබේ සන්නාමය? {email} වෙත ලියන්න',
+  'brand.visit': 'E · {name} බලන්න',
+  'brand.advertise': 'මෙතැන දැන්වීම් කරන්න',
+  'set.analytics': 'නිර්නාමික ක්‍රීඩා සංඛ්‍යාලේඛන බෙදාගන්න',
 };
 export default si;

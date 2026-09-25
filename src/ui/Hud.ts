@@ -1,4 +1,7 @@
 import { TIME_PRESETS } from '../world/Environment';
+import { brand, COMPANY_LOGO } from '../brand/Brand';
+import { t } from '../core/i18n';
+import { apiUrl } from '../net/Api';
 import type { Phrase } from '../gameplay/Collectibles';
 import { NOTE_COLOURS } from '../world/Districts';
 
@@ -578,6 +581,12 @@ function template(): string {
   </div>
 
   <div class="screen loading" data-id="loading">
+    <svg class="wc-filters" aria-hidden="true" width="0" height="0"><filter id="wc-rough"><feTurbulence type="fractalNoise" baseFrequency="0.035" numOctaves="3" seed="7" result="n"/><feDisplacementMap in="SourceGraphic" in2="n" scale="5"/><feGaussianBlur stdDeviation="0.35"/></filter></svg>
+    <div class="presents" data-id="presents">
+      <div class="presents-wash"></div>
+      <img class="presents-logo" src="${brandLogoUrl()}" alt="${escapeText(brand().company.name)}">
+      <div class="hand presents-word">${escapeText(brand().company.tagline === 'Presents' || !brand().company.tagline ? t('brand.presents') : brand().company.tagline)}</div>
+    </div>
     <div class="card loading-card">
       <div class="hand big-title">PaintLand</div>
       <div class="load-bar"><div class="load-fill"></div></div>
@@ -649,4 +658,13 @@ function template(): string {
     </div>
   </div>
   `;
+}
+
+function brandLogoUrl(): string {
+  const logo = brand().company.logo;
+  return logo ? apiUrl(logo) : COMPANY_LOGO;
+}
+
+function escapeText(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
 }

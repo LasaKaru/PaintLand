@@ -149,5 +149,14 @@ const ur: Locale = {
   'ch.walked': 'پیدل {n} میٹر چلیں',
   'ch.discoveries': '{n} نئی جگہیں دریافت کریں',
   'ch.perahera': 'رات کے پیراہیرا کے ساتھ چلیں',
+  'brand.presents': 'پیش کرتے ہیں',
+  'brand.by': 'پیشکش {name}',
+  'brand.coffee': 'مجھے ایک کافی پلائیں',
+  'brand.fund': 'گیم کی مالی مدد کریں',
+  'brand.sponsor': 'اسپانسر بنیں',
+  'brand.advertiseLine': 'PaintLand میں آپ کا برانڈ؟ {email} پر لکھیں',
+  'brand.visit': 'E · {name} دیکھیں',
+  'brand.advertise': 'یہاں اشتہار دیں',
+  'set.analytics': 'گمنام کھیل کے اعداد و شمار شیئر کریں',
 };
 export default ur;

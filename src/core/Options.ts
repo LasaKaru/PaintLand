@@ -35,6 +35,8 @@ export interface GameOptions {
   blocked: string[];
   /** Show the minimap in free roam. */
   minimap: boolean;
+  /** Send anonymous play statistics to the game's owner. */
+  analytics: boolean;
 }
 
 export const DEFAULT_OPTIONS: GameOptions = {
@@ -59,6 +61,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   chat: 'filtered',
   blocked: [],
   minimap: true,
+  analytics: true,
 };
 
 const KEY = 'paintland.settings.v1';

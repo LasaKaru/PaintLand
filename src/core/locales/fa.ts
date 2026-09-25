@@ -149,5 +149,14 @@ const fa: Locale = {
   'ch.walked': '{n} متر پیاده برو',
   'ch.discoveries': '{n} مکان تازه کشف کن',
   'ch.perahera': 'همراه پراهرای شبانه برو',
+  'brand.presents': 'تقدیم می‌کند',
+  'brand.by': 'تقدیم از {name}',
+  'brand.coffee': 'یک قهوه مهمانم کن',
+  'brand.fund': 'از بازی حمایت کن',
+  'brand.sponsor': 'حامی مالی شو',
+  'brand.advertiseLine': 'برند شما در PaintLand؟ به {email} بنویسید',
+  'brand.visit': 'E · بازدید از {name}',
+  'brand.advertise': 'تبلیغ شما اینجا',
+  'set.analytics': 'اشتراک آمار ناشناس بازی',
 };
 export default fa;

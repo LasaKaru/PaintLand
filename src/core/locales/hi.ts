@@ -149,5 +149,14 @@ const hi: Locale = {
   'ch.walked': 'पैदल {n} मीटर चलें',
   'ch.discoveries': '{n} नई जगहें खोजें',
   'ch.perahera': 'रात की पेरहेरा के साथ चलें',
+  'brand.presents': 'प्रस्तुत करते हैं',
+  'brand.by': '{name} द्वारा प्रस्तुत',
+  'brand.coffee': 'मुझे एक कॉफ़ी पिलाएँ',
+  'brand.fund': 'गेम को सहयोग दें',
+  'brand.sponsor': 'प्रायोजक बनें',
+  'brand.advertiseLine': 'PaintLand में आपका ब्रांड? {email} पर लिखें',
+  'brand.visit': 'E · {name} देखें',
+  'brand.advertise': 'यहाँ विज्ञापन दें',
+  'set.analytics': 'अनाम खेल आँकड़े साझा करें',
 };
 export default hi;

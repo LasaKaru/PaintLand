@@ -149,5 +149,14 @@ const id: Locale = {
   'ch.walked': 'Berjalan kaki {n} m',
   'ch.discoveries': 'Temukan {n} tempat baru',
   'ch.perahera': 'Ikuti perahera malam',
+  'brand.presents': 'mempersembahkan',
+  'brand.by': 'Dipersembahkan oleh {name}',
+  'brand.coffee': 'Traktir saya kopi',
+  'brand.fund': 'Dukung game ini',
+  'brand.sponsor': 'Jadi sponsor',
+  'brand.advertiseLine': 'Merek Anda di PaintLand? Tulis ke {email}',
+  'brand.visit': 'E · Kunjungi {name}',
+  'brand.advertise': 'Pasang iklan di sini',
+  'set.analytics': 'Bagikan statistik bermain anonim',
 };
 export default id;

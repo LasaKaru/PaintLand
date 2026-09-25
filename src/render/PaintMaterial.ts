@@ -63,6 +63,8 @@ export interface PaintOptions {
   ghost?: boolean;
   /** Turns to a pencil sketch inside unpainted districts (Colour the City). */
   washable?: boolean;
+  /** A painted picture on the surface (brand boards): multiplies the base colour, uses the mesh's uv. */
+  map?: THREE.Texture;
 }
 
 let nextObjectId = 1;
@@ -75,6 +77,9 @@ attribute float pattern;
 varying float vPattern;
 attribute vec3 smoothNormal;
 varying vec3 vSmoothN;
+#ifdef USE_PAINT_MAP
+  varying vec2 vPaintUv;
+#endif
 #ifdef USE_ROAD
   attribute vec4 roadInfo;
   varying vec4 vRoadInfo;
@@ -108,6 +113,9 @@ void main() {
   #include <logdepthbuf_vertex>
 
   vViewPosition = -mvPosition.xyz;
+  #ifdef USE_PAINT_MAP
+    vPaintUv = uv;
+  #endif
 
   #include <worldpos_vertex>
   #include <shadowmap_vertex>
@@ -160,6 +168,10 @@ uniform vec3 uHeadDir;
 uniform float uHeadOn;
 uniform float uFlash;
 uniform float uGloss;
+#ifdef USE_PAINT_MAP
+  uniform sampler2D uPaintMap;
+  varying vec2 vPaintUv;
+#endif
 #ifdef WASHABLE
   uniform vec4 uWashRect[8];
   uniform float uWash[8];
@@ -398,6 +410,9 @@ void main() {
     #endif
   #endif
 
+  #ifdef USE_PAINT_MAP
+    base *= texture(uPaintMap, vPaintUv).rgb;
+  #endif
   float dist = length(vViewPosition);
   #ifdef USE_ROAD
     // Realistic roads: the painted lavender cools toward real stone and tarmac.
@@ -549,6 +564,7 @@ export class PaintMaterial extends THREE.ShaderMaterial {
         uGlowAtNight: { value: opts.glowAtNight ? 1 : 0 },
         uObjectId: { value: opts.objectId ?? fract(nextObjectId++ * 0.3819661) },
         uGloss: { value: opts.gloss ?? (opts.road ? 0.28 : 0.15) },
+        uPaintMap: { value: null },
       },
     ]);
     Object.assign(uniforms, paintShared);
@@ -566,8 +582,11 @@ export class PaintMaterial extends THREE.ShaderMaterial {
         ...(opts.flat ? { FLAT_SHADED: '' } : {}),
         ...(opts.ghost ? { GHOST: '' } : {}),
         ...(opts.washable ? { WASHABLE: '' } : {}),
+        ...(opts.map ? { USE_PAINT_MAP: '' } : {}),
       },
     });
+    // Set after construction: merging uniforms clones textures, and a clone would never upload.
+    if (opts.map) this.uniforms.uPaintMap.value = opts.map;
   }
 
   get color(): THREE.Color {

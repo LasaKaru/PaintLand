@@ -149,5 +149,14 @@ const nl: Locale = {
   'ch.walked': 'Loop {n} m te voet',
   'ch.discoveries': 'Ontdek {n} nieuwe plekken',
   'ch.perahera': 'Loop mee met de nachtelijke perahera',
+  'brand.presents': 'presenteert',
+  'brand.by': 'Gepresenteerd door {name}',
+  'brand.coffee': 'Trakteer me op koffie',
+  'brand.fund': 'Steun het spel',
+  'brand.sponsor': 'Word sponsor',
+  'brand.advertiseLine': 'Jouw merk in PaintLand? Schrijf naar {email}',
+  'brand.visit': 'E · {name} bezoeken',
+  'brand.advertise': 'Adverteer hier',
+  'set.analytics': 'Anonieme speelstatistieken delen',
 };
 export default nl;

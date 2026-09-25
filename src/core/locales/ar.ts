@@ -149,5 +149,14 @@ const ar: Locale = {
   'ch.walked': 'امشِ {n} م على قدميك',
   'ch.discoveries': 'اكتشف {n} أماكن جديدة',
   'ch.perahera': 'رافق موكب البيراهيرا الليلي',
+  'brand.presents': 'يقدّم',
+  'brand.by': 'تقديم {name}',
+  'brand.coffee': 'اشترِ لي قهوة',
+  'brand.fund': 'ادعم اللعبة',
+  'brand.sponsor': 'كن راعيًا',
+  'brand.advertiseLine': 'علامتك التجارية في PaintLand؟ راسل {email}',
+  'brand.visit': 'E · زيارة {name}',
+  'brand.advertise': 'أعلن هنا',
+  'set.analytics': 'مشاركة إحصاءات لعب مجهولة الهوية',
 };
 export default ar;

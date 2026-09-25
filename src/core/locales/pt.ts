@@ -149,5 +149,14 @@ const pt: Locale = {
   'ch.walked': 'Caminhe {n} m a pé',
   'ch.discoveries': 'Descubra {n} lugares novos',
   'ch.perahera': 'Acompanhe a perahera noturna',
+  'brand.presents': 'apresenta',
+  'brand.by': 'Apresentado por {name}',
+  'brand.coffee': 'Me pague um café',
+  'brand.fund': 'Apoie o jogo',
+  'brand.sponsor': 'Seja patrocinador',
+  'brand.advertiseLine': 'Sua marca no PaintLand? Escreva para {email}',
+  'brand.visit': 'E · Visitar {name}',
+  'brand.advertise': 'Anuncie aqui',
+  'set.analytics': 'Compartilhar estatísticas de jogo anônimas',
 };
 export default pt;

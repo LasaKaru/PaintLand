@@ -1,4 +1,8 @@
 import type { Profile, ShopItem } from '../gameplay/Profile';
+import { brand, COMPANY_LOGO } from '../brand/Brand';
+import { paintedLogo } from '../brand/Watercolour';
+import { apiUrl } from '../net/Api';
+import { analytics } from '../net/Analytics';
 import { CHALLENGES, challengeAmount, challengeProgress, ensureDaily } from '../gameplay/Challenges';
 import { PHOTO_SUBJECTS } from '../gameplay/PhotoHunt';
 import { CHAINS, CITY_MISSIONS, missionUnlocked } from '../gameplay/CityMissions';
@@ -57,7 +61,13 @@ export interface MenuHost {
   stats(): string;
   resume(): void;
   canResume(): boolean;
+  /** The secret word was typed: open the admin login. */
+  openAdmin(): void;
 }
+
+/** Typed on a menu screen, opens the admin login (the password is checked by the server). */
+const SECRET = 'kumara';
+const PAINTED_UI = new Map<string, string>();
 
 const $ = <T extends HTMLElement = HTMLElement>(root: ParentNode, sel: string): T => root.querySelector<T>(sel)!;
 
@@ -74,6 +84,8 @@ export class Menu {
   private listening: ActionName | null = null;
   private readonly formatters = new Map<string, (v: number) => string>();
   private toastTimer = 0;
+  private typed = '';
+  private logoTaps: number[] = [];
 
   constructor(parent: HTMLElement, private readonly host: MenuHost) {
     this.root = document.createElement('div');
@@ -83,6 +95,21 @@ export class Menu {
     this.root.addEventListener('input', (e) => this.onInput(e));
     this.root.addEventListener('change', (e) => this.onInput(e));
     host.profile.onChange(() => this.refreshInk());
+    this.root.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]');
+      if (a) analytics.track(a.dataset.link === 'sponsor-logo' ? 'sponsor_click' : 'link', { id: a.dataset.id ?? a.dataset.link });
+    });
+    // The secret word on any menu screen (not while typing in a field) opens the admin login.
+    window.addEventListener('keydown', (e) => {
+      if (this.screen === 'none' || e.ctrlKey || e.metaKey || e.altKey || e.key.length !== 1) return;
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return;
+      this.typed = (this.typed + e.key.toLowerCase()).slice(-12);
+      if (this.typed.endsWith(SECRET)) {
+        this.typed = '';
+        this.host.openAdmin();
+      }
+    });
     onLangChange(() => this.render());
     setInterval(() => {
       const el = this.root.querySelector('[data-id="stats"]');
@@ -122,6 +149,51 @@ export class Menu {
       credits: () => this.credits(),
     }[s]();
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
+    this.paintBrandImages();
+  }
+
+  /** Branding changed (admin panel or server): redraw the footer. */
+  refreshBrand(): void {
+    if (this.screen === 'main' || this.screen === 'splash') this.render();
+  }
+
+  /** Company, support links, sponsor logos and the advertising line, from the admin settings. */
+  private brandFooter(): string {
+    const b = brand();
+    const link = (id: string, url: string, label: string): string => (url ? `<a class="btn small" href="${escapeHtml(url)}" target="_blank" rel="noopener" data-link="${id}">${label}</a>` : '');
+    const sponsors = b.sponsors.filter((s) => s.weight > 0);
+    return `<div class="brand-foot">
+      <a class="brand-presents" href="${escapeHtml(b.company.site || '#')}" target="_blank" rel="noopener" data-link="site">
+        <img class="brand-logo" data-paint-src="${escapeHtml(b.company.logo ? apiUrl(b.company.logo) : COMPANY_LOGO)}" alt="${escapeHtml(b.company.name)}">
+        <span class="label">${t('brand.by', { name: escapeHtml(b.company.name) })}</span>
+      </a>
+      <div class="brand-links">
+        ${link('coffee', b.links.coffee, `☕ ${t('brand.coffee')}`)}
+        ${link('fund', b.links.fund, `💛 ${t('brand.fund')}`)}
+        ${link('sponsor', b.links.sponsor, `🤝 ${t('brand.sponsor')}`)}
+        ${b.links.custom.map((l, i) => link(`custom${i}`, l.url, escapeHtml(l.label))).join('')}
+      </div>
+      ${sponsors.length ? `<div class="brand-sponsors">${sponsors.map((s) => `<a href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener" data-link="sponsor-logo" data-id="${escapeHtml(s.id)}" title="${escapeHtml(s.name)}"><img data-paint-src="${escapeHtml(apiUrl(s.image))}" alt="${escapeHtml(s.name)}"></a>`).join('')}</div>` : ''}
+      ${b.showSponsorCta && b.company.contact ? `<a class="brand-cta" href="mailto:${escapeHtml(b.company.contact)}?subject=Advertise%20in%20PaintLand" data-link="advertise">${t('brand.advertiseLine', { email: escapeHtml(b.company.contact) })}</a>` : ''}
+    </div>`;
+  }
+
+  /** Swap footer logos for their watercolour versions once painted. */
+  private paintBrandImages(): void {
+    for (const img of this.root.querySelectorAll<HTMLImageElement>('img[data-paint-src]')) {
+      const src = img.dataset.paintSrc!;
+      const cached = PAINTED_UI.get(src);
+      if (cached) {
+        img.src = cached;
+        continue;
+      }
+      void paintedLogo(src, 300, 110, false).then((c) => {
+        if (!c) return;
+        const url = c.toDataURL('image/png');
+        PAINTED_UI.set(src, url);
+        img.src = url;
+      });
+    }
   }
 
   private header(title: string, back = true): string {
@@ -157,7 +229,7 @@ export class Menu {
     const ch = this.host.currentChapter();
     const p = this.host.profile.data;
     return `<div class="menu-main">
-      <div class="menu-logo"><div class="logo-mark big"></div><div><div class="hand logo-name big">PaintLand</div><div class="logo-sub">ink &amp; wash roads</div></div></div>
+      <div class="menu-logo" data-action="logo-tap"><div class="logo-mark big"></div><div><div class="hand logo-name big">PaintLand</div><div class="logo-sub">ink &amp; wash roads</div></div></div>
       <div class="menu-now">${t('menu.now')} · <b>${ch.name}</b></div>
       <nav class="menu-list">
         ${this.host.canResume() ? `<button class="menu-item primary" data-nav="resume">${t('menu.resume')}</button>` : ''}
@@ -184,7 +256,8 @@ export class Menu {
         <span>♪ ${t('menu.sealed', { n: this.host.profile.totalSealed() })}</span>
       </div>
       <div class="lang-row">${this.langButtons()}</div>
-    </div>`;
+    </div>
+    ${this.brandFooter()}`;
   }
 
   private chaptersScreen(): string {
@@ -553,6 +626,7 @@ export class Menu {
         <div>
           ${this.toggle('o.autoWeather', 'Weather changes by itself')}
           ${this.toggle('o.minimap', 'Minimap in free roam')}
+          ${this.toggle('o.analytics', t('set.analytics'))}
           ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
           ${this.slider('o.dayMinutes', 'Length of an auto day', 4, 40, 1, (v) => `${v} min`)}
           <div class="row wrap"><button class="btn" data-action="controls">Controls card</button></div>
@@ -645,7 +719,7 @@ export class Menu {
   // ————— events —————
 
   private onClick(e: MouseEvent): void {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('button, [data-nav]');
+    const el = (e.target as HTMLElement).closest<HTMLElement>('button, [data-nav], [data-action="logo-tap"]');
     if (!el) return;
     this.host.uiSound();
     const d = el.dataset;
@@ -804,6 +878,17 @@ export class Menu {
         p.save();
         this.host.lookChanged();
         this.render();
+        break;
+      }
+      case 'logo-tap': {
+        // Touch screens have no keyboard: five quick taps on the logo ask for the secret word.
+        const now = Date.now();
+        this.logoTaps = [...this.logoTaps.filter((x) => now - x < 2500), now];
+        if (this.logoTaps.length >= 5) {
+          this.logoTaps = [];
+          const word = prompt('…');
+          if (word && word.trim().toLowerCase() === SECRET) this.host.openAdmin();
+        }
         break;
       }
       case 'join-online':

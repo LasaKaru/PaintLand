@@ -149,5 +149,14 @@ const ta: Locale = {
   'ch.walked': '{n} மீ நடந்து செல்லுங்கள்',
   'ch.discoveries': '{n} புதிய இடங்களைக் கண்டறியுங்கள்',
   'ch.perahera': 'இரவு பெரஹெராவுடன் பயணியுங்கள்',
+  'brand.presents': 'வழங்குகிறது',
+  'brand.by': '{name} வழங்குகிறது',
+  'brand.coffee': 'எனக்கு ஒரு காபி வாங்குங்கள்',
+  'brand.fund': 'விளையாட்டுக்கு நிதியளியுங்கள்',
+  'brand.sponsor': 'ஸ்பான்சர் ஆகுங்கள்',
+  'brand.advertiseLine': 'PaintLand இல் உங்கள் பிராண்ட்? {email} க்கு எழுதுங்கள்',
+  'brand.visit': 'E · {name} பார்வையிடு',
+  'brand.advertise': 'இங்கே விளம்பரம் செய்யுங்கள்',
+  'set.analytics': 'அநாமதேய விளையாட்டு புள்ளிவிவரங்களைப் பகிர்',
 };
 export default ta;

@@ -149,5 +149,14 @@ const ru: Locale = {
   'ch.walked': 'Пройдите пешком {n} м',
   'ch.discoveries': 'Откройте {n} новых мест',
   'ch.perahera': 'Пройдите с ночной перахерой',
+  'brand.presents': 'представляет',
+  'brand.by': 'Представляет {name}',
+  'brand.coffee': 'Угостите меня кофе',
+  'brand.fund': 'Поддержать игру',
+  'brand.sponsor': 'Стать спонсором',
+  'brand.advertiseLine': 'Ваш бренд в PaintLand? Пишите на {email}',
+  'brand.visit': 'E · Открыть {name}',
+  'brand.advertise': 'Здесь может быть ваша реклама',
+  'set.analytics': 'Отправлять анонимную статистику игры',
 };
 export default ru;

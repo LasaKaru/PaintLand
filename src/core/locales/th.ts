@@ -149,5 +149,14 @@ const th: Locale = {
   'ch.walked': 'เดินเท้า {n} ม.',
   'ch.discoveries': 'ค้นพบสถานที่ใหม่ {n} แห่ง',
   'ch.perahera': 'ไปกับขบวนแห่เปราเฮราตอนกลางคืน',
+  'brand.presents': 'ขอเสนอ',
+  'brand.by': 'นำเสนอโดย {name}',
+  'brand.coffee': 'เลี้ยงกาแฟฉันสักแก้ว',
+  'brand.fund': 'สนับสนุนเกม',
+  'brand.sponsor': 'เป็นผู้สนับสนุน',
+  'brand.advertiseLine': 'อยากให้แบรนด์ของคุณอยู่ใน PaintLand? เขียนถึง {email}',
+  'brand.visit': 'E · เยี่ยมชม {name}',
+  'brand.advertise': 'ลงโฆษณาที่นี่',
+  'set.analytics': 'แชร์สถิติการเล่นแบบไม่ระบุตัวตน',
 };
 export default th;

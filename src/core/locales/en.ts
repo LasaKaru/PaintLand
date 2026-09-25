@@ -147,6 +147,15 @@ const en = {
   'ch.walked': 'Walk {n} m on foot',
   'ch.discoveries': 'Discover {n} new places',
   'ch.perahera': 'Ride with the night perahera',
+  'brand.presents': 'presents',
+  'brand.by': 'Presented by {name}',
+  'brand.coffee': 'Buy me a coffee',
+  'brand.fund': 'Fund the game',
+  'brand.sponsor': 'Become a sponsor',
+  'brand.advertiseLine': 'Your brand in PaintLand? Write to {email}',
+  'brand.visit': 'E · Visit {name}',
+  'brand.advertise': 'Advertise here',
+  'set.analytics': 'Share anonymous play statistics',
 } as const;
 
 export default en;
