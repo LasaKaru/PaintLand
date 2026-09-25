@@ -271,8 +271,9 @@ export class Hub implements FreeRoamArea {
     const rnd = this.rnd;
     // Painted gateways to each chapter at the ends of the avenues.
     const gates: [number, number, number][] = [[0, -108, 0], [-108, 0, Math.PI / 2], [108, 0, -Math.PI / 2]];
-    CHAPTERS.forEach((ch, i) => {
-      const [x, z, yaw] = gates[i % gates.length];
+    // Chapter 4's gate stands in Lantern Village (Hub 3).
+    CHAPTERS.slice(0, gates.length).forEach((ch, i) => {
+      const [x, z, yaw] = gates[i];
       const colour = ['#e8559a', '#f08a2e', '#3e9fd8'][i % 3];
       const gate = new ModelKit();
       for (const s of [-1, 1]) {

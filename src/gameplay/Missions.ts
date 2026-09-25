@@ -43,6 +43,13 @@ export const MISSIONS: MissionDef[] = [
   { id: 'w-machu', chapter: 'wonders', title: 'Llama Lookout', giver: g('Quilla', 3, 20, -1, { top: '#f08a2e', hat: 'beanie', back: 'backpack' }), text: 'Walk up to the citadel on foot and say hello to the llamas.', kind: 'visit', district: 3, reward: { ink: 140 } },
   { id: 'w-rio', chapter: 'wonders', title: 'Arms Wide Open', giver: g('Joana', 4, 20, 1, { top: '#4f9a5a', bottomStyle: 'shorts', hat: 'sunhat' }), text: 'Launch a 2-second hop somewhere in Rio. Fly like the statue!', kind: 'air', time: 2, reward: { ink: 170, item: 'vehicle:buggy' } },
   { id: 'w-petra', chapter: 'wonders', title: 'The Treasury Run', giver: g('Omar', 6, 20, -1, { top: '#c8955a', topStyle: 'shirt', hat: 'none' }), text: 'Race me through the Siq and past the Treasury!', kind: 'race', district: 6, reward: { ink: 250, item: 'vehicle:van' } },
+  // ——— Chapter 4 · Lantern Roads ———
+  { id: 'l-fox', chapter: 'lanterns', title: 'Fox Messenger', giver: g('Priestess Aiko', 0, 30, 1, { top: '#f6f0e4', topStyle: 'dress', bottom: '#d8463a', hair: '#2b2622', hairStyle: 'bun' }), text: 'Carry this prayer through all the gates and into the bamboo grove in 35 seconds.', kind: 'deliver', district: 1, time: 35, reward: { ink: 170 } },
+  { id: 'l-bamboo', chapter: 'lanterns', title: 'Whispering Canes', giver: g('Flautist Ren', 1, 30, -1, { top: '#5c9a32', hat: 'straw' }), text: 'The grove hums a tune. Collect 20 of its notes in one lap.', kind: 'notes', district: 1, count: 20, reward: { ink: 150 } },
+  { id: 'l-halong', chapter: 'lanterns', title: 'Dragon’s Back', giver: g('Captain Linh', 2, 40, 1, { top: '#3e6fa8', topStyle: 'shirt', hat: 'cap' }), text: 'Race my junk across the bay — beat me to Hội An!', kind: 'race', district: 2, reward: { ink: 240, item: 'glow:pink' } },
+  { id: 'l-lanterns', chapter: 'lanterns', title: 'Light the Street', giver: g('Lantern-maker Mai', 3, 30, -1, { top: '#f4a13b', topStyle: 'dress', hat: 'sunhat' }), text: 'Seal 4 phrases between the lantern street and the mountains.', kind: 'seal', count: 4, reward: { ink: 160, item: 'hat:flowers' } },
+  { id: 'l-pass', chapter: 'lanterns', title: 'Over the Pass', giver: g('Sherpa Dawa', 4, 20, 1, { top: '#d8463a', hat: 'beanie', back: 'backpack' }), text: 'Climb the Himalayan switchbacks in under 40 seconds.', kind: 'split', district: 4, time: 40, reward: { ink: 200 } },
+  { id: 'l-wave', chapter: 'lanterns', title: 'Ride the Curl', giver: g('Surfer Kai', 5, 20, -1, { top: '#3e86c9', bottomStyle: 'shorts', glasses: 'sun' }), text: 'Boost for 4 seconds in total while riding the Great Wave.', kind: 'boost', district: 5, time: 4, reward: { ink: 220, item: 'glow:green' } },
 ];
 
 export function missionsFor(chapter: string): MissionDef[] {

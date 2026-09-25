@@ -10,7 +10,9 @@ export type DressStyle =
   // Chapter 2 · Serendib (Sri Lanka)
   | 'galleface' | 'lotus' | 'sigiriya' | 'tea' | 'ninearch' | 'beach'
   // Chapter 3 · Wonders of the Sketchbook
-  | 'greatwall' | 'colosseum' | 'taj' | 'machupicchu' | 'redeemer' | 'chichen' | 'petra';
+  | 'greatwall' | 'colosseum' | 'taj' | 'machupicchu' | 'redeemer' | 'chichen' | 'petra'
+  // Chapter 4 · Lantern Roads
+  | 'torii' | 'bamboo' | 'halong' | 'lanterntown' | 'himalaya' | 'greatwave' | 'fuji';
 export type ScaleName = 'major' | 'minor';
 
 export interface DistrictDef {
