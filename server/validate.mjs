@@ -89,3 +89,31 @@ export function clientIp(req, trustProxy = process.env.TRUST_PROXY === '1') {
   const list = (Array.isArray(header) ? header.join(',') : header ?? '').split(',').map((s) => s.trim()).filter(Boolean);
   return list.at(-1)?.slice(0, 64) ?? direct;
 }
+
+/**
+ * A voice chat signalling message, rebuilt from known fields only, or null.
+ * 'hi' / 'bye' announce voice to the room; 'offer' / 'answer' / 'ice' go to
+ * one peer (`to`).
+ * @param {any} msg
+ */
+export function checkRtc(msg) {
+  if (!msg || typeof msg !== 'object') return null;
+  const a = msg.a;
+  const to = typeof msg.to === 'string' && /^[a-z0-9]{1,16}$/i.test(msg.to) ? msg.to : null;
+  if (a === 'bye') return { t: 'rtc', a };
+  // A hello to the room, or (answering one) to a single player.
+  if (a === 'hi') return to ? { t: 'rtc', a, to } : { t: 'rtc', a };
+  if (!to) return null;
+  if (a === 'offer' || a === 'answer') {
+    if (typeof msg.sdp !== 'string' || msg.sdp.length > 12_000 || !msg.sdp.startsWith('v=0')) return null;
+    return { t: 'rtc', a, to: msg.to, sdp: msg.sdp };
+  }
+  if (a === 'ice') {
+    const c = msg.cand;
+    if (!c || typeof c !== 'object' || typeof c.candidate !== 'string' || c.candidate.length > 600) return null;
+    const mid = typeof c.sdpMid === 'string' ? c.sdpMid.slice(0, 16) : null;
+    const line = Number.isInteger(c.sdpMLineIndex) && c.sdpMLineIndex >= 0 && c.sdpMLineIndex < 16 ? c.sdpMLineIndex : null;
+    return { t: 'rtc', a, to: msg.to, cand: { candidate: c.candidate, sdpMid: mid, sdpMLineIndex: line } };
+  }
+  return null;
+}

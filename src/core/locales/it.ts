@@ -222,5 +222,13 @@ const it: Locale = {
   'rs.w.underwater': 'scende sotto il mare',
   'rs.w.short': 'molto corta',
   'rs.w.long': 'molto lunga',
+  'voice.setting': 'Chat vocale — tieni premuto V per parlare',
+  'voice.privacy': 'La voce ti collega direttamente agli altri giocatori della stanza, quindi possono vedere il tuo indirizzo internet. Attivala solo con persone che conosci. Il microfono si usa solo mentre tieni premuto il tasto per parlare.',
+  'voice.volume': 'Volume voce',
+  'voice.mute': 'Silenzia voce',
+  'voice.unmute': 'Riattiva voce',
+  'voice.talking': 'Stai parlando…',
+  'voice.on': 'Voce attiva · {n} collegati',
+  'voice.denied': 'La chat vocale richiede il microfono — non è stato consentito, quindi la voce è spenta',
 };
 export default it;

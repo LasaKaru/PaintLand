@@ -222,5 +222,13 @@ const id: Locale = {
   'rs.w.underwater': 'masuk ke bawah laut',
   'rs.w.short': 'sangat pendek',
   'rs.w.long': 'sangat panjang',
+  'voice.setting': 'Obrolan suara — tahan V untuk bicara',
+  'voice.privacy': 'Suara menghubungkanmu langsung dengan pemain lain di ruangan, jadi mereka bisa melihat alamat internetmu. Nyalakan hanya dengan orang yang kamu kenal. Mikrofon hanya dipakai saat kamu menahan tombol bicara.',
+  'voice.volume': 'Volume suara',
+  'voice.mute': 'Bisukan suara',
+  'voice.unmute': 'Nyalakan suara',
+  'voice.talking': 'Sedang bicara…',
+  'voice.on': 'Suara aktif · {n} terhubung',
+  'voice.denied': 'Obrolan suara butuh mikrofon — izinnya tidak diberikan, jadi suara dimatikan',
 };
 export default id;

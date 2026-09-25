@@ -665,3 +665,7 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .rs-num input { width: 64px; }
 .rs-move { display: flex; gap: 3px; }
 @media (max-width: 720px) { .rs-grid { grid-template-columns: 1fr; } }
+
+/* Voice chat status pill (bottom centre, above the songbook). */
+.voice-pill { position: absolute; left: 50%; bottom: 126px; transform: translateX(-50%); display: none; padding: 4px 12px; border-radius: 999px; background: var(--paper-2); border: 1.5px solid var(--ink); font: 700 12px var(--mono); pointer-events: none; z-index: 3; }
+.voice-pill.talking { background: var(--lemon); box-shadow: 0 0 0 4px rgba(244, 210, 59, 0.35); }

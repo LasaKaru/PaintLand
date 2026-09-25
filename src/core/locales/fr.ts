@@ -222,5 +222,13 @@ const fr: Locale = {
   'rs.w.underwater': 'plonge sous la mer',
   'rs.w.short': 'très courte',
   'rs.w.long': 'très longue',
+  'voice.setting': 'Chat vocal — maintenez V pour parler',
+  'voice.privacy': 'La voix vous relie directement aux autres joueurs du salon : ils peuvent voir votre adresse internet. Ne l’activez qu’avec des personnes que vous connaissez. Le micro n’est utilisé que lorsque vous maintenez la touche pour parler.',
+  'voice.volume': 'Volume de la voix',
+  'voice.mute': 'Couper la voix',
+  'voice.unmute': 'Rétablir la voix',
+  'voice.talking': 'Vous parlez…',
+  'voice.on': 'Voix active · {n} connecté(s)',
+  'voice.denied': 'Le chat vocal a besoin du micro — il n’a pas été autorisé, la voix est donc coupée',
 };
 export default fr;

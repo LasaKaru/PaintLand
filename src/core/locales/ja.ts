@@ -222,5 +222,13 @@ const ja: Locale = {
   'rs.w.underwater': '海の下に潜ります',
   'rs.w.short': 'とても短い',
   'rs.w.long': 'とても長い',
+  'voice.setting': 'ボイスチャット — V を押している間だけ話せます',
+  'voice.privacy': 'ボイスはこの部屋の他のプレイヤーと直接つながるため、相手にあなたのネット上のアドレスが見えます。知っている人とだけ使ってください。マイクは話すキーを押している間だけ使われます。',
+  'voice.volume': 'ボイスの音量',
+  'voice.mute': 'ボイスをミュート',
+  'voice.unmute': 'ミュート解除',
+  'voice.talking': '話しています…',
+  'voice.on': 'ボイス オン · {n} 人と接続',
+  'voice.denied': 'ボイスチャットにはマイクが必要です — 許可されなかったのでオフにしました',
 };
 export default ja;

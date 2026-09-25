@@ -29,6 +29,8 @@ export class RemotePlayers {
 
   /** Players to hide (the block list). */
   hidden: ((name: string) => boolean) | null = null;
+  /** Is this peer talking on voice chat right now? */
+  speaking: ((id: string) => boolean) | null = null;
 
   constructor(private readonly scene: THREE.Scene, private readonly labels: HTMLElement) {}
 
@@ -68,7 +70,7 @@ export class RemotePlayers {
         av.label.style.left = `${(head.x * 0.5 + 0.5) * window.innerWidth}px`;
         av.label.style.top = `${(-head.y * 0.5 + 0.5) * window.innerHeight}px`;
         const chat = peer.chat && peer.chat.until > performance.now() ? `<div class="bubble">${escapeHtml(peer.chat.text)}</div>` : '';
-        const html = `${chat}<span>${escapeHtml(peer.info.name)}</span>`;
+        const html = `${chat}<span>${this.speaking?.(peer.id) ? '🔊 ' : ''}${escapeHtml(peer.info.name)}</span>`;
         if (av.label.innerHTML !== html) av.label.innerHTML = html;
       }
     }

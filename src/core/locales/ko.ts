@@ -222,5 +222,13 @@ const ko: Locale = {
   'rs.w.underwater': '바다 아래로 내려가요',
   'rs.w.short': '너무 짧아요',
   'rs.w.long': '너무 길어요',
+  'voice.setting': '음성 채팅 — 말하려면 V를 누르고 있으세요',
+  'voice.privacy': '음성은 방 안의 다른 플레이어와 직접 연결되므로 상대가 내 인터넷 주소를 볼 수 있어요. 아는 사람과만 켜세요. 마이크는 말하기 키를 누르고 있을 때만 쓰여요.',
+  'voice.volume': '음성 볼륨',
+  'voice.mute': '음성 음소거',
+  'voice.unmute': '음소거 해제',
+  'voice.talking': '말하는 중…',
+  'voice.on': '음성 켜짐 · {n}명 연결',
+  'voice.denied': '음성 채팅에는 마이크가 필요해요 — 허용되지 않아 음성을 껐어요',
 };
 export default ko;

@@ -22,7 +22,7 @@ import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
-import { LIMITS, Strikes, cleanText, clientIp, validateState } from './validate.mjs';
+import { LIMITS, Strikes, checkRtc, cleanText, clientIp, validateState } from './validate.mjs';
 import { createAdmin } from './admin.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
@@ -31,7 +31,9 @@ const MAX_MESSAGE = 4096;
 /** Race finishes carry the recorded inputs (4 bytes a step) for re-simulation. */
 const MAX_RACE_MESSAGE = 96_000;
 const MAX_RATE = 40; // messages per second per client
-const ALLOWED = new Set(['hello', 'state', 'chat', 'emote', 'bye', 'race']);
+const ALLOWED = new Set(['hello', 'state', 'chat', 'emote', 'bye', 'race', 'rtc']);
+/** Voice chat signalling (WebRTC offers carry SDP, a few KB). */
+const MAX_RTC_MESSAGE = 16_000;
 
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const rooms = new Map();
@@ -159,6 +161,7 @@ wss.on('connection', (socket, req) => {
     return;
   }
   const id = randomUUID().slice(0, 8);
+  socket.pid = id;
   members.add(socket);
   socket.send(JSON.stringify({ t: 'welcome', id, room, peers: members.size - 1 }));
 
@@ -190,7 +193,18 @@ wss.on('connection', (socket, req) => {
       return;
     }
     if (!msg || typeof msg !== 'object' || !ALLOWED.has(msg.t)) return strike('unknown message');
-    if (String(raw).length > MAX_MESSAGE && !(msg.t === 'race' && msg.a === 'finish')) return strike('message too big');
+    const size = String(raw).length;
+    if (size > MAX_MESSAGE && !(msg.t === 'race' && msg.a === 'finish') && !(msg.t === 'rtc' && size <= MAX_RTC_MESSAGE)) return strike('message too big');
+    if (msg.t === 'rtc') {
+      // Voice chat signalling: only the known fields, and offers/answers/candidates
+      // go to the one player they are for — never broadcast.
+      const out = checkRtc(msg);
+      if (!out) return strike('bad rtc');
+      out.id = id;
+      const text = JSON.stringify(out);
+      for (const peer of members) if (peer !== socket && peer.readyState === 1 && (!out.to || peer.pid === out.to)) peer.send(text);
+      return;
+    }
     if (msg.t === 'race') {
       if (typeof msg.race !== 'string' || msg.race.length > 40) return strike('bad race');
       if (msg.a === 'start') {

@@ -1,4 +1,4 @@
-import { cleanText, validateState } from '../../server/validate.mjs';
+import { checkRtc, cleanText, validateState, type RtcMessage } from '../../server/validate.mjs';
 import type { TrialRun } from '../gameplay/TrialSim';
 import type { HumanLook } from '../models/Human';
 import type { VehicleId, VehicleLook } from '../models/Vehicles';
@@ -30,6 +30,7 @@ export type NetMessage =
   | { t: 'chat'; id: string; text: string }
   | { t: 'emote'; id: string; emote: string }
   | { t: 'bye'; id: string }
+  | (RtcMessage & { id: string })
   | RaceMessage;
 
 /** Live races (docs/09 §1): start, finish (with inputs for server re-simulation), verdict. */
@@ -144,6 +145,10 @@ export class NetClient {
   /** Race messages from other players (and the server's verdict on ours). */
   onRace: ((msg: RaceMessage, fromName: string | null) => void) | null = null;
   onPeersChanged: (() => void) | null = null;
+  /** Voice chat signalling from a peer (already checked). */
+  onRtc: ((from: string, msg: RtcMessage) => void) | null = null;
+  /** Our id as the other players see it (the relay's, or ours in tab rooms). */
+  selfId = this.id;
 
   get connected(): boolean {
     return this.transport !== null;
@@ -162,6 +167,7 @@ export class NetClient {
   disconnect(): void {
     this.transport?.close();
     this.transport = null;
+    this.selfId = this.id;
     this.peers.clear();
     this.status = 'offline';
     this.onPeersChanged?.();
@@ -175,12 +181,17 @@ export class NetClient {
     this.transport?.send(msg);
   }
 
+  sendRtc(msg: RtcMessage): void {
+    this.transport?.send(msg);
+  }
+
   chat(text: string): void {
     this.transport?.send({ t: 'chat', text: text.slice(0, 120) });
   }
 
   private receive(m: NetMessage, info: PlayerInfo): void {
     if (m.t === 'welcome') {
+      this.selfId = m.id;
       this.sendHello(info);
       return;
     }
@@ -231,6 +242,12 @@ export class NetClient {
         if (m.a === 'start' && (typeof m.chapter !== 'string' || typeof m.delay !== 'number')) break;
         this.onRace?.(m, peer.info?.name ?? null);
         break;
+      case 'rtc': {
+        const msg = checkRtc(m);
+        // Tab rooms have no relay to route: skip messages meant for someone else.
+        if (msg && (!('to' in msg) || msg.to === this.selfId)) this.onRtc?.(pid, msg);
+        break;
+      }
       case 'bye':
         this.peers.delete(m.id);
         this.onPeersChanged?.();

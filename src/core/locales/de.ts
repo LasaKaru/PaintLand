@@ -222,5 +222,13 @@ const de: Locale = {
   'rs.w.underwater': 'taucht unter das Meer',
   'rs.w.short': 'sehr kurz',
   'rs.w.long': 'sehr lang',
+  'voice.setting': 'Sprachchat — V gedrückt halten zum Sprechen',
+  'voice.privacy': 'Sprachchat verbindet dich direkt mit den anderen im Raum, daher können sie deine Internetadresse sehen. Schalte ihn nur mit Leuten ein, die du kennst. Dein Mikrofon wird nur benutzt, solange du die Sprechtaste hältst.',
+  'voice.volume': 'Sprachlautstärke',
+  'voice.mute': 'Stumm schalten',
+  'voice.unmute': 'Stumm aufheben',
+  'voice.talking': 'Du sprichst…',
+  'voice.on': 'Sprachchat an · {n} verbunden',
+  'voice.denied': 'Sprachchat braucht das Mikrofon — es wurde nicht erlaubt, deshalb ist er aus',
 };
 export default de;

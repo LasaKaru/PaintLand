@@ -200,3 +200,29 @@ describe('Road Studio (creator tool v1)', async () => {
     expect(C.roadStats(deep).warnings).toContain('underwater');
   });
 });
+
+describe('Voice chat signalling', async () => {
+  const { checkRtc } = await import('../server/validate.mjs');
+  it('keeps only known fields and routes offers to one player', () => {
+    expect(checkRtc({ t: 'rtc', a: 'hi', evil: 1 })).toEqual({ t: 'rtc', a: 'hi' });
+    expect(checkRtc({ t: 'rtc', a: 'hi', to: 'abc123' })).toEqual({ t: 'rtc', a: 'hi', to: 'abc123' });
+    expect(checkRtc({ t: 'rtc', a: 'offer', to: 'abc123', sdp: 'v=0\r\no=- 1 2 IN IP4 127.0.0.1', x: 'y' })).toEqual({ t: 'rtc', a: 'offer', to: 'abc123', sdp: 'v=0\r\no=- 1 2 IN IP4 127.0.0.1' });
+    expect(checkRtc({ t: 'rtc', a: 'ice', to: 'abc', cand: { candidate: 'candidate:1 1 udp 1 127.0.0.1 5000 typ host', sdpMid: '0', sdpMLineIndex: 0, junk: 1 } })).toEqual({
+      t: 'rtc', a: 'ice', to: 'abc', cand: { candidate: 'candidate:1 1 udp 1 127.0.0.1 5000 typ host', sdpMid: '0', sdpMLineIndex: 0 },
+    });
+  });
+
+  it('rejects anything else', () => {
+    for (const bad of [
+      null,
+      { t: 'rtc', a: 'dance' },
+      { t: 'rtc', a: 'offer', sdp: 'v=0' }, // no target
+      { t: 'rtc', a: 'offer', to: 'a b', sdp: 'v=0' },
+      { t: 'rtc', a: 'offer', to: 'abc', sdp: '<script>' },
+      { t: 'rtc', a: 'answer', to: 'abc', sdp: 'v=0' + 'x'.repeat(13000) },
+      { t: 'rtc', a: 'ice', to: 'abc', cand: { candidate: 'x'.repeat(700) } },
+      { t: 'rtc', a: 'ice', to: 'abc', cand: 'nope' },
+    ])
+      expect(checkRtc(bad)).toBeNull();
+  });
+});

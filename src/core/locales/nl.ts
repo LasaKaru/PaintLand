@@ -222,5 +222,13 @@ const nl: Locale = {
   'rs.w.underwater': 'duikt onder de zee',
   'rs.w.short': 'erg kort',
   'rs.w.long': 'erg lang',
+  'voice.setting': 'Spraakchat — houd V ingedrukt om te praten',
+  'voice.privacy': 'Spraak verbindt je rechtstreeks met de andere spelers in de kamer, dus zij kunnen je internetadres zien. Zet het alleen aan met mensen die je kent. Je microfoon wordt alleen gebruikt zolang je de praattoets vasthoudt.',
+  'voice.volume': 'Spraakvolume',
+  'voice.mute': 'Dempen',
+  'voice.unmute': 'Dempen opheffen',
+  'voice.talking': 'Je praat…',
+  'voice.on': 'Spraak aan · {n} verbonden',
+  'voice.denied': 'Spraakchat heeft de microfoon nodig — die werd niet toegestaan, dus spraak staat uit',
 };
 export default nl;

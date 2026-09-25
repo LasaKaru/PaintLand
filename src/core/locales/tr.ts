@@ -222,5 +222,13 @@ const tr: Locale = {
   'rs.w.underwater': 'denizin altına iniyor',
   'rs.w.short': 'çok kısa',
   'rs.w.long': 'çok uzun',
+  'voice.setting': 'Sesli sohbet — konuşmak için V’ye basılı tut',
+  'voice.privacy': 'Ses seni odadaki diğer oyunculara doğrudan bağlar, bu yüzden internet adresini görebilirler. Yalnızca tanıdığın kişilerle aç. Mikrofon yalnızca konuşma tuşunu basılı tutarken kullanılır.',
+  'voice.volume': 'Ses düzeyi',
+  'voice.mute': 'Sesi kapat',
+  'voice.unmute': 'Sesi aç',
+  'voice.talking': 'Konuşuyorsun…',
+  'voice.on': 'Ses açık · {n} bağlı',
+  'voice.denied': 'Sesli sohbet için mikrofon gerekli — izin verilmedi, bu yüzden ses kapalı',
 };
 export default tr;

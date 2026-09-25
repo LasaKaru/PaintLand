@@ -222,5 +222,13 @@ const zh: Locale = {
   'rs.w.underwater': '会没入海中',
   'rs.w.short': '非常短',
   'rs.w.long': '非常长',
+  'voice.setting': '语音聊天 — 按住 V 说话',
+  'voice.privacy': '语音会让你直接连接到房间里的其他玩家，他们可以看到你的网络地址。只和认识的人一起开启。只有按住说话键时才会使用麦克风。',
+  'voice.volume': '语音音量',
+  'voice.mute': '静音',
+  'voice.unmute': '取消静音',
+  'voice.talking': '正在说话…',
+  'voice.on': '语音已开 · 已连接 {n} 人',
+  'voice.denied': '语音聊天需要麦克风——未获允许，语音已关闭',
 };
 export default zh;

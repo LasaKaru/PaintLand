@@ -104,10 +104,15 @@ app.whenReady().then(() => {
     return new Response(res.body, { status: 200, headers });
   });
 
-  // Only what a game needs: pointer lock, fullscreen, gamepad, copying invite links.
+  // Only what a game needs: pointer lock, fullscreen, gamepad, copying invite links,
+  // and the microphone (never the camera) for push-to-talk voice chat.
   const allowed = new Set(['pointerLock', 'fullscreen', 'clipboard-sanitized-write']);
-  ses.setPermissionRequestHandler((_wc, permission, cb) => cb(allowed.has(permission)));
-  ses.setPermissionCheckHandler((_wc, permission) => allowed.has(permission));
+  const audioOnly = (details) => {
+    const types = details?.mediaTypes ?? [];
+    return types.length > 0 && types.every((t) => t === 'audio');
+  };
+  ses.setPermissionRequestHandler((_wc, permission, cb, details) => cb(allowed.has(permission) || (permission === 'media' && audioOnly(details))));
+  ses.setPermissionCheckHandler((_wc, permission, _origin, details) => allowed.has(permission) || (permission === 'media' && details?.mediaType === 'audio'));
 
   createWindow();
   app.on('activate', () => {

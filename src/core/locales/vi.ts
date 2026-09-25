@@ -222,5 +222,13 @@ const vi: Locale = {
   'rs.w.underwater': 'chìm xuống biển',
   'rs.w.short': 'rất ngắn',
   'rs.w.long': 'rất dài',
+  'voice.setting': 'Trò chuyện thoại — giữ V để nói',
+  'voice.privacy': 'Thoại kết nối bạn trực tiếp với những người chơi khác trong phòng, nên họ có thể thấy địa chỉ mạng của bạn. Chỉ bật với người bạn quen. Micro chỉ được dùng khi bạn giữ phím nói.',
+  'voice.volume': 'Âm lượng thoại',
+  'voice.mute': 'Tắt tiếng',
+  'voice.unmute': 'Bật tiếng',
+  'voice.talking': 'Đang nói…',
+  'voice.on': 'Thoại bật · {n} kết nối',
+  'voice.denied': 'Trò chuyện thoại cần micro — chưa được cho phép nên thoại đã tắt',
 };
 export default vi;

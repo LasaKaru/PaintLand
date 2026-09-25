@@ -222,5 +222,13 @@ const sw: Locale = {
   'rs.w.underwater': 'inazama chini ya bahari',
   'rs.w.short': 'fupi sana',
   'rs.w.long': 'ndefu sana',
+  'voice.setting': 'Gumzo la sauti — shikilia V kuongea',
+  'voice.privacy': 'Sauti inakuunganisha moja kwa moja na wachezaji wengine chumbani, hivyo wanaweza kuona anwani yako ya intaneti. Iwashe tu na watu unaowajua. Maikrofoni inatumika tu unaposhikilia kitufe cha kuongea.',
+  'voice.volume': 'Sauti ya gumzo',
+  'voice.mute': 'Nyamazisha sauti',
+  'voice.unmute': 'Rudisha sauti',
+  'voice.talking': 'Unaongea…',
+  'voice.on': 'Sauti imewashwa · {n} wameunganishwa',
+  'voice.denied': 'Gumzo la sauti linahitaji maikrofoni — haikuruhusiwa, kwa hiyo sauti imezimwa',
 };
 export default sw;

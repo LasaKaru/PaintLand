@@ -222,5 +222,13 @@ const pl: Locale = {
   'rs.w.underwater': 'schodzi pod morze',
   'rs.w.short': 'bardzo krótka',
   'rs.w.long': 'bardzo długa',
+  'voice.setting': 'Czat głosowy — przytrzymaj V, aby mówić',
+  'voice.privacy': 'Głos łączy cię bezpośrednio z innymi graczami w pokoju, więc widzą twój adres internetowy. Włączaj go tylko ze znajomymi. Mikrofon działa tylko wtedy, gdy trzymasz klawisz mówienia.',
+  'voice.volume': 'Głośność głosu',
+  'voice.mute': 'Wycisz',
+  'voice.unmute': 'Wyłącz wyciszenie',
+  'voice.talking': 'Mówisz…',
+  'voice.on': 'Głos włączony · połączeni: {n}',
+  'voice.denied': 'Czat głosowy potrzebuje mikrofonu — nie udzielono zgody, więc głos jest wyłączony',
 };
 export default pl;

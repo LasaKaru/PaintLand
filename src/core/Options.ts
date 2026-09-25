@@ -33,6 +33,9 @@ export interface GameOptions {
   chat: 'filtered' | 'on' | 'off';
   /** Player names whose chat and avatar are hidden. */
   blocked: string[];
+  /** Push-to-talk voice chat with the other players in the room (off until chosen). */
+  voice: boolean;
+  voiceVolume: number;
   /** Show the minimap in free roam. */
   minimap: boolean;
   /** Send anonymous play statistics to the game's owner. */
@@ -60,6 +63,8 @@ export const DEFAULT_OPTIONS: GameOptions = {
   showGhost: true,
   chat: 'filtered',
   blocked: [],
+  voice: false,
+  voiceVolume: 1,
   minimap: true,
   analytics: true,
 };

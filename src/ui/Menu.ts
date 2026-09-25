@@ -35,6 +35,8 @@ export interface MenuHost {
   profile: Profile;
   runBenchmark(done: (r: BenchmarkResult) => void): void;
   testRoad(road: CustomRoad): void;
+  voiceMuted(name: string): boolean;
+  toggleVoiceMute(name: string): void;
   chapters: ChapterDef[];
   currentChapter(): ChapterDef;
   missions(): MissionDef[];
@@ -483,10 +485,15 @@ export class Menu {
       ${n.players.length ? `<div class="field">${n.players
         .map((name) => {
           const blocked = this.host.options().blocked.includes(name);
-          return `<div class="player-row"><span>${blocked ? '🚫 ' : '🎨 '}${escapeHtml(name)}</span><button class="btn small" data-action="block" data-name="${escapeHtml(name)}">${blocked ? t('mp.unblock') : t('mp.block')}</button></div>`;
+          const muted = this.host.voiceMuted(name);
+          const voiceBtn = this.host.options().voice && !blocked ? `<button class="btn small" data-action="voice-mute" data-name="${escapeHtml(name)}" aria-pressed="${muted}">${muted ? `🔈 ${t('voice.unmute')}` : `🔇 ${t('voice.mute')}`}</button>` : '';
+          return `<div class="player-row"><span>${blocked ? '🚫 ' : '🎨 '}${escapeHtml(name)}</span>${voiceBtn}<button class="btn small" data-action="block" data-name="${escapeHtml(name)}">${blocked ? t('mp.unblock') : t('mp.block')}</button></div>`;
         })
         .join('')}</div>` : ''}
       ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
+      ${this.toggle('o.voice', t('voice.setting'))}
+      <p class="menu-hint">${t('voice.privacy')}</p>
+      ${this.host.options().voice ? this.slider('o.voiceVolume', t('voice.volume'), 0, 1, 0.05, (v) => `${Math.round(v * 100)}%`) : ''}
       <p class="menu-hint">Online play needs the relay running: <code>npm run server</code>. In game, press <kbd>Enter</kbd> to chat and <kbd>G</kbd> to wave.</p>
     </div>`;
   }
@@ -948,6 +955,10 @@ export class Menu {
         setTimeout(() => this.render(), 400);
         break;
       }
+      case 'voice-mute':
+        this.host.toggleVoiceMute(d.name ?? '');
+        this.render();
+        break;
       case 'block': {
         const o = this.host.options();
         const name = d.name ?? '';

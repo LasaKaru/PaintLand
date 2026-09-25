@@ -32,6 +32,7 @@ import { GhostPlayer, GhostRecorder, loadGhost, saveGhost } from '../gameplay/Gh
 import { checkTrophies } from '../gameplay/Trophies';
 import { Wildlife } from '../world/Wildlife';
 import { Village } from '../world/Village';
+import { Voice } from '../net/Voice';
 import { BENCH_MEASURE, BENCH_SPOTS, BENCH_WARMUP, scoreBenchmark, type BenchmarkResult } from '../render/Benchmark';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
 import { City } from '../world/City';
@@ -87,6 +88,13 @@ const INTRO: Shot[] = [
  * Menus, the intro and the live cinematic all run on the same world.
  */
 export class Game {
+  private readonly voice = new Voice({
+    selfId: () => this.net.selfId,
+    send: (msg) => this.net.sendRtc(msg),
+    nameOf: (id) => this.net.peers.get(id)?.info?.name,
+    isBlocked: (name) => this.options.blocked.includes(name),
+  });
+  private readonly voicePill: HTMLDivElement;
   private customKey = 'custom';
   private bench: { spot: number; t: number; frames: number[]; snapshot: StudioSettings; done: (r: BenchmarkResult) => void } | null = null;
   private readonly renderer: THREE.WebGLRenderer;
@@ -253,8 +261,18 @@ export class Game {
       vehicleChanged: () => this.buildPawnModels(),
       showcase: (t) => this.setShowcase(t),
       netStatus: () => ({ status: this.net.status, room: this.net.room, players: [...this.net.peers.values()].map((p) => p.info?.name ?? '…') }),
-      netConnect: (room, server) => this.net.connect(room, server, this.playerInfo()),
-      netDisconnect: () => this.net.disconnect(),
+      netConnect: (room, server) => {
+        this.net.connect(room, server, this.playerInfo());
+        void this.syncVoice();
+      },
+      netDisconnect: () => {
+        this.voice.disable();
+        this.net.disconnect();
+      },
+      voiceMuted: (name) => [...this.net.peers.values()].some((p) => p.info?.name === name && this.voice.muted.has(p.id)),
+      toggleVoiceMute: (name) => {
+        for (const p of this.net.peers.values()) if (p.info?.name === name) this.voice.setMuted(p.id, !this.voice.muted.has(p.id));
+      },
       openStudio: () => this.studio.toggle(),
       openControls: () => this.hud.show('screenHelp', true),
       watchIntro: () => this.startIntro(),
@@ -283,6 +301,12 @@ export class Game {
     this.admin = new AdminPanel(container);
     this.net.onChat = (name, text) => this.incomingChat(name, text);
     this.remotes.hidden = (name) => this.options.blocked.includes(name);
+    this.remotes.speaking = (id) => this.voice.speaking(id);
+    this.net.onRtc = (from, msg) => void this.voice.onMessage(from, msg).catch(() => this.voice.drop(from));
+    this.voicePill = document.createElement('div');
+    this.voicePill.className = 'voice-pill';
+    this.voicePill.setAttribute('role', 'status');
+    container.appendChild(this.voicePill);
     this.mapView = new MapView(container);
     this.mapView.onTravel = (id) => this.fastTravel(id);
     this.mapView.onClose = () => this.closeMap();
@@ -502,6 +526,39 @@ export class Game {
     this.pipeline.colourBlind = ['none', 'protan', 'deutan', 'tritan'].indexOf(o.colourBlind);
   }
 
+  /** Voice chat follows the setting while connected; if the microphone is refused, the setting turns off. */
+  private async syncVoice(): Promise<void> {
+    this.voice.setVolume(this.options.voiceVolume);
+    if (this.options.voice && this.net.connected && !this.voice.enabled) {
+      const ok = await this.voice.enable();
+      if (!ok) {
+        this.options.voice = false;
+        saveOptions(this.options);
+        this.menu.toast(t('voice.denied'));
+      }
+    } else if ((!this.options.voice || !this.net.connected) && this.voice.enabled) this.voice.disable();
+  }
+
+  /** Per frame: push-to-talk, level meters, hang up on players who left or were blocked. */
+  private updateVoice(): void {
+    const v = this.voice;
+    if (!v.enabled) {
+      this.voicePill.style.display = 'none';
+      return;
+    }
+    const typing = document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement;
+    v.setTalking(this.input.held('talk') && !typing && (this.state === 'play' || this.state === 'hub'));
+    v.update();
+    v.prune((id) => {
+      const name = this.net.peers.get(id)?.info?.name;
+      return this.net.peers.has(id) && !(name && this.options.blocked.includes(name));
+    });
+    const text = v.talking ? `🎙 ${t('voice.talking')}` : `🎧 ${t('voice.on', { n: v.connectedCount() })}`;
+    if (this.voicePill.textContent !== text) this.voicePill.textContent = text;
+    this.voicePill.classList.toggle('talking', v.talking);
+    this.voicePill.style.display = this.state === 'play' || this.state === 'hub' ? 'block' : 'none';
+  }
+
   /** Best laps and ghosts are kept per chapter, and per road for Road Studio roads. */
   private lapKey(): string {
     return this.world.chapter.id === 'custom' ? this.customKey : this.world.chapter.id;
@@ -562,6 +619,7 @@ export class Game {
   private settingsChanged(): void {
     saveStudio(this.settings);
     saveOptions(this.options);
+    void this.syncVoice();
     this.applySettings();
     this.studio?.refresh();
   }
@@ -1175,6 +1233,7 @@ export class Game {
     this.time += dt;
     // The benchmark times real frames (dt is capped for the simulation).
     if (this.bench) this.benchStep(Math.min(1, rawDt));
+    this.updateVoice();
     this.renderer.info.reset();
     this.input.poll();
     this.handleGlobalInput(dt);

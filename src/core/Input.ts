@@ -14,7 +14,7 @@ export type ActionName =
   | 'radio' | 'nextSong' | 'band'
   | 'respawn' | 'pause' | 'studio' | 'photo' | 'hud'
   | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather'
-  | 'drink' | 'cycleTonic' | 'emote' | 'chat'
+  | 'drink' | 'cycleTonic' | 'emote' | 'chat' | 'talk'
   | 'shiftUp' | 'shiftDown' | 'map';
 
 export type Bindings = Record<ActionName, string[]>;
@@ -31,7 +31,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   sprint: ['ShiftLeft', 'ShiftRight'],
   crouch: ['ControlLeft', 'ControlRight'],
   interact: ['KeyF', 'KeyE'],
-  camera: ['KeyC', 'KeyV'],
+  camera: ['KeyC'],
   zoomIn: [],
   zoomOut: [],
   fovDown: ['BracketLeft'],
@@ -58,6 +58,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   emote: ['KeyG'],
   map: ['KeyM'],
   chat: ['Enter'],
+  talk: ['KeyV'],
   shiftUp: ['Period'],
   shiftDown: ['Comma'],
 };
@@ -79,6 +80,7 @@ export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' 
   { action: 'crouch', label: 'Walk slowly', group: 'On foot' },
   { action: 'interact', label: 'Get in / out · talk', group: 'On foot' },
   { action: 'emote', label: 'Wave', group: 'On foot' },
+  { action: 'talk', label: 'Push to talk (voice chat)', group: 'Game' },
   { action: 'camera', label: 'Change camera', group: 'Camera' },
   { action: 'fovDown', label: 'Narrower view', group: 'Camera' },
   { action: 'fovUp', label: 'Wider view', group: 'Camera' },
@@ -378,7 +380,12 @@ function loadBindings(): Bindings {
   const result = structuredClone(DEFAULT_BINDINGS);
   try {
     const saved = localStorage.getItem(STORAGE_KEY);
-    if (saved) Object.assign(result, JSON.parse(saved) as Partial<Bindings>);
+    if (saved) {
+      const parsed = JSON.parse(saved) as Partial<Bindings>;
+      // Saves from before voice chat had V on the camera; V is push-to-talk now.
+      if (!parsed.talk && parsed.camera) parsed.camera = parsed.camera.filter((c) => c !== 'KeyV');
+      Object.assign(result, parsed);
+    }
   } catch {
     /* ignore corrupt or blocked storage */
   }
