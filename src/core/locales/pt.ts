@@ -183,5 +183,10 @@ const pt: Locale = {
   'wr.mouth': "Boca",
   'wr.details': "Detalhes do rosto",
   'wr.acc': "Acessórios",
+  'bench.run': "Executar teste de desempenho (15 s)",
+  'bench.adaptive': "Quando a resolução já está baixa e os quadros continuam lentos, os efeitos descem um a um (raios de sol, oclusão ambiente, brilho, sombras, distância de visão) e voltam quando houver folga.",
+  'bench.result': "Média {avg} fps · quadros mais lentos {low} fps",
+  'bench.recommend': "Recomendado: {level}",
+  'bench.apply': "Usar",
 };
 export default pt;

@@ -183,5 +183,10 @@ const ko: Locale = {
   'wr.mouth': "입",
   'wr.details': "얼굴 꾸미기",
   'wr.acc': "액세서리",
+  'bench.run': "벤치마크 실행 (15초)",
+  'bench.adaptive': "해상도가 이미 낮은데도 프레임이 느리면 효과를 하나씩 줄이고(빛줄기, 앰비언트 오클루전, 블룸, 그림자, 시야 거리) 여유가 생기면 다시 켭니다.",
+  'bench.result': "평균 {avg} fps · 가장 느린 프레임 {low} fps",
+  'bench.recommend': "추천: {level}",
+  'bench.apply': "적용",
 };
 export default ko;

@@ -183,5 +183,10 @@ const ja: Locale = {
   'wr.mouth': "口",
   'wr.details': "顔のディテール",
   'wr.acc': "アクセサリー",
+  'bench.run': "ベンチマークを実行（15秒）",
+  'bench.adaptive': "解像度がすでに下限でもフレームが遅い場合、エフェクトを一つずつ下げ（光芒、アンビエントオクルージョン、ブルーム、影、描画距離）、余裕ができると元に戻します。",
+  'bench.result': "平均 {avg} fps · 最も遅いフレーム {low} fps",
+  'bench.recommend': "おすすめ：{level}",
+  'bench.apply': "これにする",
 };
 export default ja;

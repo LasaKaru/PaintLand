@@ -183,5 +183,10 @@ const zh: Locale = {
   'wr.mouth': "嘴巴",
   'wr.details': "面部细节",
   'wr.acc': "配饰",
+  'bench.run': "运行性能测试（15 秒）",
+  'bench.adaptive': "当分辨率已经很低而帧率仍然偏慢时，特效会逐一降低（光束、环境光遮蔽、泛光、阴影、视距），性能有余时再恢复。",
+  'bench.result': "平均 {avg} fps · 最慢帧 {low} fps",
+  'bench.recommend': "推荐：{level}",
+  'bench.apply': "使用此设置",
 };
 export default zh;

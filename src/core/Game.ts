@@ -31,6 +31,7 @@ import { GhostPlayer, GhostRecorder, loadGhost, saveGhost } from '../gameplay/Gh
 import { checkTrophies } from '../gameplay/Trophies';
 import { Wildlife } from '../world/Wildlife';
 import { Village } from '../world/Village';
+import { BENCH_MEASURE, BENCH_SPOTS, BENCH_WARMUP, scoreBenchmark, type BenchmarkResult } from '../render/Benchmark';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
 import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
@@ -85,6 +86,7 @@ const INTRO: Shot[] = [
  * Menus, the intro and the live cinematic all run on the same world.
  */
 export class Game {
+  private bench: { spot: number; t: number; frames: number[]; snapshot: StudioSettings; done: (r: BenchmarkResult) => void } | null = null;
   private readonly renderer: THREE.WebGLRenderer;
   private readonly scene = new THREE.Scene();
   private readonly settings: StudioSettings = loadStudio();
@@ -208,6 +210,7 @@ export class Game {
     this.renderer.info.autoReset = false;
     container.appendChild(this.renderer.domElement);
     this.pipeline = new PaintPipeline(this.renderer, this.settings);
+    this.pipeline.onAdapt = () => this.applySettings();
     this.input = new Input(this.renderer.domElement);
     // The browser can drop the GPU context (driver reset, tab in the background on phones).
     this.renderer.domElement.addEventListener('webglcontextlost', (e) => {
@@ -256,6 +259,7 @@ export class Game {
       enterHub: () => this.enterHub(undefined, 'harbour'),
       enterCity: () => this.enterHub(undefined, 'city'),
       enterVillage: () => this.enterHub(undefined, 'village'),
+      runBenchmark: (done: (r: BenchmarkResult) => void) => this.runBenchmark(done),
       startCityMission: (id) => this.startCityMission(id),
       cancelCityMission: () => this.freeMissions.cancel(),
       cityMission: () => this.freeMissions.mission?.id ?? null,
@@ -454,13 +458,14 @@ export class Game {
     }
     paintShared.uHatch.value = s.hatching;
     paintShared.uRealism.value = s.realism;
-    this.env?.setShadows(s.shadowQuality, s.shadowDistance, s.softShadows);
+    const shed = this.pipeline?.adaptive.off('shadows') ?? false;
+    this.env?.setShadows(shed ? Math.min(s.shadowQuality, 1) : s.shadowQuality, shed ? Math.min(s.shadowDistance, 55) : s.shadowDistance, s.softShadows && !shed);
     if (this.rig) {
-      this.rig.camera.far = s.drawDistance;
+      this.rig.camera.far = this.drawDistance();
       this.rig.camera.updateProjectionMatrix();
     }
     // The sky dome sits just inside the far plane.
-    this.sky?.scale.setScalar((s.drawDistance * 0.9) / 3000);
+    this.sky?.scale.setScalar((this.drawDistance() * 0.9) / 3000);
     this.audio.musicVolume = s.musicVolume;
     this.audio.noteVolume = s.musicBox;
     this.audio.engineVolume = s.engineHum;
@@ -489,6 +494,47 @@ export class Game {
       this.env.dayMinutes = o.dayMinutes;
     }
     this.pipeline.colourBlind = ['none', 'protan', 'deutan', 'tritan'].indexOf(o.colourBlind);
+  }
+
+  /** Graphics benchmark: drive three stretches of the road at High, fixed resolution, and score it. */
+  runBenchmark(done: (r: BenchmarkResult) => void): void {
+    if (this.bench) return;
+    const snapshot = JSON.parse(JSON.stringify(this.settings)) as StudioSettings;
+    applyQuality(this.settings, 'high');
+    this.settings.autoResolution = false;
+    this.pipeline.adaptive.reset();
+    this.applySettings();
+    this.bench = { spot: -1, t: 0, frames: [], snapshot, done };
+    this.benchNext();
+  }
+
+  private benchNext(): void {
+    const b = this.bench!;
+    b.spot++;
+    b.t = 0;
+    if (b.spot >= BENCH_SPOTS.length) {
+      Object.assign(this.settings, b.snapshot);
+      this.applySettings();
+      const result = scoreBenchmark(b.frames);
+      this.bench = null;
+      analytics.track('benchmark', { avg: result.avgFps, low: result.lowFps, rec: result.recommend });
+      this.openMenu('settings');
+      b.done(result);
+      return;
+    }
+    this.debugJump(this.world.path.length * BENCH_SPOTS[b.spot], 'golden', false);
+  }
+
+  private benchStep(dt: number): void {
+    const b = this.bench!;
+    b.t += dt;
+    if (b.t > BENCH_WARMUP) b.frames.push(dt);
+    if (b.t > BENCH_WARMUP + BENCH_MEASURE) this.benchNext();
+  }
+
+  /** Draw distance in use: the setting, trimmed when adaptive quality sheds it. */
+  private drawDistance(): number {
+    return this.settings.drawDistance * (this.pipeline?.adaptive.off('distance') ? 0.7 : 1);
   }
 
   /** Save and apply everything the Settings screens touched. */
@@ -1101,10 +1147,13 @@ export class Game {
     if (this.contextLost) return;
     const cap = this.settings.fpsCap;
     if (cap > 0 && now - this.lastFrame < 1000 / cap - 2) return;
-    const dt = Math.min(0.1, (now - this.lastFrame) / 1000);
+    const rawDt = (now - this.lastFrame) / 1000;
+    const dt = Math.min(0.1, rawDt);
     this.lastFrame = now;
     this.fps += (1 / Math.max(dt, 1e-4) - this.fps) * 0.05;
     this.time += dt;
+    // The benchmark times real frames (dt is capped for the simulation).
+    if (this.bench) this.benchStep(Math.min(1, rawDt));
     this.renderer.info.reset();
     this.input.poll();
     this.handleGlobalInput(dt);
@@ -1414,7 +1463,7 @@ export class Game {
       dofFocus = cam.position.distanceTo(this.director.focusPoint);
     }
     // Short draw distances get thicker haze so the far plane never shows.
-    const hazeBoost = Math.max(1, 3000 / this.settings.drawDistance);
+    const hazeBoost = Math.max(1, 3000 / this.drawDistance());
     this.lastFx = {
       fogColor: this.env.fogColor,
       rain: this.env.rain,
@@ -2311,7 +2360,7 @@ export class Game {
       splash: this.splash * 0.8,
       sunDir: this.env.sunDirection,
       sunColor: this.env.sunColour,
-      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.settings.drawDistance) * (area.id === 'city' ? 0.5 : area.id === 'village' ? 0.7 : 1),
+      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.drawDistance()) * (area.id === 'city' ? 0.5 : area.id === 'village' ? 0.7 : 1),
       flash: this.env.flash,
       dofFocus: 10,
       dofAmount: 0,

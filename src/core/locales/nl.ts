@@ -183,5 +183,10 @@ const nl: Locale = {
   'wr.mouth': "Mond",
   'wr.details': "Gezichtsdetails",
   'wr.acc': "Accessoires",
+  'bench.run': "Benchmark starten (15 s)",
+  'bench.adaptive': "Als de resolutie al laag is en beelden nog steeds traag zijn, gaan effecten één voor één omlaag (zonnestralen, ambient occlusion, bloom, schaduwen, zichtafstand) en komen terug zodra er ruimte is.",
+  'bench.result': "Gemiddeld {avg} fps · traagste beelden {low} fps",
+  'bench.recommend': "Aanbevolen: {level}",
+  'bench.apply': "Gebruiken",
 };
 export default nl;

@@ -183,5 +183,10 @@ const pl: Locale = {
   'wr.mouth': "Usta",
   'wr.details': "Detale twarzy",
   'wr.acc': "Dodatki",
+  'bench.run': "Uruchom test wydajności (15 s)",
+  'bench.adaptive': "Gdy rozdzielczość jest już niska, a klatki wciąż wolne, efekty są wyłączane po kolei (promienie słońca, okluzja otoczenia, poświata, cienie, zasięg widzenia) i wracają, gdy jest zapas.",
+  'bench.result': "Średnio {avg} fps · najwolniejsze klatki {low} fps",
+  'bench.recommend': "Zalecane: {level}",
+  'bench.apply': "Użyj",
 };
 export default pl;

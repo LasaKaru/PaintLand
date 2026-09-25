@@ -183,5 +183,10 @@ const sw: Locale = {
   'wr.mouth': "Mdomo",
   'wr.details': "Mapambo ya uso",
   'wr.acc': "Vipambo",
+  'bench.run': "Endesha kipimo cha utendaji (sek 15)",
+  'bench.adaptive': "Ubora wa picha ukiwa tayari chini na fremu bado zinachelewa, athari hupunguzwa moja moja (miale ya jua, kivuli cha mazingira, mng'ao, vivuli, umbali wa kuona) na kurudi nafasi ikipatikana.",
+  'bench.result': "Wastani {avg} fps · fremu za polepole zaidi {low} fps",
+  'bench.recommend': "Inapendekezwa: {level}",
+  'bench.apply': "Tumia hii",
 };
 export default sw;

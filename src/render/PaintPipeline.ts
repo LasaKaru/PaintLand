@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { AdaptiveGovernor } from './Adaptive';
 import { FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { aoBlurFragment, blurFragment, brightFragment, compositeFragment, finishFragment, fullscreenVertex, kuwaharaFragment, shaftsFragment, ssaoFragment } from './shaders';
 import { createPaperTexture } from './PaperTexture';
@@ -63,6 +64,10 @@ export class PaintPipeline {
   private frameTimes: number[] = [];
   /** Current dynamic render scale (auto resolution). */
   dynamicScale = 1;
+  /** Effects shed after resolution (auto resolution only). */
+  readonly adaptive = new AdaptiveGovernor();
+  /** Called when the adaptive level changes (shadows and fog live outside the pipeline). */
+  onAdapt: (() => void) | null = null;
   /** Colour-vision assist: 0 none, 1 protan, 2 deutan, 3 tritan. */
   colourBlind = 0;
 
@@ -200,7 +205,13 @@ export class PaintPipeline {
 
   /** Dynamic resolution: hold ~60 fps by lowering render scale before dropping effects (docs/11 §4). */
   private autoBalance(dt: number): void {
-    if (!this.settings.autoResolution) return;
+    if (!this.settings.autoResolution) {
+      if (this.adaptive.level > 0) {
+        this.adaptive.reset();
+        this.onAdapt?.();
+      }
+      return;
+    }
     this.frameTimes.push(dt);
     if (this.frameTimes.length < 45) return;
     const sorted = [...this.frameTimes].sort((a, b) => a - b);
@@ -213,6 +224,7 @@ export class PaintPipeline {
       this.dynamicScale = next;
       this.resizeTargets();
     }
+    if (this.adaptive.step(p80, this.dynamicScale)) this.onAdapt?.();
   }
 
   get renderScale(): number {
@@ -273,7 +285,7 @@ export class PaintPipeline {
     }
 
     // 3 · Ambient occlusion at half resolution.
-    const aoOn = s.aoQuality > 0 && s.aoStrength > 0;
+    const aoOn = s.aoQuality > 0 && s.aoStrength > 0 && !this.adaptive.off('ao');
     if (aoOn) {
       const ao = this.ssao.uniforms;
       this.bindDepth(ao, depth, camera);
@@ -294,7 +306,7 @@ export class PaintPipeline {
       this.bright.uniforms.tColor.value = colour;
       this.bright.uniforms.hdrBloom.value = this.gbufferHdr ? realism * 0.6 : 0;
       this.draw(this.bright, this.bloomA);
-      const passes = s.bloomQuality >= 2 ? 3 : 2;
+      const passes = s.bloomQuality >= 2 && !this.adaptive.off('bloom') ? 3 : 2;
       for (let i = 0; i < passes; i++) {
         const spread = 1 + i * 0.75;
         this.blur.uniforms.tInput.value = this.bloomA.texture;
@@ -308,7 +320,7 @@ export class PaintPipeline {
 
     // 5 · Sun shafts at quarter resolution, only when the sun is roughly in view.
     let shaftStrength = 0;
-    if (s.shafts && s.sunShafts > 0 && fx.flash < 0.05) {
+    if (s.shafts && s.sunShafts > 0 && fx.flash < 0.05 && !this.adaptive.off('shafts')) {
       camera.getWorldDirection(this.camDir);
       const facing = this.camDir.dot(fx.sunDir);
       if (facing > 0.1) {

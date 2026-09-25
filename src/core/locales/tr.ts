@@ -183,5 +183,10 @@ const tr: Locale = {
   'wr.mouth': "Ağız",
   'wr.details': "Yüz detayları",
   'wr.acc': "Aksesuarlar",
+  'bench.run': "Performans testini çalıştır (15 sn)",
+  'bench.adaptive': "Çözünürlük zaten düşükken kareler hâlâ yavaşsa efektler tek tek azaltılır (güneş ışınları, ortam kapatma, parlama, gölgeler, görüş mesafesi) ve pay oluşunca geri gelir.",
+  'bench.result': "Ortalama {avg} fps · en yavaş kareler {low} fps",
+  'bench.recommend': "Önerilen: {level}",
+  'bench.apply': "Bunu kullan",
 };
 export default tr;

@@ -7,7 +7,7 @@ import { api, apiUrl } from './Api';
  * it off in Settings → Accessibility.
  */
 export type AnalyticsEvent =
-  | 'session' | 'beat' | 'play' | 'area' | 'mission' | 'cityMission' | 'trophy' | 'restore' | 'trial' | 'race' | 'link' | 'sponsor_view' | 'sponsor_click';
+  | 'session' | 'beat' | 'play' | 'area' | 'mission' | 'cityMission' | 'trophy' | 'restore' | 'trial' | 'race' | 'link' | 'sponsor_view' | 'sponsor_click' | 'benchmark';
 
 const PID_KEY = 'paintland.pid';
 

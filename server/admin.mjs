@@ -265,6 +265,10 @@ export function createAdmin({ dataDir, distDir, live }) {
       case 'link':
         count(`${ev.type}:${key(data.id)}`);
         break;
+      case 'benchmark':
+        // Which preset devices get recommended (no raw timings are stored).
+        count(`bench:${key(data.rec)}`);
+        break;
       case 'sponsor_view':
       case 'sponsor_click': {
         const s = (stats.sponsors[key(data.id)] ??= { views: 0, clicks: 0 });

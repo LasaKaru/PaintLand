@@ -183,5 +183,10 @@ const vi: Locale = {
   'wr.mouth': "Miệng",
   'wr.details': "Chi tiết khuôn mặt",
   'wr.acc': "Phụ kiện",
+  'bench.run': "Chạy kiểm tra hiệu năng (15 giây)",
+  'bench.adaptive': "Khi độ phân giải đã thấp mà khung hình vẫn chậm, các hiệu ứng lần lượt giảm (tia nắng, che khuất môi trường, phát sáng, bóng đổ, tầm nhìn) và trở lại khi dư sức.",
+  'bench.result': "Trung bình {avg} fps · khung chậm nhất {low} fps",
+  'bench.recommend': "Đề xuất: {level}",
+  'bench.apply': "Dùng mức này",
 };
 export default vi;

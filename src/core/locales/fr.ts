@@ -183,5 +183,10 @@ const fr: Locale = {
   'wr.mouth': "Bouche",
   'wr.details': "Détails du visage",
   'wr.acc': "Accessoires",
+  'bench.run': "Lancer le test de performances (15 s)",
+  'bench.adaptive': "Si la résolution est déjà basse et que les images restent lentes, les effets baissent un à un (rayons de soleil, occlusion ambiante, bloom, ombres, distance d’affichage) puis reviennent dès qu’il y a de la marge.",
+  'bench.result': "Moyenne {avg} fps · images les plus lentes {low} fps",
+  'bench.recommend': "Recommandé : {level}",
+  'bench.apply': "L’utiliser",
 };
 export default fr;

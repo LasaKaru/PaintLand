@@ -1,4 +1,5 @@
 import { LiveryEditor } from './LiveryEditor';
+import type { BenchmarkResult } from '../render/Benchmark';
 import type { Profile, ShopItem } from '../gameplay/Profile';
 import { brand, COMPANY_LOGO } from '../brand/Brand';
 import { paintedLogo } from '../brand/Watercolour';
@@ -28,6 +29,7 @@ export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'm
 /** Everything the menu needs from the game. */
 export interface MenuHost {
   profile: Profile;
+  runBenchmark(done: (r: BenchmarkResult) => void): void;
   chapters: ChapterDef[];
   currentChapter(): ChapterDef;
   missions(): MissionDef[];
@@ -82,6 +84,7 @@ export class Menu {
   readonly root: HTMLDivElement;
   screen: MenuScreen = 'none';
   private wardrobeTab = 'hair';
+  private benchResult: BenchmarkResult | null = null;
   private readonly liveryEditor = new LiveryEditor(
     (code) => {
       const p = this.host.profile;
@@ -524,6 +527,9 @@ export class Menu {
           <h4>Resolution</h4>
           ${this.slider('s.renderScale', 'Render scale', 0.5, 1, 0.05, pct)}
           ${this.toggle('s.autoResolution', 'Auto-balance to hold 60 fps')}
+          <p class="menu-hint">${t('bench.adaptive')}</p>
+          <button class="btn" data-action="benchmark">⏱ ${t('bench.run')}</button>
+          ${this.benchResult ? `<div class="bench-result" role="status">${t('bench.result', { avg: this.benchResult.avgFps, low: this.benchResult.lowFps })}<br><b>${t('bench.recommend', { level: t(`q.${this.benchResult.recommend}` as StringKey) })}</b> <button class="btn small primary" data-quality="${this.benchResult.recommend}">${t('bench.apply')}</button></div>` : ''}
           ${this.choice('s.maxPixelRatio', 'Sharpness on high-DPI screens', [[1, '1×'], [1.5, '1.5×'], [2, '2×']])}
           ${this.toggle('s.fxaa', 'Anti-aliasing (FXAA)')}
           ${this.choice('s.fpsCap', 'Frame rate limit', [[0, 'Off'], [30, '30'], [60, '60'], [120, '120']])}
@@ -877,6 +883,14 @@ export class Menu {
       return;
     }
     switch (d.action) {
+      case 'benchmark':
+        this.show('none');
+        this.host.runBenchmark((r) => {
+          this.benchResult = r;
+          this.settingsTab = 'graphics';
+          this.render();
+        });
+        break;
       case 'random-look': {
         const look = randomLook(Math.random);
         // Only keep owned styles.
@@ -889,6 +903,10 @@ export class Menu {
           hat: keep('hat', look.hat, 'none') as HumanLook['hat'],
           glasses: keep('glasses', look.glasses, 'none') as HumanLook['glasses'],
           back: keep('back', look.back, 'none') as HumanLook['back'],
+          eyes: keep('eyes', look.eyes, 'dots') as HumanLook['eyes'],
+          mouth: keep('mouth', look.mouth, 'smile') as HumanLook['mouth'],
+          face: keep('facial', look.face, 'none') as HumanLook['face'],
+          acc: keep('acc', look.acc, 'none') as HumanLook['acc'],
         };
         p.data.look = next;
         p.save();

@@ -183,5 +183,10 @@ const id: Locale = {
   'wr.mouth': "Mulut",
   'wr.details': "Detail wajah",
   'wr.acc': "Aksesori",
+  'bench.run': "Jalankan benchmark (15 dtk)",
+  'bench.adaptive': "Jika resolusi sudah rendah tetapi frame masih lambat, efek diturunkan satu per satu (sinar matahari, oklusi ambien, bloom, bayangan, jarak pandang) dan kembali saat ada ruang.",
+  'bench.result': "Rata-rata {avg} fps · frame terlambat {low} fps",
+  'bench.recommend': "Disarankan: {level}",
+  'bench.apply': "Pakai ini",
 };
 export default id;

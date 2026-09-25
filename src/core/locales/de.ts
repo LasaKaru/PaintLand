@@ -183,5 +183,10 @@ const de: Locale = {
   'wr.mouth': "Mund",
   'wr.details': "Gesichtsdetails",
   'wr.acc': "Accessoires",
+  'bench.run': "Benchmark starten (15 s)",
+  'bench.adaptive': "Ist die Auflösung schon niedrig und die Bildrate trotzdem zu gering, werden Effekte nacheinander reduziert (Lichtstrahlen, Umgebungsverdeckung, Bloom, Schatten, Sichtweite) und kehren zurück, sobald Luft ist.",
+  'bench.result': "Durchschnitt {avg} fps · langsamste Bilder {low} fps",
+  'bench.recommend': "Empfohlen: {level}",
+  'bench.apply': "Übernehmen",
 };
 export default de;

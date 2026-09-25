@@ -109,3 +109,38 @@ describe('More character customisation', async () => {
     }
   });
 });
+
+describe('Adaptive quality and the benchmark', async () => {
+  const { AdaptiveGovernor, ADAPTIVE_MAX } = await import('../src/render/Adaptive');
+  const { scoreBenchmark } = await import('../src/render/Benchmark');
+  it('sheds effects only once resolution is at its floor, and brings them back with headroom', () => {
+    const g = new AdaptiveGovernor();
+    for (let i = 0; i < 10; i++) g.step(1 / 20, 0.8);
+    expect(g.level).toBe(0); // resolution still has room to drop
+    g.step(1 / 20, 0.55);
+    expect(g.level).toBe(0); // one slow window is not enough
+    g.step(1 / 20, 0.55);
+    expect(g.level).toBe(1);
+    expect(g.off('shafts')).toBe(true);
+    expect(g.off('ao')).toBe(false);
+    for (let i = 0; i < 40; i++) g.step(1 / 15, 0.55);
+    expect(g.level).toBe(ADAPTIVE_MAX);
+    for (let i = 0; i < 3; i++) g.step(1 / 90, 1);
+    expect(g.level).toBe(ADAPTIVE_MAX);
+    g.step(1 / 90, 1);
+    expect(g.level).toBe(ADAPTIVE_MAX - 1);
+    g.reset();
+    expect(g.level).toBe(0);
+  });
+
+  it('scores runs and recommends a preset', () => {
+    expect(scoreBenchmark(Array(300).fill(1 / 120)).recommend).toBe('ultra');
+    expect(scoreBenchmark(Array(300).fill(1 / 60)).recommend).toBe('high');
+    const spiky = [...Array(285).fill(1 / 60), ...Array(15).fill(1 / 20)];
+    const r = scoreBenchmark(spiky);
+    expect(r.lowFps).toBeCloseTo(20, 0);
+    expect(r.recommend).toBe('medium');
+    expect(scoreBenchmark(Array(300).fill(1 / 25)).recommend).toBe('low');
+    expect(scoreBenchmark([]).recommend).toBe('low');
+  });
+});
