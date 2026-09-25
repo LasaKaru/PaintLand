@@ -38,6 +38,7 @@ import { submitRun } from '../net/Leaderboard';
 import { HUB_S_OFFSET } from '../net/RemotePlayers';
 import { t } from './i18n';
 import type { RoverInput } from '../gameplay/RoverController';
+import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
 
 type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused' | 'photo' | 'hub';
@@ -145,6 +146,8 @@ export class Game {
   private readonly touchUi: TouchControls;
   /** Ranked time trial in progress (inputs recorded for server re-simulation). */
   private trial: { sim: TrialSim; inputs: RoverInput[]; config: TrialConfig } | null = null;
+  /** Live multiplayer race: everyone in the room runs the same trial lap. */
+  private race: { id: string; chapter: string; results: Map<string, { name: string; time: number; verified?: boolean; me: boolean }>; finished: boolean } | null = null;
   private contextLost = false;
   private tipClock = 0;
   private showcaseTarget: 'character' | 'vehicle' | null = null;
@@ -207,6 +210,7 @@ export class Game {
       watchIntro: () => this.startIntro(),
       enterHub: () => this.enterHub(),
       startTrial: (id) => this.startTrial(id),
+      startRace: (id) => this.startRaceForAll(id),
       handling: () => this.options.handling,
       unlockAudio: () => this.unlockAudio(),
       studio: () => this.settings,
@@ -218,6 +222,7 @@ export class Game {
       canResume: () => this.resumeSnapshot !== null,
     });
     this.net.onChat = (name, text) => this.hud.chatLine(name, text);
+    this.net.onRace = (msg, from) => this.onRaceMessage(msg, from);
     this.photo = new PhotoMode(container, {
       studio: () => this.settings,
       studioChanged: () => this.settingsChanged(),
@@ -459,6 +464,8 @@ export class Game {
 
   private openMenu(screen: MenuScreen = 'main'): void {
     this.endTrial();
+    this.race = null;
+    this.hud.raceBoard(null);
     if (this.inHub) {
       this.resumeSnapshot = { s: 8, x: 0, v: 0, mode: 'drive', hs: 0, hx: 0, hub: { x: this.hubCar.x, z: this.hubCar.z, heading: this.hubCar.heading, foot: this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : null } };
       this.hud.show('screenPause', false);
@@ -1337,7 +1344,8 @@ export class Game {
     hud.setScore(this.score, this.combo);
     hud.setInk(this.profile.data.ink);
     hud.setBag(this.profile.data.tonics, this.selectedTonic);
-    hud.setMission(this.trial ? `⏱ Time trial · ${this.trial.config.handling} · ${this.trial.sim.time.toFixed(2)} s · R restarts` : this.missions.active ? this.missions.statusText() : null);
+    const racing = this.trial && this.race && !this.race.finished ? this.racePosition() : null;
+    hud.setMission(racing ? `🏁 ${t('race.position', racing)} · ${this.trial!.sim.time.toFixed(2)} s` : this.trial ? `⏱ ${t('title.trials')} · ${this.trial.config.handling} · ${this.trial.sim.time.toFixed(2)} s · R` : this.missions.active ? this.missions.statusText() : null);
     const s = this.mode === 'drive' ? this.rover.s : this.human.s;
     const current = this.world.items.notes.find((n) => n.s > s && !n.collected)?.phrase ?? this.world.items.phrases.length - 1;
     hud.setSongbook(this.world.items.phrases, current, totals.notes, totals.noteTotal, totals.sealed);
@@ -1368,7 +1376,7 @@ export class Game {
 
   // ————— ranked time trials —————
 
-  private startTrial(chapterId: string): void {
+  private startTrial(chapterId: string, countdown = 3.2): void {
     this.endTrial();
     this.play(chapterId);
     this.missions.cancel();
@@ -1384,7 +1392,7 @@ export class Game {
     this.districtTime = 0;
     this.lapClean = true;
     this.ghostRec.reset();
-    this.raceCountdown = 3.2;
+    this.raceCountdown = countdown;
     this.rig.snap();
   }
 
@@ -1436,6 +1444,10 @@ export class Game {
   private finishTrial(): void {
     const trial = this.trial!;
     const time = trial.sim.time;
+    if (this.race && !this.race.finished && this.race.chapter === trial.config.chapter) {
+      this.finishRace(trial, time);
+      return;
+    }
     const cfg = trial.config;
     const key = `${cfg.chapter}:${cfg.handling}`;
     const prev = this.profile.data.trialBest[key] ?? null;
@@ -1473,6 +1485,95 @@ export class Game {
     this.splash = 1;
     this.rig.snap();
     this.showDistrict(0);
+  }
+
+  // ————— live races —————
+
+  /** Anyone in a room can start a race: everyone gets the same chapter and countdown. */
+  private startRaceForAll(chapterId: string): void {
+    if (!this.net.connected) {
+      this.menu.toast(t('race.needRoom'));
+      return;
+    }
+    const msg: RaceMessage = { t: 'race', a: 'start', race: `${this.net.id}-${Date.now().toString(36)}`, chapter: chapterId, delay: 6000 };
+    this.net.sendRace(msg);
+    this.onRaceMessage(msg, this.profile.data.name);
+  }
+
+  private onRaceMessage(msg: RaceMessage, from: string | null): void {
+    if (msg.a === 'start') {
+      if (!this.world || !chapterById(msg.chapter)) return;
+      this.race = { id: msg.race, chapter: msg.chapter, results: new Map(), finished: false };
+      this.hud.raceBoard(null);
+      this.startTrial(msg.chapter, msg.delay / 1000);
+      this.hud.showLapBanner(`🏁 ${t('race.title')} · ${from ?? ''}`);
+      return;
+    }
+    const race = this.race;
+    if (!race || msg.race !== race.id) return;
+    if (msg.a === 'finish') {
+      race.results.set(msg.name + (msg.id ?? ''), { name: msg.name, time: msg.time, verified: msg.verified, me: false });
+      this.hud.chatLine('🏁', t('race.finished', { name: msg.name, time: msg.time.toFixed(2) }));
+      this.showRaceBoard();
+    } else if (msg.a === 'verdict') {
+      const mine = [...race.results.values()].find((r) => r.me);
+      if (mine) {
+        mine.verified = msg.ok;
+        if (msg.ok && msg.time !== undefined) mine.time = msg.time;
+      }
+      this.showRaceBoard();
+    }
+  }
+
+  private finishRace(trial: { inputs: RoverInput[]; config: TrialConfig }, time: number): void {
+    const race = this.race!;
+    race.finished = true;
+    const name = this.profile.data.name;
+    race.results.set('me', { name, time, me: true });
+    const run = { ...trial.config, name, time, inputs: encodeInputs(trial.inputs), version: TRIAL_VERSION };
+    this.net.sendRace({ t: 'race', a: 'finish', race: race.id, name, time, run });
+    this.profile.addStat('races');
+    this.endTrial();
+    this.hud.showLapBanner(t('race.finished', { name, time: time.toFixed(2) }));
+    this.audio.chime(76);
+    this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 2), _v.copy(this.frame.up).multiplyScalar(7), 70, 7, this.frame.up);
+    this.showRaceBoard();
+    this.rover.v = Math.min(this.rover.v, 12);
+    this.rover.cruise = false;
+  }
+
+  private showRaceBoard(): void {
+    const race = this.race;
+    if (!race) return;
+    const rows = [...race.results.values()].sort((a, b) => a.time - b.time).map((r) => {
+      const mark = r.verified === true ? ` <small>✓ ${t('race.verified')}</small>` : r.verified === false ? ' <small>?</small>' : '';
+      return `${r.me ? '<u>' : ''}${escapeHtml(r.name)}${r.me ? '</u>' : ''} — ${r.time.toFixed(2)}s${mark}`;
+    });
+    const waiting = race.finished && this.racersInRoom() > race.results.size ? [`<small>${t('race.waiting')}</small>`] : [];
+    this.hud.raceBoard(`🏁 ${t('race.results')}`, [...rows, ...waiting]);
+  }
+
+  /** Players in this race's chapter (including us). */
+  private racersInRoom(): number {
+    if (!this.race) return 1;
+    return 1 + [...this.net.peers.values()].filter((p) => p.info?.chapter === this.race!.chapter).length;
+  }
+
+  /** Live position: peers further along the lap (or already finished) are ahead. */
+  private racePosition(): { pos: number; total: number } {
+    const race = this.race!;
+    let ahead = [...race.results.values()].filter((r) => !r.me).length;
+    for (const peer of this.net.peers.values()) {
+      if (peer.info?.chapter !== race.chapter) continue;
+      if ([...race.results.values()].some((r) => r.name === peer.info?.name)) continue;
+      const snap = this.net.sample(peer);
+      if (snap && snap.chapter === race.chapter && snap.s > this.rover.s) ahead++;
+    }
+    return { pos: ahead + 1, total: this.racersInRoom() };
+  }
+
+  debugRace(chapter: string): void {
+    this.startRaceForAll(chapter);
   }
 
   debugTrial(chapter: string): void {
@@ -2042,3 +2143,7 @@ const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
 const _y = new THREE.Vector3(0, 1, 0);
+
+function escapeHtml(s: string): string {
+  return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
+}

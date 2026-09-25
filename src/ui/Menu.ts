@@ -15,7 +15,7 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost {
@@ -36,6 +36,7 @@ export interface MenuHost {
   watchIntro(): void;
   enterHub(): void;
   startTrial(chapterId: string): void;
+  startRace(chapterId: string): void;
   handling(): 'arcade' | 'realistic';
   unlockAudio(): void;
   /** Art + graphics values (mutable; call settingsChanged after editing). */
@@ -106,6 +107,7 @@ export class Menu {
       settings: () => this.settingsScreen(),
       trophies: () => this.trophiesScreen(),
       trials: () => this.trialsScreen(),
+      race: () => this.raceScreen(),
       credits: () => this.credits(),
     }[s]();
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
@@ -152,6 +154,7 @@ export class Menu {
         <button class="menu-item" data-nav="hub">${t('menu.hub')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
+        <button class="menu-item" data-nav="race">${t('menu.race')}</button>
         <button class="menu-item" data-nav="missions">${t('menu.missions')}</button>
         <button class="menu-item" data-nav="wardrobe">${t('menu.wardrobe')}</button>
         <button class="menu-item" data-nav="garage">${t('menu.garage')}</button>
@@ -522,6 +525,20 @@ export class Menu {
     return `<label class="lang-pick">🌐 <select data-langselect aria-label="Language">${LANGS.map((l) => `<option value="${l.id}" ${lang() === l.id ? 'selected' : ''}>${l.name}</option>`).join('')}</select></label>`;
   }
 
+  private raceScreen(): string {
+    const n = this.host.netStatus();
+    const online = n.status !== 'offline';
+    const cards = this.host.chapters.map((ch) => `<div class="card chapter-card chapter-${ch.id}">
+        <div class="kicker">${ch.kicker}</div><div class="hand chapter-name">${ch.name}</div>
+        <button class="btn primary" data-race="${ch.id}" ${online ? '' : 'disabled'}>${t('race.start')}</button>
+      </div>`).join('');
+    return `<div class="menu-panel wide">${this.header(t('race.title'))}
+      <p class="menu-hint">${t('race.intro')}</p>
+      <p><b>${online ? t('race.players', { n: n.players.length + 1 }) : t('race.needRoom')}</b> ${online ? `· ${escapeHtml(n.status)}` : '<button class="btn" data-nav="multiplayer">' + t('menu.multiplayer') + '</button>'}</p>
+      <div class="chapter-grid">${cards}</div>
+    </div>`;
+  }
+
   private trophiesScreen(): string {
     const p = this.host.profile;
     const st = p.data.stats;
@@ -561,6 +578,10 @@ export class Menu {
       else if (d.nav === 'hub') this.host.enterHub();
       else if (d.nav === 'resume') this.host.resume();
       else this.show(d.nav as MenuScreen);
+      return;
+    }
+    if (d.race) {
+      this.host.startRace(d.race);
       return;
     }
     if (d.trial) {

@@ -27,8 +27,10 @@ import { LIMITS, Strikes, cleanText, validateState } from './validate.mjs';
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_ROOM = Number(process.env.MAX_ROOM ?? 32);
 const MAX_MESSAGE = 4096;
+/** Race finishes carry the recorded inputs (4 bytes a step) for re-simulation. */
+const MAX_RACE_MESSAGE = 96_000;
 const MAX_RATE = 40; // messages per second per client
-const ALLOWED = new Set(['hello', 'state', 'chat', 'emote', 'bye']);
+const ALLOWED = new Set(['hello', 'state', 'chat', 'emote', 'bye', 'race']);
 
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const rooms = new Map();
@@ -115,7 +117,7 @@ const http = createServer((req, res) => {
   send(res, 404, { ok: false, reason: 'not found' });
 });
 
-const wss = new WebSocketServer({ server: http, maxPayload: MAX_MESSAGE });
+const wss = new WebSocketServer({ server: http, maxPayload: MAX_RACE_MESSAGE });
 
 wss.on('connection', (socket, req) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
@@ -160,6 +162,24 @@ wss.on('connection', (socket, req) => {
       return;
     }
     if (!msg || typeof msg !== 'object' || !ALLOWED.has(msg.t)) return strike('unknown message');
+    if (String(raw).length > MAX_MESSAGE && !(msg.t === 'race' && msg.a === 'finish')) return strike('message too big');
+    if (msg.t === 'race') {
+      if (typeof msg.race !== 'string' || msg.race.length > 40) return strike('bad race');
+      if (msg.a === 'start') {
+        if (typeof msg.chapter !== 'string' || msg.chapter.length > 24) return strike('bad race chapter');
+        msg.delay = Math.min(10000, Math.max(3000, Number(msg.delay) || 5000));
+      } else if (msg.a === 'finish') {
+        msg.name = cleanText(msg.name, LIMITS.name) ?? 'Painter';
+        // Re-simulate the lap: the time only counts as verified if the replay matches.
+        if (verifyRun && msg.run && typeof msg.run === 'object') {
+          const res = verifyRun({ ...msg.run, name: msg.name });
+          msg.verified = res.ok;
+          if (res.ok) msg.time = res.time;
+          socket.send(JSON.stringify({ t: 'race', a: 'verdict', race: msg.race, ok: res.ok, time: res.ok ? res.time : undefined, reason: res.ok ? undefined : res.reason }));
+        } else msg.verified = false;
+        delete msg.run;
+      } else return strike('bad race action');
+    }
     if (msg.t === 'state') {
       const check = validateState(msg, last, now);
       if (!check.ok) return strike(check.reason);

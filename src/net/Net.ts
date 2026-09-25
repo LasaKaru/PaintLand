@@ -1,4 +1,5 @@
 import { cleanText, validateState } from '../../server/validate.mjs';
+import type { TrialRun } from '../gameplay/TrialSim';
 import type { HumanLook } from '../models/Human';
 import type { VehicleId, VehicleLook } from '../models/Vehicles';
 
@@ -28,7 +29,14 @@ export type NetMessage =
   | ({ t: 'state'; id: string; time: number } & PlayerState)
   | { t: 'chat'; id: string; text: string }
   | { t: 'emote'; id: string; emote: string }
-  | { t: 'bye'; id: string };
+  | { t: 'bye'; id: string }
+  | RaceMessage;
+
+/** Live races (docs/09 §1): start, finish (with inputs for server re-simulation), verdict. */
+export type RaceMessage =
+  | { t: 'race'; id?: string; a: 'start'; race: string; chapter: string; delay: number }
+  | { t: 'race'; id?: string; a: 'finish'; race: string; name: string; time: number; verified?: boolean; run?: TrialRun }
+  | { t: 'race'; a: 'verdict'; race: string; ok: boolean; time?: number; reason?: string };
 
 interface Transport {
   send(msg: object): void;
@@ -133,6 +141,8 @@ export class NetClient {
   private sendTimer = 0;
   private helloTimer = 0;
   onChat: ((name: string, text: string) => void) | null = null;
+  /** Race messages from other players (and the server's verdict on ours). */
+  onRace: ((msg: RaceMessage, fromName: string | null) => void) | null = null;
   onPeersChanged: (() => void) | null = null;
 
   get connected(): boolean {
@@ -161,6 +171,10 @@ export class NetClient {
     this.transport?.send({ t: 'hello', ...info });
   }
 
+  sendRace(msg: RaceMessage): void {
+    this.transport?.send(msg);
+  }
+
   chat(text: string): void {
     this.transport?.send({ t: 'chat', text: text.slice(0, 120) });
   }
@@ -170,11 +184,16 @@ export class NetClient {
       this.sendHello(info);
       return;
     }
-    if (!('id' in m) || m.id === this.id) return;
-    let peer = this.peers.get(m.id);
+    if (m.t === 'race' && m.a === 'verdict') {
+      this.onRace?.(m, null);
+      return;
+    }
+    const pid = 'id' in m ? m.id : undefined;
+    if (!pid || pid === this.id) return;
+    let peer = this.peers.get(pid);
     if (!peer && m.t !== 'bye') {
-      peer = { id: m.id, info: null, snapshots: [], lastSeen: performance.now(), chat: null };
-      this.peers.set(m.id, peer);
+      peer = { id: pid, info: null, snapshots: [], lastSeen: performance.now(), chat: null };
+      this.peers.set(pid, peer);
       // Introduce ourselves to newcomers.
       this.sendHello(info);
       this.onPeersChanged?.();
@@ -202,6 +221,16 @@ export class NetClient {
         this.onChat?.(peer.info?.name ?? 'someone', peer.chat.text);
         break;
       }
+      case 'race':
+        if (typeof m.race !== 'string' || m.race.length > 40) break;
+        if (m.a === 'finish') {
+          delete m.run; // inputs are only for the server
+          if (typeof m.time !== 'number' || !Number.isFinite(m.time) || m.time <= 0) break;
+          m.name = cleanText(m.name, 20) ?? peer.info?.name ?? 'Painter';
+        }
+        if (m.a === 'start' && (typeof m.chapter !== 'string' || typeof m.delay !== 'number')) break;
+        this.onRace?.(m, peer.info?.name ?? null);
+        break;
       case 'bye':
         this.peers.delete(m.id);
         this.onPeersChanged?.();

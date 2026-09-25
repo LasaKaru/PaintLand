@@ -122,6 +122,19 @@ export class Hud {
     this.tipTimer = window.setTimeout(() => this.tipEl?.classList.remove('show'), seconds * 1000);
   }
 
+  private boardEl: HTMLDivElement | null = null;
+
+  /** Live race standings card (null hides it). */
+  raceBoard(title: string | null, rows: string[] = []): void {
+    if (!this.boardEl) {
+      this.boardEl = document.createElement('div');
+      this.boardEl.className = 'card race-board hidden';
+      this.root.appendChild(this.boardEl);
+    }
+    this.boardEl.classList.toggle('hidden', !title);
+    if (title) this.boardEl.innerHTML = `<div class="hand">${title}</div><ol>${rows.map((r) => `<li>${r}</li>`).join('')}</ol>`;
+  }
+
   /** Full-screen notice (graphics reset). */
   notice(text: string | null): void {
     let el = this.root.querySelector<HTMLDivElement>('.notice');

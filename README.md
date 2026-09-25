@@ -6,7 +6,13 @@
 
 This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
 
+![Milestone 6 screenshots: the main menu in Japanese, Chinese, Hindi, Arabic (right-to-left) and Russian, and a live race results board with two server-verified finishes](docs/screenshots/milestone-6.jpg)
+
+<details><summary>Milestone 5 screenshots</summary>
+
 ![Milestone 5 screenshots: the time-trial leaderboard with a verified run, two players meeting in Harbour Town, the main menu in Sinhala and Tamil, time trials in Sinhala, Harbour Town in Tamil](docs/screenshots/milestone-5.jpg)
+
+</details>
 
 <details><summary>Milestone 4 screenshots</summary>
 
@@ -52,6 +58,7 @@ npm run dev        # open http://localhost:5173
 | `node tools/drive-test.mjs` | Presses real keys (menu → play, drive, brake, get out, photo mode, realistic handling, lap wrap) and checks for console errors |
 | `node tools/net-test.mjs` | Run from the repo root: starts the relay and checks chat, id rewriting, message filtering, and that speed hacks and teleports are dropped |
 | `npm run server` | Builds the run verifier (`npm run build:server`) and starts the relay: multiplayer rooms on `ws://localhost:8787` and the time-trial leaderboard on `http://localhost:8787/leaderboard` |
+| `node tools/race-test.mjs` | Run from the repo root: two browser windows join a room over the relay, one starts a live race, both drive the lap, and both must show two finishes verified by server re-simulation |
 | `node tools/trial-test.mjs` | Run from the repo root: starts the relay, drives a full time-trial lap in the browser, checks that the server re-simulated and ranked it, and that a faked time is rejected |
 | `node tools/hub-test.mjs` | Drives and walks around Harbour Town with real keys, opens the garage from its ring, resumes, drives through a chapter gate, and checks the touch controls on a phone-sized screen |
 
@@ -73,7 +80,18 @@ Also: **P** photo mode · **.** / **,** gear up / down (realistic handling, manu
 
 Every key can be rebound in **Menu → Settings → Controls**. On phones and tablets, touch controls appear on the first touch: a floating stick, GO / BRAKE pedals, HOP, BOOST, DRIFT, E, camera and photo buttons, and drag-to-look.
 
-## What is new in milestone 5 · "On the board"
+## What is new in milestone 6 · "Around the world"
+
+| System | Status | Where |
+| --- | --- | --- |
+| **24 languages**: English, 简体中文, हिन्दी, Español, العربية, Français, বাংলা, Português, Русский, اردو, Bahasa Indonesia, Deutsch, 日本語, Türkçe, 한국어, Tiếng Việt, Italiano, فارسی, Polski, Nederlands, ไทย, Kiswahili, தமிழ், සිංහල. Each language is its own file, loaded only when chosen. The game detects the browser's language, and a picker (each language named in its own script) is on the splash screen, the main menu and Settings | ✅ | `src/core/i18n.ts`, `src/core/locales/` |
+| **Right-to-left** layout for Arabic, Urdu and Persian: the page direction flips and the menu moves to the right-hand side | ✅ | `src/styles/main.css` |
+| **Fonts for every script**: Noto for Latin/Cyrillic, Devanagari, Bengali, Arabic, Thai, Sinhala, Tamil and CJK, with regional Han glyphs for Japanese and Korean. Fonts are split by unicode-range, so only the pieces in use are downloaded | ✅ | `src/main.ts` |
+| **Live multiplayer races** (Menu → 🏁 Live race): anyone in a room starts a race and every player gets the same chapter and a synced countdown. Your live position shows while you drive, and finishes are re-simulated by the server and marked ✓ verified on a shared results board | ✅ | `src/core/Game.ts`, `src/net/Net.ts`, `server/relay.mjs` |
+
+All translations are first drafts and need review by native speakers before release. Tests check that every language covers every string with the same placeholders and key letters.
+
+## What was new in milestone 5 · "On the board"
 
 | System | Status | Where |
 | --- | --- | --- |

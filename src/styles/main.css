@@ -484,3 +484,11 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 :root[lang='ru'] .menu-item { font-size: 1.4em; }
 :root[lang='ru'] .menu-main, :root[lang='ar'] .menu-main, :root[lang='ur'] .menu-main, :root[lang='fa'] .menu-main { gap: 12px; }
 .menu-main { overflow-y: auto; }
+
+/* Live race standings */
+.race-board { position: absolute; right: 16px; top: 120px; min-width: 240px; padding: 10px 14px; }
+.race-board.hidden { display: none; }
+.race-board .hand { font-size: 1.4em; margin-bottom: 4px; }
+.race-board ol { margin: 0; padding-left: 22px; font-weight: 700; }
+.race-board li { margin: 3px 0; }
+.race-board small { color: var(--ink-soft); font-weight: 400; }
