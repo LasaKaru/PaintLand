@@ -41,7 +41,7 @@ export class Hub implements FreeRoamArea {
   readonly secrets: Secret[] = [
     { id: 'harbour-pier', x: 60, z: 112, y: 0.3, hint: 'At the end of the pier, under the lighthouse' },
     { id: 'harbour-alley', x: -108, z: -104, y: 0, hint: 'The far corner behind the western houses' },
-    { id: 'harbour-fountain', x: 0, z: -2.8, y: 1.6, hint: 'Hop onto the fountain' },
+    { id: 'harbour-fountain', x: 0, z: -2.8, y: 1.6, hint: 'On the fountain rim — walk right up to it' },
   ];
   readonly chests: Chest[] = [
     { id: 'harbour-c1', x: -60, z: 30, tier: 0 },
