@@ -1,3 +1,4 @@
+import { LiveryEditor } from './LiveryEditor';
 import type { Profile, ShopItem } from '../gameplay/Profile';
 import { brand, COMPANY_LOGO } from '../brand/Brand';
 import { paintedLogo } from '../brand/Watercolour';
@@ -22,7 +23,7 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost {
@@ -81,6 +82,14 @@ export class Menu {
   readonly root: HTMLDivElement;
   screen: MenuScreen = 'none';
   private wardrobeTab = 'hair';
+  private readonly liveryEditor = new LiveryEditor(
+    (code) => {
+      const p = this.host.profile;
+      p.setVehicleLook(p.data.vehicle, { livery: code || undefined });
+      this.host.vehicleChanged();
+    },
+    (text) => this.toast(text),
+  );
   private settingsTab: SettingsTab = 'graphics';
   private listening: ActionName | null = null;
   private readonly formatters = new Map<string, (v: number) => string>();
@@ -122,7 +131,7 @@ export class Menu {
     this.cancelListening();
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
-    this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' ? 'vehicle' : null);
+    this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
     this.render();
   }
 
@@ -141,6 +150,7 @@ export class Menu {
       daily: () => this.dailyScreen(),
       wardrobe: () => this.wardrobe(),
       garage: () => this.garage(),
+      livery: () => `<div class="menu-panel side">${this.header(t('lv.title')).replace('data-nav="main"', 'data-nav="garage"')}<div class="panel-body" data-id="livery"></div></div>`,
       shop: () => this.shop(),
       multiplayer: () => this.multiplayer(),
       settings: () => this.settingsScreen(),
@@ -150,6 +160,8 @@ export class Menu {
       credits: () => this.credits(),
     }[s]();
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
+    const lv = s === 'livery' ? this.root.querySelector<HTMLElement>('[data-id="livery"]') : null;
+    if (lv) this.liveryEditor.mount(lv, this.host.profile.vehicleLook(this.host.profile.data.vehicle).livery);
     this.paintBrandImages();
   }
 
@@ -374,10 +386,10 @@ export class Menu {
     const tab = this.wardrobeTab;
     let content = '';
     if (tab === 'hair') content = `<h4>Style</h4>${this.items('hair', look.hairStyle, 'hairStyle')}<h4>Colour</h4>${this.swatches('hair', PALETTE.hair, look.hair)}`;
-    if (tab === 'face') content = `<h4>Skin</h4>${this.swatches('skin', PALETTE.skin, look.skin)}<h4>Glasses</h4>${this.items('glasses', look.glasses ?? 'none', 'glasses')}<h4>Height</h4><input type="range" min="0.9" max="1.1" step="0.01" value="${look.height ?? 1}" data-range="height">`;
+    if (tab === 'face') content = `<h4>Skin</h4>${this.swatches('skin', PALETTE.skin, look.skin)}<h4>${t('wr.eyes')}</h4>${this.items('eyes', look.eyes ?? 'dots', 'eyes')}<h4>${t('wr.mouth')}</h4>${this.items('mouth', look.mouth ?? 'smile', 'mouth')}<h4>${t('wr.details')}</h4>${this.items('facial', look.face ?? 'none', 'face')}<h4>Glasses</h4>${this.items('glasses', look.glasses ?? 'none', 'glasses')}<h4>Height</h4><input type="range" min="0.9" max="1.1" step="0.01" value="${look.height ?? 1}" data-range="height">`;
     if (tab === 'top') content = `<h4>Top</h4>${this.items('top', look.topStyle ?? 'tee', 'topStyle')}<h4>Colour</h4>${this.swatches('top', PALETTE.cloth, look.top)}<h4>Scarf</h4>${this.swatches('scarf', PALETTE.cloth, look.scarf, true)}`;
     if (tab === 'bottom') content = `<h4>Bottom</h4>${this.items('bottom', look.bottomStyle ?? 'trousers', 'bottomStyle')}<h4>Colour</h4>${this.swatches('bottom', PALETTE.cloth, look.bottom)}<h4>Shoes</h4>${this.swatches('shoes', PALETTE.cloth, look.shoes)}`;
-    if (tab === 'extras') content = `<h4>Hat</h4>${this.items('hat', look.hat, 'hat')}<h4>On your back</h4>${this.items('back', look.back ?? 'none', 'back')}`;
+    if (tab === 'extras') content = `<h4>Hat</h4>${this.items('hat', look.hat, 'hat')}<h4>On your back</h4>${this.items('back', look.back ?? 'none', 'back')}<h4>${t('wr.acc')}</h4>${this.items('acc', look.acc ?? 'none', 'acc')}`;
     if (tab === 'name') content = `<h4>Your name (shown in multiplayer)</h4><input class="text-input" maxlength="20" value="${escapeHtml(this.host.profile.data.name)}" data-text="name">`;
     return `<div class="menu-panel side">${this.header('Wardrobe')}
       <div class="tabs">${tabs.map((t) => `<button class="tab ${t === tab ? 'on' : ''}" data-tab="${t}">${t}</button>`).join('')}</div>
@@ -403,6 +415,7 @@ export class Menu {
     return `<div class="menu-panel side">${this.header('Garage')}
       <div class="panel-body">
         <div class="vehicle-grid">${cards}</div>
+        <div class="row"><button class="btn primary" data-nav="livery">🎨 ${t('lv.open')}</button></div>
         <h4>Body</h4>${this.swatches('v:body', PALETTE.paint, look.body)}
         <h4>Trim</h4>${this.swatches('v:trim', PALETTE.paint, look.trim)}
         <h4>Accent</h4>${this.swatches('v:accent', PALETTE.paint, look.accent)}

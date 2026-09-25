@@ -7,7 +7,7 @@ import type { TonicId } from './Collectibles';
 export interface ShopItem {
   id: string;
   name: string;
-  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow';
+  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow' | 'eyes' | 'mouth' | 'facial' | 'acc';
   price: number;
   value: string;
   /** 0 common, 1 rare, 2 epic, 3 legendary (loot drops). */
@@ -67,6 +67,34 @@ export const CATALOGUE: ShopItem[] = [
   { id: 'hat:crown', name: 'Golden crown', category: 'hat', price: 0, value: 'crown', rarity: 3, loot: true },
   { id: 'back:cape', name: 'Painter’s cape', category: 'back', price: 0, value: 'cape', rarity: 2, loot: true },
   { id: 'back:wings', name: 'Paper wings', category: 'back', price: 0, value: 'wings', rarity: 3, loot: true },
+  // Milestone 10: faces, face details, accessories and Lantern Roads hats.
+  { id: 'eyes:dots', name: 'Button eyes', category: 'eyes', price: 0, value: 'dots' },
+  { id: 'eyes:happy', name: 'Happy eyes', category: 'eyes', price: 0, value: 'happy' },
+  { id: 'eyes:sleepy', name: 'Sleepy eyes', category: 'eyes', price: 0, value: 'sleepy' },
+  { id: 'eyes:wink', name: 'Wink', category: 'eyes', price: 30, value: 'wink' },
+  { id: 'eyes:big', name: 'Big bright eyes', category: 'eyes', price: 40, value: 'big' },
+  { id: 'eyes:sparkle', name: 'Star eyes', category: 'eyes', price: 0, value: 'sparkle', rarity: 2, loot: true },
+  { id: 'mouth:smile', name: 'Smile', category: 'mouth', price: 0, value: 'smile' },
+  { id: 'mouth:grin', name: 'Big grin', category: 'mouth', price: 0, value: 'grin' },
+  { id: 'mouth:o', name: 'Oh!', category: 'mouth', price: 0, value: 'o' },
+  { id: 'mouth:smirk', name: 'Smirk', category: 'mouth', price: 20, value: 'smirk' },
+  { id: 'mouth:cat', name: 'Cat mouth', category: 'mouth', price: 30, value: 'cat' },
+  { id: 'facial:none', name: 'Nothing', category: 'facial', price: 0, value: 'none' },
+  { id: 'facial:freckles', name: 'Freckles', category: 'facial', price: 0, value: 'freckles' },
+  { id: 'facial:bindi', name: 'Bindi', category: 'facial', price: 0, value: 'bindi' },
+  { id: 'facial:moustache', name: 'Moustache', category: 'facial', price: 30, value: 'moustache' },
+  { id: 'facial:beard', name: 'Beard', category: 'facial', price: 40, value: 'beard' },
+  { id: 'facial:facepaint', name: 'Festival face paint', category: 'facial', price: 60, value: 'facepaint' },
+  { id: 'acc:none', name: 'Nothing', category: 'acc', price: 0, value: 'none' },
+  { id: 'acc:earrings', name: 'Gold earrings', category: 'acc', price: 50, value: 'earrings' },
+  { id: 'acc:necklace', name: 'Moonstone necklace', category: 'acc', price: 70, value: 'necklace' },
+  { id: 'acc:flower', name: 'Flower behind the ear', category: 'acc', price: 30, value: 'flower' },
+  { id: 'acc:bowtie', name: 'Bow tie', category: 'acc', price: 40, value: 'bowtie' },
+  { id: 'acc:headphones', name: 'Headphones', category: 'acc', price: 0, value: 'headphones', rarity: 1, loot: true },
+  { id: 'hat:conical', name: 'Leaf hat (nón lá)', category: 'hat', price: 70, value: 'conical' },
+  { id: 'hat:catears', name: 'Cat ears', category: 'hat', price: 0, value: 'catears', rarity: 1, loot: true },
+  { id: 'hat:wizard', name: 'Star wizard hat', category: 'hat', price: 0, value: 'wizard', rarity: 3, loot: true },
+  { id: 'back:parasol', name: 'Paper parasol', category: 'back', price: 90, value: 'parasol' },
   { id: 'tonic:magnet', name: 'Magnet tonic', category: 'tonic', price: 30, value: 'magnet' },
   { id: 'tonic:feather', name: 'Feather tonic', category: 'tonic', price: 40, value: 'feather' },
   { id: 'tonic:fizzy', name: 'Fizzy Ink', category: 'tonic', price: 35, value: 'fizzy' },

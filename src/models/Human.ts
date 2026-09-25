@@ -5,9 +5,13 @@ import { PaintMaterial } from '../render/PaintMaterial';
 export type HairStyle = 'bob' | 'bun' | 'short' | 'curly' | 'long' | 'ponytail' | 'braids' | 'bald';
 export type TopStyle = 'tee' | 'shirt' | 'hoodie' | 'dress' | 'sari';
 export type BottomStyle = 'trousers' | 'shorts' | 'skirt' | 'sarong';
-export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie' | 'crown' | 'helmet' | 'flowers';
+export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie' | 'crown' | 'helmet' | 'flowers' | 'conical' | 'catears' | 'wizard';
 export type GlassesStyle = 'none' | 'round' | 'sun';
-export type BackStyle = 'none' | 'backpack' | 'satchel' | 'guitar' | 'cape' | 'wings';
+export type BackStyle = 'none' | 'backpack' | 'satchel' | 'guitar' | 'cape' | 'wings' | 'parasol';
+export type EyeStyle = 'dots' | 'happy' | 'sleepy' | 'wink' | 'big' | 'sparkle';
+export type MouthStyle = 'smile' | 'grin' | 'o' | 'cat' | 'smirk';
+export type FaceDetail = 'none' | 'freckles' | 'moustache' | 'beard' | 'bindi' | 'facepaint';
+export type Accessory = 'none' | 'earrings' | 'necklace' | 'headphones' | 'flower' | 'bowtie';
 
 /** Character creator values (docs/08 §1). */
 export interface HumanLook {
@@ -25,6 +29,10 @@ export interface HumanLook {
   back?: BackStyle;
   /** 0.9 – 1.1 */
   height?: number;
+  eyes?: EyeStyle;
+  mouth?: MouthStyle;
+  face?: FaceDetail;
+  acc?: Accessory;
 }
 
 export const DEFAULT_HUMAN_LOOK: HumanLook = {
@@ -126,7 +134,11 @@ export class HumanModel {
         torso.box(0.38, 0.2, 0.03, '#bfd9e8', { position: [s * 0.36, 0.18, 0.22], rotation: [0, s * -0.4, s * -0.2], nightGlow: 1 });
       }
     }
-    this.chest.add(mesh(torso.build(0.012, 2)));
+    if (back === 'parasol') {
+      // A paper parasol over the shoulder.
+      torso.cylinder(0.012, 0.012, 1.1, 5, '#7a4a2a', { position: [0.18, 0.55, 0.14], rotation: [0.35, 0, -0.3] });
+      torso.cylinder(0.02, 0.5, 0.2, 12, '#e0432f', { position: [0.34, 1.05, 0.33], rotation: [0.35, 0, -0.3], pattern: Pattern.Planks });
+    }
 
     // Head: big, round-ish, with painted features.
     this.head.position.y = 0.6;
@@ -134,12 +146,12 @@ export class HumanModel {
     const headKit = new ModelKit()
       .cylinder(0.05, 0.06, 0.1, 6, look.skin, { position: [0, 0.03, 0] })
       .blob(0.2, look.skin, { position: [0, 0.24, 0], scale: [1, 1.08, 0.96], detail: 1, roughness: 0.04 })
-      .blob(0.028, INK, { position: [-0.075, 0.26, -0.18], detail: 0, roughness: 0 })
-      .blob(0.028, INK, { position: [0.075, 0.26, -0.18], detail: 0, roughness: 0 })
       .blob(0.03, '#f09a8a', { position: [-0.12, 0.19, -0.16], scale: [1, 0.6, 0.4], detail: 0, roughness: 0 })
-      .blob(0.03, '#f09a8a', { position: [0.12, 0.19, -0.16], scale: [1, 0.6, 0.4], detail: 0, roughness: 0 })
-      .box(0.06, 0.012, 0.02, '#9a4a3a', { position: [0, 0.15, -0.19] });
+      .blob(0.03, '#f09a8a', { position: [0.12, 0.19, -0.16], scale: [1, 0.6, 0.4], detail: 0, roughness: 0 });
+    addFace(headKit, look);
     addHair(headKit, look);
+    addAccessory(headKit, torso, look.acc ?? 'none');
+    this.chest.add(mesh(torso.build(0.012, 2)));
     addGlasses(headKit, look.glasses ?? 'none');
     const headMesh = mesh(headKit.build(0.008, 4));
     this.head.add(headMesh);
@@ -325,6 +337,116 @@ function addHair(k: ModelKit, look: HumanLook): void {
         k.blob(0.05, ['#e8559a', '#f4d23b', '#f6f0e4', '#9a5bd6'][i % 4], { position: [Math.cos(a) * 0.19, 0.44, Math.sin(a) * 0.19], detail: 0 });
       }
       break;
+    case 'conical':
+      // Nón lá: the Vietnamese leaf hat.
+      k.cylinder(0.01, 0.4, 0.22, 16, '#e8d49a', { position: [0, 0.5, 0], pattern: Pattern.Thatch });
+      k.cylinder(0.401, 0.401, 0.012, 16, '#c8a65a', { position: [0, 0.39, 0] });
+      break;
+    case 'catears':
+      k.box(0.36, 0.03, 0.05, INK, { position: [0, 0.43, 0.02], rotation: [0.2, 0, 0] });
+      for (const s of [-1, 1]) {
+        k.cylinder(0.0, 0.07, 0.13, 4, INK, { position: [s * 0.12, 0.5, 0.02], rotation: [0, Math.PI / 4, s * -0.3] });
+        k.cylinder(0.0, 0.04, 0.08, 4, '#f7b8cf', { position: [s * 0.118, 0.49, -0.0], rotation: [0, Math.PI / 4, s * -0.3] });
+      }
+      break;
+    case 'wizard':
+      k.cylinder(0.3, 0.3, 0.02, 16, '#3e3a8a', { position: [0, 0.41, 0] });
+      k.cylinder(0.0, 0.19, 0.5, 12, '#3e3a8a', { position: [0, 0.66, 0.03], rotation: [0.15, 0, 0] });
+      k.blob(0.035, '#f4d23b', { position: [0.06, 0.62, -0.13], detail: 0, nightGlow: 1 });
+      k.blob(0.025, '#f4d23b', { position: [-0.07, 0.72, -0.08], detail: 0, nightGlow: 1 });
+      break;
+    default:
+      break;
+  }
+}
+
+/** Eyes, mouth and face details (wardrobe · face). */
+function addFace(k: ModelKit, look: HumanLook): void {
+  const z = -0.18;
+  const eyes = look.eyes ?? 'dots';
+  for (const s of [-1, 1]) {
+    const x = s * 0.075;
+    const style = eyes === 'wink' ? (s < 0 ? 'dots' : 'sleepy') : eyes;
+    if (style === 'dots') k.blob(0.028, INK, { position: [x, 0.26, z], detail: 0, roughness: 0 });
+    else if (style === 'sleepy') k.box(0.055, 0.013, 0.02, INK, { position: [x, 0.255, z - 0.005] });
+    else if (style === 'happy') for (const d of [-1, 1]) k.box(0.034, 0.013, 0.02, INK, { position: [x + d * 0.013, 0.262, z - 0.005], rotation: [0, 0, d * -0.6] });
+    else if (style === 'big') {
+      k.blob(0.042, '#f6f0e4', { position: [x, 0.265, z + 0.004], scale: [1, 1.15, 0.5], detail: 0, roughness: 0 });
+      k.blob(0.026, INK, { position: [x, 0.26, z - 0.012], scale: [1, 1.1, 0.5], detail: 0, roughness: 0 });
+      k.blob(0.009, '#ffffff', { position: [x + 0.01, 0.272, z - 0.024], detail: 0, roughness: 0 });
+    } else {
+      // Sparkle: a little four-point star.
+      k.box(0.05, 0.012, 0.02, '#f4c542', { position: [x, 0.26, z - 0.005], nightGlow: 1 });
+      k.box(0.012, 0.05, 0.02, '#f4c542', { position: [x, 0.26, z - 0.005], nightGlow: 1 });
+    }
+  }
+  const lip = '#9a4a3a';
+  const mz = -0.19;
+  switch (look.mouth ?? 'smile') {
+    case 'grin':
+      k.box(0.085, 0.028, 0.02, '#f6f0e4', { position: [0, 0.15, mz] });
+      k.box(0.09, 0.008, 0.022, lip, { position: [0, 0.136, mz] });
+      break;
+    case 'o':
+      k.blob(0.02, lip, { position: [0, 0.145, mz], scale: [1, 1.2, 0.5], detail: 0, roughness: 0 });
+      break;
+    case 'cat':
+      for (const d of [-1, 1]) k.box(0.035, 0.011, 0.02, lip, { position: [d * 0.016, 0.148, mz], rotation: [0, 0, d * 0.5] });
+      break;
+    case 'smirk':
+      k.box(0.06, 0.012, 0.02, lip, { position: [0.01, 0.152, mz], rotation: [0, 0, 0.25] });
+      break;
+    default:
+      k.box(0.06, 0.012, 0.02, lip, { position: [0, 0.15, mz] });
+  }
+  switch (look.face ?? 'none') {
+    case 'freckles':
+      for (const s of [-1, 1]) for (let i = 0; i < 3; i++) k.blob(0.008, '#9a5a3a', { position: [s * (0.09 + i * 0.018), 0.215 + (i % 2) * 0.012, -0.172], detail: 0, roughness: 0 });
+      break;
+    case 'moustache':
+      for (const s of [-1, 1]) k.box(0.05, 0.02, 0.02, look.hair, { position: [s * 0.024, 0.172, -0.192], rotation: [0, 0, s * -0.25] });
+      break;
+    case 'beard':
+      k.blob(0.13, look.hair, { position: [0, 0.12, -0.09], scale: [1.2, 0.75, 0.85], detail: 1, roughness: 0.08 });
+      k.box(0.06, 0.012, 0.02, lip, { position: [0, 0.15, -0.205] });
+      break;
+    case 'bindi':
+      k.blob(0.014, '#d8263a', { position: [0, 0.325, -0.19], scale: [1, 1, 0.5], detail: 0, roughness: 0 });
+      break;
+    case 'facepaint':
+      for (const s of [-1, 1]) {
+        k.box(0.07, 0.016, 0.02, '#3e9fd8', { position: [s * 0.12, 0.205, -0.168], rotation: [0, s * 0.5, 0] });
+        k.box(0.07, 0.016, 0.02, '#f4d23b', { position: [s * 0.12, 0.183, -0.168], rotation: [0, s * 0.5, 0] });
+      }
+      break;
+    default:
+      break;
+  }
+}
+
+/** Jewellery and gadgets: some sit on the head, some round the neck. */
+function addAccessory(head: ModelKit, torso: ModelKit, acc: Accessory): void {
+  const gold = '#f4c542';
+  switch (acc) {
+    case 'earrings':
+      for (const s of [-1, 1]) head.blob(0.022, gold, { position: [s * 0.195, 0.16, 0], detail: 0, roughness: 0 });
+      break;
+    case 'necklace':
+      torso.add(new THREE.TorusGeometry(0.13, 0.012, 5, 18).rotateX(Math.PI / 2), gold, { position: [0, 0.52, -0.02], rotation: [0.25, 0, 0] });
+      torso.blob(0.03, '#3e9fd8', { position: [0, 0.47, -0.15], detail: 0, nightGlow: 1 });
+      break;
+    case 'headphones':
+      head.add(new THREE.TorusGeometry(0.215, 0.018, 5, 14, Math.PI), INK, { position: [0, 0.27, 0.01], rotation: [0, Math.PI / 2, 0] });
+      for (const s of [-1, 1]) head.cylinder(0.06, 0.06, 0.05, 10, '#e8559a', { position: [s * 0.215, 0.24, 0.01], rotation: [0, 0, Math.PI / 2] });
+      break;
+    case 'flower':
+      head.blob(0.045, '#f7b8cf', { position: [0.17, 0.33, -0.04], scale: [1, 1, 0.5], detail: 0 });
+      head.blob(0.018, '#f4d23b', { position: [0.175, 0.33, -0.065], detail: 0 });
+      break;
+    case 'bowtie':
+      for (const s of [-1, 1]) torso.cylinder(0.0, 0.05, 0.08, 4, '#d8463a', { position: [s * 0.04, 0.52, -0.14], rotation: [0, 0, s * Math.PI / 2] });
+      torso.blob(0.018, '#9a2a2a', { position: [0, 0.52, -0.15], detail: 0 });
+      break;
     default:
       break;
   }
@@ -362,5 +484,9 @@ export function randomLook(r: () => number): HumanLook {
     glasses: pick(['none', 'none', 'round', 'sun'] as const),
     back: pick(['none', 'none', 'backpack', 'satchel', 'guitar'] as const),
     height: 0.92 + r() * 0.16,
+    eyes: pick(['dots', 'dots', 'dots', 'happy', 'big', 'sleepy'] as const),
+    mouth: pick(['smile', 'smile', 'grin', 'o', 'smirk'] as const),
+    face: pick(['none', 'none', 'none', 'none', 'freckles', 'moustache', 'beard', 'bindi'] as const),
+    acc: pick(['none', 'none', 'none', 'earrings', 'necklace', 'headphones', 'flower'] as const),
   };
 }

@@ -632,3 +632,8 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .menu > .brand-foot { position: absolute; right: 24px; bottom: 22px; max-width: min(560px, calc(100vw - 48px)); margin: 0; padding: 10px 14px; border: 1.5px solid var(--ink); border-radius: 10px; background: rgba(247, 243, 232, 0.94); box-shadow: 4px 6px 0 rgba(43, 38, 34, 0.18); pointer-events: auto; }
 :root[dir='rtl'] .menu > .brand-foot { right: auto; left: 24px; }
 @media (max-width: 760px) { .menu > .brand-foot { position: static; max-width: none; margin: 8px; } }
+
+/* Livery painter (garage). */
+.livery-wrap { position: relative; margin: 6px 0 10px; }
+#app canvas.livery-canvas { display: block; width: 100%; max-width: 420px; aspect-ratio: 2 / 1; height: auto; border: 2px solid var(--ink, #2b2622); border-radius: 6px; cursor: crosshair; touch-action: none; image-rendering: pixelated; }
+.livery-front { font: 11px var(--mono); opacity: 0.6; margin-top: 3px; }

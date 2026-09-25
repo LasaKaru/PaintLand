@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { ModelKit, Pattern } from './ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
 import { ROVER_TUNING, type VehicleTuning } from '../gameplay/RoverController';
+import { decodeLivery, isEmptyLivery, paintLiveryCanvas } from '../gameplay/Livery';
 
 /** Paint scheme and roof load (garage customisation, docs/08 §2). */
 export interface VehicleLook {
@@ -15,6 +16,8 @@ export interface VehicleLook {
   spoiler?: 'none' | 'lip' | 'wing';
   /** Neon under the car (a colour), glowing at night. */
   glow?: string | null;
+  /** A hand-painted picture on both sides (a livery share code, see Livery.ts). */
+  livery?: string;
 }
 
 export type VehicleId = 'rover' | 'tuktuk' | 'coupe' | 'buggy' | 'van' | 'scooter';
@@ -326,6 +329,25 @@ export class VehicleModel {
       m.castShadow = true;
       this.body.add(m);
     }
+    const livery = liveryTexture(look.livery);
+    if (livery) {
+      // The picture on both flanks, front of the picture toward the front of the car.
+      const len = (bb.max.z - bb.min.z) * 0.84;
+      const tall = Math.min((bb.max.y - bb.min.y) * 0.5, len * 0.5);
+      const liveryMat = new PaintMaterial({ color: '#ffffff', map: livery, gloss: 0.7, side: THREE.DoubleSide });
+      for (const s of [-1, 1]) {
+        const geo = new THREE.PlaneGeometry(len, tall);
+        if (s > 0) {
+          // The right flank would read back to front: mirror it.
+          const uv = geo.getAttribute('uv') as THREE.BufferAttribute;
+          for (let i = 0; i < uv.count; i++) uv.setX(i, 1 - uv.getX(i));
+        }
+        const plane = new THREE.Mesh(geo, liveryMat);
+        plane.rotation.y = s * Math.PI / 2;
+        plane.position.set(s < 0 ? bb.min.x - 0.014 : bb.max.x + 0.014, bb.min.y + (bb.max.y - bb.min.y) * 0.42, (bb.min.z + bb.max.z) / 2);
+        this.body.add(plane);
+      }
+    }
     if (look.glow) {
       const w = bb.max.x - bb.min.x;
       const d = bb.max.z - bb.min.z;
@@ -389,6 +411,29 @@ export class VehicleModel {
   roll(ds: number): void {
     for (let i = 0; i < this.wheels.length; i++) this.wheels[i].rotation.x -= ds / this.wheelRadii[i];
   }
+}
+
+const liveryCache = new Map<string, THREE.CanvasTexture>();
+
+/** The texture for a livery code (cached; null for none or an invalid code). */
+function liveryTexture(code: string | undefined): THREE.CanvasTexture | null {
+  if (!code || typeof document === 'undefined') return null;
+  const hit = liveryCache.get(code);
+  if (hit) return hit;
+  const px = decodeLivery(code);
+  if (!px || isEmptyLivery(px)) return null;
+  const canvas = document.createElement('canvas');
+  paintLiveryCanvas(canvas, px);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  tex.anisotropy = 4;
+  if (liveryCache.size > 48) {
+    const [oldKey, old] = liveryCache.entries().next().value!;
+    old.dispose();
+    liveryCache.delete(oldKey);
+  }
+  liveryCache.set(code, tex);
+  return tex;
 }
 
 function buildWheel(r: number, width: number, hubs: string): THREE.BufferGeometry {

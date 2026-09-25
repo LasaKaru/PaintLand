@@ -411,7 +411,10 @@ void main() {
   #endif
 
   #ifdef USE_PAINT_MAP
-    base *= texture(uPaintMap, vPaintUv).rgb;
+    vec4 paintTex = texture(uPaintMap, vPaintUv);
+    // Clear parts of a picture (car liveries) let the surface behind show through.
+    if (paintTex.a < 0.5) discard;
+    base *= paintTex.rgb;
   #endif
   float dist = length(vViewPosition);
   #ifdef USE_ROAD
