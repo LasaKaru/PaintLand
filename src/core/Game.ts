@@ -1502,10 +1502,10 @@ export class Game {
     const r = this.rover;
     if (tip('drive', touch ? t('tip.driveTouch') : t('tip.drive'))) return;
     if (this.mode === 'drive' && r.v > 15 && tip('notes', t('tip.notes'))) return;
-    if (this.mode === 'drive' && r.v > 20 && this.lapTime > 20 && tip('hop', t('tip.hop').replace('Space', touch ? 'HOP' : 'Space'))) return;
-    if (r.boostMeter > 0.6 && tip('boost', t('tip.boost').replace('Shift', touch ? 'BOOST' : 'Shift'))) return;
+    if (this.mode === 'drive' && r.v > 20 && this.lapTime > 20 && tip('hop', t('tip.hop', { key: touch ? 'HOP' : 'Space' }))) return;
+    if (r.boostMeter > 0.6 && tip('boost', t('tip.boost', { key: touch ? 'BOOST' : 'Shift' }))) return;
     if (this.frame.up.y < 0.3 && tip('gravity', t('tip.gravity'))) return;
-    if (this.lapTime > 60 && tip('walk', t('tip.walk').replace('F', touch ? 'E' : 'F'))) return;
+    if (this.lapTime > 60 && tip('walk', t('tip.walk', { key: touch ? 'E' : 'F' }))) return;
     if (this.lapTime > 90) tip('settings', t('tip.settings'));
   }
 

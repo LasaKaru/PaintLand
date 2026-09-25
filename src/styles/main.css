@@ -9,10 +9,11 @@
   --teal: #2f8f86;
   --good: #3f9a52;
   --bad: #c8453a;
-  /* Latin glyphs use the hand-drawn fonts; Sinhala and Tamil fall back to Noto per glyph. */
-  --hand: 'Permanent Marker', 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Comic Sans MS', cursive;
-  --script: 'Caveat', 'Noto Sans Sinhala', 'Noto Sans Tamil', cursive;
-  --mono: 'Space Mono', 'Noto Sans Sinhala', 'Noto Sans Tamil', ui-monospace, monospace;
+  /* Latin glyphs use the hand-drawn fonts; every other script falls back to Noto per glyph. */
+  --fb: 'Noto Sans', 'Noto Sans Devanagari', 'Noto Sans Bengali', 'Noto Sans Arabic', 'Noto Sans Thai', 'Noto Sans Sinhala', 'Noto Sans Tamil', 'Noto Sans SC', 'Noto Sans JP', 'Noto Sans KR';
+  --hand: 'Permanent Marker', var(--fb), 'Comic Sans MS', cursive;
+  --script: 'Caveat', var(--fb), cursive;
+  --mono: 'Space Mono', var(--fb), ui-monospace, monospace;
   --hud-scale: 1;
 }
 
@@ -468,3 +469,18 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .splash .lang-row { justify-content: center; }
 :root[lang='si'] .menu-item, :root[lang='ta'] .menu-item { font-size: 1.45em; }
 :root[lang='si'] .tab, :root[lang='ta'] .tab { text-transform: none; letter-spacing: 0; }
+
+/* Han characters: use the right regional font for Japanese and Korean. */
+:root[lang='ja'] { --fb: 'Noto Sans', 'Noto Sans JP', 'Noto Sans SC', 'Noto Sans KR'; }
+:root[lang='ko'] { --fb: 'Noto Sans', 'Noto Sans KR', 'Noto Sans JP', 'Noto Sans SC'; }
+.lang-pick { display: inline-flex; align-items: center; gap: 6px; font-weight: 700; }
+.lang-pick select { font-family: var(--mono); font-size: 0.95em; padding: 4px 8px; border: 1.5px solid var(--ink); border-radius: 5px; background: #fffaf0; color: var(--ink); }
+:root[lang='ja'] .menu-item, :root[lang='zh'] .menu-item, :root[lang='ko'] .menu-item, :root[lang='hi'] .menu-item, :root[lang='bn'] .menu-item, :root[lang='th'] .menu-item, :root[dir='rtl'] .menu-item { font-size: 1.45em; }
+:root:not([lang='en']) .tab { text-transform: none; letter-spacing: 0; }
+/* Right-to-left languages: mirror the menu's hover mark. */
+:root[dir='rtl'] .menu-item { text-align: right; border-left: none; border-right: 4px solid transparent; }
+:root[dir='rtl'] .menu-item:hover { transform: translateX(-6px); border-right-color: var(--terracotta); }
+:root[dir='rtl'] .menu-main { left: auto; right: 0; background: linear-gradient(270deg, rgba(247, 243, 232, 0.96) 70%, rgba(247, 243, 232, 0)); }
+:root[lang='ru'] .menu-item { font-size: 1.4em; }
+:root[lang='ru'] .menu-main, :root[lang='ar'] .menu-main, :root[lang='ur'] .menu-main, :root[lang='fa'] .menu-main { gap: 12px; }
+.menu-main { overflow-y: auto; }

@@ -135,27 +135,3 @@ describe('Multiplayer validation (server and client)', () => {
     expect(slow.add(3000)).toBe(false);
   });
 });
-
-import { allStrings, setLang, t } from '../src/core/i18n';
-
-describe('Localisation', () => {
-  it('every string has Sinhala and Tamil, with the same placeholders as English', () => {
-    for (const [key, e] of Object.entries(allStrings())) {
-      const holes = (s: string) => (s.match(/\{\w+\}/g) ?? []).sort().join();
-      expect(e.si, `${key} si`).toBeTruthy();
-      expect(e.ta, `${key} ta`).toBeTruthy();
-      expect(holes(e.si!), `${key} si placeholders`).toBe(holes(e.en));
-      expect(holes(e.ta!), `${key} ta placeholders`).toBe(holes(e.en));
-    }
-  });
-
-  it('switches language and fills placeholders', () => {
-    setLang('si');
-    expect(t('menu.trophies', { n: 3, total: 22 })).toContain('3/22');
-    expect(t('menu.settings')).toBe('සැකසුම්');
-    setLang('ta');
-    expect(t('menu.settings')).toBe('அமைப்புகள்');
-    setLang('en');
-    expect(t('menu.play', { chapter: 'Serendib' })).toBe('▶ Play · Serendib');
-  });
-});

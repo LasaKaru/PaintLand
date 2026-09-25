@@ -517,8 +517,9 @@ export class Menu {
     </div>`;
   }
 
+  /** Language picker: a dropdown (24 languages), each named in its own script. */
   private langButtons(): string {
-    return LANGS.map((l) => `<button class="seg-btn ${lang() === l.id ? 'on' : ''}" data-lang="${l.id}">${l.name}</button>`).join('');
+    return `<label class="lang-pick">🌐 <select data-langselect aria-label="Language">${LANGS.map((l) => `<option value="${l.id}" ${lang() === l.id ? 'selected' : ''}>${l.name}</option>`).join('')}</select></label>`;
   }
 
   private trophiesScreen(): string {
@@ -560,10 +561,6 @@ export class Menu {
       else if (d.nav === 'hub') this.host.enterHub();
       else if (d.nav === 'resume') this.host.resume();
       else this.show(d.nav as MenuScreen);
-      return;
-    }
-    if (d.lang) {
-      setLang(d.lang as Lang);
       return;
     }
     if (d.trial) {
@@ -750,6 +747,10 @@ export class Menu {
         this.root.querySelectorAll('.quality').forEach((b) => b.classList.remove('on'));
         q.classList.add('on');
       }
+    }
+    if (el.dataset.langselect !== undefined && e.type === 'change') {
+      void setLang((el as unknown as HTMLSelectElement).value as Lang);
+      return;
     }
     if (el.dataset.vibe !== undefined && e.type === 'change') {
       applyVibe(this.host.studio(), (el as unknown as HTMLSelectElement).value);
