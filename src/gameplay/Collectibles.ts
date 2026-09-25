@@ -1,6 +1,6 @@
 import * as THREE from 'three';
 import { RoadPath, createFrame } from '../road/RoadPath';
-import { DISTRICTS, NOTE_COLOURS, PHRASE_LENGTH, degreeToMidi } from '../world/Districts';
+import { NOTE_COLOURS, PHRASE_LENGTH, degreeToMidi, type DistrictDef, type DressStyle } from '../world/Districts';
 import { PaintMaterial } from '../render/PaintMaterial';
 import { Random, hashString } from '../core/Random';
 import { buildBolt, buildBottle, buildCrate, buildMagnet, buildNoteGeometry, buildRamp, buildSpeedPad } from '../models/Props';
@@ -83,7 +83,7 @@ export class Collectibles {
   private readonly tmp = new THREE.Vector3();
   private readonly hidden = new THREE.Matrix4().makeScale(0, 0, 0);
 
-  constructor(private readonly path: RoadPath) {
+  constructor(private readonly path: RoadPath, private readonly districts: DistrictDef[]) {
     this.group.name = 'collectibles';
     const noteMat = new PaintMaterial({ emissive: 0.25 });
     const geos = [buildNoteGeometry(false), buildNoteGeometry(true)];
@@ -91,7 +91,7 @@ export class Collectibles {
     // Build notes from every district melody.
     const perShape: Note[][] = [[], []];
     for (const span of path.spans) {
-      const def = DISTRICTS[span.district];
+      const def = this.districts[span.district];
       const start = span.start + 28;
       const end = span.end - 18;
       const count = def.melody.length;
@@ -161,7 +161,7 @@ export class Collectibles {
     };
     const plan: { kind: Item['kind']; s: number; x: number; h: number }[] = [];
     for (const span of this.path.spans) {
-      const def = DISTRICTS[span.district];
+      const def = this.districts[span.district];
       const rnd = new Random(hashString(def.id + ':items'));
       const len = span.end - span.start;
       const at = (t: number): number => span.start + len * t;
@@ -169,20 +169,11 @@ export class Collectibles {
       const add = (kind: Item['kind'], s: number, x: number, h = 0): void => {
         plan.push({ kind, s, x, h });
       };
-      const pads = { town: 3, tower: 2, ceiling: 2, arches: 1, chute: 3, bridge: 4, loop: 2, gate: 2 }[def.style];
+      const pads = PADS[def.style] ?? 2;
       for (let i = 0; i < pads; i++) add('pad', at(rnd.range(0.15, 0.85)), rnd.pick([-3, 0, 3]));
-      const pickups: Item['kind'][] = {
-        town: ['bolt', 'magnet'],
-        tower: ['bolt'],
-        ceiling: ['feather', 'fizzy'],
-        arches: ['bolt', 'magnet'],
-        chute: ['bolt'],
-        bridge: ['magnet', 'fizzy', 'bolt', 'feather'],
-        loop: ['bolt'],
-        gate: ['bolt', 'feather'],
-      }[def.style] as Item['kind'][];
+      const pickups = PICKUPS[def.style] ?? ['bolt'];
       pickups.forEach((k, i) => add(k, at((i + 1) / (pickups.length + 1) + rnd.jitter(0.05)), rnd.range(-3.5, 3.5), 1.6));
-      if (def.style === 'town' || def.style === 'bridge' || def.style === 'gate') {
+      if (FURNITURE.has(def.style)) {
         for (let i = 0; i < 2; i++) {
           const s = at(rnd.range(0.2, 0.8));
           if (upright(s)) add('ramp', s, rnd.pick([-2.5, 2.5]));
@@ -376,6 +367,31 @@ export class Collectibles {
     };
   }
 }
+
+/** How many speed pads and which pickups each district style gets. */
+const PADS: Partial<Record<DressStyle, number>> = { town: 3, chute: 3, bridge: 4, galleface: 3, lotus: 3, ninearch: 4, greatwall: 3, colosseum: 3, chichen: 3 };
+const PICKUPS: Partial<Record<DressStyle, Item['kind'][]>> = {
+  town: ['bolt', 'magnet'],
+  ceiling: ['feather', 'fizzy'],
+  arches: ['bolt', 'magnet'],
+  bridge: ['magnet', 'fizzy', 'bolt', 'feather'],
+  gate: ['bolt', 'feather'],
+  galleface: ['magnet', 'bolt'],
+  lotus: ['feather', 'bolt'],
+  sigiriya: ['magnet', 'fizzy', 'bolt'],
+  tea: ['bolt', 'magnet'],
+  ninearch: ['fizzy', 'bolt'],
+  beach: ['feather', 'magnet', 'bolt'],
+  greatwall: ['bolt', 'magnet'],
+  colosseum: ['fizzy', 'bolt'],
+  taj: ['magnet', 'feather'],
+  machupicchu: ['bolt', 'bolt'],
+  redeemer: ['feather', 'bolt'],
+  chichen: ['fizzy', 'magnet', 'bolt'],
+  petra: ['bolt', 'feather'],
+};
+/** Styles with flat stretches for ramps and crates. */
+const FURNITURE = new Set<DressStyle>(['town', 'bridge', 'gate', 'galleface', 'tea', 'beach', 'greatwall', 'petra']);
 
 const _spin = new THREE.Quaternion();
 const _yAxis = new THREE.Vector3(0, 1, 0);

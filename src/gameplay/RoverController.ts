@@ -20,6 +20,8 @@ export const ROVER_TUNING = {
   boostDrain: 1 / 4, // full meter lasts 4 s
 };
 
+export type VehicleTuning = typeof ROVER_TUNING;
+
 export interface RoverInput {
   throttle: number;
   brake: number;
@@ -76,6 +78,8 @@ export class RoverController {
   prevH = 0;
   prevYaw = 0;
 
+  /** Handling values for the current vehicle (garage choice). */
+  tuning: VehicleTuning = { ...ROVER_TUNING };
   readonly mods: RoverModifiers = { noBoost: false, noBrakes: false, highJumps: false, speedMul: 1, wobbly: false };
   private readonly frame = createFrame();
 
@@ -97,7 +101,7 @@ export class RoverController {
   }
 
   step(dt: number, input: RoverInput): void {
-    const T = ROVER_TUNING;
+    const T = this.tuning;
     this.prevS = this.s;
     this.prevX = this.x;
     this.prevH = this.h;

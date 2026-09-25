@@ -4,16 +4,16 @@ import { Random } from '../core/Random';
 
 const INK = '#2b2622';
 
-/** Leaning street lamp; the lantern glass glows at night. Base at origin, arm reaches toward -X. */
+/** Leaning street lamp; the lantern glass glows at night. Base at origin, arm reaches forward (+Z) over the road. */
 export function buildLamp(rnd: Random): THREE.BufferGeometry {
   const lean = rnd.jitter(0.05);
   return new ModelKit()
     .cylinder(0.2, 0.26, 0.4, 8, INK, { position: [0, 0.2, 0] })
     .cylinder(0.07, 0.09, 4.6, 6, INK, { position: [0, 2.5, 0], rotation: [0, 0, lean] })
-    .box(1.1, 0.07, 0.07, INK, { position: [-0.45, 4.7, 0] })
-    .box(0.42, 0.55, 0.42, '#fff2b8', { position: [-0.95, 4.35, 0], nightGlow: 1 })
-    .box(0.52, 0.12, 0.52, INK, { position: [-0.95, 4.68, 0] })
-    .cylinder(0.02, 0.2, 0.16, 4, INK, { position: [-0.95, 4.82, 0], rotation: [0, Math.PI / 4, 0] })
+    .box(0.07, 0.07, 1.1, INK, { position: [0, 4.7, 0.45] })
+    .box(0.42, 0.55, 0.42, '#fff2b8', { position: [0, 4.35, 0.95], nightGlow: 1 })
+    .box(0.52, 0.12, 0.52, INK, { position: [0, 4.68, 0.95] })
+    .cylinder(0.02, 0.2, 0.16, 4, INK, { position: [0, 4.82, 0.95], rotation: [0, Math.PI / 4, 0] })
     .build(0.02, rnd.int(0, 99));
 }
 

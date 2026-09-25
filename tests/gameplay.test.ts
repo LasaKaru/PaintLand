@@ -1,11 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
 import { TrackBuilder } from '../src/road/TrackBuilder';
-import { buildChapter1 } from '../src/road/chapter1';
+import { SKETCH } from '../src/world/chapters/sketch';
 import { RoverController, ROVER_TUNING, type RoverInput } from '../src/gameplay/RoverController';
 import { HumanController } from '../src/gameplay/HumanController';
 import { Collectibles, type PickupEvent } from '../src/gameplay/Collectibles';
-import { DISTRICTS, PHRASE_LENGTH, degreeToMidi } from '../src/world/Districts';
+import { PHRASE_LENGTH, degreeToMidi } from '../src/world/Districts';
+const DISTRICTS = SKETCH.districts;
 import { walkableHalfWidth } from '../src/road/RoadMesh';
 
 const DT = 1 / 60;
@@ -137,8 +138,8 @@ describe('HumanController', () => {
 });
 
 describe('Collectibles', () => {
-  const path = buildChapter1();
-  const items = new Collectibles(path);
+  const path = SKETCH.buildRoute();
+  const items = new Collectibles(path, DISTRICTS);
 
   it('places every melody step as a note, in phrases of eight', () => {
     const total = DISTRICTS.reduce((n, d) => n + d.melody.length, 0);

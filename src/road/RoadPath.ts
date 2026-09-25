@@ -16,7 +16,19 @@ export interface RoadFrame {
   rails: number;
   /** Extra walkable plaza width on each side (town streets). */
   plaza: number;
+  /** Road surface style (see Paving). */
+  paving: number;
 }
+
+/** Road surface styles understood by the road shader. */
+export const Paving = {
+  Slabs: 0,
+  Cobbles: 1,
+  Asphalt: 2,
+  Stone: 3,
+  Planks: 4,
+  Earth: 5,
+} as const;
 
 export function createFrame(): RoadFrame {
   return {
@@ -29,6 +41,7 @@ export function createFrame(): RoadFrame {
     district: 0,
     rails: 0,
     plaza: 0,
+    paving: 0,
   };
 }
 
@@ -56,6 +69,7 @@ export class RoadPath {
     readonly districts: Uint8Array,
     readonly rails: Uint8Array,
     readonly plazas: Float32Array,
+    readonly pavings: Uint8Array = new Uint8Array(widths.length),
   ) {
     this.count = widths.length;
     this.length = (this.count - 1) * ROAD_STEP;
@@ -83,6 +97,7 @@ export class RoadPath {
     const nearest = t < 0.5 ? i : j;
     out.district = this.districts[nearest];
     out.rails = this.rails[nearest];
+    out.paving = this.pavings[nearest];
     out.plaza = this.plazas[i] + (this.plazas[j] - this.plazas[i]) * t;
     return out;
   }

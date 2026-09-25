@@ -168,6 +168,9 @@ float edgeAt(vec2 uv, float w) {
   vec3 c = nc.xyz * 2.0 - 1.0;
   float normalEdge = max(max(1.0 - dot(c, nl.xyz * 2.0 - 1.0), 1.0 - dot(c, nr.xyz * 2.0 - 1.0)), max(1.0 - dot(c, nd.xyz * 2.0 - 1.0), 1.0 - dot(c, nu.xyz * 2.0 - 1.0)));
   normalEdge = smoothstep(0.25, 0.6, normalEdge);
+  // The sky has no normal: never draw a normal crease against it (the horizon stays soft).
+  float skyNear = step(length(c), 0.1) + step(length(nl.xyz * 2.0 - 1.0), 0.1) + step(length(nr.xyz * 2.0 - 1.0), 0.1) + step(length(nd.xyz * 2.0 - 1.0), 0.1) + step(length(nu.xyz * 2.0 - 1.0), 0.1);
+  if (skyNear > 0.0) normalEdge = 0.0;
 
   float idEdge = step(0.002, abs(nc.a - nl.a)) + step(0.002, abs(nc.a - nr.a)) + step(0.002, abs(nc.a - nd.a)) + step(0.002, abs(nc.a - nu.a));
   idEdge = clamp(idEdge, 0.0, 1.0);

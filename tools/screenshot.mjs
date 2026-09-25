@@ -1,5 +1,8 @@
-// Dev tool: drive the game in headless Chromium and save screenshots.
-// Usage: npm run dev (in another shell), then `node tools/screenshot.mjs [url]`.
+// Dev tool: render the game in headless Chromium and save screenshots to tools/out/.
+// Usage: npm run dev (in another shell), then:
+//   node tools/screenshot.mjs                       # default shot list
+//   SHOTS="sketch:20:morning,serendib:900:golden" node tools/screenshot.mjs
+//   MENUS="main,wardrobe,garage" node tools/screenshot.mjs
 import { createRequire } from 'node:module';
 import { mkdirSync } from 'node:fs';
 const require = createRequire(import.meta.url);
@@ -9,32 +12,48 @@ try { playwright = require('playwright'); } catch { playwright = require('/opt/n
 const url = process.argv[2] ?? 'http://localhost:5173/';
 const out = new URL('./out/', import.meta.url).pathname;
 mkdirSync(out, { recursive: true });
+const wait = Number(process.env.WAIT ?? 2500);
 
 const browser = await playwright.chromium.launch({
   args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist', '--autoplay-policy=no-user-gesture-required'],
 });
 const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
 const logs = [];
-page.on('console', (m) => logs.push(`[${m.type()}] ${m.text()}`));
+page.on('console', (m) => { if (m.type() === 'error' || m.type() === 'warning') logs.push(`[${m.type()}] ${m.text()}`); });
 page.on('pageerror', (e) => logs.push(`[pageerror] ${e.message}`));
 await page.goto(url);
-await page.waitForFunction(() => window.__paintland, null, { timeout: 60000 });
-await page.waitForTimeout(4000);
-await page.screenshot({ path: `${out}00-title.png` });
+await page.waitForFunction(() => window.__paintland, null, { timeout: 90000 });
+await page.waitForTimeout(3000);
+await page.screenshot({ path: `${out}00-splash.png` });
 
-const shots = (process.env.SHOTS ?? '20:morning,300:golden,420:noon,600:dusk,900:morning,1200:night,1500:noon,1800:golden,2350:morning,2440:noon,2800:dusk').split(',');
-for (const shot of shots) {
-  const [s, preset, rain] = shot.split(':');
-  await page.evaluate(([s, p, r]) => window.__paintland.debugJump(Number(s), p, r === 'rain'), [s, preset, rain]);
-  await page.waitForTimeout(Number(process.env.WAIT ?? 2500));
+for (const screen of (process.env.MENUS ?? '').split(',').filter(Boolean)) {
+  await page.evaluate((s) => window.__paintland.debugMenu(s), screen);
+  await page.waitForTimeout(wait);
+  await page.screenshot({ path: `${out}menu-${screen}.png` });
+}
+if (process.env.INTRO) {
+  await page.evaluate(() => window.__paintland.debugIntro());
+  await page.waitForTimeout(wait * 2);
+  await page.screenshot({ path: `${out}intro.png` });
+}
+const defaults = 'sketch:20:morning,sketch:650:golden';
+for (const shot of (process.env.SHOTS ?? defaults).split(',').filter(Boolean)) {
+  const [chapter, s, preset, rain] = shot.split(':');
+  await page.evaluate(([c, s, p, r]) => window.__paintland.debugJump(Number(s), p, r === 'rain', c), [chapter, s, preset, rain]);
+  await page.waitForTimeout(wait);
   const info = await page.evaluate(() => window.__paintland.debugInfo());
-  logs.push(`[shot ${s}] ${JSON.stringify(info)}`);
-  await page.screenshot({ path: `${out}s${String(s).padStart(4, '0')}-${preset}${rain ? '-rain' : ''}.png` });
+  logs.push(`[shot ${shot}] ${JSON.stringify(info)}`);
+  await page.screenshot({ path: `${out}${chapter}-${String(s).padStart(4, '0')}-${preset}${rain ? '-rain' : ''}.png` });
 }
 if (process.env.WALK) {
   await page.evaluate(() => window.__paintland.debugWalk());
   await page.waitForTimeout(1500);
   await page.screenshot({ path: `${out}walk-third.png` });
 }
-console.log(logs.filter((l) => !l.includes('[vite]')).join('\n'));
+if (process.env.MISSION) {
+  await page.evaluate((id) => window.__paintland.debugMission(id), process.env.MISSION);
+  await page.waitForTimeout(wait);
+  await page.screenshot({ path: `${out}mission-${process.env.MISSION}.png` });
+}
+console.log(logs.join('\n') || 'no console errors');
 await browser.close();

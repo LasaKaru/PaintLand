@@ -40,6 +40,7 @@ export class TrackBuilder {
   private plaza = 0;
   private district = 0;
   private rails = 0;
+  private paving = 0;
   private travelled = 0;
   private nextSampleAt = 0;
 
@@ -49,6 +50,7 @@ export class TrackBuilder {
   private readonly outDistrict: number[] = [];
   private readonly outRails: number[] = [];
   private readonly outPlaza: number[] = [];
+  private readonly outPaving: number[] = [];
 
   constructor(start: THREE.Vector3, forward: THREE.Vector3, up: THREE.Vector3, width: number) {
     this.pos.copy(start);
@@ -68,6 +70,16 @@ export class TrackBuilder {
     return this;
   }
 
+  setPaving(style: number): this {
+    this.paving = style;
+    return this;
+  }
+
+  /** Current heading/position, for chapters that place landmarks relative to the route. */
+  get position(): THREE.Vector3 {
+    return this.pos.clone();
+  }
+
   straight(length: number, extra: Omit<SegmentSpec, 'length'> = {}): this {
     return this.segment({ length, ...extra });
   }
@@ -82,6 +94,30 @@ export class TrackBuilder {
 
   roll(degrees: number, length: number, extra: Omit<SegmentSpec, 'length' | 'roll'> = {}): this {
     return this.segment({ length, roll: degrees, ...extra });
+  }
+
+  /**
+   * Smoothly remove any leftover pitch and roll over `length` metres, so the road
+   * is flat and upright again. Turns made while pitched leave a small tilt that
+   * would otherwise add climb to later helixes.
+   */
+  level(length: number): this {
+    const steps = Math.max(1, Math.round(length / SUBSTEP));
+    const ds = length / steps;
+    const flatFwd = new THREE.Vector3();
+    const right = new THREE.Vector3();
+    for (let k = 1; k <= steps; k++) {
+      const t = 1 / (steps - k + 1);
+      flatFwd.set(this.fwd.x, 0, this.fwd.z).normalize();
+      this.fwd.lerp(flatFwd, t).normalize();
+      this.up.lerp(WORLD_UP, t);
+      right.crossVectors(this.fwd, this.up).normalize();
+      this.up.crossVectors(right, this.fwd).normalize();
+      this.pos.addScaledVector(this.fwd, ds);
+      this.travelled += ds;
+      while (this.travelled + 1e-6 >= this.nextSampleAt) this.record();
+    }
+    return this;
   }
 
   /** A full vertical loop that drifts sideways by `shift` so the exit clears the entry. */
@@ -148,6 +184,7 @@ export class TrackBuilder {
     this.outDistrict.push(this.district);
     this.outRails.push(this.rails);
     this.outPlaza.push(this.plaza);
+    this.outPaving.push(this.paving);
     this.nextSampleAt += ROAD_STEP;
   }
 
@@ -183,6 +220,7 @@ export class TrackBuilder {
       new Uint8Array(this.outDistrict),
       new Uint8Array(this.outRails),
       new Float32Array(this.outPlaza),
+      new Uint8Array(this.outPaving),
     );
   }
 }

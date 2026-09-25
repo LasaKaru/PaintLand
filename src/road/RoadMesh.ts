@@ -11,15 +11,33 @@ const enum Surface {
   Underside = 4,
 }
 
-const COLOURS = {
-  road: new THREE.Color('#a9aee0'),
-  kerb: new THREE.Color('#f1e9d8'),
-  pavement: new THREE.Color('#ead7ae'),
-  wall: new THREE.Color('#d8643a'),
-  wallTop: new THREE.Color('#ec9a5e'),
-  outer: new THREE.Color('#cf6a3e'),
-  underside: new THREE.Color('#c3bfe0'),
-};
+interface PavingColours {
+  road: THREE.Color;
+  kerb: THREE.Color;
+  pavement: THREE.Color;
+  wall: THREE.Color;
+  wallTop: THREE.Color;
+  outer: THREE.Color;
+  underside: THREE.Color;
+}
+
+const c = (hex: string): THREE.Color => new THREE.Color(hex);
+
+/** Colour sets per paving style (index = Paving value). */
+const PAVING_COLOURS: PavingColours[] = [
+  // Slabs: lavender road, terracotta guard walls (the sketchbook look).
+  { road: c('#a9aee0'), kerb: c('#f1e9d8'), pavement: c('#ead7ae'), wall: c('#d8643a'), wallTop: c('#ec9a5e'), outer: c('#cf6a3e'), underside: c('#c3bfe0') },
+  // Cobbles: warm grey stones, white colonial walls.
+  { road: c('#b8aa9c'), kerb: c('#efe6d6'), pavement: c('#e2cfa8'), wall: c('#f3ede0'), wallTop: c('#d9cfbd'), outer: c('#e8dfcd'), underside: c('#c9c0b6') },
+  // Asphalt: blue-grey with ochre verges.
+  { road: c('#7d8296'), kerb: c('#e9e4da'), pavement: c('#d9c7a2'), wall: c('#e2dccd'), wallTop: c('#f2eee4'), outer: c('#cfc6b4'), underside: c('#aeb0c6') },
+  // Stone: sandy granite for wonders.
+  { road: c('#c9b99a'), kerb: c('#b5a384'), pavement: c('#d8c8a6'), wall: c('#bfae8e'), wallTop: c('#cfbf9f'), outer: c('#b09f80'), underside: c('#a99b86') },
+  // Planks: boardwalk wood.
+  { road: c('#c8955a'), kerb: c('#a8743e'), pavement: c('#d9ad72'), wall: c('#9a6a3a'), wallTop: c('#b9824a'), outer: c('#8a5a30'), underside: c('#7a5a3a') },
+  // Earth: red laterite road with green verges.
+  { road: c('#c8704a'), kerb: c('#a9c86a'), pavement: c('#8cbf4f'), wall: c('#6fa84a'), wallTop: c('#8cc63f'), outer: c('#b6784c'), underside: c('#9a6a4a') },
+];
 
 export const KERB_WIDTH = 0.35;
 export const KERB_HEIGHT = 0.18;
@@ -44,7 +62,8 @@ interface ProfileSegment {
  * Cross-section of the road, traversed clockwise when looking along the road,
  * so every face points outward (docs/04 §2 "road mesh").
  */
-function profile(width: number, plaza: number): ProfileSegment[] {
+function profile(width: number, plaza: number, paving = 0): ProfileSegment[] {
+  const COLOURS = PAVING_COLOURS[paving] ?? PAVING_COLOURS[0];
   const hw = width / 2;
   const inner = hw + KERB_WIDTH;
   const wallIn = inner + PAVEMENT_WIDTH + plaza;
@@ -99,7 +118,7 @@ function buildChunk(path: RoadPath, i0: number, i1: number): THREE.BufferGeometr
   const normals = new Float32Array(vertCount * 3);
   const colours = new Float32Array(vertCount * 4);
   const uvs = new Float32Array(vertCount * 2);
-  const info = new Float32Array(vertCount * 3);
+  const info = new Float32Array(vertCount * 4);
   const indices: number[] = [];
   const frame = createFrame();
   const p = new THREE.Vector3();
@@ -108,7 +127,7 @@ function buildChunk(path: RoadPath, i0: number, i1: number): THREE.BufferGeometr
   for (let r = 0; r < rows; r++) {
     const i = i0 + r;
     path.sample(i * ROAD_STEP, frame);
-    const segs = profile(frame.width, frame.plaza);
+    const segs = profile(frame.width, frame.plaza, frame.paving);
     for (let k = 0; k < segs.length; k++) {
       const sg = segs[k];
       const du = sg.b[0] - sg.a[0];
@@ -130,9 +149,10 @@ function buildChunk(path: RoadPath, i0: number, i1: number): THREE.BufferGeometr
         colours[v * 4 + 3] = 0;
         uvs[v * 2] = sg.surface === Surface.Underside || sg.surface === Surface.Wall ? pt[1] : pt[0];
         uvs[v * 2 + 1] = i * ROAD_STEP;
-        info[v * 3] = sg.surface;
-        info[v * 3 + 1] = frame.rails;
-        info[v * 3 + 2] = frame.width / 2;
+        info[v * 4] = sg.surface;
+        info[v * 4 + 1] = frame.rails;
+        info[v * 4 + 2] = frame.width / 2;
+        info[v * 4 + 3] = frame.paving;
       }
     }
   }
@@ -152,7 +172,7 @@ function buildChunk(path: RoadPath, i0: number, i1: number): THREE.BufferGeometr
   g.setAttribute('normal', new THREE.BufferAttribute(normals, 3));
   g.setAttribute('color', new THREE.BufferAttribute(colours, 4));
   g.setAttribute('uv', new THREE.BufferAttribute(uvs, 2));
-  g.setAttribute('roadInfo', new THREE.BufferAttribute(info, 3));
+  g.setAttribute('roadInfo', new THREE.BufferAttribute(info, 4));
   g.setIndex(indices);
   g.computeBoundingSphere();
   return g;

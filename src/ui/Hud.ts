@@ -49,6 +49,7 @@ export class Hud {
       'split', 'splitName', 'splitTime', 'splitDelta', 'tonics', 'radioFreq', 'radioName', 'radioTrack', 'radioBar', 'radioOff',
       'songbook', 'songCount', 'speed', 'speedUnit', 'boostBar', 'district', 'gravityArrow', 'gravityLabel', 'prompt', 'cameraBtn',
       'screenTitle', 'screenIntro', 'screenPause', 'screenHelp', 'loading', 'radioCheck', 'lapBanner', 'score',
+      'mission', 'bag', 'dialog', 'dialogName', 'dialogText', 'letterbox', 'subtitle', 'chat', 'chatInput', 'chatLog', 'labels', 'ink', 'players',
     ]) {
       this.el[id] = $(this.root, `[data-id="${id}"]`);
     }
@@ -95,6 +96,8 @@ export class Hud {
     click('start-title', cb.onTitle);
     click('start', () => cb.onStart((this.el.radioCheck as HTMLInputElement).checked));
     click('closeHelp', () => this.show('screenHelp', false));
+    click('dialog-yes', () => this.closeDialog(true));
+    click('dialog-no', () => this.closeDialog(false));
   }
 
   show(screen: 'screenTitle' | 'screenIntro' | 'screenPause' | 'screenHelp' | 'loading', visible: boolean): void {
@@ -230,6 +233,104 @@ export class Hud {
     setTimeout(() => el.remove(), 1400);
   }
 
+  private dialogAccept: (() => void) | null = null;
+
+  setMission(text: string | null): void {
+    this.el.mission.classList.toggle('hidden', !text);
+    if (text && this.el.mission.textContent !== text) this.el.mission.textContent = text;
+  }
+
+  setInk(ink: number): void {
+    const t = `💧 ${ink} ink`;
+    if (this.el.ink.textContent !== t) this.el.ink.textContent = t;
+  }
+
+  /** Carried tonics: Q drinks the selected one, Z cycles. */
+  setBag(tonics: Record<string, number>, selected: string): void {
+    const names: Record<string, string> = { magnet: 'Magnet', feather: 'Feather', fizzy: 'Fizzy Ink' };
+    const html = Object.keys(names)
+      .map((k) => `<span class="${k === selected ? 'on' : ''} ${tonics[k] ? '' : 'empty'}">${names[k]} ×${tonics[k] ?? 0}</span>`)
+      .join('') + '<small>Q drink · Z switch</small>';
+    if (this.el.bag.innerHTML !== html) this.el.bag.innerHTML = html;
+  }
+
+  get dialogOpen(): boolean {
+    return !this.el.dialog.classList.contains('hidden');
+  }
+
+  showDialog(name: string, text: string, onAccept: () => void): void {
+    this.el.dialogName.textContent = name;
+    this.el.dialogText.textContent = text;
+    this.dialogAccept = onAccept;
+    this.el.dialog.classList.remove('hidden');
+  }
+
+  closeDialog(accept: boolean): void {
+    this.el.dialog.classList.add('hidden');
+    const fn = this.dialogAccept;
+    this.dialogAccept = null;
+    if (accept) fn?.();
+  }
+
+  letterbox(on: boolean, line = ''): void {
+    this.el.letterbox.classList.toggle('hidden', !on);
+    if (this.el.subtitle.textContent !== line) {
+      this.el.subtitle.textContent = line;
+      this.el.subtitle.classList.remove('show');
+      void this.el.subtitle.offsetWidth;
+      if (line) this.el.subtitle.classList.add('show');
+    }
+    this.root.classList.toggle('cinematic', on);
+  }
+
+  get labels(): HTMLElement {
+    return this.el.labels;
+  }
+
+  get chatOpen(): boolean {
+    return !this.el.chat.classList.contains('hidden');
+  }
+
+  openChat(onSend: (text: string) => void): void {
+    const input = this.el.chatInput as HTMLInputElement;
+    this.el.chat.classList.remove('hidden');
+    input.value = '';
+    input.focus();
+    input.onkeydown = (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') {
+        const t = input.value.trim();
+        if (t) onSend(t);
+        this.closeChat();
+      } else if (e.key === 'Escape') this.closeChat();
+    };
+  }
+
+  closeChat(): void {
+    this.el.chat.classList.add('hidden');
+    (this.el.chatInput as HTMLInputElement).blur();
+  }
+
+  chatLine(name: string, text: string): void {
+    const line = document.createElement('div');
+    line.innerHTML = `<b></b> <span></span>`;
+    (line.firstChild as HTMLElement).textContent = name;
+    (line.lastChild as HTMLElement).textContent = text;
+    this.el.chatLog.appendChild(line);
+    while (this.el.chatLog.children.length > 6) this.el.chatLog.firstChild?.remove();
+    setTimeout(() => line.remove(), 12000);
+  }
+
+  setPlayers(names: string[], status: string): void {
+    this.el.players.classList.toggle('hidden', status === 'offline');
+    const html = `<b>${status}</b>${names.map(() => `<span></span>`).join('')}`;
+    if (this.el.players.dataset.key !== html + names.join('|')) {
+      this.el.players.dataset.key = html + names.join('|');
+      this.el.players.innerHTML = html;
+      this.el.players.querySelectorAll('span').forEach((sp, i) => (sp.textContent = `● ${names[i]}`));
+    }
+  }
+
   update(dt: number): void {
     if (this.titleTimer > 0) {
       this.titleTimer -= dt;
@@ -270,11 +371,12 @@ function template(): string {
     <div class="big" data-id="timerTime">0:00.00</div>
     <div class="label" data-id="timerLap"></div>
     <div class="label score" data-id="score">0</div>
+    <div class="label ink-line" data-id="ink">💧 0</div>
   </div>
 
   <div class="corner top-right">
     <button class="btn" data-action="help">Controls ?</button>
-    <button class="btn" data-action="look">New look ✦</button>
+    <button class="btn" data-action="look">Menu ☰</button>
     <button class="btn" data-action="studio">Studio ✎</button>
     <button class="btn" data-action="pause">Pause ❚❚</button>
   </div>
@@ -331,6 +433,21 @@ function template(): string {
     </div>
   </div>
 
+  <div class="mission-line hidden" data-id="mission"></div>
+  <div class="bag" data-id="bag"></div>
+  <div class="labels" data-id="labels"></div>
+  <div class="players hidden" data-id="players"></div>
+  <div class="chat-log" data-id="chatLog"></div>
+  <div class="chat hidden" data-id="chat"><input maxlength="120" placeholder="Say something nice… (Enter to send, Esc to close)" data-id="chatInput"></div>
+  <div class="letterbox hidden" data-id="letterbox"><div class="lb-bar top"></div><div class="lb-bar bottom"><div class="subtitle" data-id="subtitle"></div><div class="skip">Space / Esc to skip</div></div></div>
+  <div class="dialog hidden" data-id="dialog">
+    <div class="card dialog-card">
+      <div class="hand dialog-name" data-id="dialogName"></div>
+      <p data-id="dialogText"></p>
+      <div class="row"><button class="btn primary" data-action="dialog-yes">Accept (E)</button><button class="btn" data-action="dialog-no">Not now (Esc)</button></div>
+    </div>
+  </div>
+
   <div class="screen loading" data-id="loading">
     <div class="card loading-card">
       <div class="hand big-title">PaintLand</div>
@@ -370,7 +487,7 @@ function template(): string {
       <div class="hand big-title">Paused</div>
       <button class="btn wide" data-action="resume">Resume</button>
       <button class="btn wide" data-action="restart">Restart lap</button>
-      <button class="btn wide" data-action="look">New look ✦</button>
+      <button class="btn wide" data-action="look">Main menu ☰</button>
       <button class="btn wide" data-action="studio">Studio ✎</button>
       <button class="btn wide" data-action="help">Controls</button>
     </div>

@@ -13,7 +13,8 @@ export type ActionName =
   | 'camera' | 'zoomIn' | 'zoomOut' | 'fovDown' | 'fovUp'
   | 'radio' | 'nextSong' | 'band'
   | 'respawn' | 'pause' | 'studio' | 'photo' | 'hud'
-  | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather';
+  | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather'
+  | 'drink' | 'cycleTonic' | 'emote' | 'chat';
 
 export type Bindings = Record<ActionName, string[]>;
 
@@ -51,6 +52,10 @@ export const DEFAULT_BINDINGS: Bindings = {
   time7: ['Digit7'],
   time8: ['Digit8'],
   weather: ['Digit9'],
+  drink: ['KeyQ'],
+  cycleTonic: ['KeyZ'],
+  emote: ['KeyG'],
+  chat: ['Enter'],
 };
 
 /** Standard-mapping gamepad button indices per action. */
@@ -68,6 +73,8 @@ const PAD_BUTTONS: Partial<Record<ActionName, number[]>> = {
   nextSong: [15],
   band: [14],
   honk: [10],
+  drink: [12],
+  emote: [4],
 };
 
 const STORAGE_KEY = 'paintland.bindings.v1';

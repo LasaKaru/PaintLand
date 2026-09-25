@@ -8,7 +8,24 @@ export interface PartOptions {
   scale?: [number, number, number] | number;
   /** 1 = this part lights up at night (windows, lanterns). */
   nightGlow?: number;
+  /** Surface pattern drawn by the paint shader (see Pattern). */
+  pattern?: number;
 }
+
+/** Surface patterns understood by PaintMaterial. */
+export const Pattern = {
+  None: 0,
+  Brick: 1,
+  RoofTiles: 2,
+  Planks: 3,
+  Stone: 4,
+  Leaves: 5,
+  Tea: 6,
+  Thatch: 7,
+  Grass: 8,
+  Sandstone: 9,
+  Marble: 10,
+} as const;
 
 /**
  * A tiny modelling toolkit: add primitives with a colour and a transform,
@@ -50,6 +67,7 @@ export class ModelKit {
       colours[i * 4 + 3] = glow;
     }
     g.setAttribute('color', new THREE.BufferAttribute(colours, 4));
+    g.setAttribute('pattern', new THREE.BufferAttribute(new Float32Array(count).fill(opts.pattern ?? 0), 1));
     this.parts.push(g);
     if (g !== geometry) geometry.dispose();
     return this;

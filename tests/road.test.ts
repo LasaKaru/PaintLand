@@ -1,9 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import * as THREE from 'three';
-import { buildChapter1 } from '../src/road/chapter1';
 import { TrackBuilder } from '../src/road/TrackBuilder';
 import { createFrame } from '../src/road/RoadPath';
-import { DISTRICTS } from '../src/world/Districts';
+import { CHAPTERS } from '../src/world/Chapters';
 
 describe('TrackBuilder', () => {
   it('a straight road keeps its frame', () => {
@@ -36,11 +35,11 @@ describe('TrackBuilder', () => {
   });
 });
 
-describe('Chapter 1 route', () => {
-  const path = buildChapter1();
+describe.each(CHAPTERS.map((c) => [c.name, c] as const))('%s route', (_name, chapter) => {
+  const path = chapter.buildRoute();
 
   it('visits every district in order', () => {
-    expect(path.spans.map((s) => s.district)).toEqual(DISTRICTS.map((_, i) => i));
+    expect(path.spans.map((s) => s.district)).toEqual(chapter.districts.map((_, i) => i));
   });
 
   it('has orthonormal frames everywhere', () => {
@@ -52,15 +51,19 @@ describe('Chapter 1 route', () => {
     }
   });
 
-  it('never touches the sea', () => {
+  it('never touches the ground or sea', () => {
     const f = createFrame();
     let minY = Infinity;
     for (let s = 0; s < path.length; s += 1) minY = Math.min(minY, path.sample(s, f).position.y);
-    expect(minY).toBeGreaterThan(8);
+    expect(minY).toBeGreaterThan(3);
   });
 
-  it('is a proper chapter length (2–3 km)', () => {
+  it('is a proper chapter length (2–5 km)', () => {
     expect(path.length).toBeGreaterThan(2000);
-    expect(path.length).toBeLessThan(3500);
+    expect(path.length).toBeLessThan(5000);
+  });
+
+  it('every district melody has whole phrases', () => {
+    for (const d of chapter.districts) expect(d.melody.length % 8).toBe(0);
   });
 });
