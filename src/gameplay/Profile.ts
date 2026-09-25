@@ -77,6 +77,8 @@ export interface ProfileData {
   stats: Record<string, number>;
   /** Chapters, weathers and art styles tried, for "explorer" trophies. */
   seen: string[];
+  /** Best time-trial lap per `chapter:handling`. */
+  trialBest: Record<string, number>;
 }
 
 const KEY = 'paintland.profile.v2';
@@ -99,6 +101,7 @@ function defaults(): ProfileData {
     trophies: [],
     stats: {},
     seen: [],
+    trialBest: {},
   };
 }
 

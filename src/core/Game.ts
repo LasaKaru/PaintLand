@@ -33,6 +33,9 @@ import { Wildlife } from '../world/Wildlife';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
 import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
 import { TouchControls } from '../ui/TouchControls';
+import { TRIAL_VERSION, TrialSim, encodeInputs, quantizeInput, type TrialConfig } from '../gameplay/TrialSim';
+import { submitRun } from '../net/Leaderboard';
+import type { RoverInput } from '../gameplay/RoverController';
 import { RemotePlayers } from '../net/RemotePlayers';
 
 type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused' | 'photo' | 'hub';
@@ -138,6 +141,8 @@ export class Game {
   private readonly hubCam = { yaw: 0, pitch: 0.3, pos: new THREE.Vector3(), look: new THREE.Vector3(), snap: true };
   private hubZone: HubZone | null = null;
   private readonly touchUi: TouchControls;
+  /** Ranked time trial in progress (inputs recorded for server re-simulation). */
+  private trial: { sim: TrialSim; inputs: RoverInput[]; config: TrialConfig } | null = null;
   private contextLost = false;
   private tipClock = 0;
   private showcaseTarget: 'character' | 'vehicle' | null = null;
@@ -199,6 +204,8 @@ export class Game {
       openControls: () => this.hud.show('screenHelp', true),
       watchIntro: () => this.startIntro(),
       enterHub: () => this.enterHub(),
+      startTrial: (id) => this.startTrial(id),
+      handling: () => this.options.handling,
       unlockAudio: () => this.unlockAudio(),
       studio: () => this.settings,
       options: () => this.options,
@@ -449,6 +456,7 @@ export class Game {
   }
 
   private openMenu(screen: MenuScreen = 'main'): void {
+    this.endTrial();
     if (this.inHub) {
       this.resumeSnapshot = { s: 8, x: 0, v: 0, mode: 'drive', hs: 0, hx: 0, hub: { x: this.hubCar.x, z: this.hubCar.z, heading: this.hubCar.heading, foot: this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : null } };
       this.hud.show('screenPause', false);
@@ -702,6 +710,10 @@ export class Game {
   // ————— simulation —————
 
   private simStep(dt: number): void {
+    if (this.trial) {
+      this.trialStep(dt);
+      return;
+    }
     const inp = this.input;
     const items = this.world.items;
     const people = this.world.people;
@@ -852,6 +864,7 @@ export class Game {
 
   private finishLap(): void {
     this.pendingLap = false;
+    if (this.trial) return; // the trial sim decides when the lap ends
     if (this.state !== 'play') {
       this.resetDemo();
       return;
@@ -926,7 +939,7 @@ export class Game {
         case 'note': {
           const n = e.note!;
           this.audio.playNote(n.midi);
-          this.rover.addBoost(0.04);
+          if (!this.trial) this.rover.addBoost(0.04);
           if (!playing) break;
           this.songLog.push(n.midi);
           this.combo = Math.min(8, this.comboTimer > 0 ? this.combo + 1 : 1);
@@ -950,27 +963,32 @@ export class Game {
           break;
         }
         case 'bolt':
-          this.rover.boostMeter = 1;
+          if (!this.trial) this.rover.boostMeter = 1;
           this.audio.whoosh();
           if (playing) this.popAt(e.position, 'THUNDER!', 'good');
           break;
         case 'tonic':
+          if (this.trial) break;
           this.tonics.set(e.tonic!, TONICS[e.tonic!].duration);
           this.audio.chime(60);
           if (playing) this.popAt(e.position, e.tonic === 'feather' ? 'FEATHER' : e.tonic === 'fizzy' ? 'FIZZY INK!' : 'MAGNET', 'good');
           break;
         case 'pad':
+          if (this.trial) {
+            this.audio.whoosh();
+            break;
+          }
           this.rover.v = Math.max(this.rover.v, this.rover.tuning.topSpeed * 1.08);
           this.rover.addBoost(0.1);
           this.audio.whoosh();
           break;
         case 'ramp':
-          this.rover.launch(8 + this.rover.v * 0.12);
+          if (!this.trial) this.rover.launch(8 + this.rover.v * 0.12);
           if (playing) this.popAt(e.position, 'RAMP!', 'info');
           break;
         case 'crate':
           this.audio.thud();
-          this.rover.v *= 0.94;
+          if (!this.trial) this.rover.v *= 0.94;
           if (playing) this.popAt(e.position, 'CRASH', 'info');
           this.rig.addShake(0.2);
           this.particles.emit('spark', e.position, _v.copy(this.frame.up).multiplyScalar(4), 24, 7, this.frame.up);
@@ -1095,7 +1113,10 @@ export class Game {
 
     if (inp.consume('camera')) this.cycleCamera();
     if (inp.consume('honk')) this.audio.honk(this.world.districts[this.district].root);
-    if (inp.consume('respawn')) this.respawn();
+    if (inp.consume('respawn')) {
+      if (this.trial) this.startTrial(this.world.chapter.id);
+      else this.respawn();
+    }
     if (inp.consume('interact')) {
       const giver = this.nearbyGiver();
       if (giver) this.talkTo(giver);
@@ -1314,7 +1335,7 @@ export class Game {
     hud.setScore(this.score, this.combo);
     hud.setInk(this.profile.data.ink);
     hud.setBag(this.profile.data.tonics, this.selectedTonic);
-    hud.setMission(this.missions.active ? this.missions.statusText() : null);
+    hud.setMission(this.trial ? `⏱ Time trial · ${this.trial.config.handling} · ${this.trial.sim.time.toFixed(2)} s · R restarts` : this.missions.active ? this.missions.statusText() : null);
     const s = this.mode === 'drive' ? this.rover.s : this.human.s;
     const current = this.world.items.notes.find((n) => n.s > s && !n.collected)?.phrase ?? this.world.items.phrases.length - 1;
     hud.setSongbook(this.world.items.phrases, current, totals.notes, totals.noteTotal, totals.sealed);
@@ -1341,6 +1362,120 @@ export class Game {
   private popAtPawn(text: string, kind: 'good' | 'info' | 'big'): void {
     const target = this.mode === 'drive' ? this.vehicle.root.position : this.humanModel.root.position;
     this.popAt(target.clone().addScaledVector(this.frame.up, 3), text, kind);
+  }
+
+  // ————— ranked time trials —————
+
+  private startTrial(chapterId: string): void {
+    this.endTrial();
+    this.play(chapterId);
+    this.missions.cancel();
+    this.world.people.removeRival();
+    this.world.people.trafficEnabled = false;
+    this.tonics.clear();
+    const o = this.options;
+    const config: TrialConfig = { chapter: chapterId, vehicle: this.profile.data.vehicle, handling: o.handling, gearbox: o.gearbox, autoCruise: o.autoCruise };
+    const sim = new TrialSim(this.rover, this.world.items, this.world.path);
+    sim.start(config);
+    this.trial = { sim, inputs: [], config };
+    this.lapTime = 0;
+    this.districtTime = 0;
+    this.lapClean = true;
+    this.ghostRec.reset();
+    this.raceCountdown = 3.2;
+    this.rig.snap();
+  }
+
+  private endTrial(): void {
+    if (!this.trial) return;
+    this.trial = null;
+    this.world.people.trafficEnabled = true;
+    this.raceCountdown = 0;
+  }
+
+  private trialStep(dt: number): void {
+    const trial = this.trial!;
+    const inp = this.input;
+    if (this.raceCountdown > 0) {
+      const before = Math.ceil(this.raceCountdown);
+      this.raceCountdown -= dt;
+      const n = Math.ceil(this.raceCountdown);
+      if (n !== before) {
+        this.hud.pop(n > 0 ? String(n) : 'GO!', window.innerWidth / 2, window.innerHeight * 0.4, 'big');
+        this.audio.chime(n > 0 ? 60 : 72);
+      }
+      inp.consume('hop');
+      this.rover.prevS = this.rover.s;
+      this.rover.prevX = this.rover.x;
+      this.rover.prevH = this.rover.h;
+      this.rover.prevYaw = this.rover.yaw;
+      return;
+    }
+    const input = quantizeInput({ throttle: inp.throttle(), brake: inp.brake(), steer: this.steering(dt), hop: inp.consume('hop'), boost: inp.held('boost'), drift: inp.held('drift'), shiftUp: inp.consume('shiftUp'), shiftDown: inp.consume('shiftDown') });
+    trial.inputs.push(input);
+    trial.sim.step(input);
+    this.events.push(...trial.sim.events);
+    trial.sim.events.length = 0;
+    this.lapTime = trial.sim.time;
+    this.districtTime += dt;
+    this.ghostRec.record(this.lapTime, this.rover.s, this.rover.x, this.rover.h, this.rover.yaw);
+    this.trackStats(dt);
+    this.stepRivals(dt);
+    const d = this.world.path.districtAt(this.rover.s);
+    if (d !== this.district) this.changeDistrict(d);
+    if (trial.sim.finished) this.finishTrial();
+  }
+
+  /** Only race rivals move during a trial (none by default); traffic is parked. */
+  private stepRivals(dt: number): void {
+    this.world.people.step(dt, this.world.items.notes, this.rover.s, this.rover.x);
+  }
+
+  private finishTrial(): void {
+    const trial = this.trial!;
+    const time = trial.sim.time;
+    const cfg = trial.config;
+    const key = `${cfg.chapter}:${cfg.handling}`;
+    const prev = this.profile.data.trialBest[key] ?? null;
+    const best = prev === null || time < prev;
+    if (best) this.profile.data.trialBest[key] = time;
+    this.profile.addStat('laps');
+    this.profile.addStat('trials');
+    if (cfg.handling === 'realistic') this.profile.addStat('realLaps');
+    if (this.ghost && time < this.ghost.run.time) this.profile.addStat('ghostBeaten');
+    if (!this.ghost || time < this.ghost.run.time) {
+      saveGhost(this.ghostRec.finish(cfg.chapter, cfg.vehicle, time));
+      this.loadGhostFor(cfg.chapter);
+    }
+    this.profile.save();
+    this.checkTrophies();
+    const run = { ...cfg, name: this.profile.data.name, time, inputs: encodeInputs(trial.inputs), version: TRIAL_VERSION };
+    this.endTrial();
+    this.hud.showLapBanner(`⏱ ${time.toFixed(2)}s${best ? ' · personal best!' : prev !== null ? ` · best ${prev.toFixed(2)}s` : ''} — checking with the server…`);
+    this.audio.chime(76);
+    this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 2), _v.copy(this.frame.up).multiplyScalar(7), 70, 7, this.frame.up);
+    void submitRun(run).then((res) => {
+      if (!res) this.hud.showLapBanner(`⏱ ${time.toFixed(2)}s saved on this device (leaderboard server offline)`);
+      else if (res.ok) this.hud.showLapBanner(`✓ Verified by re-simulation · ${res.best === false ? 'your best still stands' : `rank #${res.rank ?? '—'}`}`);
+      else this.hud.showLapBanner(`Server did not accept the run: ${res.reason ?? 'unknown'}`);
+    });
+    // Roll on in free play.
+    this.rover.reset(8);
+    this.rover.v = this.rover.tuning.cruiseFloor;
+    this.rover.cruise = true;
+    this.lapTime = 0;
+    this.districtTime = 0;
+    this.district = 0;
+    this.world.items.resetLap();
+    this.ghostRec.reset();
+    this.splash = 1;
+    this.rig.snap();
+    this.showDistrict(0);
+  }
+
+  debugTrial(chapter: string): void {
+    if (this.state === 'splash') this.profile.data.seenIntro = true;
+    this.startTrial(chapter);
   }
 
   // ————— onboarding —————

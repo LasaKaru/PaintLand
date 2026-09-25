@@ -11,7 +11,8 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "shot": "node tools/screenshot.mjs",
-    "server": "node server/relay.mjs"
+    "server": "npm run build:server && node server/relay.mjs",
+    "build:server": "vite build --ssr src/server/verify.ts --outDir dist-server --emptyOutDir"
   },
   "dependencies": {
     "@fontsource/caveat": "^5.3.0",

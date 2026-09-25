@@ -60,6 +60,8 @@ export class Population {
   readonly givers: Giver[] = [];
   readonly cars: Car[] = [];
   readonly markers: Marker[] = [];
+  /** Off in time trials: no traffic on the road. */
+  trafficEnabled = true;
   private readonly frame = createFrame();
   private readonly basis = new THREE.Matrix4();
   private readonly yq = new THREE.Quaternion();
@@ -188,6 +190,7 @@ export class Population {
   /** Fixed-step AI driving. */
   step(dt: number, notes: readonly Note[], playerS: number, playerX: number): void {
     for (const car of this.cars) {
+      if (!this.trafficEnabled && !car.rival) continue;
       const input = car.pilot.drive(car.ctrl, notes, dt, [{ s: playerS, x: playerX }, ...this.cars.filter((c) => c !== car).map((c) => ({ s: c.ctrl.s, x: c.ctrl.x }))]);
       car.ctrl.step(dt, input);
       if (!car.rival && car.ctrl.s > this.path.length - 3) {
@@ -247,7 +250,7 @@ export class Population {
     }
     for (const car of this.cars) {
       const st = car.ctrl.lerpState(alpha);
-      const visible = Math.abs(st.s - focusS) < 400;
+      const visible = (this.trafficEnabled || car.rival) && Math.abs(st.s - focusS) < 400;
       car.model.root.visible = visible;
       if (!visible) continue;
       this.place(car.model.root, st.s, st.x, st.h + 0.02, -st.yaw);

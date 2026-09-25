@@ -7,13 +7,14 @@ import { ROVER_TUNING } from '../gameplay/RoverController';
 import { randomLook, type HumanLook } from '../models/Human';
 import { fmt } from './Hud';
 import { TROPHIES } from '../gameplay/Trophies';
+import { fetchBoard } from '../net/Leaderboard';
 import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Input';
 import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
 
-export type MenuScreen = 'splash' | 'main' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost {
@@ -33,6 +34,8 @@ export interface MenuHost {
   openControls(): void;
   watchIntro(): void;
   enterHub(): void;
+  startTrial(chapterId: string): void;
+  handling(): 'arcade' | 'realistic';
   unlockAudio(): void;
   /** Art + graphics values (mutable; call settingsChanged after editing). */
   studio(): StudioSettings;
@@ -100,6 +103,7 @@ export class Menu {
       multiplayer: () => this.multiplayer(),
       settings: () => this.settingsScreen(),
       trophies: () => this.trophiesScreen(),
+      trials: () => this.trialsScreen(),
       credits: () => this.credits(),
     }[s]();
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
@@ -144,6 +148,7 @@ export class Menu {
         <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">▶ Play · ${ch.name}</button>
         <button class="menu-item" data-nav="hub">⚓ Harbour Town · free roam</button>
         <button class="menu-item" data-nav="chapters">Chapters</button>
+        <button class="menu-item" data-nav="trials">⏱ Time trials · leaderboard</button>
         <button class="menu-item" data-nav="missions">Missions</button>
         <button class="menu-item" data-nav="wardrobe">Wardrobe</button>
         <button class="menu-item" data-nav="garage">Garage</button>
@@ -478,6 +483,35 @@ export class Menu {
     this.host.settingsChanged();
   }
 
+  private trialsScreen(): string {
+    const handling = this.host.handling();
+    const p = this.host.profile.data;
+    const cards = this.host.chapters.map((ch) => {
+      const best = p.trialBest[`${ch.id}:${handling}`];
+      return `<div class="card chapter-card chapter-${ch.id}">
+        <div class="kicker">${ch.kicker}</div><div class="hand chapter-name">${ch.name}</div>
+        <div class="chapter-stats">Your best (${handling}): ${best !== undefined ? `${best.toFixed(2)} s` : '—'}</div>
+        <ol class="board" data-board="${ch.id}"><li class="muted">Loading the leaderboard…</li></ol>
+        <button class="btn primary" data-trial="${ch.id}">⏱ Start time trial</button>
+      </div>`;
+    }).join('');
+    // Fill the boards when the server answers.
+    for (const ch of this.host.chapters) {
+      void fetchBoard(ch.id, handling).then((res) => {
+        const el = this.root.querySelector(`[data-board="${ch.id}"]`);
+        if (!el) return;
+        if (!res) el.innerHTML = '<li class="muted">Leaderboard server offline — run <code>npm run server</code> or set a server in Multiplayer.</li>';
+        else if (!res.enabled) el.innerHTML = '<li class="muted">This server has no run verifier (npm run build:server).</li>';
+        else if (!res.entries.length) el.innerHTML = '<li class="muted">No verified times yet — be the first!</li>';
+        else el.innerHTML = res.entries.map((e) => `<li><b>${escapeHtml(e.name)}</b> <span>${e.time.toFixed(2)} s</span> <small>${escapeHtml(e.vehicle)}</small></li>`).join('');
+      });
+    }
+    return `<div class="menu-panel wide">${this.header('Time trials')}
+      <p class="menu-hint">One lap from a standing start: no traffic, no tonics. Your inputs are recorded and the server replays them through the same physics — a time only counts if the replay matches. Handling: <b>${handling}</b> (change it in Settings → Driving; each handling model has its own board).</p>
+      <div class="chapter-grid">${cards}</div>
+    </div>`;
+  }
+
   private trophiesScreen(): string {
     const p = this.host.profile;
     const st = p.data.stats;
@@ -517,6 +551,10 @@ export class Menu {
       else if (d.nav === 'hub') this.host.enterHub();
       else if (d.nav === 'resume') this.host.resume();
       else this.show(d.nav as MenuScreen);
+      return;
+    }
+    if (d.trial) {
+      this.host.startTrial(d.trial);
       return;
     }
     if (d.play) {

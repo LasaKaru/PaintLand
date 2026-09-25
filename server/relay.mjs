@@ -8,8 +8,18 @@
 // clients that keep sending bad data. Authoritative rooms for ranked racing
 // (re-simulated inputs) come later.
 //
-// Run: node server/relay.mjs   (PORT and MAX_ROOM env vars are optional)
+// The same port also serves the ranked time-trial leaderboard over HTTP:
+//   GET  /leaderboard?chapter=sketch&handling=arcade   → top 10
+//   POST /submit  { run }                              → re-simulated, then ranked
+// Runs are replayed through the game's own simulation (dist-server/verify.js,
+// built by `npm run build:server`) and only accepted if the lap time matches.
+//
+// Run: npm run server   (PORT, MAX_ROOM and DATA_DIR env vars are optional)
 
+import { createServer } from 'node:http';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
 import { LIMITS, Strikes, cleanText, validateState } from './validate.mjs';
@@ -23,7 +33,89 @@ const ALLOWED = new Set(['hello', 'state', 'chat', 'emote', 'bye']);
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const rooms = new Map();
 
-const wss = new WebSocketServer({ port: PORT, maxPayload: MAX_MESSAGE });
+// ————— leaderboard —————
+
+const here = dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = process.env.DATA_DIR ?? join(here, 'data');
+const BOARD_FILE = join(DATA_DIR, 'leaderboard.json');
+const BOARD_SIZE = 50;
+let verifyRun = null;
+try {
+  ({ verifyRun } = await import('../dist-server/verify.js'));
+} catch {
+  console.warn('Leaderboard disabled: run `npm run build:server` to build the run verifier.');
+}
+/** @type {Record<string, { name: string, time: number, vehicle: string, at: number }[]>} */
+let boards = {};
+try {
+  boards = JSON.parse(readFileSync(BOARD_FILE, 'utf8'));
+} catch {
+  boards = {};
+}
+const saveBoards = () => {
+  mkdirSync(DATA_DIR, { recursive: true });
+  writeFileSync(BOARD_FILE, JSON.stringify(boards));
+};
+const boardKey = (chapter, handling) => `${String(chapter).slice(0, 24)}:${handling === 'realistic' ? 'realistic' : 'arcade'}`;
+const lastSubmit = new Map();
+
+function send(res, status, body) {
+  res.writeHead(status, { 'content-type': 'application/json', 'access-control-allow-origin': '*', 'access-control-allow-headers': 'content-type', 'access-control-allow-methods': 'GET, POST, OPTIONS' });
+  res.end(JSON.stringify(body));
+}
+
+const http = createServer((req, res) => {
+  const url = new URL(req.url ?? '/', 'http://localhost');
+  if (req.method === 'OPTIONS') return send(res, 204, {});
+  if (req.method === 'GET' && url.pathname === '/leaderboard') {
+    const list = boards[boardKey(url.searchParams.get('chapter'), url.searchParams.get('handling'))] ?? [];
+    return send(res, 200, { enabled: !!verifyRun, entries: list.slice(0, 10) });
+  }
+  if (req.method === 'POST' && url.pathname === '/submit') {
+    if (!verifyRun) return send(res, 503, { ok: false, reason: 'leaderboard disabled on this server' });
+    const ip = req.socket.remoteAddress ?? '?';
+    const now = Date.now();
+    if (now - (lastSubmit.get(ip) ?? 0) < 3000) return send(res, 429, { ok: false, reason: 'slow down' });
+    lastSubmit.set(ip, now);
+    let body = '';
+    req.on('data', (chunk) => {
+      body += chunk;
+      if (body.length > 400_000) req.destroy();
+    });
+    req.on('end', () => {
+      let run;
+      try {
+        run = JSON.parse(body);
+      } catch {
+        return send(res, 400, { ok: false, reason: 'bad json' });
+      }
+      const result = verifyRun(run);
+      if (!result.ok) {
+        console.log(`[board] rejected ${cleanText(run?.name, LIMITS.name)}: ${result.reason}`);
+        return send(res, 200, result);
+      }
+      const key = boardKey(run.chapter, run.handling);
+      const list = (boards[key] ??= []);
+      const name = cleanText(run.name, LIMITS.name) ?? 'Painter';
+      const entry = { name, time: Math.round(result.time * 1000) / 1000, vehicle: String(run.vehicle), at: now };
+      // One entry per name: keep their best.
+      const old = list.findIndex((e) => e.name === name);
+      if (old >= 0 && list[old].time <= entry.time) return send(res, 200, { ok: true, time: result.time, rank: old + 1, best: false });
+      if (old >= 0) list.splice(old, 1);
+      list.push(entry);
+      list.sort((a, b) => a.time - b.time);
+      list.length = Math.min(list.length, BOARD_SIZE);
+      saveBoards();
+      const rank = list.indexOf(entry) + 1;
+      console.log(`[board] ${key} ${name} ${entry.time}s → #${rank || '—'}`);
+      send(res, 200, { ok: true, time: result.time, rank: rank || null, best: true });
+    });
+    return;
+  }
+  send(res, 404, { ok: false, reason: 'not found' });
+});
+
+const wss = new WebSocketServer({ server: http, maxPayload: MAX_MESSAGE });
 
 wss.on('connection', (socket, req) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
@@ -101,4 +193,4 @@ wss.on('connection', (socket, req) => {
   socket.on('close', () => clearInterval(heartbeat));
 });
 
-console.log(`PaintLand relay listening on ws://localhost:${PORT}  (rooms of up to ${MAX_ROOM})`);
+http.listen(PORT, () => console.log(`PaintLand relay listening on ws://localhost:${PORT} (rooms of up to ${MAX_ROOM}) · leaderboard ${verifyRun ? 'on' : 'off'} at http://localhost:${PORT}/leaderboard`));
