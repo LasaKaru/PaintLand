@@ -1,3 +1,4 @@
+import { DEFAULT_FAMILY, familyCaps, type FamilyLock } from './Family';
 /**
  * Player options that are not art or graphics (docs/08 §4): controls, driving
  * model and assists, units, weather and accessibility. Saved per device.
@@ -36,6 +37,8 @@ export interface GameOptions {
   /** Push-to-talk voice chat with the other players in the room (off until chosen). */
   voice: boolean;
   voiceVolume: number;
+  /** Parental controls (PIN lock). */
+  family: FamilyLock;
   /** Show the minimap in free roam. */
   minimap: boolean;
   /** Send anonymous play statistics to the game's owner. */
@@ -65,6 +68,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   blocked: [],
   voice: false,
   voiceVolume: 1,
+  family: { ...DEFAULT_FAMILY },
   minimap: true,
   analytics: true,
 };
@@ -76,10 +80,11 @@ export function loadOptions(): GameOptions {
   try {
     const raw = localStorage.getItem(KEY);
     if (raw) Object.assign(o, JSON.parse(raw) as Partial<GameOptions>);
+    o.family = { ...DEFAULT_FAMILY, ...o.family };
   } catch {
     /* storage blocked or corrupt */
   }
-  return o;
+  return familyCaps(o);
 }
 
 export function saveOptions(o: GameOptions): void {

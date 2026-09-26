@@ -446,6 +446,8 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .tbtn.drift { right: 176px; bottom: 150px; font-size: 10px; }
 .tbtn.cam { right: 80px; bottom: 186px; }
 .tbtn.photo { right: 140px; bottom: 206px; }
+.tbtn.talk { display: none; left: 18px; bottom: 210px; font-size: 22px; }
+.touch.voice .tbtn.talk { display: block; }
 .tbtn.pause { position: fixed; top: 12px; left: 50%; margin-left: -24px; }
 .touch-ui .corner.top-left .pills, .touch-ui .status-chip { display: none; }
 
@@ -669,3 +671,7 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 /* Voice chat status pill (bottom centre, above the songbook). */
 .voice-pill { position: absolute; left: 50%; bottom: 126px; transform: translateX(-50%); display: none; padding: 4px 12px; border-radius: 999px; background: var(--paper-2); border: 1.5px solid var(--ink); font: 700 12px var(--mono); pointer-events: none; z-index: 3; }
 .voice-pill.talking { background: var(--lemon); box-shadow: 0 0 0 4px rgba(244, 210, 59, 0.35); }
+.report-form { display: grid; gap: 6px; margin: 4px 0 10px 24px; padding: 8px 10px; border: 1.5px dashed rgba(43, 38, 34, 0.35); border-radius: 8px; }
+.report-form label { display: grid; gap: 3px; font-size: 13px; }
+.report-form label.check { display: flex; }
+.fam-status { padding: 6px 10px; border-radius: 8px; background: var(--paper-2); border: 1.5px solid var(--ink); font-weight: 700; }

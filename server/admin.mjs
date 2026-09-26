@@ -19,10 +19,10 @@
 // data/admin.json once changed (or the ADMIN_EMAIL / ADMIN_PASSWORD env vars).
 // Analytics are anonymous: a random id per browser, no names, no IP addresses kept.
 
-import { randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
-import { clientIp } from './validate.mjs';
+import { cleanText, clientIp } from './validate.mjs';
 
 // Default login (hash of the password chosen by the owner). Override with env vars or change it in the panel.
 export const DEFAULT_ADMIN = {
@@ -107,6 +107,53 @@ export function sanitizeConfig(input, current) {
   return c;
 }
 
+export const REPORT_REASONS = ['chat', 'name', 'cheating', 'bullying', 'other'];
+
+/**
+ * @typedef {{ id: string, at: number, reporter: string, target: string, reason: string, note: string, room: string, chat: string[], status: 'open' | 'dismissed' | 'banned' }} Report
+ */
+
+/** A player report from the game, cleaned; null when it is not a valid report. */
+export function sanitizeReport(body, now = Date.now()) {
+  if (!body || typeof body !== 'object') return null;
+  // Names are cleaned exactly as the relay cleans them, so a ban matches the player.
+  const target = cleanText(body.target, 20);
+  const reason = REPORT_REASONS.includes(body.reason) ? body.reason : null;
+  if (!target || !reason) return null;
+  return {
+    id: randomUUID().slice(0, 12),
+    at: now,
+    reporter: cleanText(body.reporter, 20) ?? 'anonymous',
+    target,
+    reason,
+    note: clean(body.note, 300),
+    room: clean(body.room, 32),
+    chat: Array.isArray(body.chat) ? body.chat.slice(-10).map((c) => clean(c, 120)).filter(Boolean) : [],
+    status: 'open',
+  };
+}
+
+/**
+ * ICE servers for voice chat. STUN finds a direct route; TURN relays audio
+ * when networks block direct links. With TURN_SECRET (coturn's
+ * static-auth-secret) each player gets a password that expires in 6 hours;
+ * TURN_USERNAME / TURN_CREDENTIAL are for providers that give fixed ones.
+ */
+export function iceServers(env = process.env, now = Date.now()) {
+  const list = (v) => String(v ?? '').split(',').map((s) => s.trim()).filter(Boolean);
+  const stun = env.STUN_URLS === undefined ? ['stun:stun.l.google.com:19302'] : list(env.STUN_URLS);
+  const out = stun.length ? [{ urls: stun }] : [];
+  const turn = list(env.TURN_URLS);
+  if (turn.length && env.TURN_SECRET) {
+    const username = `${Math.floor(now / 1000) + 6 * 3600}:inkroads`;
+    const credential = createHmac('sha1', env.TURN_SECRET).update(username).digest('base64');
+    out.push({ urls: turn, username, credential });
+  } else if (turn.length && env.TURN_USERNAME && env.TURN_CREDENTIAL) {
+    out.push({ urls: turn, username: env.TURN_USERNAME, credential: env.TURN_CREDENTIAL });
+  }
+  return out;
+}
+
 export function hashPassword(password, salt = randomBytes(16).toString('hex')) {
   return { salt, hash: scryptSync(String(password), salt, 32).toString('hex') };
 }
@@ -148,6 +195,9 @@ export function createAdmin({ dataDir, distDir, live }) {
   }
   const stats = { ...emptyStats(), ...readJson('analytics.json', {}) };
   const moderation = { banned: [], ...readJson('moderation.json', {}) };
+  /** @type {Report[]} player reports, newest last */
+  let reports = readJson('reports.json', []);
+  const reportLimit = new Map();
   /** @type {{ at: number, room: string, name: string, text: string }[]} */
   const chatLog = [];
   /** @type {Map<string, number>} token → expiry */
@@ -309,6 +359,7 @@ export function createAdmin({ dataDir, distDir, live }) {
         week: new Set(Object.entries(stats.days).filter(([d]) => d >= day(now - 6 * 86400_000)).flatMap(([, r]) => Object.keys(r.seen ?? {}))).size,
         onlineNow: Math.max(recentBeats, l.online),
         inRooms: l.online,
+        openReports: reports.filter((r) => r.status === 'open').length,
         rooms: l.rooms,
         sessions,
         avgSessionMin: sessions ? +(totalSec / sessions / 60).toFixed(1) : 0,
@@ -358,6 +409,33 @@ export function createAdmin({ dataDir, distDir, live }) {
       const name = path.slice('/api/brand/'.length);
       if (!/^[a-z0-9-]+\.(png|jpe?g|webp)$/.test(name)) return send(res, 404, { ok: false }), true;
       if (!serveFile(res, join(logoDir, name), 'public, max-age=86400')) send(res, 404, { ok: false });
+      return true;
+    }
+
+    if (method === 'GET' && path === '/api/ice') return send(res, 200, { iceServers: iceServers() }), true;
+
+    if (method === 'POST' && path === '/api/report') {
+      // Anyone can report a player; five reports per address per ten minutes.
+      const ip = clientIp(req);
+      const now = Date.now();
+      const recent = (reportLimit.get(ip) ?? []).filter((t) => now - t < 10 * 60_000);
+      if (recent.length >= 5) return send(res, 429, { ok: false, reason: 'Too many reports. Try again later.' }), true;
+      try {
+        const report = sanitizeReport(await readBody(req, 8000), now);
+        if (!report) return send(res, 400, { ok: false }), true;
+        recent.push(now);
+        reportLimit.set(ip, recent);
+        reports.push(report);
+        if (reports.length > 500) {
+          const drop = reports.findIndex((r) => r.status !== 'open');
+          reports.splice(drop >= 0 ? drop : 0, 1);
+        }
+        writeJson('reports.json', reports);
+        console.log(`[report] ${report.reason} about "${report.target}" in ${report.room || 'no room'}`);
+        send(res, 200, { ok: true });
+      } catch {
+        send(res, 400, { ok: false });
+      }
       return true;
     }
 
@@ -458,6 +536,19 @@ export function createAdmin({ dataDir, distDir, live }) {
           moderation.banned = body.ban ? [...new Set([...moderation.banned, name])] : moderation.banned.filter((n) => n !== name);
           writeJson('moderation.json', moderation);
           return send(res, 200, { ok: true, banned: moderation.banned }), true;
+        }
+        if (route === 'reports' && method === 'GET') return send(res, 200, { reports: reports.slice(-200).reverse(), banned: moderation.banned }), true;
+        if (route === 'report' && method === 'POST') {
+          const body = await readBody(req, 2000);
+          const r = reports.find((x) => x.id === body.id);
+          if (!r || (body.action !== 'dismiss' && body.action !== 'ban')) return send(res, 400, { ok: false }), true;
+          r.status = body.action === 'ban' ? 'banned' : 'dismissed';
+          if (body.action === 'ban') {
+            moderation.banned = [...new Set([...moderation.banned, r.target])];
+            writeJson('moderation.json', moderation);
+          }
+          writeJson('reports.json', reports);
+          return send(res, 200, { ok: true }), true;
         }
         if (route === 'export' && method === 'GET') return send(res, 200, stats, { 'content-disposition': 'attachment; filename="paintland-analytics.json"' }), true;
       } catch (e) {

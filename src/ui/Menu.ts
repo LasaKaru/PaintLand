@@ -1,4 +1,5 @@
 import { LiveryEditor } from './LiveryEditor';
+import { checkPin, hashPin, isLocked, PIN_PATTERN, PinGuard } from '../core/Family';
 import { RoadStudio } from './RoadStudio';
 import type { CustomRoad } from '../creator/CustomRoad';
 import { accessible } from './a11y';
@@ -26,7 +27,7 @@ import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Inpu
 import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 
-type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access';
+type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
 export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'none';
 
@@ -36,6 +37,7 @@ export interface MenuHost {
   runBenchmark(done: (r: BenchmarkResult) => void): void;
   testRoad(road: CustomRoad): void;
   voiceMuted(name: string): boolean;
+  reportPlayer(name: string, reason: string, note: string, block: boolean): Promise<boolean>;
   toggleVoiceMute(name: string): void;
   chapters: ChapterDef[];
   currentChapter(): ChapterDef;
@@ -46,7 +48,7 @@ export interface MenuHost {
   vehicleChanged(): void;
   showcase(target: 'character' | 'vehicle' | null): void;
   netStatus(): { status: string; room: string; players: string[] };
-  netConnect(room: string, server: string | null): void;
+  netConnect(room: string, server: string | null): boolean;
   netDisconnect(): void;
   openStudio(): void;
   openControls(): void;
@@ -92,6 +94,9 @@ export class Menu {
   screen: MenuScreen = 'none';
   private wardrobeTab = 'hair';
   private benchResult: BenchmarkResult | null = null;
+  private reportFor: string | null = null;
+  private familyUnlocked = false;
+  private readonly pinGuard = new PinGuard();
   private readonly roadStudio = new RoadStudio(
     (road) => this.host.testRoad(road),
     (text) => this.toast(text),
@@ -116,6 +121,7 @@ export class Menu {
     this.root.className = 'menu';
     parent.appendChild(this.root);
     this.root.addEventListener('click', (e) => this.onClick(e));
+    this.root.addEventListener('submit', (e) => this.onSubmit(e));
     this.root.addEventListener('input', (e) => this.onInput(e));
     this.root.addEventListener('change', (e) => this.onInput(e));
     host.profile.onChange(() => this.refreshInk());
@@ -487,9 +493,20 @@ export class Menu {
           const blocked = this.host.options().blocked.includes(name);
           const muted = this.host.voiceMuted(name);
           const voiceBtn = this.host.options().voice && !blocked ? `<button class="btn small" data-action="voice-mute" data-name="${escapeHtml(name)}" aria-pressed="${muted}">${muted ? `🔈 ${t('voice.unmute')}` : `🔇 ${t('voice.mute')}`}</button>` : '';
-          return `<div class="player-row"><span>${blocked ? '🚫 ' : '🎨 '}${escapeHtml(name)}</span>${voiceBtn}<button class="btn small" data-action="block" data-name="${escapeHtml(name)}">${blocked ? t('mp.unblock') : t('mp.block')}</button></div>`;
+          const reportBtn = `<button class="btn small" data-action="report-open" data-name="${escapeHtml(name)}">⚑ ${t('rp.report')}</button>`;
+          const form =
+            this.reportFor === name
+              ? `<form class="report-form" data-form="report" data-name="${escapeHtml(name)}">
+                <label>${t('rp.why')}<select name="reason">${(['chat', 'name', 'cheating', 'bullying', 'other'] as const).map((r) => `<option value="${r}">${t(`rp.r.${r}` as StringKey)}</option>`).join('')}</select></label>
+                <label>${t('rp.note')}<input class="text-input" name="note" maxlength="300"></label>
+                <label class="check"><input type="checkbox" name="block" checked> ${t('rp.block')}</label>
+                <div class="row"><button class="btn primary small" type="submit">${t('rp.send')}</button><button class="btn small" type="button" data-action="report-cancel">${t('rp.cancel')}</button></div>
+              </form>`
+              : '';
+          return `<div class="player-row"><span>${blocked ? '🚫 ' : '🎨 '}${escapeHtml(name)}</span>${voiceBtn}${reportBtn}<button class="btn small" data-action="block" data-name="${escapeHtml(name)}">${blocked ? t('mp.unblock') : t('mp.block')}</button></div>${form}`;
         })
         .join('')}</div>` : ''}
+      ${isLocked(this.host.options().family) ? `<p class="fam-status" role="status">🔒 ${t('fam.mpNote')}</p>` : ''}
       ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
       ${this.toggle('o.voice', t('voice.setting'))}
       <p class="menu-hint">${t('voice.privacy')}</p>
@@ -499,7 +516,7 @@ export class Menu {
   }
 
   private settingsScreen(): string {
-    const tabs: [SettingsTab, string][] = [['graphics', t('set.graphics')], ['look', t('set.look')], ['controls', t('set.controls')], ['driving', t('set.driving')], ['audio', t('set.audio')], ['access', t('set.access')]];
+    const tabs: [SettingsTab, string][] = [['graphics', t('set.graphics')], ['look', t('set.look')], ['controls', t('set.controls')], ['driving', t('set.driving')], ['audio', t('set.audio')], ['access', t('set.access')], ['family', `👪 ${t('fam.tab')}`]];
     const body = {
       graphics: () => this.graphicsTab(),
       look: () => this.lookTab(),
@@ -507,6 +524,7 @@ export class Menu {
       driving: () => this.drivingTab(),
       audio: () => this.audioTab(),
       access: () => this.accessTab(),
+      family: () => this.familyTab(),
     }[this.settingsTab]();
     return `<div class="menu-panel wide">${this.header(t('title.settings'))}
       <div class="tabs">${tabs.map(([id, label]) => `<button class="tab ${this.settingsTab === id ? 'on' : ''}" data-stab="${id}">${label}</button>`).join('')}</div>
@@ -677,6 +695,31 @@ export class Menu {
   }
 
   /** Write a settings value from a control, mark graphics as Custom when a tier key moves. */
+  /** Settings → Family: parental controls behind a PIN. */
+  private familyTab(): string {
+    const f = this.host.options().family;
+    const locked = isLocked(f);
+    const editable = !locked || this.familyUnlocked;
+    const row = (key: 'online' | 'chat' | 'voice', label: string): string =>
+      `<div class="field"><label>${label}</label><div class="seg">${[true, false]
+        .map((v) => `<button class="seg-btn ${f[key] === v ? 'on' : ''}" data-action="fam-set" data-key="${key}" data-value="${v}" ${editable ? '' : 'disabled'}>${v ? t('fam.allowed') : t('fam.notAllowed')}</button>`)
+        .join('')}</div></div>`;
+    const allowances = `${row('online', t('fam.online'))}${row('chat', t('fam.chat'))}${row('voice', t('fam.voice'))}`;
+    const pinForm = (form: string, button: string, twice: boolean): string => `<form class="report-form" data-form="${form}">
+        <label>${t('fam.pin')}<input class="text-input" type="password" inputmode="numeric" autocomplete="off" name="pin" pattern="\\d{4,8}" minlength="4" maxlength="8" required></label>
+        ${twice ? `<label>${t('fam.pinAgain')}<input class="text-input" type="password" inputmode="numeric" autocomplete="off" name="again" pattern="\\d{4,8}" minlength="4" maxlength="8" required></label>` : ''}
+        <div class="row"><button class="btn primary small" type="submit">${button}</button></div>
+      </form>`;
+    if (!locked)
+      return `<p>${t('fam.intro')}</p>${allowances}<h4>${t('fam.setPin')}</h4>${pinForm('fam-new', t('fam.lock'), true)}`;
+    if (!this.familyUnlocked)
+      return `<p class="fam-status" role="status">🔒 ${t('fam.lockedNote')}</p>${allowances}<h4>${t('fam.unlock')}</h4>${pinForm('fam-unlock', t('fam.unlock'), false)}
+        <details><summary>${t('fam.forgot')}</summary><p class="menu-hint">${t('fam.forgotHelp')}</p><button class="btn small" data-action="fam-reset">${t('fam.reset')}</button></details>`;
+    return `<p class="fam-status" role="status">🔓 ${t('fam.unlockedNote')}</p>${allowances}
+      <div class="row wrap"><button class="btn primary" data-action="fam-relock">🔒 ${t('fam.relock')}</button><button class="btn" data-action="fam-remove">${t('fam.remove')}</button></div>
+      <h4>${t('fam.change')}</h4>${pinForm('fam-new', t('fam.change'), true)}`;
+  }
+
   private writeOpt(k: string, value: unknown): void {
     const [scope, key] = k.split('.');
     const obj = (scope === 's' ? this.host.studio() : this.host.options()) as unknown as Record<string, unknown>;
@@ -759,6 +802,49 @@ export class Menu {
   }
 
   // ————— events —————
+
+  /** Set, change or check the family PIN. */
+  private async familyPin(form: HTMLFormElement): Promise<void> {
+    const f = this.host.options().family;
+    const data = new FormData(form);
+    const pin = String(data.get('pin') ?? '');
+    if (form.dataset.form === 'fam-unlock') {
+      const wait = this.pinGuard.wait();
+      if (wait > 0) return this.toast(t('fam.wait', { s: wait }));
+      const ok = await checkPin(pin, f.pin);
+      this.pinGuard.record(ok);
+      if (!ok) return this.toast(t('fam.wrong'));
+      this.familyUnlocked = true;
+      this.render();
+      return;
+    }
+    if (isLocked(f) && !this.familyUnlocked) return;
+    if (!PIN_PATTERN.test(pin)) return this.toast(t('fam.pinRule'));
+    if (pin !== String(data.get('again') ?? '')) return this.toast(t('fam.mismatch'));
+    f.pin = await hashPin(pin);
+    this.familyUnlocked = false;
+    this.host.settingsChanged();
+    this.render();
+    this.toast(t('fam.lockedToast'));
+  }
+
+  private onSubmit(e: SubmitEvent): void {
+    const form = e.target as HTMLFormElement;
+    if (form.dataset.form === 'fam-new' || form.dataset.form === 'fam-unlock') {
+      e.preventDefault();
+      void this.familyPin(form);
+      return;
+    }
+    if (form.dataset.form !== 'report') return;
+    e.preventDefault();
+    const f = new FormData(form);
+    const name = form.dataset.name ?? '';
+    this.reportFor = null;
+    void this.host.reportPlayer(name, String(f.get('reason') ?? 'other'), String(f.get('note') ?? ''), f.get('block') === 'on').then((ok) => {
+      this.render();
+      this.toast(ok ? t('rp.sent') : t('rp.failed'));
+    });
+  }
 
   private onClick(e: MouseEvent): void {
     const el = (e.target as HTMLElement).closest<HTMLElement>('button, [data-nav], [data-action="logo-tap"]');
@@ -951,10 +1037,51 @@ export class Menu {
         const room = ($<HTMLInputElement>(this.root, '[data-id="room"]').value || randomRoom()).replace(/[^a-zA-Z0-9_-]/g, '');
         const server = d.action === 'join-online' ? $<HTMLInputElement>(this.root, '[data-id="server"]').value.trim() : null;
         if (server) localStorageSet('paintland.server', server);
-        this.host.netConnect(room, server);
+        if (!this.host.netConnect(room, server)) {
+          this.toast(t('fam.blocked'));
+          break;
+        }
         setTimeout(() => this.render(), 400);
         break;
       }
+      case 'fam-set': {
+        const f = this.host.options().family;
+        if (isLocked(f) && !this.familyUnlocked) break;
+        f[d.key as 'online' | 'chat' | 'voice'] = d.value === 'true';
+        this.host.settingsChanged();
+        this.render();
+        break;
+      }
+      case 'fam-relock':
+        this.familyUnlocked = false;
+        this.host.settingsChanged();
+        this.render();
+        this.toast(t('fam.lockedToast'));
+        break;
+      case 'fam-remove':
+        if (!this.familyUnlocked) break;
+        this.host.options().family.pin = null;
+        this.familyUnlocked = false;
+        this.host.settingsChanged();
+        this.render();
+        break;
+      case 'fam-reset':
+        if (!window.confirm(t('fam.resetConfirm'))) break;
+        try {
+          for (const k of Object.keys(localStorage)) if (k.startsWith('paintland.')) localStorage.removeItem(k);
+        } catch {
+          /* storage blocked */
+        }
+        window.location.reload();
+        break;
+      case 'report-open':
+        this.reportFor = d.name ?? null;
+        this.render();
+        break;
+      case 'report-cancel':
+        this.reportFor = null;
+        this.render();
+        break;
       case 'voice-mute':
         this.host.toggleVoiceMute(d.name ?? '');
         this.render();

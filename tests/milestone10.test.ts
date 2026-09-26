@@ -229,3 +229,65 @@ describe('Voice chat signalling', async () => {
       expect(checkRtc(bad)).toBeNull();
   });
 });
+
+describe('Safety: reports and voice relay', async () => {
+  const { sanitizeReport, iceServers } = await import('../server/admin.mjs');
+  it('cleans player reports and rejects bad ones', () => {
+    const r = sanitizeReport({ target: 'Bad<b>Guy</b>', reason: 'chat', note: 'x'.repeat(900), chat: Array(30).fill('hello'), reporter: 'Amara', room: 'r1', evil: 1 }, 5);
+    expect(r).toMatchObject({ reason: 'chat', reporter: 'Amara', room: 'r1', status: 'open', at: 5 });
+    // Same cleaning as player names in the relay (shown escaped in the admin panel).
+    expect(r!.target).toBe('Bad<b>Guy</b>');
+    expect(r!.note.length).toBeLessThanOrEqual(300);
+    expect(r!.chat.length).toBe(10);
+    expect('evil' in r!).toBe(false);
+    expect(sanitizeReport({ target: 'x', reason: 'spam' })).toBeNull();
+    expect(sanitizeReport({ reason: 'chat' })).toBeNull();
+    expect(sanitizeReport(null)).toBeNull();
+  });
+
+  it('issues short-lived TURN passwords the coturn way, and falls back to STUN only', async () => {
+    const now = 1_700_000_000_000;
+    const list = iceServers({ TURN_URLS: 'turn:a:3478, turn:a:3478?transport=tcp', TURN_SECRET: 's3cret' }, now);
+    expect(list[0].urls).toEqual(['stun:stun.l.google.com:19302']);
+    const turn = list[1];
+    expect(turn.urls).toEqual(['turn:a:3478', 'turn:a:3478?transport=tcp']);
+    expect(turn.username).toBe(`${now / 1000 + 6 * 3600}:inkroads`);
+    const key = await crypto.subtle.importKey('raw', new TextEncoder().encode('s3cret'), { name: 'HMAC', hash: 'SHA-1' }, false, ['sign']);
+    const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(turn.username!)));
+    expect(turn.credential).toBe(btoa(String.fromCharCode(...mac)));
+    expect(iceServers({}, now)).toEqual([{ urls: ['stun:stun.l.google.com:19302'] }]);
+    expect(iceServers({ STUN_URLS: '' }, now)).toEqual([]);
+    expect(iceServers({ TURN_URLS: 'turn:x', TURN_USERNAME: 'u', TURN_CREDENTIAL: 'p', STUN_URLS: '' })).toEqual([{ urls: ['turn:x'], username: 'u', credential: 'p' }]);
+  });
+});
+
+describe('Family settings (parental controls)', async () => {
+  const F = await import('../src/core/Family');
+  it('stores only a salted hash and checks the PIN', async () => {
+    const stored = await F.hashPin('4821');
+    expect(stored).not.toContain('4821');
+    expect(await F.checkPin('4821', stored)).toBe(true);
+    expect(await F.checkPin('4822', stored)).toBe(false);
+    expect(await F.checkPin('48', stored)).toBe(false);
+    expect(await F.hashPin('4821')).not.toBe(stored);
+  });
+
+  it('caps chat, voice and online play while locked', () => {
+    const o = (family: Partial<import('../src/core/Family').FamilyLock>) => ({ chat: 'on' as const, voice: true, family: { ...F.DEFAULT_FAMILY, pin: 'x:y', ...family } });
+    expect(F.familyCaps(o({ chat: true, voice: true }))).toMatchObject({ chat: 'filtered', voice: true });
+    expect(F.familyCaps(o({ chat: false, voice: false }))).toMatchObject({ chat: 'off', voice: false });
+    expect(F.familyCaps(o({ online: false, chat: true, voice: true }))).toMatchObject({ chat: 'off', voice: false });
+    expect(F.onlineAllowed({ ...F.DEFAULT_FAMILY, pin: 'x:y', online: false })).toBe(false);
+    // Without a PIN nothing is capped.
+    expect(F.familyCaps({ chat: 'on', voice: true, family: { ...F.DEFAULT_FAMILY, chat: false } })).toMatchObject({ chat: 'on', voice: true });
+  });
+
+  it('slows down PIN guessing', () => {
+    const g = new F.PinGuard();
+    for (let i = 0; i < 4; i++) g.record(false, 0);
+    expect(g.wait(0)).toBe(0);
+    g.record(false, 0);
+    expect(g.wait(0)).toBe(60);
+    expect(g.wait(61_000)).toBe(0);
+  });
+});

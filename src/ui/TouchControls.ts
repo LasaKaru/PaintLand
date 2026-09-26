@@ -18,6 +18,8 @@ const BUTTONS: ButtonDef[] = [
   { id: 'cam', label: '🎥', tap: 'camera', cls: 'small cam' },
   { id: 'drift', label: 'DRIFT', hold: 'drift', cls: 'small drift' },
   { id: 'photo', label: '📷', tap: 'photo', cls: 'small photo' },
+  // Push-to-talk: only shown while voice chat is on.
+  { id: 'talk', label: '🎙', hold: 'talk', cls: 'mid talk' },
 ];
 
 /**
@@ -78,6 +80,11 @@ export class TouchControls {
     this.enabled = true;
     this.root.classList.remove('hidden');
     document.documentElement.classList.add('touch-ui');
+  }
+
+  /** Show the push-to-talk button (voice chat on). */
+  setVoice(on: boolean): void {
+    this.root.classList.toggle('voice', on);
   }
 
   /** Only while driving or walking (not in menus or photo mode). */

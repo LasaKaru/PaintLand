@@ -8,7 +8,7 @@ interface Row {
   value: number;
 }
 interface Stats {
-  totals: { players: number; today: number; week: number; onlineNow: number; inRooms: number; rooms: number; sessions: number; avgSessionMin: number; playHours: number; returning: number };
+  totals: { players: number; today: number; week: number; onlineNow: number; inRooms: number; openReports?: number; rooms: number; sessions: number; avgSessionMin: number; playHours: number; returning: number };
   days: { day: string; players: number; newPlayers: number; sessions: number; playHours: number }[];
   chapters: Row[];
   areas: Row[];
@@ -29,6 +29,18 @@ interface ServerConfig extends Omit<BrandConfig, 'sponsors'> {
   maxPlayersPerRoom: number;
   sponsors: { id: string; name: string; url: string; file: string; weight: number; enabled: boolean }[];
 }
+interface PlayerReport {
+  id: string;
+  at: number;
+  reporter: string;
+  target: string;
+  reason: string;
+  note: string;
+  room: string;
+  chat: string[];
+  status: 'open' | 'dismissed' | 'banned';
+}
+
 interface Whoami {
   direct: string;
   forwardedFor: string;
@@ -51,6 +63,7 @@ export class AdminPanel {
   private token: string | null = null;
   private tab: Tab = 'dashboard';
   private whoami: Whoami | null = null;
+  private reports: PlayerReport[] = [];
   private stats: Stats | null = null;
   private config: ServerConfig | null = null;
   private chat: { chat: { at: number; room: string; name: string; text: string }[]; banned: string[] } | null = null;
@@ -208,6 +221,7 @@ export class AdminPanel {
         ${tile('Played today', fmt(t.today), sparkline(spark('players')))}
         ${tile('Last 7 days', fmt(t.week))}
         ${tile('Online now', fmt(t.onlineNow), `${t.inRooms} in ${t.rooms} multiplayer room${t.rooms === 1 ? '' : 's'}`)}
+        ${tile('Open reports', fmt(t.openReports ?? 0), t.openReports ? '👥 Players & chat to review' : 'all clear')}
         ${tile('Sessions', fmt(t.sessions), `avg ${t.avgSessionMin} min`)}
         ${tile('Hours played', fmt(t.playHours), sparkline(spark('playHours')))}
       </div>
@@ -315,14 +329,33 @@ export class AdminPanel {
     const s = this.stats;
     const chat = this.chat;
     if (!chat) {
-      void this.call<NonNullable<AdminPanel['chat']>>('/api/admin/chat').then((c) => c && ((this.chat = c), this.render()));
+      void Promise.all([this.call<NonNullable<AdminPanel['chat']>>('/api/admin/chat'), this.call<{ reports: PlayerReport[] }>('/api/admin/reports')]).then(([c, r]) => {
+        this.reports = r?.reports ?? [];
+        if (c) {
+          this.chat = c;
+          this.render();
+        }
+      });
       return '<p class="menu-hint">Loading chat…</p>';
     }
+    const reasons: Record<string, string> = { chat: 'Bad chat', name: 'Bad name', cheating: 'Cheating', bullying: 'Bullying', other: 'Other' };
+    const open = this.reports.filter((r) => r.status === 'open');
+    const reportRows = this.reports
+      .map(
+        (r) => `<tr class="${r.status === 'open' ? '' : 'muted'}"><td>${new Date(r.at).toLocaleString()}</td><td><b>${esc(r.target)}</b></td><td>${esc(reasons[r.reason] ?? r.reason)}</td><td>${esc(r.note)}${r.chat.length ? `<details><summary>${r.chat.length} chat line(s)</summary>${r.chat.map((c) => `<div>“${esc(c)}”</div>`).join('')}</details>` : ''}</td><td>${esc(r.reporter)}<br><small>${esc(r.room)}</small></td><td>${
+          r.status === 'open' ? `<button class="btn small" data-report-ban="${esc(r.id)}">Ban</button> <button class="btn small" data-report-dismiss="${esc(r.id)}">Dismiss</button>` : esc(r.status)
+        }</td></tr>`,
+      )
+      .join('');
+    const reportsCard = `<section class="viz-card"><h3>Player reports <small>${open.length} open · newest first</small></h3>
+        ${this.reports.length ? `<table class="admin-table"><thead><tr><th>When</th><th>Reported</th><th>Why</th><th>Details</th><th>By · room</th><th></th></tr></thead><tbody>${reportRows}</tbody></table>` : '<p class="menu-hint">No reports. Players report from Menu → Multiplayer.</p>'}
+      </section>`;
     return `<div class="kpi-row">
         <div class="stat-tile"><div class="label">Online now</div><div class="stat-value">${fmt(s?.totals.onlineNow ?? 0)}</div></div>
         <div class="stat-tile"><div class="label">In multiplayer rooms</div><div class="stat-value">${fmt(s?.totals.inRooms ?? 0)}</div></div>
         <div class="stat-tile"><div class="label">Room size limit</div><div class="stat-value">${this.config?.maxPlayersPerRoom ?? 32}</div></div>
       </div>
+      ${reportsCard}
       <section class="viz-card"><h3>Banned names</h3>
         ${chat.banned.length ? chat.banned.map((n) => `<span class="chip">${esc(n)} <button class="btn small" data-unban="${esc(n)}">Unban</button></span>`).join(' ') : '<p class="menu-hint">Nobody is banned.</p>'}
         <form class="row" data-form="ban"><input class="text-input" name="name" maxlength="20" placeholder="Player name"><button class="btn" type="submit">Ban</button></form>
@@ -366,7 +399,7 @@ export class AdminPanel {
   // ————— events —————
 
   private async onClick(e: MouseEvent): Promise<void> {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban]');
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban], [data-report-ban], [data-report-dismiss]');
     if (!el) return;
     const d = el.dataset;
     if (d.tab) {
@@ -403,6 +436,14 @@ export class AdminPanel {
       if (!confirm('Delete this sponsor and its logo?')) return;
       const saved = await this.call<ServerConfig>(`/api/admin/sponsor?id=${encodeURIComponent(d.delete)}`, 'DELETE');
       if (saved) this.saved(saved, 'Sponsor deleted.');
+      return;
+    }
+    if (d.reportBan || d.reportDismiss) {
+      const ok = await this.call<{ ok: boolean }>('/api/admin/report', 'POST', { id: d.reportBan ?? d.reportDismiss, action: d.reportBan ? 'ban' : 'dismiss' });
+      if (ok) {
+        this.chat = null;
+        this.flash(d.reportBan ? 'Banned.' : 'Report dismissed.');
+      }
       return;
     }
     if (d.ban || d.unban) {

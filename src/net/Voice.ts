@@ -1,3 +1,4 @@
+import { api } from './Api';
 import type { RtcMessage } from '../../server/validate.mjs';
 
 /**
@@ -27,7 +28,8 @@ export interface VoiceHost {
   isBlocked(name: string): boolean;
 }
 
-const ICE: RTCIceServer[] = (import.meta.env.VITE_STUN ?? 'stun:stun.l.google.com:19302')
+/** Built-in fallback when the game server does not answer /api/ice. */
+const FALLBACK_ICE: RTCIceServer[] = (import.meta.env.VITE_STUN ?? 'stun:stun.l.google.com:19302')
   .split(',')
   .map((u: string) => u.trim())
   .filter(Boolean)
@@ -37,6 +39,8 @@ export class Voice {
   enabled = false;
   talking = false;
   private stream: MediaStream | null = null;
+  /** STUN (and TURN relay, with short-lived passwords) from the game server. */
+  private ice: RTCIceServer[] = FALLBACK_ICE;
   private readonly peers = new Map<string, VoicePeer>();
   private readonly greeted = new Set<string>();
   private ctx: AudioContext | null = null;
@@ -61,6 +65,8 @@ export class Voice {
       return false;
     }
     for (const t of this.stream.getAudioTracks()) t.enabled = false;
+    const res = await api<{ iceServers: RTCIceServer[] }>('/api/ice', { timeout: 4000 });
+    if (res.ok && Array.isArray(res.data?.iceServers)) this.ice = res.data.iceServers;
     this.enabled = true;
     this.greeted.clear();
     this.host.send({ t: 'rtc', a: 'hi' });
@@ -193,7 +199,7 @@ export class Voice {
   }
 
   private link(id: string): VoicePeer {
-    const pc = new RTCPeerConnection({ iceServers: ICE });
+    const pc = new RTCPeerConnection({ iceServers: this.ice });
     const audio = document.createElement('audio');
     audio.autoplay = true;
     audio.volume = this.volume;

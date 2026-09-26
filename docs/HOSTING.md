@@ -243,16 +243,38 @@ This is cheapest for many players, and needed for a TURN voice relay.
 
 Voice chat connects players directly. About 1 player in 10 is on a network
 (some mobile carriers, schools, offices) that blocks that. For them, voice
-needs a **TURN relay**, and TURN uses UDP, which Render does not offer. Use
-one of these:
+needs a **TURN relay**. TURN uses UDP, which Render does not offer, so the
+relay runs somewhere else. The game server only hands out the relay address
+and a password (`/api/ice`); everything else in the game works without it.
 
-- a managed TURN service (for example Metered, Twilio or Cloudflare), or
-- the `coturn` relay in the deploy kit on a VPS (section 5).
+### Option A · The relay in the deploy kit (your VPS, section 5)
+1. Make a secret: `openssl rand -hex 32`.
+2. In `deploy/.env` set:
+   ```
+   TURN_SECRET=<the secret>
+   TURN_URLS=turn:play.inkroads.com:3478?transport=udp,turn:play.inkroads.com:3478?transport=tcp
+   ```
+3. Open the firewall: **UDP 3478**, **TCP 3478** and **UDP 49160–49200**.
+4. Start everything with the voice profile:
+   `docker compose --profile voice up -d`.
+5. Each player gets a relay password that expires after 6 hours (made from
+   the secret; the secret never leaves the server). The relay only carries
+   voice between players: it refuses to connect into private or local
+   networks, and it limits each player's bandwidth.
+6. If the VPS sits behind NAT (for example AWS), add
+   `--external-ip=<public IP>/<private IP>` to the `turn` command in
+   `deploy/docker-compose.yml`.
 
-The game's TURN settings are described in the deploy kit once that part is
-added. Everything else in the game works without it.
+### Option B · The game on Render + the relay elsewhere
+Run only the relay on a small VPS (steps 1–4 above; you can remove the other
+services), or use a managed TURN provider. Then add to the Render service
+(**Environment**):
+- self-hosted relay: `TURN_URLS` and `TURN_SECRET` (the same secret as the relay)
+- managed provider that gives a fixed username and password: `TURN_URLS`,
+  `TURN_USERNAME` and `TURN_CREDENTIAL`
 
----
+Optional: `STUN_URLS` replaces the default public STUN server
+(`stun:stun.l.google.com:19302`). Set it empty for none.
 
 ## 7. Launch checklist
 

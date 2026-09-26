@@ -33,6 +33,8 @@ import { checkTrophies } from '../gameplay/Trophies';
 import { Wildlife } from '../world/Wildlife';
 import { Village } from '../world/Village';
 import { Voice } from '../net/Voice';
+import { api } from '../net/Api';
+import { familyCaps, onlineAllowed } from './Family';
 import { BENCH_MEASURE, BENCH_SPOTS, BENCH_WARMUP, scoreBenchmark, type BenchmarkResult } from '../render/Benchmark';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
 import { City } from '../world/City';
@@ -95,6 +97,7 @@ export class Game {
     isBlocked: (name) => this.options.blocked.includes(name),
   });
   private readonly voicePill: HTMLDivElement;
+  private readonly chatHistory: { name: string; text: string }[] = [];
   private customKey = 'custom';
   private bench: { spot: number; t: number; frames: number[]; snapshot: StudioSettings; done: (r: BenchmarkResult) => void } | null = null;
   private readonly renderer: THREE.WebGLRenderer;
@@ -262,14 +265,17 @@ export class Game {
       showcase: (t) => this.setShowcase(t),
       netStatus: () => ({ status: this.net.status, room: this.net.room, players: [...this.net.peers.values()].map((p) => p.info?.name ?? '…') }),
       netConnect: (room, server) => {
+        if (!onlineAllowed(this.options.family)) return false;
         this.net.connect(room, server, this.playerInfo());
         void this.syncVoice();
+        return true;
       },
       netDisconnect: () => {
         this.voice.disable();
         this.net.disconnect();
       },
       voiceMuted: (name) => [...this.net.peers.values()].some((p) => p.info?.name === name && this.voice.muted.has(p.id)),
+      reportPlayer: (name, reason, note, block) => this.reportPlayer(name, reason, note, block),
       toggleVoiceMute: (name) => {
         for (const p of this.net.peers.values()) if (p.info?.name === name) this.voice.setMuted(p.id, !this.voice.muted.has(p.id));
       },
@@ -526,6 +532,17 @@ export class Game {
     this.pipeline.colourBlind = ['none', 'protan', 'deutan', 'tritan'].indexOf(o.colourBlind);
   }
 
+  /** Send a player report to the game's admins; optionally block them here too. */
+  private async reportPlayer(name: string, reason: string, note: string, block: boolean): Promise<boolean> {
+    if (block && !this.options.blocked.includes(name)) {
+      this.options.blocked = [...this.options.blocked, name];
+      this.settingsChanged();
+    }
+    const chat = this.chatHistory.filter((c) => c.name === name).slice(-10).map((c) => c.text);
+    const res = await api('/api/report', { method: 'POST', body: { reporter: this.profile.data.name, target: name, reason, note, room: this.net.room, chat } });
+    return res.ok;
+  }
+
   /** Voice chat follows the setting while connected; if the microphone is refused, the setting turns off. */
   private async syncVoice(): Promise<void> {
     this.voice.setVolume(this.options.voiceVolume);
@@ -542,6 +559,7 @@ export class Game {
   /** Per frame: push-to-talk, level meters, hang up on players who left or were blocked. */
   private updateVoice(): void {
     const v = this.voice;
+    this.touchUi.setVoice(v.enabled);
     if (!v.enabled) {
       this.voicePill.style.display = 'none';
       return;
@@ -617,6 +635,11 @@ export class Game {
 
   /** Save and apply everything the Settings screens touched. */
   private settingsChanged(): void {
+    familyCaps(this.options);
+    if (!onlineAllowed(this.options.family) && this.net.connected) {
+      this.voice.disable();
+      this.net.disconnect();
+    }
     saveStudio(this.settings);
     saveOptions(this.options);
     void this.syncVoice();
@@ -648,7 +671,7 @@ export class Game {
     const room = params.get('room');
     if (room) {
       const clean = room.replace(/[^a-zA-Z0-9_-]/g, '');
-      this.net.connect(clean, params.get('server'), this.playerInfo());
+      if (onlineAllowed(this.options.family)) this.net.connect(clean, params.get('server'), this.playerInfo());
       this.hud.pop(t('mp.joining', { room: clean }), window.innerWidth / 2, window.innerHeight * 0.3, 'info');
     }
     if (!this.profile.data.seenIntro) this.startIntro();
@@ -2788,6 +2811,9 @@ export class Game {
 
   /** Chat line from another player, after the block list and chat setting. */
   private incomingChat(name: string, text: string): void {
+    // Kept (unfiltered, last 50 lines) only so a report can include what was said.
+    this.chatHistory.push({ name, text });
+    if (this.chatHistory.length > 50) this.chatHistory.shift();
     const o = this.options;
     if (o.chat === 'off' || o.blocked.includes(name)) return;
     this.hud.chatLine(name, o.chat === 'filtered' ? filterChat(text) : text);
@@ -3026,6 +3052,7 @@ export class Game {
   }
 
   debugNet(room: string, server?: string): void {
+    if (!onlineAllowed(this.options.family)) return;
     this.net.connect(room, server ?? null, this.playerInfo());
   }
 
