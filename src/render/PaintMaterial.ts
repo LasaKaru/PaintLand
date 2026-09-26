@@ -320,7 +320,15 @@ vec3 roadPattern(vec3 base, vec2 uv, vec4 info) {
 // 1 brick/stucco · 2 roof tiles · 3 planks · 4 stone blocks · 5 leaves · 6 tea rows
 // 7 thatch · 8 grass · 9 sandstone strata · 10 marble
 vec3 surfacePattern(vec3 base, float kind, vec3 p, vec3 nW, float dist) {
-  if (kind > 10.5) return base; // 11 matte, 12 glass: gloss only, no pattern
+  if (kind > 13.5) {
+    // 14 glitter paint: tiny bright flecks scattered through the colour.
+    vec3 q = floor(p * 26.0);
+    float h = hash21(q.xy + q.z * 17.13);
+    // Bright and dark flecks, so glitter shows on pale paint as well as dark.
+    vec3 fleck = hash21(q.zx + 3.1) > 0.45 ? vec3(1.0) : base * 0.4;
+    return mix(base * 0.92, fleck, step(0.9, h) * 0.85);
+  }
+  if (kind > 10.5) return base; // 11 matte, 12 glass, 13 cloud: gloss only, no pattern
   bool broad = kind > 5.5 && kind < 6.5 || kind > 7.5 && kind < 9.5;
   float fade = 1.0 - smoothstep(broad ? 400.0 : 70.0, broad ? 1200.0 : 260.0, dist);
   if (fade <= 0.0 || kind < 0.5) return base;
@@ -393,7 +401,8 @@ float patternGloss(float kind) {
   if (kind < 10.5) return 0.6;  // marble
   if (kind < 11.5) return 0.03; // matte (rubber, cloth)
   if (kind < 12.5) return 0.95; // glass, chrome
-  return 0.0;                   // cloud
+  if (kind < 13.5) return 0.0;  // cloud
+  return 0.9;                   // glitter paint
 }
 
 void main() {
@@ -520,7 +529,7 @@ void main() {
     real += uSunColor * uSunIntensity * spec * sunTerm * 1.2;
     real += env * fres * gloss * 0.8;
     #ifndef USE_ROAD
-      if (vPattern > 12.5) {
+      if (vPattern > 12.5 && vPattern < 13.5) {
         // Clouds scatter light: bright everywhere, warm where the sun hits, no highlights.
         real = base * (mix(uSkyHorizon, uSkyTint, 0.3) * 0.75 + uSunColor * uSunIntensity * (0.35 + 0.4 * wrap));
       }

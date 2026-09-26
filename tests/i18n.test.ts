@@ -34,7 +34,7 @@ describe('Localisation (24 languages)', () => {
       const loc = locales[`../src/core/locales/${l.id}.ts`].default;
       // Words many languages share with English: T-shirt, clothing names from South Asia,
       // an exclamation and a hairstyle. They may stay the same without counting.
-      const international = new Set(['item.top:tee', 'item.top:sari', 'item.bottom:sarong', 'item.facial:bindi', 'item.mouth:o', 'item.hair:bob']);
+      const international = new Set(['item.top:tee', 'item.top:sari', 'item.bottom:sarong', 'item.facial:bindi', 'item.mouth:o', 'item.hair:bob', 'item.roof:kayak']);
       const same = (Object.keys(en) as (keyof typeof en)[]).filter((k) => loc[k] === en[k] && !international.has(k));
       // A few more words (Garage, Ultra, Audio, Tip…) are the same in some languages; most must differ.
       expect(same.length, `${l.id} identical to English: ${same.join(', ')}`).toBeLessThan(10);

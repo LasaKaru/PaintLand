@@ -3,6 +3,7 @@ import { ModelKit, Pattern } from './ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
 import { ROVER_TUNING, type VehicleTuning } from '../gameplay/RoverController';
 import { decodeLivery, isEmptyLivery, paintLiveryCanvas } from '../gameplay/Livery';
+import type { EngineSound, HornSound } from '../audio/VehicleSounds';
 
 /** Paint scheme and roof load (garage customisation, docs/08 §2). */
 export interface VehicleLook {
@@ -10,7 +11,7 @@ export interface VehicleLook {
   trim: string;
   accent: string;
   hubs: string;
-  roofLoad: 'gramophone' | 'boombox' | 'flowers' | 'surfboard' | 'none';
+  roofLoad: 'gramophone' | 'boombox' | 'flowers' | 'surfboard' | 'rack' | 'kayak' | 'lanterns' | 'none';
   /** Paint job over the body colour (loot / shop). */
   decal?: 'none' | 'stripes' | 'flames' | 'dots' | 'checker';
   spoiler?: 'none' | 'lip' | 'wing';
@@ -18,15 +19,27 @@ export interface VehicleLook {
   glow?: string | null;
   /** A hand-painted picture on both sides (a livery share code, see Livery.ts). */
   livery?: string;
+  /** How the body paint looks: glossy (default), matte, glitter or chrome. */
+  finish?: PaintFinish;
+  wheelStyle?: WheelStyle;
+  exhaust?: 'none' | 'twin' | 'side' | 'stack';
+  /** Engine sound and horn (see audio/VehicleSounds.ts). */
+  engine?: EngineSound;
+  horn?: HornSound;
 }
 
-export type VehicleId = 'rover' | 'tuktuk' | 'coupe' | 'buggy' | 'van' | 'scooter';
+export type PaintFinish = 'gloss' | 'matte' | 'glitter' | 'chrome';
+export type WheelStyle = 'classic' | 'spoke' | 'slick' | 'whitewall';
+
+export type VehicleId = 'rover' | 'tuktuk' | 'coupe' | 'buggy' | 'van' | 'scooter' | 'paperboat' | 'balloon' | 'bicycle' | 'tukracer';
 
 interface WheelSpot {
   x: number;
   z: number;
   r: number;
   steer: boolean;
+  /** Tyre width (defaults by vehicle). */
+  width?: number;
 }
 
 export interface VehicleDef {
@@ -45,6 +58,8 @@ export interface VehicleDef {
   brakeLights: [number, number, number][];
   headLights: [number, number, number][];
   build(look: VehicleLook): THREE.BufferGeometry;
+  /** Drives into the sea and floats (free roam). */
+  amphibious?: boolean;
 }
 
 const TYRE = '#2f2a28';
@@ -158,6 +173,108 @@ function buildScooter(look: VehicleLook): THREE.BufferGeometry {
   k.cylinder(0.12, 0.12, 0.08, 10, '#fff3c4', { position: [0, 1.35, -0.95], rotation: [Math.PI / 2, 0, 0], nightGlow: 1 });
   k.box(0.5, 0.35, 0.4, look.accent, { position: [0, 1.2, 1.1] });
   return k.build(0.01, 8);
+}
+
+/** A folded-paper boat on little wheels: drive off the quay and it floats. */
+function buildPaperBoat(look: VehicleLook): THREE.BufferGeometry {
+  const k = new ModelKit();
+  k.box(1.5, 0.14, 3.4, look.trim, { position: [0, 0.55, 0] });
+  // Two trapezoid sides folded out from the keel, like a real paper boat.
+  const side = new THREE.Shape([new THREE.Vector2(-1.45, 0), new THREE.Vector2(1.45, 0), new THREE.Vector2(2.35, 0.95), new THREE.Vector2(-2.35, 0.95)]);
+  for (const s of [-1, 1]) {
+    const g = new THREE.ExtrudeGeometry(side, { depth: 0.06, bevelEnabled: false }).translate(0, 0, -0.03).rotateY(Math.PI / 2).rotateZ(-s * 0.5);
+    k.add(g, look.body, { position: [s * 0.55, 0.5, 0] });
+    k.box(0.04, 0.04, 4.6, INK, { position: [s * (0.55 + Math.sin(0.5) * 0.95), 0.5 + Math.cos(0.5) * 0.95, 0], rotation: [0, 0, -s * 0.5] });
+  }
+  // The tall middle fold of a paper boat, behind the seat.
+  k.add(new THREE.ConeGeometry(1.0, 1.5, 4).rotateY(Math.PI / 4), look.body, { position: [0, 1.75, 1.05], scale: [0.18, 1, 1.15] });
+  k.box(0.04, 1.3, 0.04, INK, { position: [0, 1.7, 1.05] });
+  k.box(1.2, 0.08, 0.35, look.accent, { position: [0, 1.25, 2.0] });
+  k.box(0.95, 0.3, 0.6, '#6a3a2a', { position: [0, 0.78, 0.1] });
+  k.box(0.95, 0.5, 0.1, '#6a3a2a', { position: [0, 1.05, 0.4] });
+  k.box(1.1, 0.34, 0.05, GLASS, { pattern: Pattern.Glass, position: [0, 1.36, -0.85], rotation: [-0.35, 0, 0] });
+  return k.build(0.02, 10);
+}
+
+/** A paper-lantern hot-air balloon: a wicker basket that hovers, a glowing burner. */
+function buildBalloon(look: VehicleLook): THREE.BufferGeometry {
+  const k = new ModelKit();
+  k.box(1.5, 0.75, 1.5, '#b88a50', { position: [0, 0.75, 0], pattern: Pattern.Thatch });
+  k.box(1.6, 0.1, 1.6, '#7a5a3a', { position: [0, 1.15, 0] });
+  k.box(1.4, 0.06, 1.4, '#7a5a3a', { position: [0, 0.4, 0] });
+  // Ropes from the basket corners to the lantern.
+  for (const [x, z] of [[-0.72, -0.72], [0.72, -0.72], [-0.72, 0.72], [0.72, 0.72]] as const) {
+    k.add(new THREE.CylinderGeometry(0.018, 0.018, 1.75, 4).rotateX(z * 0.3).rotateZ(-x * 0.3), INK, { position: [x * 1.12, 2.0, z * 1.12] });
+  }
+  k.cylinder(0.14, 0.2, 0.22, 8, BRASS, { position: [0, 2.72, 0] });
+  k.cylinder(0.08, 0.02, 0.35, 6, '#ffb347', { position: [0, 3.0, 0], nightGlow: 1 });
+  // The lantern: a ribbed paper envelope, open at the bottom.
+  const profile = [
+    [0.45, 0], [1.05, 0.2], [1.55, 0.7], [1.72, 1.25], [1.6, 1.8], [1.15, 2.3], [0.35, 2.5], [0.01, 2.52],
+  ].map(([r, y]) => new THREE.Vector2(r, y));
+  k.add(new THREE.LatheGeometry(profile, 12), look.body, { position: [0, 3.05, 0] });
+  for (const y of [0.25, 1.25, 2.28]) {
+    const r = y < 0.5 ? 1.12 : y < 1.5 ? 1.74 : 1.18;
+    k.add(new THREE.TorusGeometry(r, 0.05, 4, 16).rotateX(Math.PI / 2), look.accent, { position: [0, 3.05 + y, 0] });
+  }
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    k.box(0.04, 2.3, 0.04, look.trim, { position: [Math.cos(a) * 1.64, 4.3, Math.sin(a) * 1.64] });
+  }
+  k.box(0.3, 0.3, 0.06, '#d8463a', { position: [0, 0.8, -0.78] });
+  return k.build(0.015, 11);
+}
+
+/** A town bicycle with a basket on the front. */
+function buildBicycle(look: VehicleLook): THREE.BufferGeometry {
+  const k = new ModelKit();
+  const tube = (from: [number, number], to: [number, number], colour: string, r = 0.035): void => {
+    const dz = to[1] - from[1];
+    const dy = to[0] - from[0];
+    const len = Math.hypot(dz, dy);
+    k.cylinder(r, r, len, 6, colour, { position: [0, (from[0] + to[0]) / 2, (from[1] + to[1]) / 2], rotation: [Math.atan2(dz, dy), 0, 0] });
+  };
+  // [y, z] points of a diamond frame.
+  const head: [number, number] = [1.05, -0.55];
+  const seat: [number, number] = [1.0, 0.25];
+  const crank: [number, number] = [0.42, 0.05];
+  tube(head, seat, look.body);
+  tube(head, crank, look.body);
+  tube(seat, crank, look.body);
+  for (const x of [-0.07, 0.07]) {
+    k.cylinder(0.025, 0.025, 0.72, 5, look.body, { position: [x, 0.4, 0.45], rotation: [Math.PI / 2, 0, 0] });
+    k.cylinder(0.025, 0.025, 0.8, 5, look.body, { position: [x, 0.7, 0.55], rotation: [0.95, 0, 0] });
+    k.cylinder(0.025, 0.025, 0.75, 5, look.trim, { position: [x, 0.72, -0.72], rotation: [-0.3, 0, 0] });
+  }
+  k.box(0.22, 0.07, 0.3, INK, { position: [0, 1.05, 0.3] });
+  k.box(0.62, 0.04, 0.04, INK, { position: [0, 1.22, -0.62] });
+  for (const x of [-0.3, 0.3]) k.box(0.05, 0.05, 0.12, look.accent, { position: [x, 1.22, -0.6] });
+  k.box(0.4, 0.26, 0.3, '#c8955a', { position: [0, 1.0, -0.98], pattern: Pattern.Thatch });
+  k.cylinder(0.12, 0.12, 0.06, 10, look.trim, { position: [0.1, 0.42, 0.05], rotation: [0, 0, Math.PI / 2] });
+  for (const s of [-1, 1]) k.box(0.1, 0.04, 0.06, INK, { position: [s * 0.2, 0.42 + s * 0.12, 0.05 + s * 0.1] });
+  k.cylinder(0.08, 0.08, 0.06, 8, '#fff3c4', { position: [0, 1.0, -1.15], rotation: [Math.PI / 2, 0, 0], nightGlow: 1 });
+  return k.build(0.004, 12);
+}
+
+/** The tuk-tuk, tuned: low canopy, racing stripe, wing, twin pipes. */
+function buildTukRacer(look: VehicleLook): THREE.BufferGeometry {
+  const k = new ModelKit();
+  k.box(1.55, 0.8, 1.9, look.body, { position: [0, 0.8, 0.45] });
+  k.box(1.56, 0.12, 1.95, look.trim, { position: [0, 0.4, 0.45] });
+  k.add(new THREE.CylinderGeometry(0.4, 0.72, 1.4, 4, 1).rotateY(Math.PI / 4).rotateX(-Math.PI / 2), look.body, { position: [0, 0.82, -1.05], scale: [1.35, 0.85, 1] });
+  k.box(1.3, 0.6, 0.07, GLASS, { pattern: Pattern.Glass, position: [0, 1.5, -0.55], rotation: [-0.45, 0, 0] });
+  k.box(1.6, 0.12, 2.1, INK, { position: [0, 2.02, 0.4] });
+  k.box(1.62, 0.1, 2.12, look.accent, { position: [0, 2.12, 0.4] });
+  for (const [x, z] of [[-0.72, -0.5], [0.72, -0.5], [-0.72, 1.35], [0.72, 1.35]] as const) k.box(0.06, 1.2, 0.06, INK, { position: [x, 1.45, z] });
+  k.box(0.3, 0.02, 3.4, look.accent, { position: [0, 1.22, -0.1] });
+  k.box(1.3, 0.35, 0.5, INK, { position: [0, 1.0, 0.9] });
+  k.box(1.3, 0.55, 0.12, INK, { position: [0, 1.35, 1.2] });
+  for (const x of [-0.6, 0.6]) k.box(0.06, 0.35, 0.08, INK, { position: [x, 1.35, 1.5] });
+  k.box(1.8, 0.06, 0.4, look.accent, { position: [0, 1.55, 1.55], rotation: [0.15, 0, 0] });
+  for (const x of [-0.78, 0.78]) k.add(new THREE.CylinderGeometry(0.34, 0.34, 0.3, 10, 1, true, 0, Math.PI).rotateZ(Math.PI / 2), look.trim, { position: [x, 0.35, 1.1] });
+  for (const x of [-0.3, 0.3]) k.cylinder(0.07, 0.09, 0.45, 8, '#cfd6df', { pattern: Pattern.Glass, position: [x, 0.45, 1.55], rotation: [Math.PI / 2, 0, 0] });
+  k.box(0.9, 0.18, 0.1, '#f4d23b', { position: [0, 0.6, -1.7] });
+  return k.build(0.012, 13);
 }
 
 export const VEHICLES: VehicleDef[] = [
@@ -284,6 +401,83 @@ export const VEHICLES: VehicleDef[] = [
     headLights: [[0, 1.35, -1.0]],
     build: buildScooter,
   },
+  {
+    id: 'paperboat',
+    name: 'Paper Boat',
+    blurb: 'A folded boat on wheels. Drive off the quay: it floats!',
+    price: 700,
+    tuning: { topSpeed: 47, accel: 16, steerLow: 9.5, steerHigh: 6.5, hopSpeed: 8.6 },
+    defaultLook: { body: '#f6f0e4', trim: '#bfd9e8', accent: '#3e6fa8', hubs: '#f6f0e4', roofLoad: 'none', engine: 'buzzy', horn: 'duck' },
+    seat: [0, 0.8, -0.2],
+    seatPose: 'sit',
+    wheels: [
+      { x: -0.7, z: -1.2, r: 0.32, steer: true, width: 0.24 },
+      { x: 0.7, z: -1.2, r: 0.32, steer: true, width: 0.24 },
+      { x: -0.7, z: 1.2, r: 0.32, steer: false, width: 0.24 },
+      { x: 0.7, z: 1.2, r: 0.32, steer: false, width: 0.24 },
+    ],
+    roofAt: [0, 1.3, 1.9],
+    antennaAt: null,
+    brakeLights: [[-0.5, 1.0, 1.75], [0.5, 1.0, 1.75]],
+    headLights: [[-0.45, 1.0, -1.75], [0.45, 1.0, -1.75]],
+    build: buildPaperBoat,
+    amphibious: true,
+  },
+  {
+    id: 'balloon',
+    name: 'Lantern Balloon',
+    blurb: 'Floats above the road: slow, but it hops sky-high and drifts down gently.',
+    price: 1200,
+    tuning: { topSpeed: 42, accel: 12, steerLow: 8, steerHigh: 6, steerResponse: 4, gravity: 7, hopSpeed: 9.5, halfWidth: 0.8 },
+    defaultLook: { body: '#f08a2e', trim: '#d8463a', accent: '#f4d23b', hubs: '#f6f0e4', roofLoad: 'none', engine: 'burner', horn: 'bell' },
+    seat: [0, 1.05, 0.1],
+    seatPose: 'sit',
+    wheels: [],
+    roofAt: [0, 1.2, 0.6],
+    antennaAt: null,
+    brakeLights: [],
+    headLights: [],
+    build: buildBalloon,
+  },
+  {
+    id: 'bicycle',
+    name: 'Town Bicycle',
+    blurb: 'Pedal power: the slowest, the nimblest and the quietest.',
+    price: 150,
+    tuning: { topSpeed: 36, boostSpeed: 46, accel: 18, steerLow: 14, steerHigh: 10, halfWidth: 0.4, hopSpeed: 8.8, boostDrain: 1 / 3 },
+    defaultLook: { body: '#3e6fa8', trim: '#f6f0e4', accent: '#e8559a', hubs: '#cfd6df', roofLoad: 'none', engine: 'pedal', horn: 'bell', wheelStyle: 'spoke' },
+    seat: [0, 1.3, 0.3],
+    seatPose: 'ride',
+    wheels: [
+      { x: 0, z: -0.72, r: 0.38, steer: true, width: 0.07 },
+      { x: 0, z: 0.72, r: 0.38, steer: false, width: 0.07 },
+    ],
+    roofAt: [0, 1.0, 0.72],
+    antennaAt: null,
+    brakeLights: [[0, 0.75, 1.1]],
+    headLights: [],
+    build: buildBicycle,
+  },
+  {
+    id: 'tukracer',
+    name: 'Tuk-Tuk Racer',
+    blurb: 'A tuned tuk-tuk: sharp steering, fast boost, still three wheels.',
+    price: 900,
+    tuning: { topSpeed: 50, boostSpeed: 66, accel: 21, steerLow: 12, steerHigh: 8.5, hopSpeed: 8.4, boostDrain: 1 / 3.5 },
+    defaultLook: { body: '#2f8a5a', trim: '#2b2622', accent: '#f4d23b', hubs: '#f4d23b', roofLoad: 'none', engine: 'buzzy', horn: 'trumpet', wheelStyle: 'slick' },
+    seat: [0, 0.72, -0.1],
+    seatPose: 'sit',
+    wheels: [
+      { x: 0, z: -1.45, r: 0.34, steer: true },
+      { x: -0.8, z: 1.1, r: 0.36, steer: false },
+      { x: 0.8, z: 1.1, r: 0.36, steer: false },
+    ],
+    roofAt: [0, 2.17, 0.3],
+    antennaAt: null,
+    brakeLights: [[-0.6, 0.85, 1.52], [0.6, 0.85, 1.52]],
+    headLights: [[0, 0.95, -1.75]],
+    build: buildTukRacer,
+  },
 ];
 
 export function vehicleById(id: string): VehicleDef {
@@ -317,6 +511,7 @@ export class VehicleModel {
     this.root.add(this.body);
     const mat = new PaintMaterial({ vertexColors: true, flat: true, gloss: 0.7 });
     const bodyGeo = def.build(look);
+    applyFinish(bodyGeo, look.body, look.finish);
     const bodyMesh = new THREE.Mesh(bodyGeo, mat);
     bodyMesh.castShadow = true;
     this.body.add(bodyMesh);
@@ -387,7 +582,8 @@ export class VehicleModel {
       const pivot = new THREE.Group();
       pivot.position.set(w.x, w.r, w.z);
       const wheel = new THREE.Group();
-      const mesh = new THREE.Mesh(buildWheel(w.r, def.id === 'scooter' || def.id === 'tuktuk' ? 0.22 : 0.5, look.hubs), mat);
+      const width = w.width ?? (def.id === 'scooter' || def.id === 'tuktuk' || def.id === 'tukracer' ? 0.22 : 0.5);
+      const mesh = new THREE.Mesh(buildWheel(w.r, width, look.hubs, look.wheelStyle ?? 'classic'), mat);
       mesh.castShadow = true;
       if (w.x > 0) mesh.rotation.y = Math.PI;
       wheel.add(mesh);
@@ -436,9 +632,52 @@ function liveryTexture(code: string | undefined): THREE.CanvasTexture | null {
   return tex;
 }
 
-function buildWheel(r: number, width: number, hubs: string): THREE.BufferGeometry {
+/**
+ * Paint finishes act on the body colour only (trim, glass and parts keep
+ * theirs): matte kills the shine, chrome turns it bright and mirror-like,
+ * glitter adds flecks (shader pattern 14).
+ */
+export function applyFinish(geo: THREE.BufferGeometry, body: string, finish: PaintFinish | undefined): number {
+  if (!finish || finish === 'gloss') return 0;
+  const colour = geo.getAttribute('color') as THREE.BufferAttribute;
+  const pattern = geo.getAttribute('pattern') as THREE.BufferAttribute;
+  const c = new THREE.Color(body);
+  const silver = new THREE.Color('#cfd6df');
+  const chrome = c.clone().lerp(silver, 0.55);
+  const kind = finish === 'matte' ? Pattern.Matte : finish === 'chrome' ? Pattern.Glass : Pattern.Glitter;
+  let n = 0;
+  for (let i = 0; i < colour.count; i++) {
+    // Planks (the rover's wooden sides) count as body paint too; glass and other patterns don't.
+    const p = pattern.getX(i);
+    if (p !== 0 && p !== Pattern.Planks) continue;
+    if (Math.abs(colour.getX(i) - c.r) + Math.abs(colour.getY(i) - c.g) + Math.abs(colour.getZ(i) - c.b) > 0.004) continue;
+    if (finish === 'chrome') colour.setXYZ(i, chrome.r, chrome.g, chrome.b);
+    pattern.setX(i, kind);
+    n++;
+  }
+  colour.needsUpdate = pattern.needsUpdate = true;
+  return n;
+}
+
+function buildWheel(r: number, width: number, hubs: string, style: WheelStyle = 'classic'): THREE.BufferGeometry {
   const k = new ModelKit();
+  if (style === 'spoke') {
+    // Thin tyre, spokes to a small hub.
+    k.add(new THREE.TorusGeometry(r - 0.04, 0.045, 5, 18).rotateY(Math.PI / 2), TYRE, { pattern: Pattern.Matte });
+    k.add(new THREE.TorusGeometry(r - 0.09, 0.02, 4, 18).rotateY(Math.PI / 2), hubs, { pattern: Pattern.Glass });
+    for (let i = 0; i < 8; i++) k.box(0.02, (r - 0.08) * 2, 0.02, '#cfd6df', { rotation: [(i / 8) * Math.PI, 0, 0] });
+    k.cylinder(r * 0.15, r * 0.15, Math.max(width, 0.08) + 0.04, 8, hubs, { rotation: [0, 0, Math.PI / 2] });
+    return k.build(0.002, Math.round(r * 100) + 1);
+  }
   k.cylinder(r, r, width, 12, TYRE, { pattern: Pattern.Matte, rotation: [0, 0, Math.PI / 2] });
+  if (style === 'whitewall') k.cylinder(r * 0.78, r * 0.78, width + 0.01, 12, '#f6f0e4', { rotation: [0, 0, Math.PI / 2] });
+  if (style === 'slick') {
+    // Smooth racing tyre, a five-spoke rim.
+    k.cylinder(r * 0.62, r * 0.62, width + 0.02, 12, hubs, { pattern: Pattern.Glass, rotation: [0, 0, Math.PI / 2], position: [-0.01, 0, 0] });
+    for (let i = 0; i < 5; i++) k.box(0.03, r * 1.05, 0.07, INK, { position: [-width / 2 - 0.01, 0, 0], rotation: [(i / 5) * Math.PI * 2, 0, 0] });
+    k.cylinder(r * 0.16, r * 0.16, width + 0.06, 6, INK, { rotation: [0, 0, Math.PI / 2], position: [-0.02, 0, 0] });
+    return k.build(0.004, Math.round(r * 100) + 2);
+  }
   if (r > 0.4) {
     for (let i = 0; i < 12; i++) {
       const a = (i / 12) * Math.PI * 2;
@@ -447,7 +686,7 @@ function buildWheel(r: number, width: number, hubs: string): THREE.BufferGeometr
   }
   k.cylinder(r * 0.55, r * 0.55, width + 0.02, 10, hubs, { rotation: [0, 0, Math.PI / 2], position: [-0.01, 0, 0] });
   k.cylinder(r * 0.18, r * 0.18, width + 0.06, 6, INK, { rotation: [0, 0, Math.PI / 2], position: [-0.02, 0, 0] });
-  return k.build(0.005, Math.round(r * 100));
+  return k.build(0.005, Math.round(r * 100) + (style === 'whitewall' ? 3 : 0));
 }
 
 /** Decals and spoilers, placed from the body's bounding box so they fit every vehicle. */
@@ -488,6 +727,23 @@ function buildBodyExtras(look: VehicleLook, bb: THREE.Box3): THREE.BufferGeometr
     default:
       break;
   }
+  const cx = (bb.min.x + bb.max.x) / 2;
+  switch (look.exhaust ?? 'none') {
+    case 'twin':
+      for (const s of [-0.22, 0.22]) k.cylinder(0.07, 0.09, 0.4, 8, '#cfd6df', { pattern: Pattern.Glass, position: [cx + s * w, bb.min.y + 0.35, bb.max.z - 0.05], rotation: [Math.PI / 2, 0, 0] });
+      break;
+    case 'side':
+      for (const x of [bb.min.x - 0.06, bb.max.x + 0.06]) k.cylinder(0.06, 0.06, d * 0.45, 8, '#cfd6df', { pattern: Pattern.Glass, position: [x, bb.min.y + 0.3, midZ + d * 0.1], rotation: [Math.PI / 2, 0, 0] });
+      break;
+    case 'stack':
+      for (const s of [-0.38, 0.38]) {
+        k.cylinder(0.06, 0.06, 0.9, 8, '#cfd6df', { pattern: Pattern.Glass, position: [cx + s * w, bb.min.y + h * 0.55, bb.max.z - 0.1] });
+        k.cylinder(0.08, 0.06, 0.12, 8, INK, { position: [cx + s * w, bb.min.y + h * 0.55 + 0.5, bb.max.z - 0.1] });
+      }
+      break;
+    default:
+      break;
+  }
   return k.isEmpty ? null : k.build(0.005);
 }
 
@@ -517,6 +773,26 @@ function buildRoofLoad(look: VehicleLook): THREE.BufferGeometry | null {
     case 'surfboard':
       k.blob(1, '#f6f0e4', { position: [0, 0.12, 0], scale: [0.35, 0.06, 1.3], detail: 1 });
       k.box(0.05, 0.02, 2.2, look.accent, { position: [0, 0.19, 0] });
+      break;
+    case 'rack':
+      for (const x of [-0.55, 0.55]) k.box(0.06, 0.06, 1.6, INK, { position: [x, 0.12, 0] });
+      for (const z of [-0.6, 0, 0.6]) k.box(1.2, 0.05, 0.06, INK, { position: [0, 0.16, z] });
+      k.box(0.6, 0.35, 0.45, '#c8955a', { position: [-0.2, 0.36, -0.3] });
+      k.box(0.45, 0.25, 0.4, look.accent, { position: [0.25, 0.3, 0.35] });
+      break;
+    case 'kayak':
+      for (const x of [-0.45, 0.45]) k.box(0.06, 0.08, 1.4, INK, { position: [x, 0.06, 0] });
+      k.blob(1, look.accent, { position: [0, 0.2, 0], scale: [0.3, 0.12, 1.55], detail: 1 });
+      k.box(0.34, 0.06, 0.6, INK, { position: [0, 0.3, 0] });
+      k.box(0.04, 0.04, 1.6, '#c8955a', { position: [0.2, 0.34, 0], rotation: [0, 0.15, 0] });
+      break;
+    case 'lanterns':
+      k.box(1.3, 0.04, 0.04, INK, { position: [0, 0.5, 0] });
+      for (const x of [-0.6, 0.6]) k.box(0.04, 0.5, 0.04, INK, { position: [x, 0.25, 0] });
+      for (let i = 0; i < 4; i++) {
+        const x = -0.45 + i * 0.3;
+        k.blob(0.12, i % 2 ? '#d8463a' : '#f4d23b', { position: [x, 0.36, 0], scale: [1, 1.2, 1], detail: 1, nightGlow: 1 });
+      }
       break;
     default:
       return null;

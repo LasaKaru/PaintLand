@@ -31,6 +31,8 @@ export const Pattern = {
   Glass: 12,
   /** Soft, bright, no specular in the realistic look (cloud puffs). */
   Cloud: 13,
+  /** Glitter paint: bright flecks, very glossy (car finishes). */
+  Glitter: 14,
 } as const;
 
 /**

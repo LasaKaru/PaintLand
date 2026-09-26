@@ -7,7 +7,7 @@ import type { TonicId } from './Collectibles';
 export interface ShopItem {
   id: string;
   name: string;
-  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow' | 'eyes' | 'mouth' | 'facial' | 'acc';
+  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow' | 'eyes' | 'mouth' | 'facial' | 'acc' | 'finish' | 'wheels' | 'exhaust' | 'engine' | 'horn';
   price: number;
   value: string;
   /** 0 common, 1 rare, 2 epic, 3 legendary (loot drops). */
@@ -95,6 +95,34 @@ export const CATALOGUE: ShopItem[] = [
   { id: 'hat:catears', name: 'Cat ears', category: 'hat', price: 0, value: 'catears', rarity: 1, loot: true },
   { id: 'hat:wizard', name: 'Star wizard hat', category: 'hat', price: 0, value: 'wizard', rarity: 3, loot: true },
   { id: 'back:parasol', name: 'Paper parasol', category: 'back', price: 90, value: 'parasol' },
+  // Garage parts: roof racks, paint finishes, wheels, exhausts, engine sounds and horns.
+  { id: 'roof:rack', name: 'Roof rack', category: 'roof', price: 90, value: 'rack' },
+  { id: 'roof:kayak', name: 'Kayak', category: 'roof', price: 130, value: 'kayak' },
+  { id: 'roof:lanterns', name: 'String of lanterns', category: 'roof', price: 110, value: 'lanterns' },
+  { id: 'finish:gloss', name: 'Gloss paint', category: 'finish', price: 0, value: 'gloss' },
+  { id: 'finish:matte', name: 'Matte paint', category: 'finish', price: 120, value: 'matte' },
+  { id: 'finish:glitter', name: 'Glitter paint', category: 'finish', price: 200, value: 'glitter', rarity: 1 },
+  { id: 'finish:chrome', name: 'Chrome', category: 'finish', price: 300, value: 'chrome', rarity: 2 },
+  { id: 'wheels:classic', name: 'Classic wheels', category: 'wheels', price: 0, value: 'classic' },
+  { id: 'wheels:spoke', name: 'Spoked wheels', category: 'wheels', price: 60, value: 'spoke' },
+  { id: 'wheels:whitewall', name: 'Whitewall tyres', category: 'wheels', price: 100, value: 'whitewall' },
+  { id: 'wheels:slick', name: 'Racing slicks', category: 'wheels', price: 140, value: 'slick' },
+  { id: 'exhaust:none', name: 'Hidden exhaust', category: 'exhaust', price: 0, value: 'none' },
+  { id: 'exhaust:twin', name: 'Twin pipes', category: 'exhaust', price: 90, value: 'twin' },
+  { id: 'exhaust:side', name: 'Side pipes', category: 'exhaust', price: 120, value: 'side' },
+  { id: 'exhaust:stack', name: 'Smoke stacks', category: 'exhaust', price: 0, value: 'stack', rarity: 1, loot: true },
+  { id: 'engine:classic', name: 'Classic engine', category: 'engine', price: 0, value: 'classic' },
+  { id: 'engine:buzzy', name: 'Buzzy engine', category: 'engine', price: 60, value: 'buzzy' },
+  { id: 'engine:rumble', name: 'Big rumble', category: 'engine', price: 120, value: 'rumble' },
+  { id: 'engine:electric', name: 'Electric hum', category: 'engine', price: 150, value: 'electric' },
+  { id: 'engine:pedal', name: 'Pedal whirr', category: 'engine', price: 40, value: 'pedal' },
+  { id: 'engine:burner', name: 'Balloon burner', category: 'engine', price: 80, value: 'burner' },
+  { id: 'horn:toot', name: 'Toot', category: 'horn', price: 0, value: 'toot' },
+  { id: 'horn:beep', name: 'Beep beep', category: 'horn', price: 30, value: 'beep' },
+  { id: 'horn:duck', name: 'Rubber duck', category: 'horn', price: 50, value: 'duck' },
+  { id: 'horn:bell', name: 'Bicycle bell', category: 'horn', price: 40, value: 'bell' },
+  { id: 'horn:trumpet', name: 'Fanfare', category: 'horn', price: 90, value: 'trumpet' },
+  { id: 'horn:train', name: 'Train whistle', category: 'horn', price: 0, value: 'train', rarity: 2, loot: true },
   { id: 'tonic:magnet', name: 'Magnet tonic', category: 'tonic', price: 30, value: 'magnet' },
   { id: 'tonic:feather', name: 'Feather tonic', category: 'tonic', price: 40, value: 'feather' },
   { id: 'tonic:fizzy', name: 'Fizzy Ink', category: 'tonic', price: 35, value: 'fizzy' },

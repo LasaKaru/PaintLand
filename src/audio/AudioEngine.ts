@@ -1,5 +1,6 @@
 import { SCALES, type DistrictDef } from '../world/Districts';
 import { Ambience, type AmbienceParams } from './Ambience';
+import { ENGINE_PROFILES, HORN_PROFILES, type EngineSound, type EngineProfile, type HornSound } from './VehicleSounds';
 
 /** Radio stations (docs/07 §4). Each is a procedural arrangement style. */
 export interface Station {
@@ -52,6 +53,10 @@ export class AudioEngine {
   private rainGain!: GainNode;
   private musicFilter!: BiquadFilterNode;
   private engineSub!: OscillatorNode;
+  private engineSubGain!: GainNode;
+  private engineProfile: EngineProfile = ENGINE_PROFILES.classic;
+  private engineName: EngineSound = 'classic';
+  private hornSound: HornSound = 'toot';
   private intakeFilter!: BiquadFilterNode;
   private intakeGain!: GainNode;
   private screechGain!: GainNode;
@@ -148,10 +153,11 @@ export class AudioEngine {
     // A sub-octave for weight and a noisy intake that opens up with throttle.
     this.engineSub = ctx.createOscillator();
     this.engineSub.type = 'sine';
-    const subGain = ctx.createGain();
+    const subGain = (this.engineSubGain = ctx.createGain());
     subGain.gain.value = 0.6;
     this.engineSub.connect(subGain).connect(this.engineFilter);
     this.engineSub.start();
+    this.setVehicleSounds(this.engineName, this.hornSound);
     const intake = ctx.createBufferSource();
     intake.buffer = this.noise;
     intake.loop = true;
@@ -219,7 +225,10 @@ export class AudioEngine {
     const ctx = this.ctx;
     if (!ctx) return;
     const t = ctx.currentTime;
-    this.intakeGain.gain.setTargetAtTime(this.engineVolume * 0.05 * throttle * Math.min(1, 0.3 + speed / 40), t, 0.08);
+    // Intake noise; a burner roars with the throttle, a bicycle only whirrs with speed.
+    const ep = this.engineProfile;
+    const intake = 0.05 * throttle * Math.min(1, 0.3 + speed / 40) * Math.min(1, ep.level) + ep.hiss * 0.05 * (ep.level > 0 ? throttle : Math.min(1, speed / 25));
+    this.intakeGain.gain.setTargetAtTime(this.engineVolume * intake, t, 0.08);
     this.screechGain.gain.setTargetAtTime(this.engineVolume * 0.09 * screech, t, 0.05);
     this.screechFilter.frequency.setTargetAtTime(1300 + Math.sin(t * 23) * 180 + speed * 6, t, 0.03);
   }
@@ -702,25 +711,43 @@ export class AudioEngine {
     this.noiseHit(this.ctx.currentTime, 'bandpass', 400, 0.05, 0.08, this.sfxBus);
   }
 
-  honk(midi: number): void {
+  /** Fit the current vehicle's engine sound and horn. */
+  setVehicleSounds(engine: EngineSound, horn: HornSound): void {
+    this.engineName = ENGINE_PROFILES[engine] ? engine : 'classic';
+    this.engineProfile = ENGINE_PROFILES[this.engineName];
+    this.hornSound = HORN_PROFILES[horn] ? horn : 'toot';
+    if (!this.ctx) return;
+    this.engineOsc.type = this.engineProfile.wave;
+    this.engineOsc2.type = this.engineProfile.wave2;
+    this.engineSubGain.gain.value = this.engineProfile.sub;
+  }
+
+  honk(midi: number, horn: HornSound = this.hornSound): void {
     const ctx = this.ctx;
     if (!ctx) return;
-    const t = ctx.currentTime;
-    for (const iv of [0, 4]) {
+    const h = HORN_PROFILES[horn] ?? HORN_PROFILES.toot;
+    const t0 = ctx.currentTime;
+    const root = midi + h.octave * 12;
+    for (const n of h.notes) {
+      const t = t0 + n.t;
       const o = ctx.createOscillator();
-      o.type = 'square';
-      o.frequency.value = midiToHz(midi + iv);
+      o.type = h.wave;
+      o.frequency.setValueAtTime(midiToHz(root + n.at), t);
+      if (h.bend) o.frequency.linearRampToValueAtTime(midiToHz(root + n.at + h.bend), t + n.len);
       const f = ctx.createBiquadFilter();
       f.type = 'lowpass';
-      f.frequency.value = 1400;
+      f.frequency.value = h.cut;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, t);
-      g.gain.linearRampToValueAtTime(0.05, t + 0.02);
-      g.gain.setValueAtTime(0.05, t + 0.25);
-      g.gain.linearRampToValueAtTime(0, t + 0.32);
+      g.gain.linearRampToValueAtTime(h.level, t + 0.02);
+      if (h.ring) g.gain.exponentialRampToValueAtTime(0.0005, t + n.len);
+      else {
+        g.gain.setValueAtTime(h.level, t + n.len * 0.8);
+        g.gain.linearRampToValueAtTime(0, t + n.len);
+      }
       o.connect(f).connect(g).connect(this.sfxBus);
       o.start(t);
-      o.stop(t + 0.35);
+      o.stop(t + n.len + 0.05);
     }
   }
 
@@ -734,15 +761,16 @@ export class AudioEngine {
     const ctx = this.ctx;
     if (!ctx) return;
     const t = ctx.currentTime;
-    const hum = driving ? this.engineVolume * 0.06 : 0;
+    const ep = this.engineProfile;
+    const hum = driving ? this.engineVolume * 0.06 * ep.level : 0;
     this.engineGain.gain.setTargetAtTime(hum * (0.5 + Math.min(1, speed / 50) * 0.7), t, 0.1);
     // Realistic handling drives the pitch from engine rpm (gear changes drop it).
-    const f = rpm !== undefined ? 28 + rpm * 0.013 + (boosting ? 20 : 0) : 38 + speed * 1.6 + (boosting ? 30 : 0);
+    const f = ep.pitch * (rpm !== undefined ? 28 + rpm * 0.013 + (boosting ? 20 : 0) : 38 + speed * 1.6 + (boosting ? 30 : 0));
     this.engineOsc.frequency.setTargetAtTime(f, t, 0.08);
     this.engineOsc2.frequency.setTargetAtTime(f * 0.5 + 1.5, t, 0.08);
     this.engineSub.frequency.setTargetAtTime(f * 0.25, t, 0.08);
     this.intakeFilter.frequency.setTargetAtTime(f * 6, t, 0.08);
-    this.engineFilter.frequency.setTargetAtTime(300 + speed * 12 + (boosting ? 500 : 0), t, 0.1);
+    this.engineFilter.frequency.setTargetAtTime((300 + speed * 12 + (boosting ? 500 : 0)) * ep.bright, t, 0.1);
     const windLevel = this.windVolume * (Math.min(1, speed / 60) * 0.12 + Math.min(1, height / 250) * 0.05);
     this.windGain.gain.setTargetAtTime(windLevel, t, 0.3);
     this.windFilter.frequency.setTargetAtTime(300 + speed * 18, t, 0.3);

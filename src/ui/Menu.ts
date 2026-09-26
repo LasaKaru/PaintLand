@@ -18,6 +18,10 @@ import { CATALOGUE, MAX_TONICS, PALETTE } from '../gameplay/Profile';
 import type { ChapterDef } from '../world/Chapters';
 import type { MissionDef } from '../gameplay/Missions';
 import { VEHICLES, type VehicleId } from '../models/Vehicles';
+import { defaultEngine, defaultHorn } from '../audio/VehicleSounds';
+
+/** Garage item fields stored on the vehicle's look rather than the character's. */
+const VEHICLE_FIELDS = ['roofLoad', 'decal', 'spoiler', 'glow', 'finish', 'wheelStyle', 'exhaust', 'engine', 'horn'];
 import { ROVER_TUNING } from '../gameplay/RoverController';
 import { randomLook, type HumanLook } from '../models/Human';
 import { fmt } from './Hud';
@@ -47,6 +51,8 @@ export interface MenuHost {
   startMission(m: MissionDef): void;
   lookChanged(): void;
   vehicleChanged(): void;
+  /** Play the fitted horn (garage preview). */
+  previewHorn?(): void;
   showcase(target: 'character' | 'vehicle' | null): void;
   netStatus(): { status: string; room: string; players: string[] };
   netConnect(room: string, server: string | null): boolean;
@@ -442,7 +448,7 @@ export class Menu {
       const t = { ...ROVER_TUNING, ...v.tuning };
       const owned = p.owns(`vehicle:${v.id}`);
       return `<button class="vehicle-card ${v.id === vid ? 'on' : ''} ${owned ? '' : 'locked'}" data-vehicle="${v.id}">
-        <b>${v.name}</b><small>${v.blurb}</small>
+        <b>${itemLabel(`vehicle:${v.id}`)}</b><small>${v.blurb}</small>
         <div class="stats">speed ${stat(t.topSpeed, 60)} grip ${stat(t.steerLow, 13)} hop ${stat(t.hopSpeed, 11)}</div>
         ${owned ? '' : `<em>💧 ${v.price}</em>`}
       </button>`;
@@ -459,6 +465,11 @@ export class Menu {
         <h4>Decals</h4>${this.items('decal', look.decal ?? 'none', 'decal')}
         <h4>Spoiler</h4>${this.items('spoiler', look.spoiler ?? 'none', 'spoiler')}
         <h4>Underglow</h4>${this.items('glow', look.glow ?? 'none', 'glow')}
+        <h4>${t('gar.finish')}</h4>${this.items('finish', look.finish ?? 'gloss', 'finish')}
+        <h4>${t('gar.wheels')}</h4>${this.items('wheels', look.wheelStyle ?? 'classic', 'wheelStyle')}
+        <h4>${t('gar.exhaust')}</h4>${this.items('exhaust', look.exhaust ?? 'none', 'exhaust')}
+        <h4>${t('gar.engine')}</h4>${this.items('engine', look.engine ?? defaultEngine(vid), 'engine')}
+        <h4>${t('gar.horn')}</h4>${this.items('horn', look.horn ?? defaultHorn(vid), 'horn')}
       </div>
     </div>`;
   }
@@ -965,10 +976,11 @@ export class Menu {
         this.toast(r === 'ok' ? `Bought ${itemLabel(item)}!` : r === 'poor' ? `Need ${item.price} ink` : '');
         if (r !== 'ok') return;
       }
-      if (d.field === 'roofLoad' || d.field === 'decal' || d.field === 'spoiler' || d.field === 'glow') {
+      if (VEHICLE_FIELDS.includes(d.field)) {
         const value = d.field === 'glow' && item.value === 'none' ? null : item.value;
         p.setVehicleLook(p.data.vehicle, { [d.field]: value } as never);
         this.host.vehicleChanged();
+        if (d.field === 'horn') this.host.previewHorn?.();
       } else {
         (p.data.look as unknown as Record<string, string>)[d.field] = item.value;
         p.save();

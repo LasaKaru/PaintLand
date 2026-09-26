@@ -54,6 +54,7 @@ export class Village implements FreeRoamArea {
   ];
   readonly group = new THREE.Group();
   readonly world: FreeWorld;
+  readonly seaZ = 70;
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -90, z: 4, heading: -Math.PI / 2 };
   readonly folk: Townsfolk[] = [];
@@ -228,11 +229,14 @@ export class Village implements FreeRoamArea {
     const pier = new ModelKit().box(6, 0.5, 30, '#b58a5c', { position: [0, -0.25, 0], pattern: Pattern.Planks });
     for (let i = 0; i < 4; i++) for (const s of [-1, 1]) pier.cylinder(0.3, 0.3, AREA_Y + 3, 6, '#7a5a3a', { position: [s * 2.6, -(AREA_Y + 3) / 2, -12 + i * 8] });
     this.put(pier.build(0), -40, 82);
+    this.world.box(-40, 82, 3.2, 15.5);
     for (const z of [74, 86, 96]) for (const s of [-1, 1]) this.put(buildStoneLantern(), -40 + s * 2.4, z, 0, 0, 0.6);
     for (let i = 0; i < 6; i++) {
       const x = -95 + i * 36 + rnd.range(-4, 4);
       if (Math.abs(x + 40) < 10) continue;
-      this.put(i % 2 ? buildJunk(rnd) : buildPaperBoat(), x, 84 + rnd.range(0, 30), rnd.range(0, Math.PI), -AREA_Y + 0.1, i % 2 ? 1 : 2.2);
+      const z = 84 + rnd.range(0, 30);
+      this.put(i % 2 ? buildJunk(rnd) : buildPaperBoat(), x, z, rnd.range(0, Math.PI), -AREA_Y + 0.1, i % 2 ? 1 : 2.2);
+      this.world.circle(x, z, 2.2);
     }
     // Market stalls along the waterfront.
     for (let i = 0; i < 6; i++) {
@@ -352,7 +356,7 @@ export class Village implements FreeRoamArea {
         { x1: -118, z1: 62, x2: 118, z2: 62, w: 12 },
       ],
       water: [{ x: 80, z: -80, r: 8 }],
-      seaZ: 70,
+      seaZ: this.seaZ,
       blocks: [
         { x: 45, z: -45, w: 7, d: 7, colour: 'rgba(224,67,47,0.9)' },
         { x: -40, z: 82, w: 6, d: 30, colour: 'rgba(122,90,58,0.8)' },

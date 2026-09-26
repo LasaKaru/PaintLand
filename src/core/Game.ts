@@ -39,6 +39,7 @@ import { itemLabel } from '../ui/names';
 import { familyCaps, onlineAllowed } from './Family';
 import { BENCH_MEASURE, BENCH_SPOTS, BENCH_WARMUP, scoreBenchmark, type BenchmarkResult } from '../render/Benchmark';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
+import { defaultEngine, defaultHorn } from '../audio/VehicleSounds';
 import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
 import { buildBeacon, buildChest, buildPaintPot } from '../models/CityProps';
@@ -264,6 +265,10 @@ export class Game {
       startMission: (m) => this.startMissionFromMenu(m),
       lookChanged: () => this.buildPawnModels(),
       vehicleChanged: () => this.buildPawnModels(),
+      previewHorn: () => {
+        this.unlockAudio();
+        this.audio.honk(60);
+      },
       showcase: (t) => this.setShowcase(t),
       netStatus: () => ({ status: this.net.status, room: this.net.room, players: [...this.net.peers.values()].map((p) => p.info?.name ?? '…') }),
       netConnect: (room, server) => {
@@ -455,6 +460,19 @@ export class Game {
     this.loadGhostFor(this.lapKey());
   }
 
+  /** Free-roam handling for the current vehicle; amphibious ones may head out to sea. */
+  private fitHubCar(): void {
+    const def = vehicleById(this.profile.data.vehicle);
+    this.hubCar.tuning = tuningFor(def.id);
+    const seaZ = this.area?.seaZ;
+    this.hubCar.water = def.amphibious && seaZ !== undefined ? { edge: seaZ, level: -HUB_Y - 0.6, maxZ: seaZ + 90 } : null;
+    if (!this.hubCar.water && this.hubCar.y < 0) {
+      // Swapped to a land vehicle at sea: back to the quay.
+      const sp = this.area!.spawn;
+      this.hubCar.place(sp.x, sp.z, sp.heading);
+    }
+  }
+
   private buildPawnModels(): void {
     this.vehicle?.root.removeFromParent();
     this.humanModel?.root.removeFromParent();
@@ -463,6 +481,9 @@ export class Game {
     this.humanModel = new HumanModel(this.profile.data.look);
     this.scene.add(this.vehicle.root);
     this.rover.tuning = tuningFor(def.id);
+    const vlook = this.profile.vehicleLook(def.id);
+    this.audio.setVehicleSounds(vlook.engine ?? defaultEngine(def.id), vlook.horn ?? defaultHorn(def.id));
+    if (this.inHub) this.fitHubCar();
     this.seatHuman();
     this.updateHeadVisibility();
     if (this.net.connected) this.net.sendHello(this.playerInfo());
@@ -1961,7 +1982,7 @@ export class Game {
     this.state = 'hub';
     this.hud.setPlaying(true);
     this.hud.setHub(true);
-    this.hubCar.tuning = tuningFor(this.profile.data.vehicle);
+    this.fitHubCar();
     this.wireCarEvents();
     const sp = area.spawn;
     this.hubCar.place(at?.x ?? sp.x, at?.z ?? sp.z, at?.heading ?? sp.heading);
@@ -2233,6 +2254,7 @@ export class Game {
       if (zone) this.useZone(zone);
       else if (this.mode === 'drive') {
         if (Math.abs(this.hubCar.v) > 4) this.popAtPawn(t('prompt.slowDown'), 'info');
+        else if (this.hubCar.y < -0.5) this.popAtPawn(t('prompt.onWater'), 'info');
         else {
           this.hubCar.v = 0;
           this.mode = 'foot';
@@ -2315,7 +2337,8 @@ export class Game {
     const vm = this.vehicle;
     const car = this.hubCar.lerp(alpha);
     const cam = this.rig.camera;
-    vm.root.position.set(car.x, HUB_Y + car.y + 0.02, car.z);
+    const bob = this.hubCar.afloat ? Math.sin(this.time * 1.7) * 0.06 : 0;
+    vm.root.position.set(car.x, HUB_Y + car.y + 0.02 + bob, car.z);
     vm.root.quaternion.setFromAxisAngle(_y, car.heading);
     const steer = this.mode === 'drive' ? this.input.steer() : 0;
     for (const p of vm.steerPivots) p.rotation.y = -steer * 0.45;
@@ -2364,10 +2387,12 @@ export class Game {
     else {
       // Keep the lens out of buildings.
       const lens = { x: desired.x, z: desired.z };
-      if (desired.y < HUB_Y + 14) area.world.resolve(lens, 0.6);
+      // Out at sea (paper boat) the lens may follow over the water.
+      const sea = this.mode === 'drive' ? this.hubCar.water : null;
+      if (desired.y < HUB_Y + 14) area.world.resolve(lens, 0.6, sea?.maxZ);
       desired.x = lens.x;
       desired.z = lens.z;
-      desired.y = Math.max(desired.y, HUB_Y + 0.6);
+      desired.y = Math.max(desired.y, HUB_Y + (sea ? this.hubCar.groundAt(lens.z) + 2.4 : 0) + 0.6);
       const k = this.hubCam.snap ? 1 : 1 - Math.exp(-(this.mode === 'foot' ? 14 : 5) * dt);
       this.hubCam.pos.lerp(desired, k);
       this.hubCam.look.lerp(look, this.hubCam.snap ? 1 : 1 - Math.exp(-10 * dt));
@@ -2419,7 +2444,7 @@ export class Game {
     this.nearBoard = this.mode === 'foot' && !nearCar && !this.hubZone ? boards?.nearest(here) ?? null : null;
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t('prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
     const boardText = this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
-    this.hud.setPrompt(this.state === 'photo' ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 ? t('prompt.getOut') : null)));
+    this.hud.setPrompt(this.state === 'photo' ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
     this.updateMissionHud(player.x, player.z, cam);
     this.mapView.setArea(area.mapInfo((id) => this.districtState(area).find((d) => d.district.id === id)?.paint ?? 1));
     this.mapView.showMini(this.options.minimap && this.state === 'hub' && !this.hudHidden);

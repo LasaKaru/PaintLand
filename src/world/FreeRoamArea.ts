@@ -92,6 +92,8 @@ export interface FreeRoamArea {
   /** The night festival parade, if this area has one. */
   readonly perahera?: Perahera;
   /** Data for the paper map; `paint` gives each district's paint 0..1. */
+  /** Where the quay ends and the sea begins (z), if the area has a sea. */
+  readonly seaZ?: number;
   mapInfo(paint: (districtId: string) => number): MapInfo;
   dispose(): void;
 }

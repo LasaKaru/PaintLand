@@ -56,6 +56,7 @@ export class Hub implements FreeRoamArea {
   ];
   readonly group = new THREE.Group();
   readonly world: FreeWorld;
+  readonly seaZ = 70;
   readonly zones: HubZone[] = [];
   readonly spawn = { x: 0, z: 30, heading: 0 };
   readonly folk: Townsfolk[] = [];
@@ -246,12 +247,16 @@ export class Hub implements FreeRoamArea {
     for (let i = 0; i < 6; i++) for (const s of [-1, 1]) pier.cylinder(0.35, 0.35, HUB_Y + 3, 6, '#7a5a3a', { position: [s * 3.6, -(HUB_Y + 3) / 2, -20 + i * 8] });
     this.put(pier.build(0), 60, 92);
     this.put(buildLighthouse(), 60, 114, 0, 0, 1.3);
+    // Out past the quay (only paper boats get there): the pier and lighthouse are solid.
+    this.world.box(60, 94, 4.2, 25);
     // Boats bobbing in the harbour (static, sitting on the sea).
     for (let i = 0; i < 7; i++) {
       const x = -95 + i * 24 + rnd.range(-4, 4);
       if (Math.abs(x - 60) < 12) continue;
       const g = i % 2 ? buildOruwa() : buildPaperBoat();
-      this.put(g, x, 82 + rnd.range(0, 16), rnd.range(0, Math.PI), -HUB_Y + 0.1, i % 2 ? 1.4 : 2.2);
+      const z = 82 + rnd.range(0, 16);
+      this.put(g, x, z, rnd.range(0, Math.PI), -HUB_Y + 0.1, i % 2 ? 1.4 : 2.2);
+      this.world.circle(x, z, 2.2);
     }
     // Stalls along the harbour front.
     for (let i = 0; i < 5; i++) {
@@ -419,7 +424,7 @@ export class Hub implements FreeRoamArea {
         { x1: -118, z1: 62, x2: 118, z2: 62, w: 12 },
       ],
       water: [],
-      seaZ: 70,
+      seaZ: this.seaZ,
       blocks: [
         { x: 0, z: 0, w: 12, d: 12, colour: 'rgba(217,199,164,0.9)' },
         { x: 60, z: 90, w: 8, d: 44, colour: 'rgba(122,90,58,0.8)' },

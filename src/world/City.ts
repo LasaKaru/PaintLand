@@ -58,6 +58,7 @@ export class City implements FreeRoamArea {
   readonly id = 'city';
   readonly group = new THREE.Group();
   readonly world = new FreeWorld({ minX: -640, maxX: 640, minZ: -600, maxZ: 548 });
+  readonly seaZ = 550;
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -100, z: 470, heading: 0 };
   readonly secrets: Secret[] = [];
@@ -394,8 +395,14 @@ export class City implements FreeRoamArea {
     for (let i = 0; i < 10; i++) for (const s of [-1, 1]) pier.cylinder(0.4, 0.4, AREA_Y + 3, 6, '#7a5a3a', { position: [s * 4.4, -(AREA_Y + 3) / 2, -42 + i * 9.4] });
     this.merge(pier.build(0), 300, 590);
     this.merge(buildLighthouse(), 300, 640, 0, 0, 1.4);
+    this.world.box(300, 597, 5.2, 48);
     this.world.bounds.maxZ = 548;
-    for (let i = 0; i < 9; i++) this.merge(i % 2 ? buildOruwa() : buildPaperBoat(), -500 + i * 110 + rnd.range(-10, 10), 600 + rnd.range(0, 40), rnd.range(0, 3), -AREA_Y + 0.1, i % 2 ? 1.6 : 2.4);
+    for (let i = 0; i < 9; i++) {
+      const x = -500 + i * 110 + rnd.range(-10, 10);
+      const z = 600 + rnd.range(0, 40);
+      this.merge(i % 2 ? buildOruwa() : buildPaperBoat(), x, z, rnd.range(0, 3), -AREA_Y + 0.1, i % 2 ? 1.6 : 2.4);
+      this.world.circle(x, z, 2.5);
+    }
     this.places.push({ id: 'pier', name: 'the pier', x: 300, z: 540 }, { id: 'beach', name: 'Mount Lavinia beach', x: -300, z: 520 });
   }
 
@@ -617,7 +624,7 @@ export class City implements FreeRoamArea {
       regions: this.districts.map((d) => ({ id: d.id, name: d.name, rect: d.rect, colour: d.colour, paint: paint(d.id) })),
       roads,
       water: [{ x: 500, z: -300, r: 70 }],
-      seaZ: 550,
+      seaZ: this.seaZ,
       blocks: [
         { x: -160, z: -160, w: 60, d: 60, colour: 'rgba(217,199,164,0.9)' },
         { x: 60, z: -600, w: 30, d: 30, colour: 'rgba(246,240,228,0.95)' },

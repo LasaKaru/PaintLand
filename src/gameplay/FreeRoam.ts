@@ -53,7 +53,7 @@ export class FreeWorld {
    * Push a circle (x, z, radius) out of every collider and the bounds.
    * Returns the push normal of the deepest hit, or null when nothing was touched.
    */
-  resolve(p: { x: number; z: number }, radius: number): { nx: number; nz: number } | null {
+  resolve(p: { x: number; z: number }, radius: number, maxZ = this.bounds.maxZ): { nx: number; nz: number } | null {
     let hit: { nx: number; nz: number; depth: number } | null = null;
     for (const c of this.colliders) {
       let nx = 0;
@@ -98,7 +98,7 @@ export class FreeWorld {
     }
     const b = this.bounds;
     const bx = clamp(p.x, b.minX + radius, b.maxX - radius);
-    const bz = clamp(p.z, b.minZ + radius, b.maxZ - radius);
+    const bz = clamp(p.z, b.minZ + radius, maxZ - radius);
     if (bx !== p.x || bz !== p.z) {
       const nx = Math.sign(bx - p.x);
       const nz = Math.sign(bz - p.z);
@@ -117,6 +117,16 @@ export interface FreeCarInput {
   hop: boolean;
   boost: boolean;
   drift?: boolean;
+}
+
+/**
+ * Open water past a quay (amphibious vehicles only): beyond `edge` (z) the
+ * ground drops to `level`, where the vehicle floats, out to `maxZ`.
+ */
+export interface FreeWater {
+  edge: number;
+  level: number;
+  maxZ: number;
 }
 
 /** A car on flat ground: bicycle-model steering, a little slip, hops, bumps. */
@@ -154,6 +164,8 @@ export class FreeCar {
   readonly radius = 1.35;
   /** Hubs are slow places: a speed limit below the route top speed. */
   topSpeed = 26;
+  /** Set for amphibious vehicles: they can drive off the quay and float. */
+  water: FreeWater | null = null;
 
   constructor(public tuning: VehicleTuning) {}
 
@@ -258,12 +270,30 @@ export class FreeCar {
         }
       }
     }
+    // The quay wall: from the water it can't be driven through. Nose into it
+    // with some speed and the vehicle leaps back up onto the quay.
+    const wall = this.water ? this.water.edge : Infinity;
+    if (this.water && this.prevZ > wall && this.z <= wall && this.y < -0.01) {
+      this.z = wall + 0.01;
+      if (this.grounded && this.v > 2) {
+        this.vy = Math.sqrt(2 * T.gravity * (0.8 - this.y));
+        this.grounded = false;
+        this.airTime = 0;
+      } else if (this.grounded) this.v = Math.min(this.v, 0);
+    }
+    const ground = this.groundAt(this.z);
+    if (this.grounded && this.y > ground + 0.01) {
+      // Rolled off the quay into the water.
+      this.grounded = false;
+      this.vy = 0;
+      this.airTime = 0;
+    } else if (this.grounded) this.y = ground;
     if (!this.grounded) {
       this.vy -= T.gravity * dt;
       this.y += this.vy * dt;
       this.airTime += dt;
-      if (this.y <= 0) {
-        this.y = 0;
+      if (this.y <= ground) {
+        this.y = ground;
         this.vy = 0;
         this.grounded = true;
         this.onLand?.(this.airTime);
@@ -271,7 +301,7 @@ export class FreeCar {
       }
     }
 
-    const hit = world.resolve(this, this.radius);
+    const hit = world.resolve(this, this.radius, this.water ? this.water.maxZ : undefined);
     if (hit) {
       // Speed into the wall is lost; a hard hit bounces back a little.
       const into = -(fx * hit.nx + fz * hit.nz);
@@ -282,6 +312,16 @@ export class FreeCar {
       }
       this.slip *= 0.5;
     }
+  }
+
+  /** Height of whatever is under (x, z): the quay, or the water for amphibious vehicles. */
+  groundAt(z: number): number {
+    return this.water && z > this.water.edge ? this.water.level : 0;
+  }
+
+  /** Floating on the water. */
+  get afloat(): boolean {
+    return !!this.water && this.grounded && this.z > this.water.edge;
   }
 
   get speedKmh(): number {
