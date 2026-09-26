@@ -114,7 +114,9 @@ Every push to GitHub runs these workflows (`.github/workflows/`):
 
 **Check a download:** compare `certutil -hashfile Inkroads-Setup-1.0.0.exe SHA256` with `SHA256SUMS.txt`, or run `gh attestation verify Inkroads-Setup-1.0.0.exe -R lasakaru/paintland` to prove it was built by this repository's workflow.
 
-**Host the server with HTTPS (recommended):** the [`deploy/`](deploy/) kit runs the game server behind Caddy, which gets and renews a Let's Encrypt certificate by itself:
+**Where to host:** see the step-by-step **[hosting guide](docs/HOSTING.md)**. It recommends Render for the whole game (the `render.yaml` Blueprint sets it up), explains why Vercel and Netlify can only serve the page and not the multiplayer server, and covers your own VPS.
+
+**Host the server yourself with HTTPS:** the [`deploy/`](deploy/) kit runs the game server behind Caddy, which gets and renews a Let's Encrypt certificate by itself:
 
 ```bash
 cd deploy

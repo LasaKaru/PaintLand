@@ -1,0 +1,33 @@
+# Render Blueprint for Inkroads (docs/HOSTING.md).
+# Render → New → Blueprint → pick this repository. It creates one web service
+# that runs the whole game server from the Dockerfile: the game, multiplayer
+# (WebSockets), leaderboard, admin panel and analytics, with a small disk for
+# their data.
+services:
+  - type: web
+    name: inkroads
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    # Closest region to Sri Lanka and South Asia; change if most players are elsewhere.
+    region: singapore
+    # A paid instance: free instances sleep when idle and cannot keep a disk.
+    plan: starter
+    branch: main
+    autoDeploy: true
+    healthCheckPath: /api/config
+    disk:
+      name: inkroads-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DATA_DIR
+        value: /data
+      # Render's proxy sits in front of the app; check with Admin → Security →
+      # Hosting check and change if needed (docs/HOSTING.md, step 6).
+      - key: TRUST_PROXY
+        value: "1"
+      # Asked for when the Blueprint is created; never stored in the repository.
+      - key: ADMIN_PASSWORD
+        sync: false

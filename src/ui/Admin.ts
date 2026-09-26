@@ -29,6 +29,13 @@ interface ServerConfig extends Omit<BrandConfig, 'sponsors'> {
   maxPlayersPerRoom: number;
   sponsors: { id: string; name: string; url: string; file: string; weight: number; enabled: boolean }[];
 }
+interface Whoami {
+  direct: string;
+  forwardedFor: string;
+  trustProxy: number;
+  used: string;
+}
+
 type Tab = 'dashboard' | 'branding' | 'links' | 'sponsors' | 'players' | 'security';
 
 const TOKEN = 'paintland.admin';
@@ -43,6 +50,7 @@ export class AdminPanel {
   readonly root: HTMLDivElement;
   private token: string | null = null;
   private tab: Tab = 'dashboard';
+  private whoami: Whoami | null = null;
   private stats: Stats | null = null;
   private config: ServerConfig | null = null;
   private chat: { chat: { at: number; room: string; name: string; text: string }[]; banned: string[] } | null = null;
@@ -329,7 +337,13 @@ export class AdminPanel {
   }
 
   private securityTab(): string {
-    return `<form class="admin-form" data-form="password">
+    const w = this.whoami;
+    const net = `<section class="admin-card"><h3>Hosting check</h3>
+      <p class="menu-hint">Rate limits (logins, leaderboard) must see each player's real address. Behind a host's proxy, set <code>TRUST_PROXY</code> to the number of proxies in front of the server (see docs/HOSTING.md). Open this page from your own phone or computer and compare "Used for rate limits" with your address at <a href="https://ifconfig.me" target="_blank" rel="noopener">ifconfig.me</a>.</p>
+      <button class="btn" data-admin="whoami">Check my address</button>
+      ${w ? `<table class="admin-table"><tbody><tr><td>Connection from</td><td>${esc(w.direct)}</td></tr><tr><td>X-Forwarded-For</td><td>${esc(w.forwardedFor || '—')}</td></tr><tr><td>TRUST_PROXY</td><td>${w.trustProxy}</td></tr><tr><td><b>Used for rate limits</b></td><td><b>${esc(w.used)}</b></td></tr></tbody></table>` : ''}
+    </section>`;
+    return `${net}<form class="admin-form" data-form="password">
       <p class="menu-hint">The password is stored on the server only as a salted hash. Choose a long one: at least 8 characters, better 12+. Changing it logs out every admin session.</p>
       <label>Login email (leave empty to keep it)<input class="text-input" type="email" name="email" placeholder="keep the current email"></label>
       <label>Current password<input class="text-input" type="password" name="current" autocomplete="current-password" required></label>
@@ -363,6 +377,10 @@ export class AdminPanel {
     }
     if (d.admin === 'close') return this.hide();
     if (d.admin === 'logout') return this.logout('Logged out.');
+    if (d.admin === 'whoami') {
+      this.whoami = await this.call<Whoami>('/api/admin/whoami');
+      return this.render();
+    }
     if (d.admin === 'refresh') {
       this.chat = null;
       return this.loadAll();

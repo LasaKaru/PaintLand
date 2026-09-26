@@ -17,8 +17,10 @@ COPY --from=build /app/dist ./dist
 COPY --from=build /app/dist-server ./dist-server
 COPY server ./server
 RUN mkdir -p /data && chown node:node /data
-USER node
+# Starts as root only long enough to hand a host-mounted /data disk to the
+# `node` user, then drops root for good (server/start.mjs). Docker Compose
+# runs it as `node` from the first moment.
 VOLUME /data
 EXPOSE 8787
-HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- http://localhost:8787/api/config > /dev/null || exit 1
-CMD ["node", "server/relay.mjs"]
+HEALTHCHECK --interval=30s --timeout=3s CMD wget -qO- "http://localhost:${PORT:-8787}/api/config" > /dev/null || exit 1
+CMD ["node", "server/start.mjs"]

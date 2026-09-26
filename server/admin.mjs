@@ -403,6 +403,11 @@ export function createAdmin({ dataDir, distDir, live }) {
 
       try {
         if (route === 'stats' && method === 'GET') return send(res, 200, dashboard()), true;
+        if (route === 'whoami' && method === 'GET') {
+          // Hosting check: what the server sees for this request, to set TRUST_PROXY right.
+          const xff = req.headers['x-forwarded-for'];
+          return send(res, 200, { direct: req.socket.remoteAddress ?? '?', forwardedFor: Array.isArray(xff) ? xff.join(', ') : xff ?? '', trustProxy: Number(process.env.TRUST_PROXY || 0), used: clientIp(req) }), true;
+        }
         if (route === 'config' && method === 'GET') return send(res, 200, config), true;
         if (route === 'config' && method === 'PUT') {
           config = sanitizeConfig(await readBody(req, 64_000), config);

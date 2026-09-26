@@ -5,6 +5,6 @@ export declare class Strikes {
   constructor(limit?: number, windowMs?: number);
   add(now: number): boolean;
 }
-export function clientIp(req: { socket?: { remoteAddress?: string }; headers?: Record<string, string | string[] | undefined> }, trustProxy?: boolean): string;
+export function clientIp(req: { socket?: { remoteAddress?: string }; headers?: Record<string, string | string[] | undefined> }, trustProxy?: boolean | number): string;
 export type RtcMessage = { t: 'rtc'; a: 'hi' | 'bye'; to?: string } | { t: 'rtc'; a: 'offer' | 'answer'; to: string; sdp: string } | { t: 'rtc'; a: 'ice'; to: string; cand: { candidate: string; sdpMid: string | null; sdpMLineIndex: number | null } };
 export function checkRtc(msg: unknown): RtcMessage | null;

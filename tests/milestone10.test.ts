@@ -154,6 +154,9 @@ describe('Deploy: client address behind the HTTPS proxy', async () => {
     // A client forging the header cannot pick its own address.
     expect(clientIp(req('6.6.6.6, 1.2.3.4') as never, true)).toBe('1.2.3.4');
     expect(clientIp(req() as never, true)).toBe('172.18.0.3');
+    // Two trusted hops (e.g. a CDN in front of the host's load balancer).
+    expect(clientIp(req('6.6.6.6, 1.2.3.4, 10.0.0.9') as never, 2)).toBe('1.2.3.4');
+    expect(clientIp(req('1.2.3.4') as never, 3)).toBe('1.2.3.4');
   });
 });
 

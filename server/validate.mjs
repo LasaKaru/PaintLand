@@ -76,18 +76,20 @@ export class Strikes {
 }
 
 /**
- * The client's address for rate limits. Behind one trusted reverse proxy
- * (TRUST_PROXY=1, e.g. the Caddy in deploy/), use the address that proxy
- * appended — the last X-Forwarded-For entry. Earlier entries come from the
- * client and can be forged, so they are never used.
+ * The client's address for rate limits. Behind N trusted reverse proxies
+ * (TRUST_PROXY=N; 1 for the Caddy in deploy/), use the address the outermost
+ * trusted proxy saw: the N-th X-Forwarded-For entry from the end. Entries
+ * before that come from the client and can be forged, so they are never used.
  * @param {import('node:http').IncomingMessage} req
+ * @param {boolean | number} [trustProxy] number of trusted proxy hops (true = 1)
  */
-export function clientIp(req, trustProxy = process.env.TRUST_PROXY === '1') {
+export function clientIp(req, trustProxy = Number(process.env.TRUST_PROXY || 0)) {
   const direct = req.socket?.remoteAddress ?? '?';
-  if (!trustProxy) return direct;
+  const hops = trustProxy === true ? 1 : Math.max(0, Math.floor(Number(trustProxy) || 0));
+  if (!hops) return direct;
   const header = req.headers?.['x-forwarded-for'];
   const list = (Array.isArray(header) ? header.join(',') : header ?? '').split(',').map((s) => s.trim()).filter(Boolean);
-  return list.at(-1)?.slice(0, 64) ?? direct;
+  return (list.at(-hops) ?? list[0])?.slice(0, 64) ?? direct;
 }
 
 /**

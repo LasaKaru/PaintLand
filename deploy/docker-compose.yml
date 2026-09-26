@@ -19,12 +19,14 @@ services:
     # Or use the image CI publishes instead of building here:
     # image: ghcr.io/lasakaru/paintland:main
     restart: unless-stopped
+    # Never root inside the container (the image can also start as root and drop it).
+    user: node
     environment:
       NODE_ENV: production
       PORT: "8787"
       DATA_DIR: /data
       # Caddy is the one trusted proxy: rate limits use the address it saw.
-      TRUST_PROXY: "1"
+      TRUST_PROXY: "1"  # one proxy (Caddy) in front
       # Optional: replaces the built-in admin password on first start.
       ADMIN_PASSWORD: ${ADMIN_PASSWORD:-}
       MAX_ROOM: ${MAX_ROOM:-}
