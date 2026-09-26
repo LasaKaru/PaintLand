@@ -154,7 +154,7 @@ const bn: Locale = {
   'brand.coffee': 'আমাকে একটা কফি খাওয়ান',
   'brand.fund': 'গেমে অর্থ সাহায্য করুন',
   'brand.sponsor': 'স্পনসর হোন',
-  'brand.advertiseLine': 'PaintLand-এ আপনার ব্র্যান্ড? {email}-এ লিখুন',
+  'brand.advertiseLine': 'Inkroads-এ আপনার ব্র্যান্ড? {email}-এ লিখুন',
   'brand.visit': 'E · {name} দেখুন',
   'brand.advertise': 'এখানে বিজ্ঞাপন দিন',
   'set.analytics': 'বেনামি খেলার পরিসংখ্যান শেয়ার করুন',

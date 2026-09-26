@@ -154,7 +154,7 @@ const sw: Locale = {
   'brand.coffee': 'Ninunulie kahawa',
   'brand.fund': 'Changia mchezo',
   'brand.sponsor': 'Kuwa mfadhili',
-  'brand.advertiseLine': 'Chapa yako ndani ya PaintLand? Andika kwa {email}',
+  'brand.advertiseLine': 'Chapa yako ndani ya Inkroads? Andika kwa {email}',
   'brand.visit': 'E · Tembelea {name}',
   'brand.advertise': 'Tangaza hapa',
   'set.analytics': 'Shiriki takwimu za mchezo bila majina',

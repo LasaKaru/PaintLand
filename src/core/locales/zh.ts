@@ -154,7 +154,7 @@ const zh: Locale = {
   'brand.coffee': '请我喝杯咖啡',
   'brand.fund': '资助这款游戏',
   'brand.sponsor': '成为赞助商',
-  'brand.advertiseLine': '想让你的品牌出现在 PaintLand？请写信至 {email}',
+  'brand.advertiseLine': '想让你的品牌出现在 Inkroads？请写信至 {email}',
   'brand.visit': 'E · 访问 {name}',
   'brand.advertise': '在此投放广告',
   'set.analytics': '分享匿名游戏统计',

@@ -1,4 +1,4 @@
-// PaintLand desktop shell (Electron). Security first:
+// Inkroads desktop shell (Electron). Security first:
 //  - the game runs sandboxed, context-isolated, with no Node.js access at all;
 //  - it is served from a private app:// scheme out of the signed ASAR archive
 //    (never file://), with a strict Content-Security-Policy;
@@ -24,7 +24,7 @@ protocol.registerSchemesAsPrivileged([{ scheme: SCHEME, privileges: { standard: 
 if (!app.requestSingleInstanceLock()) app.quit();
 // The OS sandbox is always on in the packaged app. Only an unpackaged dev run
 // (e.g. CI containers running as root) may switch it off explicitly.
-if (!app.isPackaged && process.env.PAINTLAND_NO_SANDBOX === '1') app.commandLine.appendSwitch('no-sandbox');
+if (!app.isPackaged && process.env.INKROADS_NO_SANDBOX === '1') app.commandLine.appendSwitch('no-sandbox');
 else app.enableSandbox();
 app.setAppUserModelId('com.helao2.paintland');
 
@@ -35,7 +35,7 @@ function createWindow() {
     minWidth: 960,
     minHeight: 600,
     backgroundColor: '#f1ecdd',
-    title: 'PaintLand',
+    title: 'Inkroads',
     autoHideMenuBar: true,
     show: false,
     webPreferences: {

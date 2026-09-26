@@ -43,8 +43,8 @@ jobs:
       - name: Build the game
         run: npm run build
         env:
-          VITE_API_BASE: ${{ vars.PAINTLAND_API_BASE }}
-          VITE_SERVER_WS: ${{ vars.PAINTLAND_SERVER_WS }}
+          VITE_API_BASE: ${{ vars.INKROADS_API_BASE || vars.PAINTLAND_API_BASE }}
+          VITE_SERVER_WS: ${{ vars.INKROADS_SERVER_WS || vars.PAINTLAND_SERVER_WS }}
       - name: Version
         id: version
         shell: bash
@@ -67,7 +67,7 @@ jobs:
         working-directory: desktop
         shell: bash
         run: |
-          npx @electron/fuses read --app release/win-unpacked/PaintLand.exe | tee fuses.txt
+          npx @electron/fuses read --app release/win-unpacked/Inkroads.exe | tee fuses.txt
           grep -q "RunAsNode is Disabled" fuses.txt
           grep -q "EnableNodeCliInspectArguments is Disabled" fuses.txt
           grep -q "OnlyLoadAppFromAsar is Enabled" fuses.txt
@@ -83,7 +83,7 @@ jobs:
           subject-path: desktop/release/*.exe
       - uses: actions/upload-artifact@v4
         with:
-          name: PaintLand-Windows-${{ steps.version.outputs.version }}
+          name: Inkroads-Windows-${{ steps.version.outputs.version }}
           path: |
             desktop/release/*.exe
             desktop/release/SHA256SUMS.txt
@@ -98,7 +98,7 @@ jobs:
     steps:
       - uses: actions/download-artifact@v4
         with:
-          name: PaintLand-Windows-${{ needs.build.outputs.version }}
+          name: Inkroads-Windows-${{ needs.build.outputs.version }}
           path: release
       - uses: softprops/action-gh-release@v2
         with:

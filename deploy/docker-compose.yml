@@ -1,4 +1,4 @@
-# PaintLand on your own server with automatic HTTPS (Caddy + Let's Encrypt).
+# Inkroads on your own server with automatic HTTPS (Caddy + Let's Encrypt).
 #
 #   cd deploy
 #   cp .env.example .env        # set DOMAIN, EMAIL and ADMIN_PASSWORD

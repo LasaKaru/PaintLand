@@ -154,7 +154,7 @@ const ja: Locale = {
   'brand.coffee': 'コーヒーをおごる',
   'brand.fund': 'ゲームを支援する',
   'brand.sponsor': 'スポンサーになる',
-  'brand.advertiseLine': 'PaintLand にあなたのブランドを？ {email} までご連絡ください',
+  'brand.advertiseLine': 'Inkroads にあなたのブランドを？ {email} までご連絡ください',
   'brand.visit': 'E · {name} を見る',
   'brand.advertise': '広告募集中',
   'set.analytics': '匿名のプレイ統計を送信する',

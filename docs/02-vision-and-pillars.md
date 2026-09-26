@@ -2,7 +2,7 @@
 
 ## 1. The game in one breath
 
-**PaintLand** (working title) is a browser 3D game set inside a living watercolour sketchbook. You walk, run and drive through a paper town whose roads peel off the ground and fold into the sky — up walls, across ceilings, through loops and corkscrews. Driving or running through floating notes plays each street's melody, so your path becomes a song. Play alone, or open the world to friends to cruise, race, collect and paint together.
+**Inkroads** (earlier working title: PaintLand) is a browser 3D game set inside a living watercolour sketchbook. You walk, run and drive through a paper town whose roads peel off the ground and fold into the sky — up walls, across ceilings, through loops and corkscrews. Driving or running through floating notes plays each street's melody, so your path becomes a song. Play alone, or open the world to friends to cruise, race, collect and paint together.
 
 **Tagline:** *Paint the road. Then drive up it.*
 

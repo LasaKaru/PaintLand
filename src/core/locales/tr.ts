@@ -154,7 +154,7 @@ const tr: Locale = {
   'brand.coffee': 'Bana bir kahve ısmarla',
   'brand.fund': 'Oyunu destekle',
   'brand.sponsor': 'Sponsor ol',
-  'brand.advertiseLine': 'Markanız PaintLand’de mi? {email} adresine yazın',
+  'brand.advertiseLine': 'Markanız Inkroads’de mi? {email} adresine yazın',
   'brand.visit': 'E · {name} sitesini ziyaret et',
   'brand.advertise': 'Buraya reklam verin',
   'set.analytics': 'Anonim oyun istatistiklerini paylaş',

@@ -154,7 +154,7 @@ const ko: Locale = {
   'brand.coffee': '커피 한 잔 사주기',
   'brand.fund': '게임 후원하기',
   'brand.sponsor': '스폰서 되기',
-  'brand.advertiseLine': 'PaintLand에 브랜드를 소개하고 싶나요? {email}로 연락하세요',
+  'brand.advertiseLine': 'Inkroads에 브랜드를 소개하고 싶나요? {email}로 연락하세요',
   'brand.visit': 'E · {name} 방문',
   'brand.advertise': '광고 문의',
   'set.analytics': '익명 플레이 통계 공유',

@@ -154,7 +154,7 @@ const nl: Locale = {
   'brand.coffee': 'Trakteer me op koffie',
   'brand.fund': 'Steun het spel',
   'brand.sponsor': 'Word sponsor',
-  'brand.advertiseLine': 'Jouw merk in PaintLand? Schrijf naar {email}',
+  'brand.advertiseLine': 'Jouw merk in Inkroads? Schrijf naar {email}',
   'brand.visit': 'E · {name} bezoeken',
   'brand.advertise': 'Adverteer hier',
   'set.analytics': 'Anonieme speelstatistieken delen',

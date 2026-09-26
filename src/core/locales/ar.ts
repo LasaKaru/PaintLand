@@ -154,7 +154,7 @@ const ar: Locale = {
   'brand.coffee': 'اشترِ لي قهوة',
   'brand.fund': 'ادعم اللعبة',
   'brand.sponsor': 'كن راعيًا',
-  'brand.advertiseLine': 'علامتك التجارية في PaintLand؟ راسل {email}',
+  'brand.advertiseLine': 'علامتك التجارية في Inkroads؟ راسل {email}',
   'brand.visit': 'E · زيارة {name}',
   'brand.advertise': 'أعلن هنا',
   'set.analytics': 'مشاركة إحصاءات لعب مجهولة الهوية',

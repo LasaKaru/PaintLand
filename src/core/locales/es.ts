@@ -154,7 +154,7 @@ const es: Locale = {
   'brand.coffee': 'Invítame a un café',
   'brand.fund': 'Apoya el juego',
   'brand.sponsor': 'Hazte patrocinador',
-  'brand.advertiseLine': '¿Tu marca en PaintLand? Escribe a {email}',
+  'brand.advertiseLine': '¿Tu marca en Inkroads? Escribe a {email}',
   'brand.visit': 'E · Visitar {name}',
   'brand.advertise': 'Anúnciate aquí',
   'set.analytics': 'Compartir estadísticas de juego anónimas',

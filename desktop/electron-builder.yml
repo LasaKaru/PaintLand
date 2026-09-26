@@ -1,6 +1,6 @@
-# Windows installer (NSIS) and a portable .exe for PaintLand.
+# Windows installer (NSIS) and a portable .exe for Inkroads.
 appId: com.helao2.paintland
-productName: PaintLand
+productName: Inkroads
 copyright: Copyright © HelaO2
 directories:
   output: release
@@ -33,7 +33,7 @@ nsis:
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: true
   createStartMenuShortcut: true
-  shortcutName: PaintLand
-  artifactName: PaintLand-Setup-${version}.${ext}
+  shortcutName: Inkroads
+  artifactName: Inkroads-Setup-${version}.${ext}
 portable:
-  artifactName: PaintLand-Portable-${version}.${ext}
+  artifactName: Inkroads-Portable-${version}.${ext}

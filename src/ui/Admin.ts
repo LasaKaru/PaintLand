@@ -160,7 +160,7 @@ export class AdminPanel {
 
   private login(): string {
     return `<form class="card admin-login" autocomplete="on">
-      <div class="admin-brand"><img src="${COMPANY_LOGO}" alt="HelaO2"><span class="label">PaintLand admin</span></div>
+      <div class="admin-brand"><img src="${COMPANY_LOGO}" alt="HelaO2"><span class="label">Inkroads admin</span></div>
       <div class="hand admin-title">Secret door 🔑</div>
       <label>Email<input class="text-input" type="email" name="email" autocomplete="username" value="${esc(this.email)}" required></label>
       <label>Password<input class="text-input" type="password" name="password" autocomplete="current-password" required></label>
@@ -175,7 +175,7 @@ export class AdminPanel {
     const body = { dashboard: () => this.dashboard(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
     return `<div class="card admin-panel">
       <div class="admin-head">
-        <div class="admin-brand"><img src="${esc(this.config?.company.logo ? apiUrl(this.config.company.logo) : COMPANY_LOGO)}" alt=""><span class="hand">${esc(this.config?.company.name ?? 'HelaO2')} · PaintLand admin</span></div>
+        <div class="admin-brand"><img src="${esc(this.config?.company.logo ? apiUrl(this.config.company.logo) : COMPANY_LOGO)}" alt=""><span class="hand">${esc(this.config?.company.name ?? 'HelaO2')} · Inkroads admin</span></div>
         <div class="row"><button class="btn small" data-admin="refresh">↻ Refresh</button><button class="btn small" data-admin="logout">Log out</button><button class="btn small" data-admin="close">✕ Close</button></div>
       </div>
       <nav class="tabs">${tabs.map(([id, label]) => `<button class="tab ${this.tab === id ? 'on' : ''}" data-tab="${id}">${label}</button>`).join('')}</nav>

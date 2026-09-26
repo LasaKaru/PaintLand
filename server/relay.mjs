@@ -1,4 +1,4 @@
-// PaintLand multiplayer relay (docs/09 §2).
+// Inkroads multiplayer relay (docs/09 §2).
 //
 // A small room server: clients join `ws://host:8787/?room=<code>`; every
 // message a client sends is stamped with its server-assigned id and relayed to
@@ -263,4 +263,4 @@ wss.on('connection', (socket, req) => {
   socket.on('close', () => clearInterval(heartbeat));
 });
 
-http.listen(PORT, () => console.log(`PaintLand relay listening on ws://localhost:${PORT} (rooms of up to ${maxRoom()}) · leaderboard ${verifyRun ? 'on' : 'off'} at http://localhost:${PORT}/leaderboard`));
+http.listen(PORT, () => console.log(`Inkroads relay listening on ws://localhost:${PORT} (rooms of up to ${maxRoom()}) · leaderboard ${verifyRun ? 'on' : 'off'} at http://localhost:${PORT}/leaderboard`));

@@ -1,9 +1,9 @@
 {
   "name": "paintland-desktop",
-  "productName": "PaintLand",
+  "productName": "Inkroads",
   "version": "0.1.0",
   "private": true,
-  "description": "PaintLand for Windows: the web game in a locked-down Electron shell.",
+  "description": "Inkroads for Windows: the web game in a locked-down Electron shell.",
   "author": "HelaO2 <support@helao2.com>",
   "homepage": "https://helao2.com",
   "main": "main.cjs",

@@ -1,4 +1,4 @@
-// PaintLand admin, branding and analytics service (runs inside server/relay.mjs).
+// Inkroads admin, branding and analytics service (runs inside server/relay.mjs).
 //
 // Public:
 //   GET  /api/config              → branding: company, links, sponsors, logo frequency
@@ -36,7 +36,7 @@ export const DEFAULT_CONFIG = {
   links: {
     coffee: '',
     fund: '',
-    sponsor: 'mailto:support@helao2.com?subject=Sponsor%20PaintLand',
+    sponsor: 'mailto:support@helao2.com?subject=Sponsor%20Inkroads',
     custom: [],
   },
   /** How often the company logo appears in the world: 0 never … 1 on most boards. */

@@ -154,7 +154,7 @@ const id: Locale = {
   'brand.coffee': 'Traktir saya kopi',
   'brand.fund': 'Dukung game ini',
   'brand.sponsor': 'Jadi sponsor',
-  'brand.advertiseLine': 'Merek Anda di PaintLand? Tulis ke {email}',
+  'brand.advertiseLine': 'Merek Anda di Inkroads? Tulis ke {email}',
   'brand.visit': 'E · Kunjungi {name}',
   'brand.advertise': 'Pasang iklan di sini',
   'set.analytics': 'Bagikan statistik bermain anonim',

@@ -38,6 +38,6 @@ game
     const msg = document.createElement('div');
     msg.className = 'card';
     msg.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-width:460px;font-family:monospace';
-    msg.textContent = `PaintLand could not start: ${err instanceof Error ? err.message : String(err)}. It needs a browser with WebGL2.`;
+    msg.textContent = `Inkroads could not start: ${err instanceof Error ? err.message : String(err)}. It needs a browser with WebGL2.`;
     document.body.appendChild(msg);
   });

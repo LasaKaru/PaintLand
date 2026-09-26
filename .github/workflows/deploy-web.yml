@@ -37,8 +37,8 @@ jobs:
       - run: npm run build
         env:
           # Point the static site at your game server (admin, branding, multiplayer), if you host one.
-          VITE_API_BASE: ${{ vars.PAINTLAND_API_BASE }}
-          VITE_SERVER_WS: ${{ vars.PAINTLAND_SERVER_WS }}
+          VITE_API_BASE: ${{ vars.INKROADS_API_BASE || vars.PAINTLAND_API_BASE }}
+          VITE_SERVER_WS: ${{ vars.INKROADS_SERVER_WS || vars.PAINTLAND_SERVER_WS }}
       - name: Publish the live site
         if: github.event_name != 'pull_request'
         uses: JamesIves/github-pages-deploy-action@v4

@@ -154,7 +154,7 @@ const ta: Locale = {
   'brand.coffee': 'எனக்கு ஒரு காபி வாங்குங்கள்',
   'brand.fund': 'விளையாட்டுக்கு நிதியளியுங்கள்',
   'brand.sponsor': 'ஸ்பான்சர் ஆகுங்கள்',
-  'brand.advertiseLine': 'PaintLand இல் உங்கள் பிராண்ட்? {email} க்கு எழுதுங்கள்',
+  'brand.advertiseLine': 'Inkroads இல் உங்கள் பிராண்ட்? {email} க்கு எழுதுங்கள்',
   'brand.visit': 'E · {name} பார்வையிடு',
   'brand.advertise': 'இங்கே விளம்பரம் செய்யுங்கள்',
   'set.analytics': 'அநாமதேய விளையாட்டு புள்ளிவிவரங்களைப் பகிர்',

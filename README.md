@@ -1,6 +1,6 @@
-# PaintLand — Game Design & Build Guide
+# Inkroads — Game Design & Build Guide
 
-**PaintLand** (working title) is a browser 3D game built with Three.js that looks like a moving watercolour sketchbook. Roads peel off the ground and fold into the sky, up walls, across ceilings and through loops. Driving or walking through floating notes plays each street's melody. You can play alone or with friends, walk around as a customisable character in first or third person, and drive a little rover with a gramophone on its roof.
+**Inkroads** (earlier working title: PaintLand) is a browser 3D game built with Three.js that looks like a moving watercolour sketchbook. Roads peel off the ground and fold into the sky, up walls, across ceilings and through loops. Driving or walking through floating notes plays each street's melody. You can play alone or with friends, walk around as a customisable character in first or third person, and drive a little rover with a gramophone on its roof.
 
 *Paint the road. Then drive up it.* Prefer it real? One slider turns the sketchbook into a realistically lit world with HDR light, reflections, fog and depth of field.
 
@@ -101,18 +101,18 @@ Every push to GitHub runs these workflows (`.github/workflows/`):
 | **CI** | every push and pull request | Typecheck, 141 unit tests, web and server builds, a live smoke test of the server (game page, branding, a refused admin login, analytics, leaderboard), the desktop shell's security tests, and `npm audit` for the game and the desktop app |
 | **CodeQL** | pushes to `main`, pull requests, weekly | GitHub's static security analysis (extended queries) over the game, server and desktop code |
 | **Web deploy and previews** | pushes to `main`; pull requests | Publishes the game to GitHub Pages. Every pull request from this repository gets its own preview at `…/previews/pr-<number>/`, linked in a comment and deleted when the pull request closes. Forks never get a write token |
-| **Desktop app (Windows)** | every push (and `v*` tags) | Builds **PaintLand-Setup-x.y.z.exe** (installer) and **PaintLand-Portable-x.y.z.exe**, checks the security fuses in the built exe, writes `SHA256SUMS.txt`, and signs build provenance. Download them from the run's **Artifacts**. A tag like `v1.0.0` also creates a **GitHub Release** with the files |
+| **Desktop app (Windows)** | every push (and `v*` tags) | Builds **Inkroads-Setup-x.y.z.exe** (installer) and **Inkroads-Portable-x.y.z.exe**, checks the security fuses in the built exe, writes `SHA256SUMS.txt`, and signs build provenance. Download them from the run's **Artifacts**. A tag like `v1.0.0` also creates a **GitHub Release** with the files |
 | **Server image** | pushes to `main`, tags | Builds `ghcr.io/lasakaru/paintland` (the one-process server: game + multiplayer + leaderboard + admin + analytics) with an SBOM and provenance |
 | **Dependabot** | weekly | Update pull requests for npm (game and desktop), GitHub Actions and the Docker base image |
 
 **One-time setup on GitHub**
 1. Settings → Pages → *Deploy from a branch* → `gh-pages` / root (the first `main` deploy creates the branch).
-2. If you host the game server, add the repository **variables** `PAINTLAND_API_BASE` (e.g. `https://play.helao2.com`) and `PAINTLAND_SERVER_WS` (e.g. `wss://play.helao2.com`). The web and desktop builds then use it for the admin panel, branding, sponsors and multiplayer.
+2. If you host the game server, add the repository **variables** `INKROADS_API_BASE` (e.g. `https://play.helao2.com`) and `INKROADS_SERVER_WS` (e.g. `wss://play.helao2.com`). (The older names `PAINTLAND_API_BASE` and `PAINTLAND_SERVER_WS` still work.) The web and desktop builds then use it for the admin panel, branding, sponsors and multiplayer.
 3. Optional, recommended: code signing. Buy a Windows code-signing certificate and add the **secrets** `WIN_CSC_LINK` (the .pfx, base64-encoded) and `WIN_CSC_KEY_PASSWORD`. The desktop workflow then signs the exe automatically. Unsigned exes work, but Windows SmartScreen warns "unknown publisher" until they are signed.
 
 **Release a version:** `git tag v1.0.0 && git push origin v1.0.0` publishes the installer, the portable exe and the checksums as a GitHub Release.
 
-**Check a download:** compare `certutil -hashfile PaintLand-Setup-1.0.0.exe SHA256` with `SHA256SUMS.txt`, or run `gh attestation verify PaintLand-Setup-1.0.0.exe -R lasakaru/paintland` to prove it was built by this repository's workflow.
+**Check a download:** compare `certutil -hashfile Inkroads-Setup-1.0.0.exe SHA256` with `SHA256SUMS.txt`, or run `gh attestation verify Inkroads-Setup-1.0.0.exe -R lasakaru/paintland` to prove it was built by this repository's workflow.
 
 **Host the server with HTTPS (recommended):** the [`deploy/`](deploy/) kit runs the game server behind Caddy, which gets and renews a Let's Encrypt certificate by itself:
 
@@ -166,8 +166,8 @@ Not tested here: a real GPU (the container renders with SwiftShader) or voice ac
 | System | Status | Where |
 | --- | --- | --- |
 | **One application**: `npm start` builds the game and serves everything from one Node process on one port: the game itself, multiplayer rooms, the ranked leaderboard, the admin panel API, analytics and uploaded logos. In development, Vite forwards `/api` to the relay (`npm run server`) | ✅ | `server/relay.mjs`, `server/admin.mjs`, `vite.config.ts` |
-| **HelaO2 presents**: the loading screen paints the HelaO2 logo in like a watercolour wash (a spreading reveal, rough pigment edges, soft colour blooms), then "presents", then PaintLand | ✅ | `src/ui/Hud.ts`, `src/styles/main.css` |
-| **Secret admin panel**: type **kumara** on any menu screen (on touch screens, tap the PaintLand logo 5 times) to open the login. The server checks the email and password against a salted scrypt hash. Wrong attempts are rate-limited, sessions last 12 hours, and the password can be changed in the panel | ✅ | `src/ui/Admin.ts` |
+| **HelaO2 presents**: the loading screen paints the HelaO2 logo in like a watercolour wash (a spreading reveal, rough pigment edges, soft colour blooms), then "presents", then Inkroads | ✅ | `src/ui/Hud.ts`, `src/styles/main.css` |
+| **Secret admin panel**: type **kumara** on any menu screen (on touch screens, tap the Inkroads logo 5 times) to open the login. The server checks the email and password against a salted scrypt hash. Wrong attempts are rate-limited, sessions last 12 hours, and the password can be changed in the panel | ✅ | `src/ui/Admin.ts` |
 | **Dashboard**: players (all time, today, 7 days, returning), online now and multiplayer rooms, sessions and average length, hours played, 30-day charts of players and hours, sponsor board views and visits with visit rate, plus breakdowns by chapter, area, time by place, language, device, graphics quality, frame rate, missions, trophies and menu link clicks. Exportable as JSON | ✅ | `server/admin.mjs` |
 | **Branding and links**: company name, website, loading-screen words, sponsor contact email, company logo upload, how often the company logo appears, "Your brand here" boards on or off, and room size. Buy me a coffee, Fund the game, Become a sponsor and up to 8 more links appear in the main menu's footer | ✅ | `src/ui/Menu.ts` |
 | **Sponsors**: upload logos (PNG, JPEG or WebP, shrunk in the browser) with a name, link and weight, and switch them on or off. They appear in the menu footer and on boards in the world | ✅ | `src/ui/Admin.ts` |

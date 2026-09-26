@@ -154,7 +154,7 @@ const de: Locale = {
   'brand.coffee': 'Spendier mir einen Kaffee',
   'brand.fund': 'Das Spiel unterstützen',
   'brand.sponsor': 'Sponsor werden',
-  'brand.advertiseLine': 'Deine Marke in PaintLand? Schreib an {email}',
+  'brand.advertiseLine': 'Deine Marke in Inkroads? Schreib an {email}',
   'brand.visit': 'E · {name} besuchen',
   'brand.advertise': 'Hier werben',
   'set.analytics': 'Anonyme Spielstatistiken teilen',

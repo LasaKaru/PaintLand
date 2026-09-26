@@ -487,7 +487,7 @@ function template(): string {
     <div class="card logo-card">
       <div class="logo-mark"></div>
       <div>
-        <div class="logo-name">PaintLand</div>
+        <div class="logo-name">Inkroads</div>
         <div class="logo-sub">ink &amp; wash roads</div>
       </div>
     </div>
@@ -588,7 +588,7 @@ function template(): string {
       <div class="hand presents-word">${escapeText(brand().company.tagline === 'Presents' || !brand().company.tagline ? t('brand.presents') : brand().company.tagline)}</div>
     </div>
     <div class="card loading-card">
-      <div class="hand big-title">PaintLand</div>
+      <div class="hand big-title">Inkroads</div>
       <div class="load-bar"><div class="load-fill"></div></div>
       <div class="label load-text">mixing paint…</div>
     </div>
@@ -597,7 +597,7 @@ function template(): string {
   <div class="screen title-screen hidden" data-id="screenTitle">
     <div class="banner">Drive the song · beat the clock</div>
     <div class="title-letters">
-      ${'PAINTLAND'.split('').map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}
+      ${'INKROADS'.split('').map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}
     </div>
     <button class="btn primary" data-action="start-title"><kbd>Space</kbd> Drive</button>
     <div class="title-hints">A D steer · W throttle · Space hop · Shift boost · F get out · C camera</div>

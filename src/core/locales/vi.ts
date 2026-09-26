@@ -154,7 +154,7 @@ const vi: Locale = {
   'brand.coffee': 'Mời tôi một ly cà phê',
   'brand.fund': 'Ủng hộ trò chơi',
   'brand.sponsor': 'Trở thành nhà tài trợ',
-  'brand.advertiseLine': 'Thương hiệu của bạn trong PaintLand? Viết cho {email}',
+  'brand.advertiseLine': 'Thương hiệu của bạn trong Inkroads? Viết cho {email}',
   'brand.visit': 'E · Ghé thăm {name}',
   'brand.advertise': 'Quảng cáo tại đây',
   'set.analytics': 'Chia sẻ thống kê chơi ẩn danh',

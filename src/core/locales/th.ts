@@ -154,7 +154,7 @@ const th: Locale = {
   'brand.coffee': 'เลี้ยงกาแฟฉันสักแก้ว',
   'brand.fund': 'สนับสนุนเกม',
   'brand.sponsor': 'เป็นผู้สนับสนุน',
-  'brand.advertiseLine': 'อยากให้แบรนด์ของคุณอยู่ใน PaintLand? เขียนถึง {email}',
+  'brand.advertiseLine': 'อยากให้แบรนด์ของคุณอยู่ใน Inkroads? เขียนถึง {email}',
   'brand.visit': 'E · เยี่ยมชม {name}',
   'brand.advertise': 'ลงโฆษณาที่นี่',
   'set.analytics': 'แชร์สถิติการเล่นแบบไม่ระบุตัวตน',

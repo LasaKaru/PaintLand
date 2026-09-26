@@ -205,7 +205,7 @@ export class Menu {
         ${b.links.custom.map((l, i) => link(`custom${i}`, l.url, escapeHtml(l.label))).join('')}
       </div>
       ${sponsors.length ? `<div class="brand-sponsors">${sponsors.map((s) => `<a href="${escapeHtml(s.url || '#')}" target="_blank" rel="noopener" data-link="sponsor-logo" data-id="${escapeHtml(s.id)}" title="${escapeHtml(s.name)}"><img data-paint-src="${escapeHtml(apiUrl(s.image))}" alt="${escapeHtml(s.name)}"></a>`).join('')}</div>` : ''}
-      ${b.showSponsorCta && b.company.contact ? `<a class="brand-cta" href="mailto:${escapeHtml(b.company.contact)}?subject=Advertise%20in%20PaintLand" data-link="advertise">${t('brand.advertiseLine', { email: escapeHtml(b.company.contact) })}</a>` : ''}
+      ${b.showSponsorCta && b.company.contact ? `<a class="brand-cta" href="mailto:${escapeHtml(b.company.contact)}?subject=Advertise%20in%20Inkroads" data-link="advertise">${t('brand.advertiseLine', { email: escapeHtml(b.company.contact) })}</a>` : ''}
     </div>`;
   }
 
@@ -249,7 +249,7 @@ export class Menu {
 
   private splash(): string {
     return `<div class="splash">
-      <div class="title-letters">${'PAINTLAND'.split('').map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}</div>
+      <div class="title-letters">${'INKROADS'.split('').map((c, i) => `<span style="--i:${i}">${c}</span>`).join('')}</div>
       <div class="banner">${t('splash.banner')}</div>
       <button class="btn primary" data-nav="enter">${t('splash.press')}</button>
       <div class="lang-row">${this.langButtons()}</div>
@@ -260,7 +260,7 @@ export class Menu {
     const ch = this.host.currentChapter();
     const p = this.host.profile.data;
     return `<div class="menu-main">
-      <div class="menu-logo" data-action="logo-tap"><div class="logo-mark big"></div><div><div class="hand logo-name big">PaintLand</div><div class="logo-sub">ink &amp; wash roads</div></div></div>
+      <div class="menu-logo" data-action="logo-tap"><div class="logo-mark big"></div><div><div class="hand logo-name big">Inkroads</div><div class="logo-sub">ink &amp; wash roads</div></div></div>
       <div class="menu-now">${t('menu.now')} · <b>${ch.name}</b></div>
       <nav class="menu-list">
         ${this.host.canResume() ? `<button class="menu-item primary" data-nav="resume">${t('menu.resume')}</button>` : ''}
@@ -752,7 +752,7 @@ export class Menu {
 
   private credits(): string {
     return `<div class="menu-panel">${this.header('Credits')}
-      <p><b>PaintLand</b> — a watercolour road game made with Three.js.</p>
+      <p><b>Inkroads</b> — a watercolour road game made with Three.js.</p>
       <p>Everything you see is painted in code: every house, tree, landmark, vehicle and person is built procedurally, then inked and washed by the renderer. Every song is generated live in the district’s key.</p>
       <p>Places visited: Colombo’s Lotus Tower and Galle Face Green, Sigiriya, Ella and the Nine Arch Bridge, Mirissa; the Great Wall, the Colosseum, the Taj Mahal, Machu Picchu, Christ the Redeemer, Chichen Itza and Petra — all as loving sketches, not replicas.</p>
     </div>`;

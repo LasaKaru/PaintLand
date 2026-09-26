@@ -154,7 +154,7 @@ const ur: Locale = {
   'brand.coffee': 'مجھے ایک کافی پلائیں',
   'brand.fund': 'گیم کی مالی مدد کریں',
   'brand.sponsor': 'اسپانسر بنیں',
-  'brand.advertiseLine': 'PaintLand میں آپ کا برانڈ؟ {email} پر لکھیں',
+  'brand.advertiseLine': 'Inkroads میں آپ کا برانڈ؟ {email} پر لکھیں',
   'brand.visit': 'E · {name} دیکھیں',
   'brand.advertise': 'یہاں اشتہار دیں',
   'set.analytics': 'گمنام کھیل کے اعداد و شمار شیئر کریں',

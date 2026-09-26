@@ -1,6 +1,6 @@
 # 13 · Performance results
 
-How PaintLand keeps its frame rate, and what the relay can carry. Numbers here
+How Inkroads keeps its frame rate, and what the relay can carry. Numbers here
 were measured, not estimated; the conditions are written next to each one.
 
 ## 1. Frame rate: three layers

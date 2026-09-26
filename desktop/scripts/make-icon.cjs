@@ -1,5 +1,5 @@
 'use strict';
-// Draws the PaintLand mark (yellow disc, ink ring, terracotta corner stroke)
+// Draws the Inkroads mark (yellow disc, ink ring, terracotta corner stroke)
 // into build/icon.png (512×512) without any image libraries.
 const fs = require('node:fs');
 const path = require('node:path');

@@ -154,7 +154,7 @@ const fa: Locale = {
   'brand.coffee': 'یک قهوه مهمانم کن',
   'brand.fund': 'از بازی حمایت کن',
   'brand.sponsor': 'حامی مالی شو',
-  'brand.advertiseLine': 'برند شما در PaintLand؟ به {email} بنویسید',
+  'brand.advertiseLine': 'برند شما در Inkroads؟ به {email} بنویسید',
   'brand.visit': 'E · بازدید از {name}',
   'brand.advertise': 'تبلیغ شما اینجا',
   'set.analytics': 'اشتراک آمار ناشناس بازی',

@@ -1,4 +1,4 @@
-# HTTPS front door for PaintLand. Caddy gets a certificate for {$DOMAIN} from
+# HTTPS front door for Inkroads. Caddy gets a certificate for {$DOMAIN} from
 # Let's Encrypt, redirects HTTP to HTTPS, and passes everything (the game, the
 # API and the multiplayer WebSocket) to the game server.
 {

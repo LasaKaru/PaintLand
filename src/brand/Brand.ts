@@ -13,7 +13,7 @@ export const COMPANY_LOGO = 'brand/helao2-logo.jpg';
 
 export const DEFAULT_BRAND: BrandConfig = {
   company: { name: 'HelaO2', site: 'https://helao2.com', tagline: 'Presents', contact: 'support@helao2.com' },
-  links: { coffee: '', fund: '', sponsor: 'mailto:support@helao2.com?subject=Sponsor%20PaintLand', custom: [] },
+  links: { coffee: '', fund: '', sponsor: 'mailto:support@helao2.com?subject=Sponsor%20Inkroads', custom: [] },
   logoFrequency: 0.35,
   showSponsorCta: true,
   sponsors: [],
@@ -80,7 +80,7 @@ export function logoPool(b: BrandConfig = current): BrandLogo[] {
   const companyWeight = f >= 1 || others === 0 ? 1 : (f / (1 - f)) * Math.max(1, sponsors.reduce((s, x) => s + x.weight, 0) + (b.showSponsorCta ? 1 : 0));
   if (f > 0) pool.push({ id: 'helao2', kind: 'company', name: b.company.name, url: b.company.site, image: b.company.logo ? apiUrl(b.company.logo) : COMPANY_LOGO, weight: companyWeight });
   for (const s of sponsors) pool.push({ id: s.id, kind: 'sponsor', name: s.name, url: s.url, image: apiUrl(s.image), weight: s.weight });
-  if (b.showSponsorCta) pool.push({ id: 'cta', kind: 'cta', name: b.company.contact, url: `mailto:${b.company.contact}?subject=Advertise%20in%20PaintLand`, image: '', weight: Math.max(0.6, 2 - sponsors.length * 0.4) });
+  if (b.showSponsorCta) pool.push({ id: 'cta', kind: 'cta', name: b.company.contact, url: `mailto:${b.company.contact}?subject=Advertise%20in%20Inkroads`, image: '', weight: Math.max(0.6, 2 - sponsors.length * 0.4) });
   return pool;
 }
 

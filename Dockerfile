@@ -1,4 +1,4 @@
-# PaintLand game server: the built game, multiplayer rooms, leaderboard, admin panel and analytics.
+# Inkroads game server: the built game, multiplayer rooms, leaderboard, admin panel and analytics.
 #   docker run -p 8787:8787 -v paintland-data:/data -e ADMIN_PASSWORD='a long passphrase' ghcr.io/lasakaru/paintland:main
 ARG NODE_IMAGE=node:22-alpine
 FROM ${NODE_IMAGE} AS build
