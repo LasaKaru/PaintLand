@@ -6,13 +6,14 @@ import { SKETCH } from './chapters/sketch';
 import { SERENDIB } from './chapters/serendib';
 import { WONDERS } from './chapters/wonders';
 import { LANTERNS } from './chapters/lanterns';
+import { POSTCARDS } from './chapters/postcards';
 
 /**
  * A chapter is one continuous route of districts plus its wider world
  * (docs/04 §1). Only one chapter is loaded at a time.
  */
 export interface ChapterDef {
-  id: 'sketch' | 'serendib' | 'wonders' | 'lanterns' | 'custom';
+  id: 'sketch' | 'serendib' | 'wonders' | 'lanterns' | 'postcards' | 'custom';
   name: string;
   kicker: string;
   blurb: string;
@@ -26,7 +27,7 @@ export interface ChapterDef {
   background(d: Decorator, rnd: Random): void;
 }
 
-export const CHAPTERS: ChapterDef[] = [SKETCH, SERENDIB, WONDERS, LANTERNS];
+export const CHAPTERS: ChapterDef[] = [SKETCH, SERENDIB, WONDERS, LANTERNS, POSTCARDS];
 
 /** The road being test-driven from the Road Studio (not in the chapter list). */
 let custom: ChapterDef | null = null;

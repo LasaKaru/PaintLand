@@ -512,7 +512,22 @@ export class City implements FreeRoamArea {
       { kind: 'missions', label: '📋 Mission board', x: -130, z: 452, r: 5, colour: '#3e9fd8' },
       { kind: 'trophies', label: '🏆 Trophy hall', x: 130, z: 452, r: 5, colour: '#f4d23b' },
       { kind: 'area', label: '⚓ Harbour Town', x: -620, z: 520, r: 9, area: 'harbour', colour: '#2f8f86' },
+      { kind: 'portal', label: '→ Postcards', x: -100, z: 428, r: 6, chapter: 'postcards', colour: '#2d6fb7' },
     ];
+    // Chapter 5's painted gate, just north of where you arrive.
+    const gate = new ModelKit();
+    for (const s of [-1, 1]) {
+      gate.box(1.4, 11, 1.4, '#2d6fb7', { position: [s * 8, 5.5, 0] });
+      gate.box(2, 0.6, 2, '#2b2622', { position: [s * 8, 11.2, 0] });
+    }
+    gate.box(17.4, 1.6, 1.2, '#f6f0e4', { position: [0, 10, 0] });
+    gate.box(17.8, 0.4, 1.4, '#e3c07a', { position: [0, 10.9, 0] });
+    for (let j = 0; j < 14; j++) {
+      const a = (j / 14) * Math.PI * 2;
+      gate.box(1.8, 0.35, 0.2, ['#e3c07a', '#2d6fb7', '#b0352a', '#4f9a5a'][j % 4], { position: [Math.cos(a) * 4, 5 + Math.sin(a) * 4, 0], rotation: [0, 0, a + Math.PI / 2], nightGlow: 1 });
+    }
+    this.merge(gate.build(0.02), -100, 425);
+    for (const s of [-1, 1]) this.world.circle(-100 + s * 8, 425, 0.9);
     this.murals.push(...addMuralBoards(this, 'city', this.spawn));
     for (const z of [...zones, ...this.zones.splice(0)]) {
       this.zones.push(z);

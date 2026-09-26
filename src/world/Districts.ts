@@ -12,7 +12,9 @@ export type DressStyle =
   // Chapter 3 · Wonders of the Sketchbook
   | 'greatwall' | 'colosseum' | 'taj' | 'machupicchu' | 'redeemer' | 'chichen' | 'petra'
   // Chapter 4 · Lantern Roads
-  | 'torii' | 'bamboo' | 'halong' | 'lanterntown' | 'himalaya' | 'greatwave' | 'fuji';
+  | 'torii' | 'bamboo' | 'halong' | 'lanterntown' | 'himalaya' | 'greatwave' | 'fuji'
+  // Chapter 5 · Postcards
+  | 'nile' | 'santorini' | 'kyoto' | 'kandy' | 'ella';
 export type ScaleName = 'major' | 'minor';
 
 export interface DistrictDef {
@@ -30,6 +32,10 @@ export interface DistrictDef {
   walls: string[];
   /** Melody as scale degrees (0 = tonic, 7 = octave). 32 steps = 4 phrases. */
   melody: number[];
+  /** Time of day this district is always seen at (e.g. Kyoto by night). */
+  preset?: string;
+  /** Weather this district always has (e.g. Kandy in the rain). */
+  weather?: 'clear' | 'cloudy' | 'fog' | 'rain' | 'storm';
 }
 
 export const SCALES: Record<ScaleName, number[]> = {

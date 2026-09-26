@@ -606,6 +606,21 @@ const en = {
   'tg.team': 'Team {n}/{target} · you {mine}',
   'tg.paintDone': 'The team painted the town!',
   'tg.paintMissed': 'Time’s up — so close!',
+  'set.season': 'Seasons',
+  'set.festival': 'Festival decorations',
+  'set.auto': 'Auto',
+  'set.off': 'Off',
+  'season.spring': 'Spring',
+  'season.summer': 'Summer',
+  'season.autumn': 'Autumn',
+  'season.winter': 'Winter',
+  'fest.vesak': 'Vesak',
+  'fest.avurudu': 'Sinhala & Tamil New Year',
+  'fest.diwali': 'Diwali',
+  'fest.vesak.hi': 'Happy Vesak! Lanterns light every street.',
+  'fest.avurudu.hi': 'Subha Aluth Avuruddak! Swings, oil lamps and games.',
+  'fest.diwali.hi': 'Happy Diwali! Lamps, rangoli and light.',
+  'fest.decorated': 'The free-roam towns are decorated.',
 } as const;
 
 export default en;

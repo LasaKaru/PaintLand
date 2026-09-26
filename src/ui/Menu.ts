@@ -830,6 +830,8 @@ export class Menu {
           ${this.toggle('o.analytics', t('set.analytics'))}
           ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
           ${this.slider('o.dayMinutes', 'Length of an auto day', 4, 40, 1, (v) => `${v} min`)}
+          ${this.choice('o.season', t('set.season'), [['auto', t('set.auto')], ['off', t('set.off')], ['spring', t('season.spring')], ['summer', t('season.summer')], ['autumn', t('season.autumn')], ['winter', t('season.winter')]])}
+          ${this.choice('o.festival', t('set.festival'), [['auto', t('set.auto')], ['off', t('set.off')], ['vesak', t('fest.vesak')], ['avurudu', t('fest.avurudu')], ['diwali', t('fest.diwali')]])}
           <div class="row wrap"><button class="btn" data-action="controls">Controls card</button></div>
         </div>
       </div>`;

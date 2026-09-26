@@ -1,3 +1,4 @@
+import type { FestivalSetting, SeasonSetting } from '../world/Calendar';
 import { DEFAULT_FAMILY, familyCaps, type FamilyLock } from './Family';
 /**
  * Player options that are not art or graphics (docs/08 §4): controls, driving
@@ -43,6 +44,10 @@ export interface GameOptions {
   minimap: boolean;
   /** Send anonymous play statistics to the game's owner. */
   analytics: boolean;
+  /** Seasons recolour leaves and grass (auto = by your calendar). */
+  season: SeasonSetting;
+  /** Festival decorations in the free-roam areas (auto = on the festival days). */
+  festival: FestivalSetting;
 }
 
 export const DEFAULT_OPTIONS: GameOptions = {
@@ -71,6 +76,8 @@ export const DEFAULT_OPTIONS: GameOptions = {
   family: { ...DEFAULT_FAMILY },
   minimap: true,
   analytics: true,
+  season: 'auto',
+  festival: 'auto',
 };
 
 const KEY = 'paintland.settings.v1';

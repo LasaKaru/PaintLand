@@ -30,6 +30,9 @@ export const paintShared = {
   /** Colour the City: up to 8 district rects (minX, minZ, maxX, maxZ) and how much of each is still a sketch. */
   uWashRect: { value: Array.from({ length: 8 }, () => new THREE.Vector4(0, 0, 0, 0)) },
   uWash: { value: new Array<number>(8).fill(0) },
+  /** Seasons: a tint (rgb) and how much of it (a) for leaves, and for grass. */
+  uSeasonLeaf: { value: new THREE.Vector4(0, 0, 0, 0) },
+  uSeasonGrass: { value: new THREE.Vector4(0, 0, 0, 0) },
 };
 
 /** Set the sketch wash for washable materials (district rects in world x/z; amount 0 painted … 1 sketch). */
@@ -158,6 +161,8 @@ uniform vec3 uSkyTint;
 uniform float uHatch;
 uniform float uTime;
 uniform float uNight;
+uniform vec4 uSeasonLeaf;
+uniform vec4 uSeasonGrass;
 uniform float uWet;
 uniform float uRealism;
 uniform vec3 uUpView;
@@ -432,6 +437,10 @@ void main() {
     base = roadPattern(base, vRoadUv, vRoadInfo);
   #else
     if (vPattern > 0.5) {
+      // Seasons recolour leaves and grass, keeping each surface's light and shade.
+      float lum = dot(base, vec3(0.3, 0.55, 0.15));
+      if (vPattern > 4.5 && vPattern < 5.5) base = mix(base, uSeasonLeaf.rgb * (0.55 + lum), uSeasonLeaf.a);
+      else if (vPattern > 7.5 && vPattern < 8.5) base = mix(base, uSeasonGrass.rgb * (0.55 + lum), uSeasonGrass.a);
       vec3 nW = normalize(cross(dFdx(vWorldPos), dFdy(vWorldPos)));
       base = surfacePattern(base, vPattern, vWorldPos, nW, dist);
     }

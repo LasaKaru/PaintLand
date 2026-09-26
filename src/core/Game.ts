@@ -47,6 +47,8 @@ import type { GroupPhotoInvite } from '../net/Net';
 import { AccountClient } from '../net/Account';
 import { ModelKit } from '../models/ModelKit';
 import { paintMural } from '../world/Murals';
+import { applySeason, resolveFestival, resolveSeason, type Festival } from '../world/Calendar';
+import { buildFestivalDecor } from '../world/FestivalDecor';
 import { CONTEST_INK, PAINT_INK, acceptScore, convoyTick, driftPoints, dropsNear, leaderTick, newContest, newConvoy, newPaintEvent, paintDrops, standings, stuntPoints, takeDrop, type Contest, type ContestMode, type PaintEvent, type TogetherMsg } from '../gameplay/Together';
 import { defaultServer } from '../net/Leaderboard';
 import { City } from '../world/City';
@@ -198,6 +200,11 @@ export class Game {
   /** Player account (cloud save, friends, clubs); optional. */
   readonly account = new AccountClient();
   private cloudPulled = false;
+  /** Festival decorations built per area (removed when the festival or setting changes). */
+  private festivalDecor = new Map<string, { festival: Festival; group: THREE.Group }>();
+  private festivalGreeted: Festival | null = null;
+  /** The time/weather the current district set, to undo when leaving it. */
+  private districtEnv: { preset?: string; weather?: string } | null = null;
   /** The mural board being painted. */
   private muralId: string | null = null;
   private cloudDue = 0;
@@ -486,6 +493,7 @@ export class Game {
       stats: () => `${this.fps.toFixed(0)} fps · ${Math.round(this.pipeline.renderScale * 100)}% · ${this.renderer.info.render.calls} calls`,
     });
     this.applySettings();
+    this.applyCalendar();
     this.resize();
     await step(1, 'ready');
     this.director.update(0.016, 0, { s: this.rover.s, x: 0, h: 0, position: this.vehicle.root.position.clone() });
@@ -682,6 +690,29 @@ export class Game {
     this.hubCam.snap = true;
     this.pet?.reset();
     this.startEmote('cheer');
+  }
+
+  /** Seasons tint leaves and grass; festivals dress the current free-roam area. */
+  private applyCalendar(): void {
+    applySeason(resolveSeason(this.options.season));
+    const festival = resolveFestival(this.options.festival);
+    const area = this.inHub ? this.area : null;
+    for (const [id, d] of this.festivalDecor) {
+      if (d.festival === festival) continue;
+      d.group.removeFromParent();
+      d.group.traverse((o) => (o as THREE.Mesh).geometry?.dispose());
+      this.festivalDecor.delete(id);
+    }
+    if (!area || !festival) return;
+    if (!this.festivalDecor.has(area.id)) {
+      const group = buildFestivalDecor(festival, area);
+      area.group.add(group);
+      this.festivalDecor.set(area.id, { festival, group });
+    }
+    if (this.festivalGreeted !== festival) {
+      this.festivalGreeted = festival;
+      this.hud.lootCard(t(`fest.${festival}`), '#f4d23b', t(`fest.${festival}.hi`), t('fest.decorated'));
+    }
   }
 
   /** Show this player's murals on the boards of the current area. */
@@ -1193,6 +1224,7 @@ export class Game {
     saveOptions(this.options);
     void this.syncVoice();
     this.applySettings();
+    this.applyCalendar();
     this.studio?.refresh();
   }
 
@@ -1650,6 +1682,13 @@ export class Game {
 
   private showDistrict(d: number): void {
     const def = this.world.districts[d];
+    // Some districts have their own time or weather (Kyoto by night, Kandy in the rain).
+    const prev = this.districtEnv;
+    if (def.preset) this.env.setPreset(def.preset);
+    else if (prev?.preset) this.env.setPreset(this.world.chapter.startPreset);
+    if (def.weather) this.env.setWeather(def.weather);
+    else if (prev?.weather) this.env.setWeather('clear');
+    this.districtEnv = def.preset || def.weather ? { preset: def.preset, weather: def.weather } : null;
     if (this.state === 'play') this.hud.showDistrictTitle(def.kicker, def.name, def.poem);
     this.audio.setDistrict(def);
   }
@@ -2497,6 +2536,12 @@ export class Game {
   private enterHub(at?: HubSpot, areaId?: string): void {
     // A new area: events from the old one end (their paint pots and scores belong there).
     if (this.area && this.paintEvent) this.endTogether();
+    // Leaving a district with its own weather or time (Kandy's rain, Kyoto's night) puts them back.
+    if (this.districtEnv) {
+      if (this.districtEnv.weather) this.env.setWeather('clear');
+      if (this.districtEnv.preset) this.env.setPreset(this.world.chapter.startPreset);
+      this.districtEnv = null;
+    }
     const id = areaId ?? at?.area ?? this.area?.id ?? 'harbour';
     if (this.area && this.area.id !== id) this.area.show(false);
     const area = this.areaFor(id);
@@ -2519,6 +2564,7 @@ export class Game {
     this.hud.setHub(true);
     this.fitHubCar();
     this.paintMurals();
+    this.applyCalendar();
     this.wireCarEvents();
     const sp = area.spawn;
     this.hubCar.place(at?.x ?? sp.x, at?.z ?? sp.z, at?.heading ?? sp.heading);

@@ -58,3 +58,16 @@ describe('Mural walls', () => {
     expect(pages.find((x) => x.id === 'garage')!.stickers.filter((s) => s.got).length).toBe(1);
   });
 });
+
+describe('Festival decorations', async () => {
+  const { buildFestivalDecor } = await import('../src/world/FestivalDecor');
+  it('stand on open ground in every area, for every festival', () => {
+    const areas = [new Hub(fakeEl() as unknown as HTMLElement), new Village(fakeEl() as unknown as HTMLElement), new City(fakeEl() as unknown as HTMLElement)];
+    for (const area of areas)
+      for (const f of ['vesak', 'avurudu', 'diwali'] as const) {
+        const g = buildFestivalDecor(f, area);
+        expect(g.children.length, `${area.id} ${f}`).toBeGreaterThan(8);
+        for (const m of g.children) expect(area.world.resolve({ x: m.position.x, z: m.position.z }, 0.8), `${area.id} ${f}`).toBeNull();
+      }
+  });
+});
