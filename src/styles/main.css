@@ -446,6 +446,7 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .tbtn.drift { right: 176px; bottom: 150px; font-size: 10px; }
 .tbtn.cam { right: 80px; bottom: 186px; }
 .tbtn.photo { right: 140px; bottom: 206px; }
+.tbtn.emote { right: 200px; bottom: 230px; }
 .tbtn.talk { display: none; left: 18px; bottom: 210px; font-size: 22px; }
 .touch.voice .tbtn.talk { display: block; }
 .tbtn.pause { position: fixed; top: 12px; left: 50%; margin-left: -24px; }
@@ -675,3 +676,18 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .report-form label { display: grid; gap: 3px; font-size: 13px; }
 .report-form label.check { display: flex; }
 .fam-status { padding: 6px 10px; border-radius: 8px; background: var(--paper-2); border: 1.5px solid var(--ink); font-weight: 700; }
+
+/* Emote wheel */
+.emote-wheel { position: fixed; inset: 0; z-index: 40; background: rgba(43, 38, 34, 0.25); display: grid; place-items: center; }
+.emote-wheel.hidden { display: none; }
+.emote-ring { position: relative; width: 340px; height: 340px; border-radius: 50%; background: radial-gradient(circle, rgba(246, 240, 228, 0.92) 0 38%, rgba(246, 240, 228, 0.55) 39% 100%); box-shadow: 0 6px 30px rgba(0, 0, 0, 0.25); }
+.emote-centre { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); font-family: var(--hand, inherit); font-size: 20px; color: #2b2622; pointer-events: none; }
+.emote-slot { position: absolute; transform: translate(-50%, -50%); width: 84px; min-height: 72px; display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 6px 4px; border: 2px solid #2b2622; border-radius: 14px; background: #f6f0e4; color: #2b2622; font: inherit; font-size: 12px; cursor: pointer; }
+.emote-slot:hover, .emote-slot:focus-visible { background: #f4d23b; outline: 3px solid #3e6fa8; outline-offset: 2px; }
+.emote-icon { font-size: 24px; line-height: 1; }
+.emote-slot kbd { font-size: 10px; opacity: 0.7; }
+@media (max-width: 420px) { .emote-ring { transform: scale(0.85); } }
+.group-invite { position: fixed; left: 50%; top: 84px; transform: translateX(-50%); z-index: 35; display: flex; gap: 10px; align-items: center; padding: 8px 12px; border: 2px solid #2b2622; border-radius: 12px; background: #f6f0e4; color: #2b2622; box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2); }
+.group-invite.hidden { display: none; }
+.photo-countdown { position: fixed; left: 0; right: 0; top: 12%; display: grid; place-items: center; z-index: 45; pointer-events: none; font-size: 120px; color: #f6f0e4; text-shadow: 0 4px 0 #2b2622; font-family: var(--hand, inherit); }
+.photo-countdown.hidden { display: none; }

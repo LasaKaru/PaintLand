@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { seatRider, unseatRider } from '../models/Rider';
 import type { RoadPath } from '../road/RoadPath';
 import { createFrame } from '../road/RoadPath';
-import { HumanModel } from '../models/Human';
+import { HumanModel, isEmote } from '../models/Human';
+import { Pet, isPet } from '../models/Pets';
 import { VehicleModel, vehicleById } from '../models/Vehicles';
 import type { NetClient, RemotePeer } from './Net';
 
@@ -13,6 +14,7 @@ interface Avatar {
   key: string;
   vehicle: VehicleModel;
   human: HumanModel;
+  pet: Pet | null;
   label: HTMLDivElement;
   mode: 'drive' | 'foot' | '';
 }
@@ -61,7 +63,12 @@ export class RemotePlayers {
         av.vehicle.roll(snap.v * dt);
         av.human.animate(dt, av.vehicle.def.seatPose, 0, time);
       } else {
-        av.human.animate(dt, snap.v > 5 ? 'run' : snap.v > 0.4 ? 'walk' : (snap.pose as 'wave') === 'wave' ? 'wave' : 'idle', snap.v, time);
+        av.human.animate(dt, snap.v > 5 ? 'run' : snap.v > 0.4 ? 'walk' : isEmote(snap.pose) ? snap.pose : 'idle', snap.v, time);
+      }
+      if (av.pet) {
+        av.pet.root.visible = snap.mode === 'foot';
+        if (snap.mode === 'foot') av.pet.update(dt, av.human.root.position, hubY !== undefined ? snap.yaw : Math.atan2(-this.tmp.set(0, 0, -1).applyQuaternion(target.quaternion).x, -this.tmp.z), time);
+        else av.pet.reset();
       }
       // Name tag above the head.
       const head = target.position.clone().addScaledVector(f.up, snap.mode === 'drive' ? 3.4 : 2.3).project(camera);
@@ -79,6 +86,7 @@ export class RemotePlayers {
       if (seen.has(id)) continue;
       av.vehicle.root.removeFromParent();
       av.human.root.removeFromParent();
+      av.pet?.root.removeFromParent();
       av.label.remove();
       this.avatars.delete(id);
     }
@@ -92,15 +100,18 @@ export class RemotePlayers {
     if (av) {
       av.vehicle.root.removeFromParent();
       av.human.root.removeFromParent();
+      av.pet?.root.removeFromParent();
       av.label.remove();
     }
     const vehicle = new VehicleModel(vehicleById(info.vehicle), info.vlook);
     const human = new HumanModel(info.look);
+    const pet = isPet(info.look?.pet) ? new Pet(info.look.pet) : null;
+    if (pet) this.scene.add(pet.root);
     const label = document.createElement('div');
     label.className = 'name-tag';
     this.labels.appendChild(label);
     this.scene.add(vehicle.root);
-    av = { key, vehicle, human, label, mode: '' };
+    av = { key, vehicle, human, pet, label, mode: '' };
     this.avatars.set(peer.id, av);
     return av;
   }
@@ -119,6 +130,7 @@ export class RemotePlayers {
     for (const av of this.avatars.values()) {
       av.vehicle.root.removeFromParent();
       av.human.root.removeFromParent();
+      av.pet?.root.removeFromParent();
       av.label.remove();
     }
     this.avatars.clear();

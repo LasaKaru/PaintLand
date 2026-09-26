@@ -647,7 +647,7 @@ function template(): string {
         <tr><td>T · N · B</td><td colspan="2">Radio on/off · next song · change station</td></tr>
         <tr><td>1–7 · 8 · 9</td><td colspan="2">Time of day · auto day cycle · weather (clear, cloudy, fog, rain, storm)</td></tr>
         <tr><td>H · R</td><td colspan="2">Honk (plays a note) · respawn</td></tr>
-        <tr><td>Q · Z · G · Enter</td><td colspan="2">Drink tonic · next tonic · wave · chat (online)</td></tr>
+        <tr><td>Q · Z · G · Enter</td><td colspan="2">Drink tonic · next tonic · emote wheel · chat (online)</td></tr>
         <tr><td>. · ,</td><td colspan="2">Gear up · down (realistic handling, manual gearbox)</td></tr>
         <tr><td>P</td><td colspan="2">Photo mode: free camera, focus, blur, light · save PNG up to 4K</td></tr>
         <tr><td>\` / F2 · U · Esc</td><td colspan="2">Studio panel · hide HUD · pause</td></tr>

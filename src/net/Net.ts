@@ -4,6 +4,13 @@ import type { HumanLook } from '../models/Human';
 import type { VehicleId, VehicleLook } from '../models/Vehicles';
 
 /** What each player shares about themselves (docs/09 §3). */
+export interface GroupPhotoInvite {
+  chapter: string;
+  x: number;
+  z: number;
+  yaw: number;
+}
+
 export interface PlayerInfo {
   name: string;
   look: HumanLook;
@@ -147,6 +154,8 @@ export class NetClient {
   onPeersChanged: (() => void) | null = null;
   /** Voice chat signalling from a peer (already checked). */
   onRtc: ((from: string, msg: RtcMessage) => void) | null = null;
+  /** Someone is taking a group photo at (x, z) in a free-roam area and invites others to join. */
+  onGroupPhoto: ((from: string, name: string, at: GroupPhotoInvite) => void) | null = null;
   /** Our id as the other players see it (the relay's, or ours in tab rooms). */
   selfId = this.id;
 
@@ -183,6 +192,10 @@ export class NetClient {
 
   sendRtc(msg: RtcMessage): void {
     this.transport?.send(msg);
+  }
+
+  groupPhoto(at: GroupPhotoInvite): void {
+    this.transport?.send({ t: 'emote', kind: 'photo', ...at });
   }
 
   chat(text: string): void {
@@ -246,6 +259,13 @@ export class NetClient {
         const msg = checkRtc(m);
         // Tab rooms have no relay to route: skip messages meant for someone else.
         if (msg && (!('to' in msg) || msg.to === this.selfId)) this.onRtc?.(pid, msg);
+        break;
+      }
+      case 'emote': {
+        const e = m as unknown as Record<string, unknown>;
+        const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 5000;
+        if (e.kind === 'photo' && typeof e.chapter === 'string' && e.chapter.length <= 24 && num(e.x) && num(e.z) && num(e.yaw))
+          this.onGroupPhoto?.(pid, peer.info?.name ?? 'Painter', { chapter: e.chapter, x: e.x, z: e.z, yaw: e.yaw });
         break;
       }
       case 'bye':

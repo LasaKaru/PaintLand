@@ -18,6 +18,7 @@ const BUTTONS: ButtonDef[] = [
   { id: 'cam', label: '🎥', tap: 'camera', cls: 'small cam' },
   { id: 'drift', label: 'DRIFT', hold: 'drift', cls: 'small drift' },
   { id: 'photo', label: '📷', tap: 'photo', cls: 'small photo' },
+  { id: 'emote', label: '🙏', tap: 'emote', cls: 'small emote' },
   // Push-to-talk: only shown while voice chat is on.
   { id: 'talk', label: '🎙', hold: 'talk', cls: 'mid talk' },
 ];

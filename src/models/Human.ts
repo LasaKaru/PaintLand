@@ -3,9 +3,9 @@ import { ModelKit, Pattern } from './ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
 
 export type HairStyle = 'bob' | 'bun' | 'short' | 'curly' | 'long' | 'ponytail' | 'braids' | 'bald';
-export type TopStyle = 'tee' | 'shirt' | 'hoodie' | 'dress' | 'sari';
+export type TopStyle = 'tee' | 'shirt' | 'hoodie' | 'dress' | 'sari' | 'osariya' | 'national';
 export type BottomStyle = 'trousers' | 'shorts' | 'skirt' | 'sarong';
-export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie' | 'crown' | 'helmet' | 'flowers' | 'conical' | 'catears' | 'wizard';
+export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie' | 'crown' | 'helmet' | 'flowers' | 'conical' | 'catears' | 'wizard' | 'natcap';
 export type GlassesStyle = 'none' | 'round' | 'sun';
 export type BackStyle = 'none' | 'backpack' | 'satchel' | 'guitar' | 'cape' | 'wings' | 'parasol';
 export type EyeStyle = 'dots' | 'happy' | 'sleepy' | 'wink' | 'big' | 'sparkle';
@@ -33,6 +33,8 @@ export interface HumanLook {
   mouth?: MouthStyle;
   face?: FaceDetail;
   acc?: Accessory;
+  /** A pet that follows you on foot (see Pets.ts). */
+  pet?: 'none' | 'fox' | 'cat' | 'crane';
 }
 
 export const DEFAULT_HUMAN_LOOK: HumanLook = {
@@ -51,7 +53,12 @@ export const DEFAULT_HUMAN_LOOK: HumanLook = {
   height: 1,
 };
 
-export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | 'wave';
+/** Emotes from the emote wheel (the first is the quick wave). */
+export const EMOTES = ['wave', 'ayubowan', 'cheer', 'dance', 'clap', 'bow', 'laugh', 'sitdown'] as const;
+export type Emote = (typeof EMOTES)[number];
+export const isEmote = (v: unknown): v is Emote => typeof v === 'string' && (EMOTES as readonly string[]).includes(v);
+
+export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote;
 
 const INK = '#2b2622';
 
@@ -84,9 +91,10 @@ export class HumanModel {
     };
     const topStyle = look.topStyle ?? 'tee';
     const bottomStyle = look.bottomStyle ?? 'trousers';
-    const longSkirt = topStyle === 'dress' || topStyle === 'sari' || bottomStyle === 'sarong' || bottomStyle === 'skirt';
+    const saree = topStyle === 'sari' || topStyle === 'osariya';
+    const longSkirt = topStyle === 'dress' || saree || bottomStyle === 'sarong' || bottomStyle === 'skirt';
     const legColour = bottomStyle === 'shorts' || longSkirt ? look.skin : look.bottom;
-    const skirtColour = topStyle === 'dress' || topStyle === 'sari' ? look.top : look.bottom;
+    const skirtColour = topStyle === 'dress' || saree ? look.top : look.bottom;
 
     this.root.scale.setScalar(look.height ?? 1);
     this.hips.position.y = 0.86;
@@ -95,7 +103,7 @@ export class HumanModel {
     // Pelvis, with a skirt, sarong or dress hem when chosen.
     const pelvis = new ModelKit().box(0.36, 0.2, 0.22, longSkirt ? skirtColour : look.bottom);
     if (longSkirt) {
-      const len = bottomStyle === 'sarong' || topStyle === 'sari' ? 0.72 : 0.42;
+      const len = bottomStyle === 'sarong' || saree ? 0.72 : 0.42;
       pelvis.cylinder(0.2, 0.3, len, 8, skirtColour, { position: [0, -len / 2 + 0.05, 0], pattern: bottomStyle === 'sarong' ? Pattern.Planks : Pattern.None });
     }
     this.hips.add(mesh(pelvis.build(0.01, 1)));
@@ -114,6 +122,17 @@ export class HumanModel {
     } else if (topStyle === 'sari') {
       torso.box(0.14, 0.62, 0.3, shadeHex(look.top, 1.12), { position: [0.12, 0.22, 0], rotation: [0, 0, -0.5] });
       torso.box(0.5, 0.06, 0.3, '#e8c872', { position: [0, 0.0, 0] });
+    } else if (topStyle === 'osariya') {
+      // Kandyan osariya: the pleated frill (pota) round the waist, the pallu over the left shoulder.
+      torso.cylinder(0.25, 0.3, 0.12, 14, shadeHex(look.top, 1.12), { position: [0, 0.02, 0], pattern: Pattern.Planks });
+      torso.cylinder(0.305, 0.305, 0.025, 14, '#e8c872', { position: [0, -0.04, 0] });
+      torso.box(0.14, 0.66, 0.3, shadeHex(look.top, 1.12), { position: [-0.12, 0.24, 0.02], rotation: [0, 0, 0.45] });
+      torso.box(0.03, 0.66, 0.31, '#e8c872', { position: [-0.05, 0.24, 0.02], rotation: [0, 0, 0.45] });
+    } else if (topStyle === 'national') {
+      // Sri Lankan national dress: a long collarless white tunic over the sarong.
+      torso.cylinder(0.2, 0.25, 0.32, 8, look.top, { position: [0, -0.1, 0] });
+      torso.cylinder(0.1, 0.11, 0.05, 8, look.top, { position: [0, 0.54, 0] });
+      for (let i = 0; i < 3; i++) torso.blob(0.014, '#e8c872', { position: [0, 0.44 - i * 0.1, -0.2], detail: 0 });
     }
     if (look.scarf) torso.cylinder(0.12, 0.15, 0.1, 8, look.scarf, { position: [0, 0.54, 0] });
     const back = look.back ?? 'none';
@@ -167,11 +186,14 @@ export class HumanModel {
       this.headMeshes.push(this.hatMesh);
     }
 
-    const sleeve = topStyle === 'tee' || topStyle === 'dress' ? look.skin : look.top;
+    const sleeve = topStyle === 'tee' || topStyle === 'dress' || topStyle === 'osariya' ? look.skin : look.top;
     for (const side of [-1, 1]) {
       const shoulder = new THREE.Group();
       shoulder.position.set(side * 0.25, 0.44, 0);
-      const upper = new ModelKit().cylinder(0.055, 0.05, 0.3, 6, topStyle === 'tee' ? look.top : sleeve, { position: [0, -0.15, 0] }).build(0.006, side);
+      const upperKit = new ModelKit().cylinder(0.055, 0.05, 0.3, 6, topStyle === 'tee' || topStyle === 'osariya' ? look.top : sleeve, { position: [0, -0.15, 0] });
+      // The osariya blouse has puffed sleeves.
+      if (topStyle === 'osariya') upperKit.blob(0.08, look.top, { position: [0, -0.06, 0], scale: [1, 0.9, 1], detail: 0 });
+      const upper = upperKit.build(0.006, side);
       shoulder.add(mesh(upper));
       const elbow = new THREE.Group();
       elbow.position.y = -0.3;
@@ -231,6 +253,8 @@ export class HumanModel {
     const swing = Math.sin(p) * stride * b;
     const lift = Math.max(0, Math.cos(p)) * stride * b;
     const liftB = Math.max(0, -Math.cos(p)) * stride * b;
+    this.hips.rotation.set(0, 0, 0);
+    this.head.rotation.z = 0;
 
     if (pose === 'sit' || pose === 'ride') {
       const ride = pose === 'ride';
@@ -267,16 +291,91 @@ export class HumanModel {
     this.arms[1].shoulder.rotation.set(swing * 0.8, 0, -0.12);
     this.arms[0].elbow.rotation.x = 0.3 + (pose === 'run' ? 0.8 : 0.2) * b;
     this.arms[1].elbow.rotation.x = 0.3 + (pose === 'run' ? 0.8 : 0.2) * b;
-    if (pose === 'wave') {
-      this.arms[1].shoulder.rotation.set(0, 0, -2.6 + Math.sin(time * 9) * 0.25);
-      this.arms[1].elbow.rotation.x = 0.4;
-    }
-
     const breathe = Math.sin(time * 2) * 0.01 * (1 - b);
     const bob = Math.abs(Math.sin(p)) * 0.05 * b * stride;
     this.hips.position.y = 0.86 + bob + breathe;
-    this.chest.rotation.x = -(pose === 'run' ? 0.22 : 0.06) * b;
+    this.chest.rotation.set(-(pose === 'run' ? 0.22 : 0.06) * b, 0, 0);
     this.head.rotation.set(-this.chest.rotation.x * 0.6, 0, 0);
+    if (isEmote(pose)) this.emote(pose, time);
+  }
+
+  /** Emote poses (rotation.x > 0 swings a limb forward; chest.x < 0 leans forward). */
+  private emote(e: Emote, time: number): void {
+    const [left, right] = this.arms;
+    switch (e) {
+      case 'wave':
+        right.shoulder.rotation.set(0, 0, -2.6 + Math.sin(time * 9) * 0.25);
+        right.elbow.rotation.x = 0.4;
+        break;
+      case 'ayubowan':
+        // The Sri Lankan greeting: palms together at the chest, a small bow.
+        left.shoulder.rotation.set(0.75, 0, 0.55);
+        right.shoulder.rotation.set(0.75, 0, -0.55);
+        left.elbow.rotation.x = right.elbow.rotation.x = 1.75;
+        this.chest.rotation.x = -0.25 - Math.max(0, Math.sin(time * 1.5)) * 0.1;
+        this.head.rotation.x = -0.15;
+        break;
+      case 'cheer': {
+        const hop = Math.abs(Math.sin(time * 7));
+        left.shoulder.rotation.set(0, 0, 2.7 + hop * 0.2);
+        right.shoulder.rotation.set(0, 0, -2.7 - hop * 0.2);
+        left.elbow.rotation.x = right.elbow.rotation.x = 0.2;
+        this.hips.position.y = 0.86 + hop * 0.12;
+        this.head.rotation.x = 0.2;
+        break;
+      }
+      case 'dance': {
+        const beat = Math.sin(time * 6);
+        this.hips.rotation.z = beat * 0.12;
+        this.hips.rotation.y = Math.sin(time * 3) * 0.3;
+        this.hips.position.y = 0.86 - Math.abs(beat) * 0.05;
+        left.shoulder.rotation.set(0.3, 0, 1.6 + beat * 0.8);
+        right.shoulder.rotation.set(0.3, 0, -1.6 + beat * 0.8);
+        left.elbow.rotation.x = right.elbow.rotation.x = 0.9;
+        for (const [i, leg] of this.legs.entries()) {
+          leg.hip.rotation.x = (i ? -1 : 1) * beat * 0.25;
+          leg.knee.rotation.x = -Math.max(0, (i ? -1 : 1) * beat) * 0.6;
+        }
+        this.head.rotation.z = -beat * 0.15;
+        break;
+      }
+      case 'clap': {
+        const open = 0.35 + Math.max(0, Math.sin(time * 14)) * 0.35;
+        left.shoulder.rotation.set(1.2, 0, open);
+        right.shoulder.rotation.set(1.2, 0, -open);
+        left.elbow.rotation.x = right.elbow.rotation.x = 0.5;
+        break;
+      }
+      case 'bow':
+        this.chest.rotation.x = -0.75;
+        this.head.rotation.x = -0.2;
+        left.shoulder.rotation.set(0.1, 0, 0.1);
+        right.shoulder.rotation.set(0.1, 0, -0.1);
+        left.elbow.rotation.x = right.elbow.rotation.x = 0.1;
+        break;
+      case 'laugh': {
+        const shake = Math.sin(time * 18) * 0.04;
+        this.chest.rotation.x = 0.18 + shake;
+        this.head.rotation.x = 0.35 + shake;
+        left.shoulder.rotation.set(0.6, 0, 0.5);
+        right.shoulder.rotation.set(0.6, 0, -0.5);
+        left.elbow.rotation.x = right.elbow.rotation.x = 1.5;
+        break;
+      }
+      case 'sitdown':
+        // Sitting on the ground, legs out, leaning back on the hands.
+        this.hips.position.y = 0.2;
+        for (const leg of this.legs) {
+          leg.hip.rotation.set(1.45, 0, 0);
+          leg.knee.rotation.x = -0.35;
+        }
+        left.shoulder.rotation.set(-0.5, 0, 0.3);
+        right.shoulder.rotation.set(-0.5, 0, -0.3);
+        left.elbow.rotation.x = right.elbow.rotation.x = 0;
+        this.chest.rotation.x = 0.15;
+        this.head.rotation.x = -0.1 + Math.sin(time * 0.8) * 0.05;
+        break;
+    }
   }
 }
 
@@ -326,6 +425,11 @@ function addHat(k: ModelKit, look: HumanLook): void {
       k.cylinder(0.34, 0.34, 0.03, 14, '#e8c872', { position: [0, 0.42, 0], pattern: Pattern.Thatch });
       k.cylinder(0.16, 0.19, 0.14, 12, '#e8c872', { position: [0, 0.5, 0], pattern: Pattern.Thatch });
       k.cylinder(0.195, 0.195, 0.04, 12, '#d8463a', { position: [0, 0.45, 0] });
+      break;
+    case 'natcap':
+      // A round white cap with a gold band (worn with the national dress).
+      k.cylinder(0.2, 0.215, 0.11, 14, '#f6f0e4', { position: [0, 0.43, 0.01] });
+      k.cylinder(0.218, 0.218, 0.03, 14, '#e8c872', { position: [0, 0.39, 0.01] });
       break;
     case 'beret':
       k.blob(0.2, '#d8463a', { position: [0.03, 0.45, 0.02], scale: [1.1, 0.4, 1.1], detail: 1, roughness: 0.02 });

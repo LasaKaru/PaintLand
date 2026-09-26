@@ -14,11 +14,17 @@ import { analytics } from '../net/Analytics';
 import { CHALLENGES, challengeAmount, challengeProgress, ensureDaily } from '../gameplay/Challenges';
 import { PHOTO_SUBJECTS } from '../gameplay/PhotoHunt';
 import { CHAINS, CITY_MISSIONS, missionUnlocked } from '../gameplay/CityMissions';
-import { CATALOGUE, MAX_TONICS, PALETTE } from '../gameplay/Profile';
+import { CATALOGUE, MAX_OUTFITS, MAX_TONICS, PALETTE } from '../gameplay/Profile';
 import type { ChapterDef } from '../world/Chapters';
 import type { MissionDef } from '../gameplay/Missions';
 import { VEHICLES, type VehicleId } from '../models/Vehicles';
 import { defaultEngine, defaultHorn } from '../audio/VehicleSounds';
+
+/** Ready-made outfits from the Sri Lankan pack (colours are free; styles need the pack). */
+const LANKA_PRESETS: { id: string; label: StringKey; look: Partial<HumanLook> }[] = [
+  { id: 'osariya', label: 'wr.presetOsariya', look: { topStyle: 'osariya', top: '#d8463a', hairStyle: 'bun', hat: 'none', acc: 'earrings', scarf: null } },
+  { id: 'national', label: 'wr.presetNational', look: { topStyle: 'national', top: '#f6f0e4', bottomStyle: 'sarong', bottom: '#f6f0e4', hat: 'natcap', scarf: null, shoes: '#6b4a2a' } },
+];
 
 /** Garage item fields stored on the vehicle's look rather than the character's. */
 const VEHICLE_FIELDS = ['roofLoad', 'decal', 'spoiler', 'glow', 'finish', 'wheelStyle', 'exhaust', 'engine', 'horn'];
@@ -423,7 +429,7 @@ export class Menu {
 
   private wardrobe(): string {
     const look = this.host.profile.data.look;
-    const tabs = ['hair', 'face', 'top', 'bottom', 'extras', 'name'];
+    const tabs = ['hair', 'face', 'top', 'bottom', 'extras', 'pet', 'outfits', 'name'];
     const tab = this.wardrobeTab;
     let content = '';
     if (tab === 'hair') content = `<h4>Style</h4>${this.items('hair', look.hairStyle, 'hairStyle')}<h4>Colour</h4>${this.swatches('hair', PALETTE.hair, look.hair)}`;
@@ -431,12 +437,35 @@ export class Menu {
     if (tab === 'top') content = `<h4>Top</h4>${this.items('top', look.topStyle ?? 'tee', 'topStyle')}<h4>Colour</h4>${this.swatches('top', PALETTE.cloth, look.top)}<h4>Scarf</h4>${this.swatches('scarf', PALETTE.cloth, look.scarf, true)}`;
     if (tab === 'bottom') content = `<h4>Bottom</h4>${this.items('bottom', look.bottomStyle ?? 'trousers', 'bottomStyle')}<h4>Colour</h4>${this.swatches('bottom', PALETTE.cloth, look.bottom)}<h4>Shoes</h4>${this.swatches('shoes', PALETTE.cloth, look.shoes)}`;
     if (tab === 'extras') content = `<h4>Hat</h4>${this.items('hat', look.hat, 'hat')}<h4>On your back</h4>${this.items('back', look.back ?? 'none', 'back')}<h4>${t('wr.acc')}</h4>${this.items('acc', look.acc ?? 'none', 'acc')}`;
+    if (tab === 'pet') content = `<h4>${t('wr.pet')}</h4>${this.items('pet', look.pet ?? 'none', 'pet')}<p class="menu-hint">${t('wr.petHint')}</p>`;
+    if (tab === 'outfits') content = this.outfitsTab();
     if (tab === 'name') content = `<h4>Your name (shown in multiplayer)</h4><input class="text-input" maxlength="20" value="${escapeHtml(this.host.profile.data.name)}" data-text="name">`;
     return `<div class="menu-panel side">${this.header('Wardrobe')}
       <div class="tabs">${tabs.map((t) => `<button class="tab ${t === tab ? 'on' : ''}" data-tab="${t}">${t}</button>`).join('')}</div>
       <div class="panel-body">${content}</div>
       <div class="row"><button class="btn" data-action="random-look">🎲 Randomise</button></div>
     </div>`;
+  }
+
+  private outfitsTab(): string {
+    const p = this.host.profile;
+    const saved = p.data.outfits ?? [];
+    const rows = saved
+      .map((o, i) => `<div class="card outfit-card"><b>${escapeHtml(o.name)}</b><div class="row"><button class="btn primary" data-action="outfit-wear" data-index="${i}">${t('wr.wear')}</button><button class="btn" data-action="outfit-delete" data-index="${i}" aria-label="${t('wr.delete')} ${escapeHtml(o.name)}">🗑</button></div></div>`)
+      .join('');
+    const pack = CATALOGUE.find((i) => i.id === 'pack:lanka')!;
+    const presets = LANKA_PRESETS.map((pr) => {
+      const missing = p.missingFor(pr.look).length;
+      return `<div class="card outfit-card"><b>🇱🇰 ${t(pr.label)}</b><div class="row"><button class="btn ${missing ? '' : 'primary'}" data-action="preset-wear" data-preset="${pr.id}">${t('wr.wear')}</button></div></div>`;
+    }).join('');
+    const ownsPack = p.owns(pack.id);
+    return `<h4>${t('wr.saveOutfit')}</h4>
+      <div class="row"><input class="text-input" maxlength="24" placeholder="${t('wr.outfitName')}" aria-label="${t('wr.outfitName')}" data-id="outfit-name"><button class="btn primary" data-action="outfit-save">💾 ${t('wr.save')}</button></div>
+      <h4>${t('wr.myOutfits')} (${saved.length}/${MAX_OUTFITS})</h4>
+      <div class="outfit-grid">${rows || `<p class="menu-hint">${t('wr.noOutfits')}</p>`}</div>
+      <h4>${t('wr.lankaPack')}</h4>
+      <div class="outfit-grid">${presets}</div>
+      ${ownsPack ? '' : `<div class="row"><button class="btn primary" data-buy="${pack.id}">${itemLabel(pack)} · 💧 ${pack.price}</button></div><p class="menu-hint">${t('wr.packHint')}</p>`}`;
   }
 
   private garage(): string {
@@ -1020,12 +1049,34 @@ export class Menu {
           this.render();
         });
         break;
+      case 'outfit-save': {
+        const name = this.root.querySelector<HTMLInputElement>('[data-id="outfit-name"]')?.value ?? '';
+        const r = p.saveOutfit(name);
+        this.toast(r === 'ok' ? t('wr.saved') : t('wr.full', { n: MAX_OUTFITS }));
+        this.render();
+        return;
+      }
+      case 'outfit-wear':
+      case 'preset-wear': {
+        const look = d.action === 'outfit-wear' ? p.data.outfits?.[Number(d.index)]?.look : LANKA_PRESETS.find((x) => x.id === d.preset)?.look;
+        if (!look) return;
+        const missing = p.wearOutfit(look);
+        this.host.lookChanged();
+        if (missing) this.toast(t('wr.missing', { n: missing }));
+        this.render();
+        return;
+      }
+      case 'outfit-delete':
+        p.deleteOutfit(Number(d.index));
+        this.render();
+        return;
       case 'random-look': {
         const look = randomLook(Math.random);
         // Only keep owned styles.
         const keep = (cat: ShopItem['category'], v: string | undefined, fallback: string): string => (p.owns(`${cat}:${v}`) ? v! : fallback);
         const next: HumanLook = {
           ...look,
+          pet: p.data.look.pet,
           hairStyle: keep('hair', look.hairStyle, 'bob') as HumanLook['hairStyle'],
           topStyle: keep('top', look.topStyle, 'tee') as HumanLook['topStyle'],
           bottomStyle: keep('bottom', look.bottomStyle, 'trousers') as HumanLook['bottomStyle'],

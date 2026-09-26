@@ -79,7 +79,7 @@ export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' 
   { action: 'sprint', label: 'Sprint', group: 'On foot' },
   { action: 'crouch', label: 'Walk slowly', group: 'On foot' },
   { action: 'interact', label: 'Get in / out · talk', group: 'On foot' },
-  { action: 'emote', label: 'Wave', group: 'On foot' },
+  { action: 'emote', label: 'Emote wheel', group: 'On foot' },
   { action: 'talk', label: 'Push to talk (voice chat)', group: 'Game' },
   { action: 'camera', label: 'Change camera', group: 'Camera' },
   { action: 'fovDown', label: 'Narrower view', group: 'Camera' },

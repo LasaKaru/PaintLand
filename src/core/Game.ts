@@ -40,6 +40,10 @@ import { familyCaps, onlineAllowed } from './Family';
 import { BENCH_MEASURE, BENCH_SPOTS, BENCH_WARMUP, scoreBenchmark, type BenchmarkResult } from '../render/Benchmark';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
 import { defaultEngine, defaultHorn } from '../audio/VehicleSounds';
+import { EmoteWheel } from '../ui/EmoteWheel';
+import { Pet, isPet } from '../models/Pets';
+import type { Emote } from '../models/Human';
+import type { GroupPhotoInvite } from '../net/Net';
 import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
 import { buildBeacon, buildChest, buildPaintPot } from '../models/CityProps';
@@ -166,6 +170,14 @@ export class Game {
   private fps = 60;
   private hudHidden = false;
   private waveTimer = 0;
+  /** The emote playing while waveTimer runs (sitdown lasts until you move). */
+  private emoteName: Emote = 'wave';
+  private emoteWheel!: EmoteWheel;
+  private pet: Pet | null = null;
+  private groupInvite!: HTMLDivElement;
+  private pendingInvite: { from: string; at: GroupPhotoInvite; until: number } | null = null;
+  private photoCountdown!: HTMLDivElement;
+  private groupShotTimer = 0;
   private raceCountdown = 0;
   private missionEndTimer = 0;
   private saveTimer = 0;
@@ -325,6 +337,21 @@ export class Game {
     this.mapView.onClose = () => this.closeMap();
     this.mapView.onOpen = () => this.openMap();
     this.net.onRace = (msg, from) => this.onRaceMessage(msg, from);
+    this.net.onGroupPhoto = (from, name, at) => this.onGroupPhotoInvite(from, name, at);
+    this.emoteWheel = new EmoteWheel(container);
+    this.groupInvite = document.createElement('div');
+    this.groupInvite.className = 'group-invite hidden';
+    this.groupInvite.setAttribute('role', 'status');
+    container.appendChild(this.groupInvite);
+    this.groupInvite.addEventListener('click', (e) => {
+      const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
+      if (b?.dataset.gp === 'join') this.joinGroupPhoto();
+      else if (b) this.hideGroupInvite();
+    });
+    this.photoCountdown = document.createElement('div');
+    this.photoCountdown.className = 'photo-countdown hidden';
+    this.photoCountdown.setAttribute('aria-live', 'assertive');
+    container.appendChild(this.photoCountdown);
     this.photo = new PhotoMode(container, {
       studio: () => this.settings,
       studioChanged: () => this.settingsChanged(),
@@ -332,6 +359,7 @@ export class Game {
       setWeather: (w) => this.env.setWeather(w),
       capture: (m) => this.capturePhoto(m),
       exit: () => this.exitPhoto(),
+      groupPhoto: () => this.startGroupPhoto(),
     });
 
     window.addEventListener('resize', () => this.resize());
@@ -460,6 +488,129 @@ export class Game {
     this.loadGhostFor(this.lapKey());
   }
 
+  // ————— emotes, pets and group photos —————
+
+  private toggleEmoteWheel(): void {
+    if (this.emoteWheel.isOpen) {
+      this.emoteWheel.close();
+      return;
+    }
+    if (this.mode !== 'foot') {
+      this.popAtPawn(t('emote.onFoot'), 'info');
+      return;
+    }
+    this.input.releasePointerLock();
+    this.emoteWheel.open((e) => this.startEmote(e));
+  }
+
+  startEmote(e: Emote): void {
+    this.emoteName = e;
+    this.waveTimer = e === 'sitdown' ? Infinity : e === 'dance' ? 6 : 2.8;
+  }
+
+  /** Emotes stop when you walk off (sitting down lasts until then). */
+  private tickEmote(dt: number, speed: number): void {
+    if (speed > 0.5) this.waveTimer = 0;
+    else if (this.waveTimer > 0) this.waveTimer -= dt;
+  }
+
+  /** The pet trots after you on foot and waits in the car while you drive. */
+  private updatePet(dt: number, owner: THREE.Object3D): void {
+    const pet = this.pet;
+    if (!pet) return;
+    pet.root.visible = owner.visible;
+    const fwd = _v4.set(0, 0, -1).applyQuaternion(owner.quaternion);
+    pet.update(dt, owner.position, Math.atan2(-fwd.x, -fwd.z), this.time);
+  }
+
+  private hidePet(): void {
+    if (!this.pet) return;
+    this.pet.root.visible = false;
+    this.pet.reset();
+  }
+
+  /** The free-roam area id other players see (as in PlayerState.chapter). */
+  private roamChapter(): string | null {
+    return this.inHub && this.area ? (this.area.id === 'harbour' ? 'hub' : this.area.id) : null;
+  }
+
+  /** Photo mode → Group photo: line the camera up in front of you, invite everyone near, count down, snap. */
+  private startGroupPhoto(): void {
+    const chapter = this.roamChapter();
+    if (!chapter || this.mode !== 'foot' || this.state !== 'photo') {
+      this.menu.toast(t('group.needFoot'));
+      return;
+    }
+    const w = this.hubWalker;
+    if (this.net.connected) this.net.groupPhoto({ chapter, x: w.x, z: w.z, yaw: w.heading });
+    // Camera 7 m in front, a little above head height, looking back at you.
+    const pc = this.photoCam;
+    const fx = -Math.sin(w.heading);
+    const fz = -Math.cos(w.heading);
+    pc.pos.set(w.x + fx * 7, HUB_Y + w.y + 2.4, w.z + fz * 7);
+    pc.yaw = w.heading + Math.PI;
+    pc.pitch = -0.1;
+    this.startEmote('cheer');
+    this.groupShotTimer = 6;
+  }
+
+  private tickGroupPhoto(dt: number): void {
+    if (this.groupShotTimer <= 0) return;
+    this.groupShotTimer -= dt;
+    const n = Math.ceil(this.groupShotTimer);
+    // 3 · 2 · 1 over the last three seconds (before that, others have time to join).
+    this.photoCountdown.textContent = String(n);
+    this.photoCountdown.classList.toggle('hidden', this.groupShotTimer <= 0 || n > 3);
+    if (this.groupShotTimer <= 1.2 && this.waveTimer < 1.5) this.startEmote('cheer');
+    if (this.groupShotTimer <= 0) {
+      this.photoCountdown.classList.add('hidden');
+      if (this.state === 'photo') this.capturePhoto(1);
+    }
+  }
+
+  private onGroupPhotoInvite(from: string, name: string, at: GroupPhotoInvite): void {
+    const o = this.options;
+    if (o.blocked.includes(name) || this.roamChapter() !== at.chapter) return;
+    const me = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+    if (Math.hypot(me.x - at.x, me.z - at.z) > 80) return;
+    this.pendingInvite = { from, at, until: performance.now() + 8000 };
+    this.groupInvite.innerHTML = `<span>📸 ${escapeHtml(t('group.invite', { name }))}</span><button class="btn primary" data-gp="join">${t('group.join')}</button><button class="btn" data-gp="no" aria-label="${t('group.dismiss')}">✕</button>`;
+    this.groupInvite.classList.remove('hidden');
+    window.setTimeout(() => {
+      if (this.pendingInvite && performance.now() >= this.pendingInvite.until) this.hideGroupInvite();
+    }, 8100);
+  }
+
+  private hideGroupInvite(): void {
+    this.pendingInvite = null;
+    this.groupInvite.classList.add('hidden');
+  }
+
+  /** Stand in the group beside the photographer (a spot picked from our id so friends don't pile up). */
+  private joinGroupPhoto(): void {
+    const inv = this.pendingInvite;
+    this.hideGroupInvite();
+    if (!inv || this.roamChapter() !== inv.at.chapter || this.state !== 'hub') return;
+    if (this.mode === 'drive') {
+      if (Math.abs(this.hubCar.v) > 4 || this.hubCar.y < -0.5) return;
+      this.mode = 'foot';
+      this.seatHuman();
+      this.updateHeadVisibility();
+    }
+    const spots = [[1.3, 0], [-1.3, 0], [2.6, 0], [-2.6, 0], [0.65, 1.3], [-0.65, 1.3], [1.95, 1.3], [-1.95, 1.3]];
+    let h = 0;
+    for (const c of this.net.selfId) h = (h * 31 + c.charCodeAt(0)) >>> 0;
+    const [side, back] = spots[h % spots.length];
+    const { x, z, yaw } = inv.at;
+    const rx = Math.cos(yaw);
+    const rz = -Math.sin(yaw);
+    this.hubWalker.place(x + rx * side + Math.sin(yaw) * back, z + rz * side + Math.cos(yaw) * back, yaw);
+    this.hubCam.yaw = yaw;
+    this.hubCam.snap = true;
+    this.pet?.reset();
+    this.startEmote('cheer');
+  }
+
   /** Free-roam handling for the current vehicle; amphibious ones may head out to sea. */
   private fitHubCar(): void {
     const def = vehicleById(this.profile.data.vehicle);
@@ -480,6 +631,13 @@ export class Game {
     this.vehicle = new VehicleModel(def, this.profile.vehicleLook(def.id));
     this.humanModel = new HumanModel(this.profile.data.look);
     this.scene.add(this.vehicle.root);
+    this.pet?.root.removeFromParent();
+    const petKind = this.profile.data.look.pet;
+    this.pet = isPet(petKind) ? new Pet(petKind) : null;
+    if (this.pet) {
+      this.pet.root.visible = false;
+      this.scene.add(this.pet.root);
+    }
     this.rover.tuning = tuningFor(def.id);
     const vlook = this.profile.vehicleLook(def.id);
     this.audio.setVehicleSounds(vlook.engine ?? defaultEngine(def.id), vlook.horn ?? defaultHorn(def.id));
@@ -1416,7 +1574,7 @@ export class Game {
       const order: TonicId[] = ['magnet', 'feather', 'fizzy'];
       this.selectedTonic = order[(order.indexOf(this.selectedTonic) + 1) % order.length];
     }
-    if (inp.consume('emote')) this.waveTimer = 2.2;
+    if (inp.consume('emote')) this.toggleEmoteWheel();
     if (inp.consume('chat') && this.net.connected && this.options.chat !== 'off') {
       this.input.releasePointerLock();
       this.hud.openChat((text) => {
@@ -1443,6 +1601,9 @@ export class Game {
   }
 
   private render(dt: number, alpha: number): void {
+    // The pet only shows while you're on foot (updatePet shows it again).
+    if (this.mode !== 'foot' && this.pet?.root.visible) this.hidePet();
+    this.tickGroupPhoto(dt);
     if (this.inHub && (this.state === 'hub' || this.state === 'paused' || this.state === 'photo')) {
       this.renderHub(dt, alpha);
       return;
@@ -1486,8 +1647,9 @@ export class Game {
       const hb = _m.makeBasis(hf.right, hf.up, _v.copy(hf.tangent).negate());
       this.humanModel.root.quaternion.setFromRotationMatrix(hb).multiply(_q.setFromAxisAngle(_y, -hs.heading));
       this.humanModel.root.position.copy(hf.position).addScaledVector(hf.right, hs.x).addScaledVector(hf.up, hs.h);
-      if (this.waveTimer > 0) this.waveTimer -= dt;
-      this.humanModel.animate(dt, this.waveTimer > 0 && this.human.speed < 0.5 ? 'wave' : this.human.pose, this.human.speed, this.time);
+      this.tickEmote(dt, this.human.speed);
+      this.humanModel.animate(dt, this.waveTimer > 0 ? this.emoteName : this.human.pose, this.human.speed, this.time);
+      this.updatePet(dt, this.humanModel.root);
       if (this.human.grounded && this.human.speed > 0.5) {
         this.footstepTimer -= dt * this.human.speed;
         if (this.footstepTimer <= 0) {
@@ -1546,7 +1708,7 @@ export class Game {
       const st: PlayerState =
         this.mode === 'drive'
           ? { chapter: this.world.chapter.id, mode: 'drive', s: this.rover.s, x: this.rover.x, h: this.rover.h, yaw: this.rover.yaw, v: this.rover.v }
-          : { chapter: this.world.chapter.id, mode: 'foot', s: this.human.s, x: this.human.x, h: this.human.h, yaw: this.human.heading, v: this.human.speed, pose: this.waveTimer > 0 ? 'wave' : undefined };
+          : { chapter: this.world.chapter.id, mode: 'foot', s: this.human.s, x: this.human.x, h: this.human.h, yaw: this.human.heading, v: this.human.speed, pose: this.waveTimer > 0 ? this.emoteName : undefined };
       this.net.update(dt, st, this.playerInfo());
       this.remotes.update(dt, this.time, this.net, path, this.world.chapter.id, cam);
       this.hud.setPlayers([...this.net.peers.values()].map((p) => p.info?.name ?? '…'), this.net.status);
@@ -2223,7 +2385,7 @@ export class Game {
   private hubInput(dt: number): void {
     const inp = this.input;
     if (inp.consume('honk')) this.audio.honk(60);
-    if (inp.consume('emote')) this.waveTimer = 2.2;
+    if (inp.consume('emote')) this.toggleEmoteWheel();
     if (inp.consume('chat') && this.net.connected && this.options.chat !== 'off') {
       this.input.releasePointerLock();
       this.hud.openChat((text) => {
@@ -2358,8 +2520,9 @@ export class Game {
       const hm = this.humanModel;
       hm.root.position.set(w.x, HUB_Y + w.y, w.z);
       hm.root.quaternion.setFromAxisAngle(_y, w.heading);
-      if (this.waveTimer > 0) this.waveTimer -= dt;
-      hm.animate(dt, this.waveTimer > 0 && this.hubWalker.speed < 0.5 ? 'wave' : this.hubWalker.pose, this.hubWalker.speed, this.time);
+      this.tickEmote(dt, this.hubWalker.speed);
+      hm.animate(dt, this.waveTimer > 0 ? this.emoteName : this.hubWalker.pose, this.hubWalker.speed, this.time);
+      this.updatePet(dt, hm.root);
       if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
         this.footstepTimer -= dt * this.hubWalker.speed;
         if (this.footstepTimer <= 0) {
@@ -2460,7 +2623,7 @@ export class Game {
       const foot = this.mode === 'foot';
       const chapter = area.id === 'harbour' ? 'hub' : area.id;
       const st: PlayerState = foot
-        ? { chapter, mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? 'wave' : undefined }
+        ? { chapter, mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? this.emoteName : undefined }
         : { chapter, mode: 'drive', s: this.hubCar.z + HUB_S_OFFSET, x: this.hubCar.x, h: this.hubCar.y, yaw: this.hubCar.heading, v: this.hubCar.v };
       this.net.update(dt, st, this.playerInfo());
       this.remotes.update(dt, this.time, this.net, this.world.path, chapter, cam, HUB_Y);

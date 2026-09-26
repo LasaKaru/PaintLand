@@ -7,14 +7,24 @@ import type { TonicId } from './Collectibles';
 export interface ShopItem {
   id: string;
   name: string;
-  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow' | 'eyes' | 'mouth' | 'facial' | 'acc' | 'finish' | 'wheels' | 'exhaust' | 'engine' | 'horn';
+  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow' | 'eyes' | 'mouth' | 'facial' | 'acc' | 'finish' | 'wheels' | 'exhaust' | 'engine' | 'horn' | 'pet' | 'pack';
   price: number;
   value: string;
   /** 0 common, 1 rare, 2 epic, 3 legendary (loot drops). */
   rarity?: 0 | 1 | 2 | 3;
   /** Only found in loot chests, never sold. */
   loot?: boolean;
+  /** A bundle: buying it gives all of these items. */
+  grants?: string[];
 }
+
+/** A saved outfit (wardrobe → Outfits). */
+export interface OutfitSet {
+  name: string;
+  look: HumanLook;
+}
+
+export const MAX_OUTFITS = 8;
 
 /** The shop catalogue (docs/06 §7, docs/08 §1–2). Colours are always free. */
 export const CATALOGUE: ShopItem[] = [
@@ -123,6 +133,16 @@ export const CATALOGUE: ShopItem[] = [
   { id: 'horn:bell', name: 'Bicycle bell', category: 'horn', price: 40, value: 'bell' },
   { id: 'horn:trumpet', name: 'Fanfare', category: 'horn', price: 90, value: 'trumpet' },
   { id: 'horn:train', name: 'Train whistle', category: 'horn', price: 0, value: 'train', rarity: 2, loot: true },
+  // The Sri Lankan pack: Kandyan osariya, the national dress and cap, and the sarong.
+  { id: 'top:osariya', name: 'Osariya (Kandyan sari)', category: 'top', price: 150, value: 'osariya' },
+  { id: 'top:national', name: 'National dress tunic', category: 'top', price: 110, value: 'national' },
+  { id: 'hat:natcap', name: 'National cap', category: 'hat', price: 60, value: 'natcap' },
+  { id: 'pack:lanka', name: 'Sri Lankan outfit pack', category: 'pack', price: 280, value: 'lanka', grants: ['top:osariya', 'top:national', 'hat:natcap', 'bottom:sarong', 'top:sari'] },
+  // Pets that follow you on foot.
+  { id: 'pet:none', name: 'No pet', category: 'pet', price: 0, value: 'none' },
+  { id: 'pet:cat', name: 'Paper cat', category: 'pet', price: 200, value: 'cat' },
+  { id: 'pet:fox', name: 'Little fox', category: 'pet', price: 260, value: 'fox' },
+  { id: 'pet:crane', name: 'Origami crane', category: 'pet', price: 0, value: 'crane', rarity: 2, loot: true },
   { id: 'tonic:magnet', name: 'Magnet tonic', category: 'tonic', price: 30, value: 'magnet' },
   { id: 'tonic:feather', name: 'Feather tonic', category: 'tonic', price: 40, value: 'feather' },
   { id: 'tonic:fizzy', name: 'Fizzy Ink', category: 'tonic', price: 35, value: 'fizzy' },
@@ -144,6 +164,8 @@ export interface ProfileData {
   look: HumanLook;
   vehicle: VehicleId;
   vehicleLooks: Partial<Record<VehicleId, VehicleLook>>;
+  /** Saved outfit sets. */
+  outfits?: OutfitSet[];
   tonics: Record<TonicId, number>;
   sealed: Record<string, number[]>;
   bestLap: Record<string, number>;
@@ -232,6 +254,46 @@ export class Profile {
     for (const l of this.listeners) l();
   }
 
+  saveOutfit(name: string): 'ok' | 'full' {
+    const list = (this.data.outfits ??= []);
+    if (list.length >= MAX_OUTFITS) return 'full';
+    list.push({ name: name.trim().slice(0, 24) || `Outfit ${list.length + 1}`, look: { ...this.data.look } });
+    this.save();
+    return 'ok';
+  }
+
+  deleteOutfit(i: number): void {
+    this.data.outfits?.splice(i, 1);
+    this.save();
+  }
+
+  /** Items a look uses that aren't owned yet (so a preset can offer to buy them). */
+  missingFor(look: Partial<HumanLook>): ShopItem[] {
+    const fields: [keyof HumanLook, ShopItem['category']][] = [['hairStyle', 'hair'], ['hat', 'hat'], ['topStyle', 'top'], ['bottomStyle', 'bottom'], ['glasses', 'glasses'], ['back', 'back'], ['eyes', 'eyes'], ['mouth', 'mouth'], ['face', 'facial'], ['acc', 'acc'], ['pet', 'pet']];
+    const out: ShopItem[] = [];
+    for (const [field, category] of fields) {
+      const v = look[field];
+      if (v === undefined) continue;
+      const item = CATALOGUE.find((i) => i.category === category && i.value === v);
+      if (item && !this.owns(item.id)) out.push(item);
+    }
+    return out;
+  }
+
+  /** Wear a saved or preset outfit; only items you own are put on. */
+  wearOutfit(look: Partial<HumanLook>): number {
+    const missing = this.missingFor(look);
+    const next = { ...this.data.look, ...look };
+    const fieldOf: Partial<Record<ShopItem['category'], keyof HumanLook>> = { hair: 'hairStyle', hat: 'hat', top: 'topStyle', bottom: 'bottomStyle', glasses: 'glasses', back: 'back', eyes: 'eyes', mouth: 'mouth', facial: 'face', acc: 'acc', pet: 'pet' };
+    for (const m of missing) {
+      const f = fieldOf[m.category];
+      if (f) (next as unknown as Record<string, unknown>)[f] = (this.data.look as unknown as Record<string, unknown>)[f];
+    }
+    this.data.look = next;
+    this.save();
+    return missing.length;
+  }
+
   owns(id: string): boolean {
     return this.data.owned.includes(id);
   }
@@ -256,6 +318,7 @@ export class Profile {
     if (this.data.ink < item.price) return 'poor';
     this.data.ink -= item.price;
     this.data.owned.push(item.id);
+    for (const g of item.grants ?? []) if (!this.data.owned.includes(g)) this.data.owned.push(g);
     this.save();
     return 'ok';
   }
