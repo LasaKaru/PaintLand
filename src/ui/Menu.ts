@@ -1,4 +1,5 @@
 import { LiveryEditor } from './LiveryEditor';
+import { actionGroupLabel, actionLabel, itemLabel } from './names';
 import { checkPin, hashPin, isLocked, PIN_PATTERN, PinGuard } from '../core/Family';
 import { RoadStudio } from './RoadStudio';
 import type { CustomRoad } from '../creator/CustomRoad';
@@ -369,7 +370,7 @@ export class Menu {
             ? `<span class="label">🔒 ${t('cm.locked')}</span>`
             : `<button class="btn ${isDone ? '' : 'primary'}" data-citymission="${m.id}">${m.id === current ? '▶' : isDone ? t('cm.replay') : t('cm.start')}</button>`;
           return `<div class="card mission-card ${isDone ? 'done' : ''}">
-            <div class="mission-top"><span class="hand">${isDone ? '✓ ' : ''}${m.title}</span><span class="reward">💧 ${m.reward.ink}${m.reward.item ? ` + ${itemName(m.reward.item)}` : ''}</span></div>
+            <div class="mission-top"><span class="hand">${isDone ? '✓ ' : ''}${m.title}</span><span class="reward">💧 ${m.reward.ink}${m.reward.item ? ` + ${itemLabel(m.reward.item)}` : ''}</span></div>
             <div class="label">${m.giver}</div>
             <p>${m.intro}</p>${btn}</div>`;
         })
@@ -388,7 +389,7 @@ export class Menu {
       .map((m) => {
         const d = ch.districts[m.giver.district];
         return `<div class="card mission-card ${done.has(m.id) ? 'done' : ''}">
-          <div class="mission-top"><span class="hand">${m.title}</span><span class="reward">💧 ${m.reward.ink}${m.reward.item ? ` + ${itemName(m.reward.item)}` : ''}</span></div>
+          <div class="mission-top"><span class="hand">${m.title}</span><span class="reward">💧 ${m.reward.ink}${m.reward.item ? ` + ${itemLabel(m.reward.item)}` : ''}</span></div>
           <div class="label">${m.giver.name} · ${d?.name ?? ''}</div>
           <p>${m.text}</p>
           <button class="btn ${done.has(m.id) ? '' : 'primary'}" data-mission="${m.id}">${done.has(m.id) ? 'Play again' : 'Go to ' + m.giver.name.split(' ')[0]}</button>
@@ -409,7 +410,7 @@ export class Menu {
       .map((i) => {
         const owned = this.host.profile.owns(i.id);
         const tag = owned ? '' : i.loot ? '<small>🎁 loot chests</small>' : `<small>💧 ${i.price}</small>`;
-        return `<button class="item ${i.value === current ? 'on' : ''} ${owned ? '' : 'locked'} ${i.rarity !== undefined ? `rarity-${i.rarity}` : ''}" data-item="${i.id}" data-field="${field}">${i.name}${tag}</button>`;
+        return `<button class="item ${i.value === current ? 'on' : ''} ${owned ? '' : 'locked'} ${i.rarity !== undefined ? `rarity-${i.rarity}` : ''}" data-item="${i.id}" data-field="${field}">${itemLabel(i)}${tag}</button>`;
       })
       .join('')}</div>`;
   }
@@ -467,15 +468,15 @@ export class Menu {
     const tonics = (['magnet', 'feather', 'fizzy'] as const)
       .map((t) => {
         const item = CATALOGUE.find((i) => i.id === `tonic:${t}`)!;
-        return `<div class="card tonic-card"><b>${item.name}</b><div class="dots">${'●'.repeat(p.data.tonics[t])}${'○'.repeat(MAX_TONICS - p.data.tonics[t])}</div><button class="btn" data-buy="${item.id}">Buy · 💧 ${item.price}</button></div>`;
+        return `<div class="card tonic-card"><b>${itemLabel(item)}</b><div class="dots">${'●'.repeat(p.data.tonics[t])}${'○'.repeat(MAX_TONICS - p.data.tonics[t])}</div><button class="btn" data-buy="${item.id}">Buy · 💧 ${item.price}</button></div>`;
       })
       .join('');
     const owned = CATALOGUE.filter((i) => i.price > 0 && i.category !== 'tonic' && p.owns(i.id));
     const forSale = CATALOGUE.filter((i) => i.price > 0 && i.category !== 'tonic' && !p.owns(i.id));
     return `<div class="menu-panel wide">${this.header('Shop & inventory')}
       <h4>Tonics you carry (press <kbd>Q</kbd> in game to drink one)</h4><div class="tonic-row">${tonics}</div>
-      <h4>For sale</h4><div class="item-grid">${forSale.map((i) => `<button class="item locked" data-buy="${i.id}">${i.name}<small>${i.category} · 💧 ${i.price}</small></button>`).join('') || '<p>You own everything. Wow.</p>'}</div>
-      <h4>Owned (${owned.length})</h4><div class="item-grid">${owned.map((i) => `<span class="item">${i.name}<small>${i.category}</small></span>`).join('') || '<p class="menu-hint">Nothing yet — earn ink from notes, phrases and missions.</p>'}</div>
+      <h4>For sale</h4><div class="item-grid">${forSale.map((i) => `<button class="item locked" data-buy="${i.id}">${itemLabel(i)}<small>${i.category} · 💧 ${i.price}</small></button>`).join('') || '<p>You own everything. Wow.</p>'}</div>
+      <h4>Owned (${owned.length})</h4><div class="item-grid">${owned.map((i) => `<span class="item">${itemLabel(i)}<small>${i.category}</small></span>`).join('') || '<p class="menu-hint">Nothing yet — earn ink from notes, phrases and missions.</p>'}</div>
       <p class="menu-hint">Earn ink: 1 per note, 10 per sealed phrase, 25 per lap, and big rewards from missions.</p>
     </div>`;
   }
@@ -629,10 +630,10 @@ export class Menu {
   private controlsTab(): string {
     const input = this.host.input();
     const groups = [...new Set(ACTION_INFO.map((a) => a.group))];
-    const rows = groups.map((g) => `<h4>${g}</h4>${ACTION_INFO.filter((a) => a.group === g).map((a) => {
+    const rows = groups.map((g) => `<h4>${actionGroupLabel(g)}</h4>${ACTION_INFO.filter((a) => a.group === g).map((a) => {
       const keys = input.bindings[a.action];
       const listening = this.listening === a.action;
-      return `<div class="bind-row"><span>${a.label}</span><span class="keys">${keys.map((k) => `<kbd>${escapeHtml(keyLabel(k))}</kbd>`).join(' ') || '<i>none</i>'}</span><button class="btn small ${listening ? 'listening' : ''}" data-bind="${a.action}">${listening ? 'Press a key… (Esc cancels)' : 'Change'}</button></div>`;
+      return `<div class="bind-row"><span>${actionLabel(a.action)}</span><span class="keys">${keys.map((k) => `<kbd>${escapeHtml(keyLabel(k))}</kbd>`).join(' ') || '<i>none</i>'}</span><button class="btn small ${listening ? 'listening' : ''}" data-bind="${a.action}">${listening ? 'Press a key… (Esc cancels)' : 'Change'}</button></div>`;
     }).join('')}`).join('');
     return `
       <div class="grid2">
@@ -934,7 +935,7 @@ export class Menu {
         this.listening = null;
         if (code !== 'Escape') {
           this.host.input().bindPrimary(action, code);
-          this.toast(`${keyLabel(code)} → ${ACTION_INFO.find((a) => a.action === action)?.label ?? action}`);
+          this.toast(`${keyLabel(code)} → ${actionLabel(action)}`);
         }
         this.render();
       });
@@ -961,7 +962,7 @@ export class Menu {
       }
       if (!p.owns(item.id)) {
         const r = p.buy(item);
-        this.toast(r === 'ok' ? `Bought ${item.name}!` : r === 'poor' ? `Need ${item.price} ink` : '');
+        this.toast(r === 'ok' ? `Bought ${itemLabel(item)}!` : r === 'poor' ? `Need ${item.price} ink` : '');
         if (r !== 'ok') return;
       }
       if (d.field === 'roofLoad' || d.field === 'decal' || d.field === 'spoiler' || d.field === 'glow') {
@@ -981,7 +982,7 @@ export class Menu {
       const item = CATALOGUE.find((i) => i.id === `vehicle:${id}`)!;
       if (!p.owns(item.id)) {
         const r = p.buy(item);
-        this.toast(r === 'ok' ? `The ${item.name} is yours!` : `Need ${item.price} ink`);
+        this.toast(r === 'ok' ? `The ${itemLabel(item)} is yours!` : `Need ${item.price} ink`);
         if (r !== 'ok') return;
       }
       p.data.vehicle = id;
@@ -993,7 +994,7 @@ export class Menu {
     if (d.buy) {
       const item = CATALOGUE.find((i) => i.id === d.buy)!;
       const r = p.buy(item);
-      this.toast(r === 'ok' ? `Bought ${item.name}` : r === 'poor' ? `Need ${item.price} ink` : r === 'full' ? 'You can carry 3' : 'Already owned');
+      this.toast(r === 'ok' ? `Bought ${itemLabel(item)}` : r === 'poor' ? `Need ${item.price} ink` : r === 'full' ? 'You can carry 3' : 'Already owned');
       if (r === 'ok' && item.category !== 'tonic') this.host.lookChanged();
       this.render();
       return;
@@ -1166,9 +1167,6 @@ export class Menu {
   }
 }
 
-function itemName(id: string): string {
-  return CATALOGUE.find((i) => i.id === id)?.name ?? id;
-}
 
 function randomRoom(): string {
   return `paint-${Math.random().toString(36).slice(2, 7)}`;

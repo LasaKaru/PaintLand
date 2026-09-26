@@ -35,6 +35,7 @@ import { Village } from '../world/Village';
 import { Voice } from '../net/Voice';
 import { seatRider, unseatRider } from '../models/Rider';
 import { api } from '../net/Api';
+import { itemLabel } from '../ui/names';
 import { familyCaps, onlineAllowed } from './Family';
 import { BENCH_MEASURE, BENCH_SPOTS, BENCH_WARMUP, scoreBenchmark, type BenchmarkResult } from '../render/Benchmark';
 import { Hub, HUB_Y, type HubZone } from '../world/Hub';
@@ -2145,7 +2146,7 @@ export class Game {
       const loot = openChest(this.profile, c.tier);
       this.audio.loot(loot.rarity);
       const name = t(`rarity.${RARITY_NAMES[loot.rarity].toLowerCase()}` as StringKey);
-      const what = loot.item ? loot.item.name : `+${loot.ink} ink`;
+      const what = loot.item ? itemLabel(loot.item) : `+${loot.ink} ink`;
       this.hud.lootCard(name, RARITY_COLOURS[loot.rarity], what, [loot.item ? `+${loot.ink} ink` : '', loot.tonic ? `+1 ${loot.tonic}` : ''].filter(Boolean).join(' · '));
       this.splash = Math.max(this.splash, 0.6);
       this.checkTrophies();
@@ -2176,7 +2177,7 @@ export class Game {
       if (first && m.reward.item && !this.profile.owns(m.reward.item)) {
         this.profile.data.owned.push(m.reward.item);
         const item = CATALOGUE.find((i) => i.id === m.reward.item);
-        if (item) detail += ` · ${item.name}`;
+        if (item) detail += ` · ${itemLabel(item)}`;
       }
       this.profile.addStat('cityMissions');
       analytics.track('cityMission', { id: m.id });
@@ -2741,7 +2742,7 @@ export class Game {
         // Streak reward: a better chest every day of the streak (up to legendary).
         const loot = openChest(p, Math.min(3, p.data.streak.count - 1));
         this.audio.loot(loot.rarity);
-        window.setTimeout(() => this.hud.lootCard(t('daily.allDone', { n: p.data.streak.count }), RARITY_COLOURS[loot.rarity], loot.item ? loot.item.name : `+${loot.ink} ink`, t(`rarity.${RARITY_NAMES[loot.rarity].toLowerCase()}` as StringKey)), 3400);
+        window.setTimeout(() => this.hud.lootCard(t('daily.allDone', { n: p.data.streak.count }), RARITY_COLOURS[loot.rarity], loot.item ? itemLabel(loot.item) : `+${loot.ink} ink`, t(`rarity.${RARITY_NAMES[loot.rarity].toLowerCase()}` as StringKey)), 3400);
       }
       p.save();
       this.checkTrophies();
