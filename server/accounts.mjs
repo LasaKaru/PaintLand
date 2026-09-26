@@ -442,6 +442,8 @@ export function createAccounts({ dataDir, isBanned, now = Date.now }) {
     userForToken,
     /** Is this name registered to an account? */
     isTaken: (name) => byName.has(nameKey(name)),
+    /** The account registered to a name (for admin grants), or null. */
+    userByName: (name) => findByName(name),
     stats: () => ({ accounts: Object.keys(db.users).length, clubs: Object.keys(db.clubs).length, online: Object.values(db.users).filter(online).length }),
     flush: () => persist(),
   };

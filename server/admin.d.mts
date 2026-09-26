@@ -7,14 +7,18 @@ export interface AdminConfig {
   showSponsorCta: boolean;
   maxPlayersPerRoom: number;
   sponsors: { id: string; name: string; url: string; file: string; weight: number; enabled: boolean }[];
+  challenges?: AdminChallenge[];
 }
+export interface AdminChallenge { id: string; sponsorId: string; title: string; text: string; kind: string; target: number; ink: number; item: string; start: number; end: number; enabled: boolean }
+export declare const CHALLENGE_KINDS: string[];
+export declare function activeChallenges(config: AdminConfig, now?: number): { id: string; title: string; text: string; kind: string; target: number; ink: number; item?: string; end: number; sponsor: { name: string; url: string; image: string } }[];
 export declare const DEFAULT_CONFIG: AdminConfig;
 export declare const DEFAULT_ADMIN: { email: string; salt: string; hash: string };
 export declare function safeUrl(s: unknown): string;
 export declare function sanitizeConfig(input: unknown, current: AdminConfig): AdminConfig;
 export declare function hashPassword(password: string, salt?: string): { salt: string; hash: string };
 export declare function checkPassword(password: string, rec: { salt: string; hash: string }): boolean;
-export declare function createAdmin(opts: { dataDir: string; distDir?: string; live: () => { rooms: number; online: number; roomSizes: Record<string, number> }; accounts?: () => { accounts: number; clubs: number; online: number } | null; gallery?: () => { reported(): unknown[]; moderate(id: string, action: 'remove' | 'keep'): boolean; stats(): { roads: number; hidden: number } } | null }): {
+export declare function createAdmin(opts: { dataDir: string; distDir?: string; live: () => { rooms: number; online: number; roomSizes: Record<string, number> }; accounts?: () => { accounts: number; clubs: number; online: number } | null; gallery?: () => { reported(): unknown[]; moderate(id: string, action: 'remove' | 'keep'): boolean; stats(): { roads: number; hidden: number } } | null; store?: () => import('./store.mjs').Store | null }): {
   handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean>;
   maxRoom(): number;
   isBanned(name: string): boolean;

@@ -222,6 +222,10 @@ export interface ProfileData {
   /** Today's daily brushstrokes. */
   daily: DailyState | null;
   streak: Streak;
+  /** This season's pass (see SeasonPass.ts). */
+  pass?: { season: string; base: number; claimed: number[]; patronClaimed: number[] };
+  /** Joined sponsor challenges: starting count and whether it's done. */
+  sponsorCh?: Record<string, { base: number; done: boolean }>;
 }
 
 const KEY = 'paintland.profile.v2';

@@ -1,5 +1,5 @@
 import { api, apiBase, apiUrl, setApiBase } from '../net/Api';
-import { COMPANY_LOGO, setBrand, type BrandConfig } from '../brand/Brand';
+import { COMPANY_LOGO, brand, setBrand, type BrandConfig } from '../brand/Brand';
 import { paintedLogo } from '../brand/Watercolour';
 
 /** What /api/admin/stats returns (server/admin.mjs). */
@@ -25,10 +25,42 @@ interface Stats {
   health?: { sessions7: number; crashed7: number; crashFree7: number; errors: { msg: string; where: string; top: string; count: number; first: number; last: number }[] };
   roomSizes: Record<string, number>;
   since: number;
+  challenges?: { id: string; title: string; sponsor: string; joined: number; done: number }[];
+  patron?: PatronStats | null;
 }
-interface ServerConfig extends Omit<BrandConfig, 'sponsors'> {
+interface PatronStats {
+  current: string;
+  seasons: { season: string; issued: number; redeemed: number }[];
+  patrons: Record<string, number>;
+}
+interface AdminChallenge {
+  id: string;
+  sponsorId: string;
+  title: string;
+  text: string;
+  kind: string;
+  target: number;
+  ink: number;
+  item: string;
+  start: number;
+  end: number;
+  enabled: boolean;
+}
+const CHALLENGE_KINDS: [string, string][] = [
+  ['distance', 'Travel (km)'],
+  ['laps', 'Laps'],
+  ['stunts', 'Stunts'],
+  ['photos', 'Photos'],
+  ['races', 'Races finished'],
+  ['missions', 'Missions'],
+  ['pockets', 'Hidden pockets'],
+  ['secrets', 'Golden pots'],
+];
+const dateIn = (t: number): string => new Date(t || Date.now()).toISOString().slice(0, 10);
+interface ServerConfig extends Omit<BrandConfig, 'sponsors' | 'challenges'> {
   maxPlayersPerRoom: number;
   sponsors: { id: string; name: string; url: string; file: string; weight: number; enabled: boolean }[];
+  challenges?: AdminChallenge[];
 }
 interface PlayerReport {
   id: string;
@@ -49,7 +81,7 @@ interface Whoami {
   used: string;
 }
 
-type Tab = 'dashboard' | 'branding' | 'links' | 'sponsors' | 'players' | 'security';
+type Tab = 'dashboard' | 'branding' | 'links' | 'sponsors' | 'business' | 'players' | 'security';
 
 const TOKEN = 'paintland.admin';
 const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
@@ -67,6 +99,7 @@ export class AdminPanel {
   private reports: PlayerReport[] = [];
   private roads: { id: string; title: string; author: string; reports: number; hidden: boolean }[] = [];
   private stats: Stats | null = null;
+  private newCodes: string[] = [];
   private config: ServerConfig | null = null;
   private chat: { chat: { at: number; room: string; name: string; text: string }[]; banned: string[] } | null = null;
   private timer = 0;
@@ -167,6 +200,8 @@ export class AdminPanel {
       logoFrequency: c.logoFrequency,
       showSponsorCta: c.showSponsorCta,
       sponsors: c.sponsors.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, url: s.url, weight: s.weight, image: `/api/brand/${s.file}` })),
+      // Running challenges come in the public config on the next load; keep the current ones meanwhile.
+      challenges: brand().challenges,
     });
   }
 
@@ -194,8 +229,8 @@ export class AdminPanel {
   }
 
   private panel(): string {
-    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
-    const body = { dashboard: () => this.dashboard(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
+    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['business', '🎟 Pass & challenges'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
+    const body = { dashboard: () => this.dashboard(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), business: () => this.businessTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
     return `<div class="card admin-panel">
       <div class="admin-head">
         <div class="admin-brand"><img src="${esc(this.config?.company.logo ? apiUrl(this.config.company.logo) : COMPANY_LOGO)}" alt=""><span class="hand">${esc(this.config?.company.name ?? 'HelaO2')} · Inkroads admin</span></div>
@@ -332,6 +367,53 @@ export class AdminPanel {
           .join('')}
         ${c.sponsors.length ? '<button class="btn primary" type="submit">Save sponsor changes</button>' : ''}
       </form>`;
+  }
+
+  private businessTab(): string {
+    const c = this.config;
+    if (!c) return '<p class="menu-hint">Loading…</p>';
+    const list = [...(c.challenges ?? []), { id: 'new', sponsorId: '', title: '', text: '', kind: 'distance', target: 10, ink: 200, item: '', start: Date.now(), end: Date.now() + 14 * 86400_000, enabled: true }];
+    const st = new Map((this.stats?.challenges ?? []).map((x) => [x.id, x]));
+    const sponsorOpts = (sel: string): string => c.sponsors.map((s) => `<option value="${esc(s.id)}" ${s.id === sel ? 'selected' : ''}>${esc(s.name)}</option>`).join('');
+    const rows = list
+      .map((x, i) => {
+        const n = st.get(x.id);
+        return `<fieldset class="card challenge-row"><legend>${x.id === 'new' ? 'New challenge' : `${esc(x.title)} ${n ? `· ${n.joined} joined · ${n.done} finished` : ''}`}</legend>
+          <input type="hidden" name="id${i}" value="${esc(x.id)}">
+          <div class="grid2">
+            <label>Sponsor<select class="text-input" name="sponsor${i}"><option value="">—</option>${sponsorOpts(x.sponsorId)}</select></label>
+            <label>Title (players see it)<input class="text-input" name="title${i}" maxlength="60" value="${esc(x.title)}"></label>
+            <label>What to do<select class="text-input" name="kind${i}">${CHALLENGE_KINDS.map(([k, l]) => `<option value="${k}" ${k === x.kind ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+            <label>How many<input class="text-input" type="number" min="1" max="10000" name="target${i}" value="${x.target}"></label>
+            <label>Ink reward (0–1000)<input class="text-input" type="number" min="0" max="1000" name="ink${i}" value="${x.ink}"></label>
+            <label>Cosmetic reward (item id, optional, e.g. <code>wrap:stars</code>)<input class="text-input" name="item${i}" maxlength="40" value="${esc(x.item)}"></label>
+            <label>Starts<input class="text-input" type="date" name="start${i}" value="${dateIn(x.start)}"></label>
+            <label>Ends<input class="text-input" type="date" name="end${i}" value="${dateIn(x.end)}"></label>
+          </div>
+          <label>Short text (optional)<input class="text-input" name="text${i}" maxlength="200" value="${esc(x.text)}"></label>
+          <label class="check"><input type="checkbox" name="enabled${i}" ${x.enabled ? 'checked' : ''}> ${x.id === 'new' ? 'Add it (fill in sponsor and title)' : 'Running'}</label>
+          ${x.id === 'new' ? '' : `<label class="check"><input type="checkbox" name="remove${i}"> Delete this challenge</label>`}
+        </fieldset>`;
+      })
+      .join('');
+    const p = this.stats?.patron;
+    const codes = this.newCodes.length ? `<label>New codes (copy them now: they are not shown again)<textarea class="text-input" rows="6" readonly>${esc(this.newCodes.join('\n'))}</textarea></label>` : '';
+    return `<form class="admin-form" data-form="challenges">
+        <h3>Sponsor challenges</h3>
+        <p class="menu-hint">Players join a challenge in Menu → Season pass. Progress counts from when they join; the reward is paid once. Rewards can be ink (up to 1000) and one cosmetic; vehicles and tonics are refused. ${c.sponsors.length ? '' : 'Add a sponsor first.'}</p>
+        <input type="hidden" name="count" value="${list.length}">
+        ${rows}
+        <button class="btn primary" type="submit">Save challenges</button>
+      </form>
+      <div class="card admin-form">
+        <h3>Season pass · Patron track</h3>
+        <p class="menu-hint">The Patron track is cosmetic-only. There is no payment provider yet: you can hand out one-use codes (for supporters, donors, prizes) or give an account the track by name. A payment provider would call the same grant hook (see <code>server/store.mjs</code>).</p>
+        <p>Current season: <b>${esc(p?.current ?? '—')}</b> · Patrons this season: <b>${p ? (p.patrons[p.current] ?? 0) : 0}</b></p>
+        ${p?.seasons.length ? `<table class="admin-table"><thead><tr><th>Season</th><th>Codes made</th><th>Redeemed</th><th>Patrons</th></tr></thead><tbody>${p.seasons.map((s) => `<tr><td>${esc(s.season)}</td><td>${s.issued}</td><td>${s.redeemed}</td><td>${p.patrons[s.season] ?? 0}</td></tr>`).join('')}</tbody></table>` : ''}
+        <form class="row wrap" data-form="codes"><label>How many codes<input class="text-input" type="number" name="n" min="1" max="500" value="10"></label><label>Season<input class="text-input" name="season" value="${esc(p?.current ?? '')}" maxlength="6"></label><button class="btn" type="submit">Make codes</button></form>
+        ${codes}
+        <form class="row wrap" data-form="patron"><label>Account name<input class="text-input" name="name" maxlength="20"></label><label>Season<input class="text-input" name="season" value="${esc(p?.current ?? '')}" maxlength="6"></label><button class="btn" type="submit">Give the Patron track</button></form>
+      </div>`;
   }
 
   private playersTab(): string {
@@ -560,6 +642,26 @@ export class AdminPanel {
       const sponsors = this.config.sponsors.map((s) => ({ id: s.id, name: v(`name-${s.id}`), url: v(`url-${s.id}`), weight: Number(v(`weight-${s.id}`)), enabled: f.get(`enabled-${s.id}`) === 'on' }));
       const saved = await this.call<ServerConfig>('/api/admin/config', 'PUT', { sponsors });
       if (saved) this.saved(saved, 'Sponsors saved.');
+    } else if (kind === 'challenges') {
+      const out: Partial<AdminChallenge>[] = [];
+      for (let i = 0; i < Number(v('count')); i++) {
+        const id = v(`id${i}`);
+        if (f.get(`remove${i}`) === 'on') continue;
+        if (id === 'new' && (!v(`title${i}`) || !v(`sponsor${i}`) || f.get(`enabled${i}`) !== 'on')) continue;
+        out.push({ id: id === 'new' ? undefined : id, sponsorId: v(`sponsor${i}`), title: v(`title${i}`), text: v(`text${i}`), kind: v(`kind${i}`), target: Number(v(`target${i}`)), ink: Number(v(`ink${i}`)), item: v(`item${i}`), start: Date.parse(v(`start${i}`)) || Date.now(), end: (Date.parse(v(`end${i}`)) || Date.now()) + 86400_000 - 1, enabled: f.get(`enabled${i}`) === 'on' });
+      }
+      const saved = await this.call<ServerConfig>('/api/admin/config', 'PUT', { challenges: out });
+      if (saved) this.saved(saved, 'Challenges saved. Players see running ones the next time they load the game.');
+    } else if (kind === 'codes') {
+      const res = await this.call<{ ok: boolean; codes: string[]; season: string }>('/api/admin/codes', 'POST', { count: Number(v('n')), season: v('season') });
+      if (res?.ok) {
+        this.newCodes = res.codes;
+        this.stats = (await this.call<Stats>('/api/admin/stats')) ?? this.stats;
+        this.flash(`${res.codes.length} codes made for ${res.season}.`);
+      }
+    } else if (kind === 'patron') {
+      const res = await this.call<{ ok: boolean; granted: boolean; name: string; season: string }>('/api/admin/patron', 'POST', { name: v('name'), season: v('season') });
+      if (res?.ok) this.flash(res.granted ? `${res.name} has the Patron track for ${res.season}.` : `${res.name} already had it.`);
     } else if (kind === 'ban') {
       if (!v('name')) return;
       const res = await this.call<{ banned: string[] }>('/api/admin/ban', 'POST', { name: v('name'), ban: true });

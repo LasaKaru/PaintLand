@@ -14,6 +14,13 @@
 //   GET  /api/admin/chat                                   → recent chat for moderation
 //   POST /api/admin/ban           { name, ban }            → ban / unban a player name
 //   GET  /api/admin/export                                 → all analytics as JSON
+//   GET  /api/admin/codes                                  → Patron codes issued / redeemed per season
+//   POST /api/admin/codes         { count, season }        → new one-use Patron codes (shown once)
+//   POST /api/admin/patron        { name, season }         → give an account the Patron track
+//
+// Sponsor challenges are part of the config (`challenges`): each belongs to a
+// sponsor, asks for something the game counts (distance, laps, stunts…) and
+// pays ink and optionally a cosmetic. Active ones are in /api/config.
 //
 // The password is never stored in plain text: only a salted scrypt hash, in
 // data/admin.json once changed (or the ADMIN_EMAIL / ADMIN_PASSWORD env vars).
@@ -44,7 +51,12 @@ export const DEFAULT_CONFIG = {
   showSponsorCta: true,
   maxPlayersPerRoom: 32,
   sponsors: [],
+  challenges: [],
 };
+
+/** What a sponsor challenge can count (the game knows how: src/gameplay/SeasonPass.ts). */
+export const CHALLENGE_KINDS = ['distance', 'laps', 'stunts', 'photos', 'races', 'missions', 'pockets', 'secrets'];
+const ITEM_ID = /^[a-z]+:[a-z0-9#-]{1,30}$/;
 
 const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.map': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain' };
 const TOKEN_TTL = 12 * 3600 * 1000;
@@ -104,7 +116,41 @@ export function sanitizeConfig(input, current) {
       s.enabled = !!e.enabled;
     }
   }
+  if (Array.isArray(i.challenges)) {
+    const sponsorIds = new Set(c.sponsors.map((s) => s.id));
+    c.challenges = i.challenges
+      .slice(0, 20)
+      .map((x) => {
+        const start = Number(x?.start) || 0;
+        const end = Number(x?.end) || 0;
+        return {
+          id: typeof x?.id === 'string' && /^[a-z0-9]{6,16}$/.test(x.id) ? x.id : randomUUID().replace(/-/g, '').slice(0, 10),
+          sponsorId: String(x?.sponsorId ?? ''),
+          title: clean(x?.title, 60),
+          text: clean(x?.text, 200),
+          kind: CHALLENGE_KINDS.includes(x?.kind) ? x.kind : '',
+          target: Math.min(10000, Math.max(1, Math.round(Number(x?.target) || 0))),
+          ink: Math.min(1000, Math.max(0, Math.round(Number(x?.ink) || 0))),
+          item: typeof x?.item === 'string' && ITEM_ID.test(x.item) ? x.item : '',
+          start,
+          end: end > start ? end : start + 7 * 86400_000,
+          enabled: !!x?.enabled,
+        };
+      })
+      .filter((x) => x.title && x.kind && sponsorIds.has(x.sponsorId));
+  }
   return c;
+}
+
+/** The challenges players see now: switched on, running, and their sponsor still showing. */
+export function activeChallenges(config, now = Date.now()) {
+  return (config.challenges ?? [])
+    .filter((x) => x.enabled && x.start <= now && now < x.end)
+    .map((x) => {
+      const s = config.sponsors.find((y) => y.id === x.sponsorId && y.enabled);
+      return s ? { id: x.id, title: x.title, text: x.text, kind: x.kind, target: x.target, ink: x.ink, item: x.item || undefined, end: x.end, sponsor: { name: s.name, url: s.url, image: `/api/brand/${s.file}` } } : null;
+    })
+    .filter(Boolean);
 }
 
 export const REPORT_REASONS = ['chat', 'name', 'cheating', 'bullying', 'other'];
@@ -171,7 +217,7 @@ function emptyStats() {
 /**
  * @param {{ dataDir: string, distDir?: string, live: () => { rooms: number, online: number, roomSizes: Record<string, number> }, accounts?: () => { accounts: number, clubs: number, online: number } | null }} opts
  */
-export function createAdmin({ dataDir, distDir, live, accounts = () => null, gallery = () => null }) {
+export function createAdmin({ dataDir, distDir, live, accounts = () => null, gallery = () => null, store = () => null }) {
   const file = (name) => join(dataDir, name);
   const logoDir = file('brand');
   const readJson = (name, fallback) => {
@@ -187,6 +233,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
   };
 
   let config = { ...structuredClone(DEFAULT_CONFIG), ...readJson('config.json', {}) };
+  const challengeSeen = new Set();
   let admin = readJson('admin.json', null);
   if (!admin) {
     admin = process.env.ADMIN_PASSWORD
@@ -261,6 +308,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
       logoFrequency: config.logoFrequency,
       showSponsorCta: config.showSponsorCta,
       sponsors: config.sponsors.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, url: s.url, weight: s.weight, image: `/api/brand/${s.file}` })),
+      challenges: activeChallenges(config),
     };
   }
 
@@ -339,6 +387,20 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
         // Which preset devices get recommended (no raw timings are stored).
         count(`bench:${key(data.rec)}`);
         break;
+      case 'challenge': {
+        // Sponsor challenges: how many joined and finished (for the sponsor's report).
+        const id = key(data.id);
+        if (!(config.challenges ?? []).some((x) => x.id === id)) return;
+        // Each player counts once per challenge and step.
+        const once = `${clean(pid, 40)}:${id}:${data.step === 'done' ? 'd' : 'j'}`;
+        if (challengeSeen.has(once)) return;
+        if (challengeSeen.size > 200_000) challengeSeen.clear();
+        challengeSeen.add(once);
+        const s = ((stats.challenges ??= {})[id] ??= { joined: 0, done: 0 });
+        if (data.step === 'done') s.done++;
+        else s.joined++;
+        break;
+      }
       case 'sponsor_view':
       case 'sponsor_click': {
         const s = (stats.sponsors[key(data.id)] ??= { views: 0, clicks: 0 });
@@ -416,6 +478,8 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
       links: group('link:'),
       sponsors: config.sponsors.map((s) => ({ id: s.id, name: s.name, enabled: s.enabled, ...(stats.sponsors[s.id] ?? { views: 0, clicks: 0 }) })),
       helao2: stats.sponsors.helao2 ?? { views: 0, clicks: 0 },
+      challenges: (config.challenges ?? []).map((x) => ({ id: x.id, title: x.title, sponsor: config.sponsors.find((s) => s.id === x.sponsorId)?.name ?? '', ...(stats.challenges?.[x.id] ?? { joined: 0, done: 0 }) })),
+      patron: store()?.codeStats() ?? null,
       health: health(now),
       roomSizes: l.roomSizes,
       since: stats.since,
@@ -574,6 +638,17 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
           moderation.banned = body.ban ? [...new Set([...moderation.banned, name])] : moderation.banned.filter((n) => n !== name);
           writeJson('moderation.json', moderation);
           return send(res, 200, { ok: true, banned: moderation.banned }), true;
+        }
+        if (route === 'codes' && method === 'GET') return send(res, 200, store()?.codeStats() ?? { current: '', seasons: [], patrons: {} }), true;
+        if (route === 'codes' && method === 'POST') {
+          const b = await readBody(req, 2000);
+          const r = store()?.makeCodes(Number(b.count), b.season ? String(b.season) : undefined) ?? { ok: false, reason: 'No store.' };
+          return send(res, r.ok ? 200 : 400, r), true;
+        }
+        if (route === 'patron' && method === 'POST') {
+          const b = await readBody(req, 2000);
+          const r = store()?.grantByName(clean(b.name, 20), b.season ? String(b.season) : undefined) ?? { ok: false, reason: 'No store.' };
+          return send(res, r.ok ? 200 : 400, r), true;
         }
         if (route === 'gallery' && method === 'GET') return send(res, 200, { roads: gallery()?.reported() ?? [] }), true;
         if (route === 'gallery' && method === 'POST') {

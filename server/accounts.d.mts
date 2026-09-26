@@ -20,6 +20,7 @@ export declare function createAccounts(opts: { dataDir: string; isBanned: (name:
   handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean>;
   userForToken(token: unknown): AccountUser | null;
   isTaken(name: string): boolean;
+  userByName(name: string): AccountUser | null;
   stats(): { accounts: number; clubs: number; online: number };
   flush(): void;
 };

@@ -1,3 +1,4 @@
+import { settleChallenges } from '../ui/PassScreen';
 import { POCKETS, POCKET_INK, POCKET_REACH } from '../world/Pockets';
 import * as THREE from 'three';
 import { Input } from './Input';
@@ -3598,6 +3599,7 @@ export class Game {
     p.markSeen(`style:${this.settings.realism >= 0.99 ? 'realistic' : this.settings.realism <= 0.01 ? 'watercolour' : 'illustrated'}`);
     if (this.net.peers.size > 0) p.recordStat('multiplayer', 1);
     this.checkTrophies();
+    for (const c of settleChallenges(p)) this.hud.lootCard(t('pass.chComplete'), '#3e9fd8', c.title, [c.ink ? `+${c.ink} ink` : '', c.item ? itemLabel(c.item) : ''].filter(Boolean).join(' · '));
   }
 
   private checkTrophies(): void {

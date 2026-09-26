@@ -26,6 +26,7 @@ import { LIMITS, Strikes, checkRtc, cleanText, clientIp, validateState } from '.
 import { createAdmin } from './admin.mjs';
 import { createAccounts } from './accounts.mjs';
 import { createGallery } from './gallery.mjs';
+import { createStore } from './store.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_ROOM_ENV = process.env.MAX_ROOM ? Number(process.env.MAX_ROOM) : null;
@@ -87,11 +88,14 @@ const admin = createAdmin({
   },
   accounts: () => accounts.stats(),
   gallery: () => gallery,
+  store: () => store,
 });
 // Player accounts (cloud saves, friends, clubs) share the same data folder.
 const accounts = createAccounts({ dataDir: DATA_DIR, isBanned: (n) => admin.isBanned(n) });
 // The road gallery and weekly contest (publishing and rating need an account).
 const gallery = createGallery({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), isBanned: (n) => admin.isBanned(n) });
+// Patron entitlements for the season pass (codes and admin grants; the hook for payments later).
+const store = createStore({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), userByName: (n) => accounts.userByName(n) });
 const maxRoom = () => MAX_ROOM_ENV ?? admin.maxRoom();
 
 const http = createServer((req, res) => {
@@ -99,6 +103,7 @@ const http = createServer((req, res) => {
   accounts
     .handle(req, res, url)
     .then((handled) => handled || gallery.handle(req, res, url))
+    .then((handled) => handled || store.handle(req, res, url))
     .then((handled) => handled || admin.handle(req, res, url))
     .then((handled) => {
       if (!handled) relayHttp(req, res, url);
@@ -292,6 +297,7 @@ for (const sig of ['SIGTERM', 'SIGINT']) {
     try {
       accounts.flush();
       gallery.flush();
+      store.flush();
     } finally {
       process.exit(0);
     }

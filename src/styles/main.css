@@ -719,3 +719,22 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .together-hud > div + div { margin-top: 6px; border-top: 1px dashed #c8b89a; padding-top: 6px; }
 .tg-bar { height: 8px; margin: 4px 0; border: 1px solid #2b2622; border-radius: 6px; overflow: hidden; background: #fffaf0; }
 .tg-bar i { display: block; height: 100%; background: linear-gradient(90deg, #d8463a, #f4d23b, #3e6fa8); }
+
+/* Season pass */
+.pass-head .bar { height: 10px; border-radius: 999px; background: var(--paper); }
+.pass-tierline { font-weight: 700; margin-top: 4px; }
+.pass-grid { display: grid; gap: 4px; }
+.pass-row { display: grid; grid-template-columns: 34px 1fr 1fr; gap: 6px; align-items: stretch; opacity: 0.7; }
+.pass-row.open, .pass-row.head { opacity: 1; }
+.pass-tier { display: grid; place-items: center; font-family: var(--hand, inherit); }
+.pass-cell { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 6px; padding: 6px 8px; border: 1.5px solid rgba(43, 38, 34, 0.35); border-radius: 8px; background: var(--paper); font-size: 13px; min-width: 0; }
+.pass-cell.patron { background: linear-gradient(135deg, rgba(244, 210, 59, 0.18), rgba(232, 85, 154, 0.12)); }
+.pass-cell.got { border-style: dashed; }
+.pass-cell.open:not(.got) { border-color: var(--ink); }
+.ch-logo { max-height: 48px; max-width: 140px; object-fit: contain; align-self: flex-start; }
+.item.featured small s { opacity: 0.6; margin-right: 4px; }
+.challenge-row { margin-bottom: 8px; }
+@media (max-width: 560px) {
+  .pass-row { grid-template-columns: 26px 1fr; }
+  .pass-row .pass-cell.patron { grid-column: 2; }
+}

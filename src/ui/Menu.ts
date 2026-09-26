@@ -1,6 +1,8 @@
 import { LiveryEditor } from './LiveryEditor';
 import { AccountScreen, type AccountHost } from './AccountScreen';
 import { GalleryScreen } from './GalleryScreen';
+import { PassScreen } from './PassScreen';
+import { buyFeatured, featuredToday, FEATURED_OFF } from '../gameplay/SeasonPass';
 import { PAGE_REWARD, pageDone, stickerPages, type StickerArea } from '../gameplay/Stickers';
 import { actionGroupLabel, actionLabel, itemLabel } from './names';
 import { checkPin, hashPin, isLocked, PIN_PATTERN, PinGuard } from '../core/Family';
@@ -43,7 +45,7 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost extends AccountHost {
@@ -129,6 +131,7 @@ export class Menu {
   );
   private readonly accountScreen: AccountScreen;
   private readonly galleryScreen: GalleryScreen;
+  private readonly passScreen: PassScreen;
   /** The same painter, for mural boards in the free-roam areas. */
   private readonly muralEditor = new LiveryEditor(
     (code) => {
@@ -167,6 +170,11 @@ export class Menu {
       () => this.screen === 'gallery' && this.render(),
       (m) => this.toast(m),
     );
+    this.passScreen = new PassScreen(
+      host,
+      () => this.screen === 'pass' && this.render(),
+      (m) => this.toast(m),
+    );
     this.root = document.createElement('div');
     this.root.className = 'menu';
     parent.appendChild(this.root);
@@ -202,6 +210,7 @@ export class Menu {
     // Opening Account fetches fresh friends and club news.
     if (screen === 'account' && this.screen !== 'account') this.accountScreen.load(true);
     if (screen === 'gallery' && this.screen !== 'gallery') this.galleryScreen.load();
+    if (screen === 'pass') this.passScreen.load();
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
@@ -234,6 +243,7 @@ export class Menu {
       shop: () => this.shop(),
       multiplayer: () => this.multiplayer(),
       gallery: () => `<div class="menu-panel wide">${this.header(`🖼 ${t('gal.title')}`)}<div class="panel-body">${this.galleryScreen.render()}</div></div>`,
+      pass: () => `<div class="menu-panel wide">${this.header(`🎟 ${t('pass.title')}`)}<div class="panel-body">${this.passScreen.render()}</div></div>`,
       account: () => `<div class="menu-panel">${this.header(t('acct.title'))}<div class="panel-body">${this.accountScreen.render()}</div></div>`,
       settings: () => this.settingsScreen(),
       trophies: () => this.trophiesScreen(),
@@ -354,6 +364,7 @@ export class Menu {
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="roadstudio">🛣 ${t('rs.title')}</button>
         <button class="menu-item" data-nav="gallery">🖼 ${t('gal.title')}</button>
+        <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
         <button class="menu-item" data-nav="race">${t('menu.race')}</button>
@@ -602,9 +613,14 @@ export class Menu {
         return `<div class="card tonic-card"><b>${itemLabel(item)}</b><div class="dots">${'●'.repeat(p.data.tonics[t])}${'○'.repeat(MAX_TONICS - p.data.tonics[t])}</div><button class="btn" data-buy="${item.id}">Buy · 💧 ${item.price}</button></div>`;
       })
       .join('');
+    const featured = featuredToday(p)
+      .map((f) => `<button class="item locked featured" data-featured="${f.item.id}">${itemLabel(f.item)}<small><s>💧 ${f.item.price}</s> 💧 ${f.price}</small></button>`)
+      .join('');
     const owned = CATALOGUE.filter((i) => i.price > 0 && i.category !== 'tonic' && p.owns(i.id));
     const forSale = CATALOGUE.filter((i) => i.price > 0 && i.category !== 'tonic' && !p.owns(i.id));
     return `<div class="menu-panel wide">${this.header('Shop & inventory')}
+      <p class="fam-status">${t('shop.cosmetic')}</p>
+      ${featured ? `<h4>✨ ${t('shop.featured', { off: Math.round(FEATURED_OFF * 100) })}</h4><div class="item-grid">${featured}</div>` : ''}
       <h4>Tonics you carry (press <kbd>Q</kbd> in game to drink one)</h4><div class="tonic-row">${tonics}</div>
       <h4>For sale</h4><div class="item-grid">${forSale.map((i) => `<button class="item locked" data-buy="${i.id}">${itemLabel(i)}<small>${i.category} · 💧 ${i.price}</small></button>`).join('') || '<p>You own everything. Wow.</p>'}</div>
       <h4>Owned (${owned.length})</h4><div class="item-grid">${owned.map((i) => `<span class="item">${itemLabel(i)}<small>${i.category}</small></span>`).join('') || '<p class="menu-hint">Nothing yet — earn ink from notes, phrases and missions.</p>'}</div>
@@ -974,7 +990,7 @@ export class Menu {
 
   private onSubmit(e: SubmitEvent): void {
     const form = e.target as HTMLFormElement;
-    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form)) {
+    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form) || this.passScreen.onSubmit(form)) {
       e.preventDefault();
       return;
     }
@@ -1002,6 +1018,13 @@ export class Menu {
     const p = this.host.profile;
     if (d.acct && this.accountScreen.onClick(el)) return;
     if (this.galleryScreen.onClick(el)) return;
+    if (this.passScreen.onClick(el)) return;
+    if (d.featured) {
+      const r = buyFeatured(p, d.featured);
+      this.toast(r === 'ok' ? `✓ ${itemLabel(d.featured)}` : r === 'poor' ? t('shop.poor') : '');
+      this.render();
+      return;
+    }
     if (d.together) {
       const msg = this.host.together(d.together as 'convoy' | 'drift' | 'stunt' | 'paint');
       if (msg) this.toast(msg);

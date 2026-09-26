@@ -7,6 +7,8 @@ export interface BrandConfig {
   logoFrequency: number;
   showSponsorCta: boolean;
   sponsors: { id: string; name: string; url: string; weight: number; image: string }[];
+  /** Sponsor challenges running now (see gameplay/SeasonPass.ts). */
+  challenges?: import('../gameplay/SeasonPass').SponsorChallenge[];
 }
 
 export const COMPANY_LOGO = 'brand/helao2-logo.jpg';
