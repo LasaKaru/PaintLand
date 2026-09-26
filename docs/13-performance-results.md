@@ -54,3 +54,53 @@ No player was dropped by the validator or the rate limit in any run. The
 missing 0.1–0.2 % are the first and last updates while players join and
 leave. One relay process comfortably holds a few hundred players; for more,
 run several relays behind the load balancer and route by room code.
+
+## 3. Batching and sharding for thousands of players (2026-09-26)
+
+Two changes lift the ceiling:
+
+1. **Batched sends.** The relay used to send every message in its own frame.
+   Now it collects each player's outgoing messages and sends them together
+   every 40 ms (`RELAY_BATCH_MS`, 0 turns it off) as one frame holding a JSON
+   array. The game and the load tester read both forms. In a room of 8 at
+   12 updates a second, that is about 20 frames a second per player instead of 84.
+   This adds about 20 ms of average delay, which the game's interpolation
+   buffer already hides.
+2. **Several relays (shards).** `RELAY_SHARDS` lists every relay's public
+   address. A room always lives on the same relay (a hash of the room code).
+   A player who connects to the wrong one gets `{ t: 'moved' }` and the game
+   reconnects there. Shard 0 keeps accounts, bans, chat logs, the gallery and
+   the admin panel. The others ask it over HTTP with `SHARD_SECRET`, and
+   report their live numbers so the dashboard shows everyone. See
+   `server/shards.mjs` and *Hosting → 7*.
+
+The load test now uses the game's real rate (12 updates a second), splits the
+fake players over worker processes (`--workers`), follows moves, and counts
+only the steady part (after everyone has joined).
+
+Measured on the same 4-core container. The load generator shares the CPU with
+the relays, so separate servers will do better.
+
+**One relay, rooms of 8, 12 Hz** (3 generator workers)
+
+| players | before batching: delivery · p50 / p95 / p99 | with batching: delivery · p50 / p95 / p99 / max | delivered / s |
+|---:|---|---|---:|
+| 1 000 | 99.8 % · 77 / 245 / 366 ms | 100 % · 24 / 40 / 41 / 49 ms | 84 235 |
+| 1 500 | 100 % · 78 / 306 / 460 ms (8 did not connect) | — | — |
+| 2 000 | 99.8 % · 88 / 271 / 392 ms (414 did not connect) | 100 % · 27 / 41 / 42 / 61 ms | 168 385 |
+| 3 000 | — | 100 % · 32 / 54 / 88 / 146 ms | 251 900 |
+
+**Four relays (shards), rooms of 8, 12 Hz** (4 generator workers, every player connects to shard 0 first)
+
+| players | connected | moved to their shard | delivery | latency p50 / p95 / p99 / max | sent / s | delivered / s |
+|---:|---:|---:|---:|---|---:|---:|
+| 5 000 (before batching) | 2 886 | 2 159 | 88 % | 150 / 668 / 967 / 2 283 ms | 24 641 | 152 105 |
+| **5 000** | **5 000** | 3 760 | **100 %** | **29 / 45 / 58 / 197 ms** | 58 310 | 408 655 |
+| 8 000 | 8 000 | 5 992 | 100 % | 60 / 105 / 138 / 265 ms | 72 714 | 510 096 |
+
+About ¾ of players were moved, as expected with 4 shards. Nobody was dropped
+by the validator or the rate limit. "Delivery" can read slightly above 100 %
+because messages already on their way when counting starts are counted on
+arrival. A sensible production plan: one relay per CPU core, planning for
+about 1 500 players each (headroom for chat, voice signalling and races).
+So 5 000 players need 4 shards on, for example, two 2-core servers.

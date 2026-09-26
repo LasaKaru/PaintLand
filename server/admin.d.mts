@@ -22,6 +22,7 @@ export declare function createAdmin(opts: { dataDir: string; distDir?: string; l
   handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean>;
   maxRoom(): number;
   isBanned(name: string): boolean;
+  bannedList(): string[];
   logChat(room: string, name: string, text: string): void;
 };
 export declare const REPORT_REASONS: string[];

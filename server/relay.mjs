@@ -15,6 +15,9 @@
 // built by `npm run build:server`) and only accepted if the lap time matches.
 //
 // Run: npm run server   (PORT, MAX_ROOM and DATA_DIR env vars are optional)
+//
+// Several relays can share the load: RELAY_SHARDS, SHARD_INDEX and
+// SHARD_SECRET (see server/shards.mjs and docs/HOSTING.md).
 
 import { createServer } from 'node:http';
 import { existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
@@ -27,6 +30,7 @@ import { createAdmin } from './admin.mjs';
 import { createAccounts } from './accounts.mjs';
 import { createGallery } from './gallery.mjs';
 import { createStore } from './store.mjs';
+import { createShardLink, secretOk, shardConfig, shardFor } from './shards.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_ROOM_ENV = process.env.MAX_ROOM ? Number(process.env.MAX_ROOM) : null;
@@ -40,6 +44,27 @@ const MAX_RTC_MESSAGE = 16_000;
 
 /** @type {Map<string, Set<import('ws').WebSocket>>} */
 const rooms = new Map();
+
+// Outgoing messages to each player are sent together every RELAY_BATCH_MS
+// (one frame holding a JSON array) instead of one frame each: in a room of 8
+// at 12 updates a second that is ~20 frames a second per player instead of ~84,
+// which is most of the relay's work. 0 sends every message on its own.
+const BATCH_MS = Math.max(0, Math.min(100, Number(process.env.RELAY_BATCH_MS ?? 40)));
+const pending = new Set();
+function post(peer, text) {
+  if (!BATCH_MS) return peer.send(text);
+  (peer.outbox ??= []).push(text);
+  pending.add(peer);
+}
+if (BATCH_MS)
+  setInterval(() => {
+    for (const peer of pending) {
+      const q = peer.outbox;
+      peer.outbox = [];
+      if (peer.readyState === 1 && q.length) peer.send(q.length === 1 ? q[0] : `[${q.join(',')}]`);
+    }
+    pending.clear();
+  }, BATCH_MS);
 
 // ————— leaderboard —————
 
@@ -72,36 +97,118 @@ function send(res, status, body) {
   res.end(JSON.stringify(body));
 }
 
+const SHARD = shardConfig();
+/** Live numbers other shards report to the primary (for the admin dashboard). */
+const shardLive = new Map();
+const localLive = () => {
+  const roomSizes = {};
+  let online = 0;
+  for (const [name, set] of rooms) {
+    roomSizes[name] = set.size;
+    online += set.size;
+  }
+  return { rooms: rooms.size, online, roomSizes };
+};
+
 // Admin panel, branding, analytics and the built game (dist/) share this port.
+// Only the primary relay (the only one without RELAY_SHARDS) keeps this data.
 const DIST_DIR = process.env.DIST_DIR ?? join(here, '..', 'dist');
-const admin = createAdmin({
+const admin = !SHARD.primary ? null : createAdmin({
   dataDir: DATA_DIR,
   distDir: existsSync(join(DIST_DIR, 'index.html')) ? DIST_DIR : undefined,
   live: () => {
-    const roomSizes = {};
-    let online = 0;
-    for (const [name, set] of rooms) {
-      roomSizes[name] = set.size;
-      online += set.size;
+    const all = localLive();
+    for (const [i, r] of shardLive) {
+      if (Date.now() - r.at > 60_000) {
+        shardLive.delete(i);
+        continue;
+      }
+      all.rooms += r.rooms;
+      all.online += r.online;
+      Object.assign(all.roomSizes, r.roomSizes);
     }
-    return { rooms: rooms.size, online, roomSizes };
+    return all;
   },
   accounts: () => accounts.stats(),
   gallery: () => gallery,
   store: () => store,
 });
 // Player accounts (cloud saves, friends, clubs) share the same data folder.
-const accounts = createAccounts({ dataDir: DATA_DIR, isBanned: (n) => admin.isBanned(n) });
+const accounts = !SHARD.primary ? null : createAccounts({ dataDir: DATA_DIR, isBanned: (n) => admin.isBanned(n) });
 // The road gallery and weekly contest (publishing and rating need an account).
-const gallery = createGallery({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), isBanned: (n) => admin.isBanned(n) });
+const gallery = !SHARD.primary ? null : createGallery({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), isBanned: (n) => admin.isBanned(n) });
 // Patron entitlements for the season pass (codes and admin grants; the hook for payments later).
-const store = createStore({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), userByName: (n) => accounts.userByName(n) });
-const maxRoom = () => MAX_ROOM_ENV ?? admin.maxRoom();
+const store = !SHARD.primary ? null : createStore({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), userByName: (n) => accounts.userByName(n) });
+const maxRoom = () => MAX_ROOM_ENV ?? admin?.maxRoom() ?? 32;
+
+/** Who a player is, and whether they may talk: the primary answers for every shard. */
+const identity = SHARD.primary
+  ? {
+      async hello(acct, rawName) {
+        const user = typeof acct === 'string' ? accounts.userForToken(acct) : null;
+        if (user) return { name: user.name, verified: true, banned: admin.isBanned(user.name) };
+        let name = cleanText(rawName, LIMITS.name) ?? 'Painter';
+        // Guests can't pose as a registered player.
+        if (accounts.isTaken(name)) name = `${name.slice(0, LIMITS.name - 6)} guest`;
+        return { name, verified: false, banned: admin.isBanned(name) };
+      },
+      isBanned: (n) => admin.isBanned(n),
+      logChat: (room, n, text) => admin.logChat(room, n, text),
+    }
+  : createShardLink({ primaryHttp: SHARD.primaryHttp, secret: SHARD.secret, index: SHARD.index });
+if (!SHARD.primary) setInterval(() => identity.reportLive(localLive()), 15_000).unref();
+
+/** Primary only: what the other shards ask for. */
+async function internalHttp(req, res, url) {
+  if (!url.pathname.startsWith('/api/internal/')) return false;
+  if (!SHARD.primary || !secretOk(req, SHARD.secret)) return send(res, 403, { ok: false }), true;
+  const route = url.pathname.slice('/api/internal/'.length);
+  const body = req.method === 'POST' ? await readJsonBody(req, 256_000) : null;
+  if (route === 'bans') return send(res, 200, { banned: admin.bannedList() }), true;
+  if (route === 'hello' && body) return send(res, 200, await identity.hello(body.acct, body.name)), true;
+  if (route === 'chat' && body && Array.isArray(body.lines)) {
+    for (const l of body.lines.slice(0, 500)) {
+      const text = cleanText(l?.text);
+      if (text) admin.logChat(String(l.room ?? '').slice(0, 32), cleanText(l.name, LIMITS.name) ?? 'Painter', text);
+    }
+    return send(res, 200, { ok: true }), true;
+  }
+  if (route === 'live' && body) {
+    const sizes = {};
+    for (const [k, v] of Object.entries(body.roomSizes ?? {}).slice(0, 5000)) sizes[String(k).slice(0, 32)] = Math.max(0, Math.min(1000, Number(v) || 0));
+    shardLive.set(Number(body.index) || 0, { at: Date.now(), rooms: Math.max(0, Number(body.rooms) || 0), online: Math.max(0, Number(body.online) || 0), roomSizes: sizes });
+    return send(res, 200, { ok: true }), true;
+  }
+  return send(res, 404, { ok: false }), true;
+}
+
+function readJsonBody(req, max) {
+  return new Promise((resolve) => {
+    let size = 0;
+    const chunks = [];
+    req.on('data', (c) => {
+      size += c.length;
+      if (size <= max) chunks.push(c);
+    });
+    req.on('end', () => {
+      try {
+        resolve(size > max ? null : JSON.parse(Buffer.concat(chunks).toString('utf8') || '{}'));
+      } catch {
+        resolve(null);
+      }
+    });
+  });
+}
 
 const http = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
-  accounts
-    .handle(req, res, url)
+  if (!SHARD.primary) {
+    // Room-only relay: everything else lives on the primary.
+    if (url.pathname === '/healthz') return send(res, 200, { ok: true, shard: SHARD.index });
+    return void internalHttp(req, res, url).then((h) => h || send(res, 421, { ok: false, reason: 'This relay only hosts rooms.', primary: SHARD.urls[0] }));
+  }
+  internalHttp(req, res, url)
+    .then((handled) => handled || accounts.handle(req, res, url))
     .then((handled) => handled || gallery.handle(req, res, url))
     .then((handled) => handled || store.handle(req, res, url))
     .then((handled) => handled || admin.handle(req, res, url))
@@ -166,6 +273,13 @@ const wss = new WebSocketServer({ server: http, maxPayload: MAX_RACE_MESSAGE });
 wss.on('connection', (socket, req) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const room = (url.searchParams.get('room') ?? 'lobby').slice(0, 32).replace(/[^a-zA-Z0-9_-]/g, '') || 'lobby';
+  // Each room lives on one relay: send the player there.
+  const home = shardFor(room, SHARD.count);
+  if (home !== SHARD.index) {
+    socket.send(JSON.stringify({ t: 'moved', url: SHARD.urls[home], room }));
+    socket.close(4010, 'moved');
+    return;
+  }
   let members = rooms.get(room);
   if (!members) {
     members = new Set();
@@ -217,7 +331,7 @@ wss.on('connection', (socket, req) => {
       if (!out) return strike('bad rtc');
       out.id = id;
       const text = JSON.stringify(out);
-      for (const peer of members) if (peer !== socket && peer.readyState === 1 && (!out.to || peer.pid === out.to)) peer.send(text);
+      for (const peer of members) if (peer !== socket && peer.readyState === 1 && (!out.to || peer.pid === out.to)) post(peer, text);
       return;
     }
     if (msg.t === 'race') {
@@ -244,36 +358,36 @@ wss.on('connection', (socket, req) => {
     }
     if (msg.t === 'chat') {
       msg.text = cleanText(msg.text);
-      if (!msg.text || admin.isBanned(name)) return;
-      admin.logChat(room, name, msg.text);
+      if (!msg.text || identity.isBanned(name)) return;
+      identity.logChat(room, name, msg.text);
     }
     if (msg.t === 'hello') {
       // A signed-in player proves their name with their session token (never passed on).
-      const user = typeof msg.acct === 'string' ? accounts.userForToken(msg.acct) : null;
+      const acct = msg.acct;
       delete msg.acct;
       delete msg.verified;
-      if (user) {
-        msg.name = user.name;
-        msg.verified = true;
-      } else {
-        msg.name = cleanText(msg.name, LIMITS.name) ?? 'Painter';
-        // Guests can't pose as a registered player.
-        if (accounts.isTaken(msg.name)) msg.name = `${msg.name.slice(0, LIMITS.name - 6)} guest`;
-      }
-      name = msg.name;
-      if (admin.isBanned(name)) {
-        socket.close(4004, 'banned');
-        return;
-      }
+      void identity.hello(acct, msg.name).then((who) => {
+        if (socket.readyState !== 1) return;
+        name = who.name;
+        if (who.banned) return socket.close(4004, 'banned');
+        msg.name = who.name;
+        if (who.verified) msg.verified = true;
+        msg.id = id;
+        const out = JSON.stringify(msg);
+        for (const peer of members) if (peer !== socket && peer.readyState === 1) post(peer, out);
+      });
+      return;
     }
     msg.id = id; // never trust a client-provided id
     const out = JSON.stringify(msg);
-    for (const peer of members) if (peer !== socket && peer.readyState === 1) peer.send(out);
+    for (const peer of members) if (peer !== socket && peer.readyState === 1) post(peer, out);
   });
 
   socket.on('close', () => {
     members.delete(socket);
-    for (const peer of members) if (peer.readyState === 1) peer.send(JSON.stringify({ t: 'bye', id }));
+    pending.delete(socket);
+    const bye = JSON.stringify({ t: 'bye', id });
+    for (const peer of members) if (peer.readyState === 1) post(peer, bye);
     if (members.size === 0) rooms.delete(room);
   });
 
@@ -295,9 +409,9 @@ http.listen(PORT, () => console.log(`Inkroads relay listening on ws://localhost:
 for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, () => {
     try {
-      accounts.flush();
-      gallery.flush();
-      store.flush();
+      accounts?.flush();
+      gallery?.flush();
+      store?.flush();
     } finally {
       process.exit(0);
     }

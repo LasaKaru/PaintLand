@@ -282,7 +282,28 @@ services), or use a managed TURN provider. Then add to the Render service
 Optional: `STUN_URLS` replaces the default public STUN server
 (`stun:stun.l.google.com:19302`). Set it empty for none.
 
-## 7. Launch checklist
+## 7. More players: several relays (sharding)
+
+One relay handles about 1 500–3 000 players (see
+[performance results](13-performance-results.md)). For more, run several relays and
+give each one the same list:
+
+| Setting | On every relay | Example |
+| --- | --- | --- |
+| `RELAY_SHARDS` | every relay's public address, in the same order | `wss://r0.example.com,wss://r1.example.com` |
+| `SHARD_INDEX` | this relay's place in the list (0, 1, 2…) | `1` |
+| `SHARD_SECRET` | the same long random text everywhere (16+ characters) | from a password manager |
+| `PRIMARY_URL` | optional: how the others reach relay 0 privately | `http://relay-0.internal:8787` |
+
+Relay 0 is the **primary**. It keeps all the data (accounts, gallery,
+admin, bans, leaderboard), so give only it the persistent disk, and point the
+game page's server address at it. The other relays only host rooms. A player
+who reaches the wrong relay is sent to the right one automatically. On
+Render: one web service per relay, each with its own `SHARD_INDEX`, and the
+same `RELAY_SHARDS` and `SHARD_SECRET` set as environment variables. Keep
+the secret secret: with it, a server can ask the primary to vouch for names.
+
+## 8. Launch checklist
 
 - [ ] Work merged to `main`, Render service **Live**
 - [ ] Game opens at your address; two devices see each other in multiplayer

@@ -689,6 +689,8 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
     handle,
     maxRoom: () => config.maxPlayersPerRoom,
     isBanned: (name) => moderation.banned.some((b) => b.toLowerCase() === String(name ?? '').toLowerCase()),
+    /** Banned names, for the other relays (server/shards.mjs). */
+    bannedList: () => [...moderation.banned],
     logChat(room, name, text) {
       chatLog.push({ at: Date.now(), room, name, text });
       if (chatLog.length > 500) chatLog.splice(0, chatLog.length - 500);

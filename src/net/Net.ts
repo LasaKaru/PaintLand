@@ -86,7 +86,10 @@ class SocketTransport implements Transport {
   onMessage: (msg: NetMessage) => void = () => {};
   onStatus: (status: string) => void = () => {};
 
-  constructor(private readonly url: string, private readonly room: string) {
+  private moves = 0;
+  private moving = false;
+
+  constructor(private url: string, private readonly room: string) {
     this.socket = this.open();
   }
 
@@ -97,22 +100,41 @@ class SocketTransport implements Transport {
       this.onStatus(`online · room ${this.room}`);
     };
     ws.onmessage = (e) => {
+      let data: unknown;
       try {
-        this.onMessage(JSON.parse(String(e.data)) as NetMessage);
+        data = JSON.parse(String(e.data));
       } catch {
-        /* ignore malformed */
+        return;
       }
+      // The relay sends several messages in one frame as an array.
+      for (const one of Array.isArray(data) ? data : [data]) if (one && typeof one === 'object') this.handle(one as { t?: string; url?: unknown });
     };
     ws.onclose = () => {
       if (this.closed) return;
       this.onStatus('reconnecting…');
-      const wait = Math.min(10000, 1000 * 2 ** this.retry++);
+      // Straight to the right relay after a move; otherwise back off.
+      const wait = this.moving ? 50 : Math.min(10000, 1000 * 2 ** this.retry++);
+      this.moving = false;
       setTimeout(() => {
         if (!this.closed) this.socket = this.open();
       }, wait);
     };
     ws.onerror = () => this.onStatus('connection problem');
     return ws;
+  }
+
+  private handle(msg: { t?: string; url?: unknown }): void {
+    // Several relays share rooms: this room lives on another one (server/shards.mjs).
+    if (msg.t === 'moved') {
+      const to = msg.url;
+      if (typeof to === 'string' && /^wss?:\/\/[^\s]+$/.test(to) && this.moves++ < 3) {
+        this.url = to;
+        this.moving = true;
+        this.onStatus('moving to the room’s server…');
+      }
+      return;
+    }
+    this.onMessage(msg as NetMessage);
   }
 
   send(msg: object): void {
