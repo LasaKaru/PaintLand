@@ -1,5 +1,7 @@
 import { LiveryEditor } from './LiveryEditor';
 import { AccountScreen, type AccountHost } from './AccountScreen';
+import { GalleryScreen } from './GalleryScreen';
+import { PAGE_REWARD, pageDone, stickerPages, type StickerArea } from '../gameplay/Stickers';
 import { actionGroupLabel, actionLabel, itemLabel } from './names';
 import { checkPin, hashPin, isLocked, PIN_PATTERN, PinGuard } from '../core/Family';
 import { RoadStudio } from './RoadStudio';
@@ -41,7 +43,7 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost extends AccountHost {
@@ -58,6 +60,11 @@ export interface MenuHost extends AccountHost {
   startMission(m: MissionDef): void;
   lookChanged(): void;
   vehicleChanged(): void;
+  /** Free-roam areas visited so far (sticker book pages). */
+  stickerAreas(): StickerArea[];
+  /** The mural board being painted (Menu → mural). */
+  currentMural(): string | null;
+  muralChanged(id: string): void;
   /** Play the fitted horn (garage preview). */
   previewHorn?(): void;
   showcase(target: 'character' | 'vehicle' | null): void;
@@ -115,8 +122,22 @@ export class Menu {
   private readonly roadStudio = new RoadStudio(
     (road) => this.host.testRoad(road),
     (text) => this.toast(text),
+    (code) => this.galleryScreen.publish(code),
   );
   private readonly accountScreen: AccountScreen;
+  private readonly galleryScreen: GalleryScreen;
+  /** The same painter, for mural boards in the free-roam areas. */
+  private readonly muralEditor = new LiveryEditor(
+    (code) => {
+      const id = this.host.currentMural();
+      if (!id) return;
+      const p = this.host.profile;
+      p.data.murals = { ...p.data.murals, [id]: code };
+      p.save();
+      this.host.muralChanged(id);
+    },
+    (text) => this.toast(text),
+  );
   private readonly liveryEditor = new LiveryEditor(
     (code) => {
       const p = this.host.profile;
@@ -136,6 +157,11 @@ export class Menu {
     this.accountScreen = new AccountScreen(
       host,
       () => this.render(),
+      (m) => this.toast(m),
+    );
+    this.galleryScreen = new GalleryScreen(
+      host,
+      () => this.screen === 'gallery' && this.render(),
       (m) => this.toast(m),
     );
     this.root = document.createElement('div');
@@ -172,6 +198,7 @@ export class Menu {
     this.cancelListening();
     // Opening Account fetches fresh friends and club news.
     if (screen === 'account' && this.screen !== 'account') this.accountScreen.load(true);
+    if (screen === 'gallery' && this.screen !== 'gallery') this.galleryScreen.load();
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
@@ -198,9 +225,12 @@ export class Menu {
       wardrobe: () => this.wardrobe(),
       garage: () => this.garage(),
       roadstudio: () => `<div class="menu-panel wide">${this.header(t('rs.title'))}<div class="panel-body" data-id="roadstudio"></div></div>`,
+      stickers: () => this.stickersScreen(),
+      mural: () => `<div class="menu-panel side">${this.header(`🎨 ${t('mural.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<p class="menu-hint">${t('mural.hint')}</p><div class="panel-body" data-id="mural"></div></div>`,
       livery: () => `<div class="menu-panel side">${this.header(t('lv.title')).replace('data-nav="main"', 'data-nav="garage"')}<div class="panel-body" data-id="livery"></div></div>`,
       shop: () => this.shop(),
       multiplayer: () => this.multiplayer(),
+      gallery: () => `<div class="menu-panel wide">${this.header(`🖼 ${t('gal.title')}`)}<div class="panel-body">${this.galleryScreen.render()}</div></div>`,
       account: () => `<div class="menu-panel">${this.header(t('acct.title'))}<div class="panel-body">${this.accountScreen.render()}</div></div>`,
       settings: () => this.settingsScreen(),
       trophies: () => this.trophiesScreen(),
@@ -213,6 +243,9 @@ export class Menu {
     this.root.innerHTML = `${body}<div class="menu-toast ${live ? 'show' : ''}" data-id="toast" role="status" aria-live="polite">${live ? escapeHtml(this.toastText) : ''}</div>`;
     const lv = s === 'livery' ? this.root.querySelector<HTMLElement>('[data-id="livery"]') : null;
     if (lv) this.liveryEditor.mount(lv, this.host.profile.vehicleLook(this.host.profile.data.vehicle).livery);
+    const mu = s === 'mural' ? this.root.querySelector<HTMLElement>('[data-id="mural"]') : null;
+    const muralId = this.host.currentMural();
+    if (mu && muralId) this.muralEditor.mount(mu, this.host.profile.data.murals?.[muralId]);
     if (focusSig && !newScreen) this.root.querySelector<HTMLElement>(focusSig)?.focus({ preventScroll: true });
     else if (newScreen && (document.activeElement === document.body || this.root.contains(document.activeElement) || !document.activeElement))
       // A new screen: put focus at its start (the menu, or the Back button).
@@ -317,6 +350,8 @@ export class Menu {
         <button class="menu-item" data-nav="daily">${t('daily.menu')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="roadstudio">🛣 ${t('rs.title')}</button>
+        <button class="menu-item" data-nav="gallery">🖼 ${t('gal.title')}</button>
+        <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
         <button class="menu-item" data-nav="race">${t('menu.race')}</button>
         <button class="menu-item" data-nav="missions">${t('menu.missions')}</button>
@@ -464,6 +499,25 @@ export class Menu {
       <div class="panel-body">${content}</div>
       <div class="row"><button class="btn" data-action="random-look">🎲 Randomise</button></div>
     </div>`;
+  }
+
+  private stickersScreen(): string {
+    const p = this.host.profile;
+    const pages = stickerPages(p.data, this.host.stickerAreas(), { harbour: t('hub.name'), village: t('st.village'), city: t('city.name'), chapters: t('menu.chapters'), photos: t('st.photos'), garage: t('menu.garage') }, { secret: t('st.secret'), mural: t('st.mural') });
+    const total = pages.reduce((n, pg) => n + pg.stickers.filter((x) => x.got).length, 0);
+    const all = pages.reduce((n, pg) => n + pg.stickers.length, 0);
+    const html = pages
+      .map((pg) => {
+        const got = pg.stickers.filter((x) => x.got).length;
+        const claimed = p.data.seen.includes(`stickers:${pg.id}`);
+        const reward = pageDone(pg) ? (claimed ? `<span class="menu-hint">✓ ${t('st.claimed')}</span>` : `<button class="btn small primary" data-sticker-claim="${pg.id}">🎁 ${t('st.claim', { ink: PAGE_REWARD })}</button>`) : '';
+        const body = pg.locked
+          ? `<p class="menu-hint">${t('st.visit', { place: escapeHtml(pg.title) })}</p>`
+          : `<div class="sticker-grid">${pg.stickers.map((x) => `<span class="sticker ${x.got ? 'got' : ''}" title="${escapeHtml(x.got ? x.label : t('st.unknown'))}"><b aria-hidden="true">${x.got ? x.icon : '?'}</b><small>${x.got ? escapeHtml(x.label) : t('st.unknown')}</small></span>`).join('')}</div>`;
+        return `<div class="card sticker-page"><div class="row"><b>${escapeHtml(pg.title)}</b><small>${pg.locked ? '' : `${got}/${pg.stickers.length}`}</small>${reward}</div>${body}</div>`;
+      })
+      .join('');
+    return `<div class="menu-panel wide">${this.header(`📒 ${t('st.title')}`)}<p class="menu-hint">${t('st.hint', { n: total, total: all, ink: PAGE_REWARD })}</p><div class="panel-body">${html}</div></div>`;
   }
 
   private outfitsTab(): string {
@@ -899,7 +953,7 @@ export class Menu {
 
   private onSubmit(e: SubmitEvent): void {
     const form = e.target as HTMLFormElement;
-    if (this.accountScreen.onSubmit(form)) {
+    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form)) {
       e.preventDefault();
       return;
     }
@@ -926,6 +980,16 @@ export class Menu {
     const d = el.dataset;
     const p = this.host.profile;
     if (d.acct && this.accountScreen.onClick(el)) return;
+    if (this.galleryScreen.onClick(el)) return;
+    if (d.stickerClaim) {
+      const pg = stickerPages(p.data, this.host.stickerAreas(), {}, { secret: '', mural: '' }).find((x) => x.id === d.stickerClaim);
+      if (pg && pageDone(pg) && p.markSeen(`stickers:${pg.id}`)) {
+        p.earn(PAGE_REWARD);
+        this.toast(t('st.reward', { ink: PAGE_REWARD }));
+      }
+      this.render();
+      return;
+    }
     if (d.nav) {
       if (d.nav === 'enter') {
         this.host.unlockAudio();

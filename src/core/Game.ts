@@ -45,6 +45,7 @@ import { Pet, isPet } from '../models/Pets';
 import type { Emote } from '../models/Human';
 import type { GroupPhotoInvite } from '../net/Net';
 import { AccountClient } from '../net/Account';
+import { paintMural } from '../world/Murals';
 import { defaultServer } from '../net/Leaderboard';
 import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
@@ -183,6 +184,8 @@ export class Game {
   /** Player account (cloud save, friends, clubs); optional. */
   readonly account = new AccountClient();
   private cloudPulled = false;
+  /** The mural board being painted. */
+  private muralId: string | null = null;
   private cloudDue = 0;
   private raceCountdown = 0;
   private missionEndTimer = 0;
@@ -277,6 +280,9 @@ export class Game {
     this.menu = new Menu(container, {
       profile: this.profile,
       account: this.account,
+      currentMural: () => this.muralId,
+      stickerAreas: () => [...this.areas.values()].map((a) => ({ id: a.id, name: a.title().name, places: a.places, secrets: a.secrets })),
+      muralChanged: () => this.paintMurals(),
       socialAllowed: () => onlineAllowed(this.options.family),
       localSummary: () => ({ ink: this.profile.data.ink, trophies: this.profile.data.trophies.length }),
       useCloudSave: () => this.useCloudSave(),
@@ -649,6 +655,11 @@ export class Game {
     this.startEmote('cheer');
   }
 
+  /** Show this player's murals on the boards of the current area. */
+  private paintMurals(): void {
+    for (const b of this.area?.murals ?? []) paintMural(b, this.profile.data.murals?.[b.id] ?? null);
+  }
+
   // ————— account: cloud save and presence —————
 
   /** Pull once after signing in, then push this device's progress (asks when both changed). */
@@ -672,6 +683,7 @@ export class Game {
     const save = this.account.acceptCloud();
     if (!save) return;
     this.profile.replace(save);
+    this.paintMurals();
     this.cloudDue = 0;
     this.buildPawnModels();
     if (this.menu.screen !== 'none') this.menu.show(this.menu.screen);
@@ -2229,6 +2241,7 @@ export class Game {
     this.hud.setPlaying(true);
     this.hud.setHub(true);
     this.fitHubCar();
+    this.paintMurals();
     this.wireCarEvents();
     const sp = area.spawn;
     this.hubCar.place(at?.x ?? sp.x, at?.z ?? sp.z, at?.heading ?? sp.heading);
@@ -2536,6 +2549,10 @@ export class Game {
     else if (zone.kind === 'shop') this.openMenu('shop');
     else if (zone.kind === 'missions') this.openMenu(this.area?.id === 'city' ? 'citymissions' : 'missions');
     else if (zone.kind === 'trophies') this.openMenu('trophies');
+    else if (zone.kind === 'mural' && zone.mural) {
+      this.muralId = zone.mural;
+      this.openMenu('mural');
+    }
   }
 
   /** Beacons over mission targets, the compass and the objective card. */

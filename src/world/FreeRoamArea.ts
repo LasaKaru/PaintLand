@@ -1,3 +1,4 @@
+import type { MuralBoard } from './Murals';
 import type * as THREE from 'three';
 import type { FreeWorld, Ramp } from '../gameplay/FreeRoam';
 import type { District } from '../gameplay/Restoration';
@@ -7,7 +8,7 @@ import type { Perahera } from './Perahera';
 /** Ground height of every free-roam area above the sea. */
 export const AREA_Y = 2;
 
-export type ZoneKind = 'portal' | 'area' | 'garage' | 'wardrobe' | 'shop' | 'missions' | 'trophies';
+export type ZoneKind = 'portal' | 'area' | 'garage' | 'wardrobe' | 'shop' | 'missions' | 'trophies' | 'mural';
 
 /** A glowing ring: a service (garage…), a gate to a chapter, or a road to another area. */
 export interface AreaZone {
@@ -18,6 +19,8 @@ export interface AreaZone {
   r: number;
   chapter?: string;
   area?: string;
+  /** Mural board id (kind 'mural'). */
+  mural?: string;
   colour: string;
 }
 
@@ -92,6 +95,8 @@ export interface FreeRoamArea {
   /** The night festival parade, if this area has one. */
   readonly perahera?: Perahera;
   /** Data for the paper map; `paint` gives each district's paint 0..1. */
+  /** Paintable mural boards in this area. */
+  readonly murals: MuralBoard[];
   /** Where the quay ends and the sea begins (z), if the area has a sea. */
   readonly seaZ?: number;
   mapInfo(paint: (districtId: string) => number): MapInfo;

@@ -25,6 +25,7 @@ import { randomUUID } from 'node:crypto';
 import { LIMITS, Strikes, checkRtc, cleanText, clientIp, validateState } from './validate.mjs';
 import { createAdmin } from './admin.mjs';
 import { createAccounts } from './accounts.mjs';
+import { createGallery } from './gallery.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_ROOM_ENV = process.env.MAX_ROOM ? Number(process.env.MAX_ROOM) : null;
@@ -85,15 +86,19 @@ const admin = createAdmin({
     return { rooms: rooms.size, online, roomSizes };
   },
   accounts: () => accounts.stats(),
+  gallery: () => gallery,
 });
 // Player accounts (cloud saves, friends, clubs) share the same data folder.
 const accounts = createAccounts({ dataDir: DATA_DIR, isBanned: (n) => admin.isBanned(n) });
+// The road gallery and weekly contest (publishing and rating need an account).
+const gallery = createGallery({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), isBanned: (n) => admin.isBanned(n) });
 const maxRoom = () => MAX_ROOM_ENV ?? admin.maxRoom();
 
 const http = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   accounts
     .handle(req, res, url)
+    .then((handled) => handled || gallery.handle(req, res, url))
     .then((handled) => handled || admin.handle(req, res, url))
     .then((handled) => {
       if (!handled) relayHttp(req, res, url);
@@ -286,6 +291,7 @@ for (const sig of ['SIGTERM', 'SIGINT']) {
   process.on(sig, () => {
     try {
       accounts.flush();
+      gallery.flush();
     } finally {
       process.exit(0);
     }

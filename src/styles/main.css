@@ -691,3 +691,22 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .group-invite.hidden { display: none; }
 .photo-countdown { position: fixed; left: 0; right: 0; top: 12%; display: grid; place-items: center; z-index: 45; pointer-events: none; font-size: 120px; color: #f6f0e4; text-shadow: 0 4px 0 #2b2622; font-family: var(--hand, inherit); }
 .photo-countdown.hidden { display: none; }
+
+/* Road gallery and sticker books */
+.gal-grid, .outfit-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 10px; }
+.gal-card { display: flex; flex-direction: column; gap: 4px; }
+.gal-meta { font-size: 13px; }
+.gal-stars { display: flex; gap: 2px; }
+.gal-stars .star { background: none; border: none; font-size: 22px; line-height: 1; color: #c8b89a; cursor: pointer; padding: 2px; }
+.gal-stars .star.on { color: #f0a92e; }
+.gal-stars .star:focus-visible { outline: 3px solid #3e6fa8; border-radius: 4px; }
+.gal-stars .star:disabled { cursor: default; opacity: 0.5; }
+.gal-contest { margin-bottom: 10px; }
+.sticker-page { margin-bottom: 10px; }
+.sticker-page .row { gap: 10px; align-items: center; }
+.sticker-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); gap: 8px; margin-top: 8px; }
+.sticker { display: flex; flex-direction: column; align-items: center; gap: 2px; padding: 8px 4px; border: 2px dashed #c8b89a; border-radius: 12px; text-align: center; color: #8a7a60; }
+.sticker b { font-size: 26px; }
+.sticker small { font-size: 11px; }
+.sticker.got { border-style: solid; border-color: #2b2622; background: #fffaf0; color: #2b2622; transform: rotate(-2deg); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15); }
+.sticker.got:nth-child(even) { transform: rotate(2deg); }

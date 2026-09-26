@@ -164,6 +164,8 @@ export interface ProfileData {
   look: HumanLook;
   vehicle: VehicleId;
   vehicleLooks: Partial<Record<VehicleId, VehicleLook>>;
+  /** Mural board id → livery code (free-roam mural walls). */
+  murals?: Record<string, string>;
   /** Saved outfit sets. */
   outfits?: OutfitSet[];
   tonics: Record<TonicId, number>;

@@ -25,6 +25,8 @@ export class RoadStudio {
   constructor(
     private readonly onDrive: (road: CustomRoad) => void,
     private readonly toast: (text: string) => void,
+    /** Publish to the road gallery (Menu → Gallery). */
+    private readonly onPublish?: (code: string) => void,
   ) {
     try {
       const saved = localStorage.getItem(KEY);
@@ -87,7 +89,7 @@ export class RoadStudio {
         <div>
           <canvas class="rs-preview" width="360" height="260" aria-label="${t('rs.preview')}"></canvas>
           <p class="rs-stats" role="status">${t('rs.stats', { length: Math.round(st.length), min: Math.round(st.minY), max: Math.round(st.maxY), scenes: st.scenes })} ${warn}</p>
-          <div class="row wrap"><button class="btn primary" data-rs-action="drive">▶ ${t('rs.drive')}</button><button class="btn small" data-rs-action="example">↺ ${t('rs.example')}</button></div>
+          <div class="row wrap"><button class="btn primary" data-rs-action="drive">▶ ${t('rs.drive')}</button><button class="btn small" data-rs-action="example">↺ ${t('rs.example')}</button>${this.onPublish ? `<button class="btn small" data-rs-action="publish">🖼 ${t('gal.publish')}</button>` : ''}</div>
         </div>
       </div>
       <h4>${t('rs.pieces')} (${r.pieces.length}/${MAX_PIECES})</h4>
@@ -182,6 +184,10 @@ export class RoadStudio {
     else if (d.rsAction === 'drive') {
       this.save();
       this.onDrive(this.road);
+      return;
+    } else if (d.rsAction === 'publish') {
+      if (this.stats?.warnings.some((w) => w !== 'long')) return this.toast(t('gal.fixFirst'));
+      this.onPublish?.(encodeRoad(this.road));
       return;
     } else if (d.rsAction === 'copy') {
       void navigator.clipboard?.writeText(encodeRoad(this.road)).then(() => this.toast(t('lv.copied')), () => undefined);

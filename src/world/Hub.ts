@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { addMuralBoards, type MuralBoard } from './Murals';
 import { Random } from '../core/Random';
 import { ModelKit, Pattern } from '../models/ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
@@ -56,6 +57,7 @@ export class Hub implements FreeRoamArea {
   ];
   readonly group = new THREE.Group();
   readonly world: FreeWorld;
+  readonly murals: MuralBoard[] = [];
   readonly seaZ = 70;
   readonly zones: HubZone[] = [];
   readonly spawn = { x: 0, z: 30, heading: 0 };
@@ -370,6 +372,7 @@ export class Hub implements FreeRoamArea {
       this.put(new ModelKit().box(4, 0.08, 5, '#3e9fd8', { position: [0, 0.07, 0], nightGlow: 1 }).box(0.8, 0.1, 2.6, '#f6f0e4', { position: [0, 0.1, 0], rotation: [0, Math.PI / 4, 0] }).build(0), 0, z);
     }
 
+    this.murals.push(...addMuralBoards(this, 'harbour', this.spawn));
     // Glowing rings on the ground and floating labels.
     for (const z of this.zones) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.35, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));

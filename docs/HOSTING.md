@@ -174,8 +174,8 @@ saves) is kept across deploys.
 - **Admin → 📊 Dashboard → Export** downloads the analytics as JSON.
 - Render keeps automatic snapshots of the disk (see the **Disks** section of
   the service). Before a big update, make a manual snapshot there.
-- Player accounts live in `/data/accounts.json` and cloud saves in
-  `/data/saves/`. Passwords and sign-in tokens are stored only as hashes, so
+- Player accounts live in `/data/accounts.json`, cloud saves in
+  `/data/saves/` and the road gallery in `/data/gallery.json`. Passwords and sign-in tokens are stored only as hashes, so
   a copy of the disk can't be used to sign in as a player, but it still holds
   player names and saves: keep backups private.
 

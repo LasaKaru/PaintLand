@@ -65,6 +65,7 @@ export class AdminPanel {
   private tab: Tab = 'dashboard';
   private whoami: Whoami | null = null;
   private reports: PlayerReport[] = [];
+  private roads: { id: string; title: string; author: string; reports: number; hidden: boolean }[] = [];
   private stats: Stats | null = null;
   private config: ServerConfig | null = null;
   private chat: { chat: { at: number; room: string; name: string; text: string }[]; banned: string[] } | null = null;
@@ -337,8 +338,9 @@ export class AdminPanel {
     const s = this.stats;
     const chat = this.chat;
     if (!chat) {
-      void Promise.all([this.call<NonNullable<AdminPanel['chat']>>('/api/admin/chat'), this.call<{ reports: PlayerReport[] }>('/api/admin/reports')]).then(([c, r]) => {
+      void Promise.all([this.call<NonNullable<AdminPanel['chat']>>('/api/admin/chat'), this.call<{ reports: PlayerReport[] }>('/api/admin/reports'), this.call<{ roads: AdminPanel['roads'] }>('/api/admin/gallery')]).then(([c, r, g]) => {
         this.reports = r?.reports ?? [];
+        this.roads = g?.roads ?? [];
         if (c) {
           this.chat = c;
           this.render();
@@ -364,6 +366,9 @@ export class AdminPanel {
         <div class="stat-tile"><div class="label">Room size limit</div><div class="stat-value">${this.config?.maxPlayersPerRoom ?? 32}</div></div>
       </div>
       ${reportsCard}
+      <section class="viz-card"><h3>Reported gallery roads <small>hidden after 3 reports until you keep or remove them</small></h3>
+        ${this.roads.length ? `<table class="admin-table"><thead><tr><th>Road</th><th>Maker</th><th>Reports</th><th>Shown?</th><th></th></tr></thead><tbody>${this.roads.map((r) => `<tr><td>${esc(r.title)}</td><td>${esc(r.author)}</td><td>${r.reports}</td><td>${r.hidden ? 'Hidden' : 'Shown'}</td><td><button class="btn small" data-road-keep="${esc(r.id)}">Keep</button> <button class="btn small" data-road-remove="${esc(r.id)}">Remove</button></td></tr>`).join('')}</tbody></table>` : '<p class="menu-hint">No reported roads.</p>'}
+      </section>
       <section class="viz-card"><h3>Banned names</h3>
         ${chat.banned.length ? chat.banned.map((n) => `<span class="chip">${esc(n)} <button class="btn small" data-unban="${esc(n)}">Unban</button></span>`).join(' ') : '<p class="menu-hint">Nobody is banned.</p>'}
         <form class="row" data-form="ban"><input class="text-input" name="name" maxlength="20" placeholder="Player name"><button class="btn" type="submit">Ban</button></form>
@@ -407,7 +412,7 @@ export class AdminPanel {
   // ————— events —————
 
   private async onClick(e: MouseEvent): Promise<void> {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban], [data-report-ban], [data-report-dismiss]');
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban], [data-report-ban], [data-report-dismiss], [data-road-keep], [data-road-remove]');
     if (!el) return;
     const d = el.dataset;
     if (d.tab) {
@@ -444,6 +449,14 @@ export class AdminPanel {
       if (!confirm('Delete this sponsor and its logo?')) return;
       const saved = await this.call<ServerConfig>(`/api/admin/sponsor?id=${encodeURIComponent(d.delete)}`, 'DELETE');
       if (saved) this.saved(saved, 'Sponsor deleted.');
+      return;
+    }
+    if (d.roadKeep || d.roadRemove) {
+      const ok = await this.call<{ ok: boolean }>('/api/admin/gallery', 'POST', { id: d.roadKeep ?? d.roadRemove, action: d.roadRemove ? 'remove' : 'keep' });
+      if (ok) {
+        this.chat = null;
+        this.flash(d.roadRemove ? 'Road removed.' : 'Road kept and shown again.');
+      }
       return;
     }
     if (d.reportBan || d.reportDismiss) {

@@ -87,7 +87,8 @@ export class AccountClient {
     this.onChange?.();
   }
 
-  private call<T>(path: string, method = 'GET', body?: unknown): Promise<ApiResult<T & { reason?: string }>> {
+  /** An API call with this account’s sign-in (when signed in). */
+  call<T>(path: string, method = 'GET', body?: unknown): Promise<ApiResult<T & { reason?: string }>> {
     return api<T & { reason?: string }>(path, { method, body, token: this.stored?.token }).then((r) => {
       // The session ended (signed out elsewhere, password changed, banned).
       if (r.status === 401 && this.stored && !path.startsWith('/api/account/login')) {

@@ -14,7 +14,7 @@ export declare function safeUrl(s: unknown): string;
 export declare function sanitizeConfig(input: unknown, current: AdminConfig): AdminConfig;
 export declare function hashPassword(password: string, salt?: string): { salt: string; hash: string };
 export declare function checkPassword(password: string, rec: { salt: string; hash: string }): boolean;
-export declare function createAdmin(opts: { dataDir: string; distDir?: string; live: () => { rooms: number; online: number; roomSizes: Record<string, number> }; accounts?: () => { accounts: number; clubs: number; online: number } | null }): {
+export declare function createAdmin(opts: { dataDir: string; distDir?: string; live: () => { rooms: number; online: number; roomSizes: Record<string, number> }; accounts?: () => { accounts: number; clubs: number; online: number } | null; gallery?: () => { reported(): unknown[]; moderate(id: string, action: 'remove' | 'keep'): boolean; stats(): { roads: number; hidden: number } } | null }): {
   handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean>;
   maxRoom(): number;
   isBanned(name: string): boolean;

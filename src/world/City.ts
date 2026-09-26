@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
+import { addMuralBoards, type MuralBoard } from './Murals';
 import { Random } from '../core/Random';
 import { ModelKit, Pattern } from '../models/ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
@@ -58,6 +59,7 @@ export class City implements FreeRoamArea {
   readonly id = 'city';
   readonly group = new THREE.Group();
   readonly world = new FreeWorld({ minX: -640, maxX: 640, minZ: -600, maxZ: 548 });
+  readonly murals: MuralBoard[] = [];
   readonly seaZ = 550;
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -100, z: 470, heading: 0 };
@@ -511,7 +513,8 @@ export class City implements FreeRoamArea {
       { kind: 'trophies', label: '🏆 Trophy hall', x: 130, z: 452, r: 5, colour: '#f4d23b' },
       { kind: 'area', label: '⚓ Harbour Town', x: -620, z: 520, r: 9, area: 'harbour', colour: '#2f8f86' },
     ];
-    for (const z of zones) {
+    this.murals.push(...addMuralBoards(this, 'city', this.spawn));
+    for (const z of [...zones, ...this.zones.splice(0)]) {
       this.zones.push(z);
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.4, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
       ring.position.set(z.x, 0.12, z.z);

@@ -171,7 +171,7 @@ function emptyStats() {
 /**
  * @param {{ dataDir: string, distDir?: string, live: () => { rooms: number, online: number, roomSizes: Record<string, number> }, accounts?: () => { accounts: number, clubs: number, online: number } | null }} opts
  */
-export function createAdmin({ dataDir, distDir, live, accounts = () => null }) {
+export function createAdmin({ dataDir, distDir, live, accounts = () => null, gallery = () => null }) {
   const file = (name) => join(dataDir, name);
   const logoDir = file('brand');
   const readJson = (name, fallback) => {
@@ -396,6 +396,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null }) {
         openReports: reports.filter((r) => r.status === 'open').length,
         accounts: accounts()?.accounts ?? 0,
         clubs: accounts()?.clubs ?? 0,
+        roads: gallery()?.stats().roads ?? 0,
         rooms: l.rooms,
         sessions,
         avgSessionMin: sessions ? +(totalSec / sessions / 60).toFixed(1) : 0,
@@ -573,6 +574,12 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null }) {
           moderation.banned = body.ban ? [...new Set([...moderation.banned, name])] : moderation.banned.filter((n) => n !== name);
           writeJson('moderation.json', moderation);
           return send(res, 200, { ok: true, banned: moderation.banned }), true;
+        }
+        if (route === 'gallery' && method === 'GET') return send(res, 200, { roads: gallery()?.reported() ?? [] }), true;
+        if (route === 'gallery' && method === 'POST') {
+          const b = await readBody(req, 2000).catch(() => ({}));
+          const ok = gallery()?.moderate(String(b.id ?? ''), b.action === 'remove' ? 'remove' : 'keep') ?? false;
+          return send(res, ok ? 200 : 404, { ok }), true;
         }
         if (route === 'reports' && method === 'GET') return send(res, 200, { reports: reports.slice(-200).reverse(), banned: moderation.banned }), true;
         if (route === 'report' && method === 'POST') {
