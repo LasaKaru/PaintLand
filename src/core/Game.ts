@@ -44,6 +44,8 @@ import { EmoteWheel } from '../ui/EmoteWheel';
 import { Pet, isPet } from '../models/Pets';
 import type { Emote } from '../models/Human';
 import type { GroupPhotoInvite } from '../net/Net';
+import { AccountClient } from '../net/Account';
+import { defaultServer } from '../net/Leaderboard';
 import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
 import { buildBeacon, buildChest, buildPaintPot } from '../models/CityProps';
@@ -178,6 +180,10 @@ export class Game {
   private pendingInvite: { from: string; at: GroupPhotoInvite; until: number } | null = null;
   private photoCountdown!: HTMLDivElement;
   private groupShotTimer = 0;
+  /** Player account (cloud save, friends, clubs); optional. */
+  readonly account = new AccountClient();
+  private cloudPulled = false;
+  private cloudDue = 0;
   private raceCountdown = 0;
   private missionEndTimer = 0;
   private saveTimer = 0;
@@ -270,6 +276,26 @@ export class Game {
     this.touchUi = new TouchControls(container, this.input);
     this.menu = new Menu(container, {
       profile: this.profile,
+      account: this.account,
+      socialAllowed: () => onlineAllowed(this.options.family),
+      localSummary: () => ({ ink: this.profile.data.ink, trophies: this.profile.data.trophies.length }),
+      useCloudSave: () => this.useCloudSave(),
+      keepDeviceSave: async () => {
+        await this.account.push(this.profile.data, true);
+      },
+      syncNow: () => this.cloudSync(),
+      joinRoom: (room) => {
+        if (!onlineAllowed(this.options.family)) return false;
+        let server: string | null = null;
+        try {
+          server = localStorage.getItem('paintland.server');
+        } catch {
+          /* storage blocked */
+        }
+        this.net.connect(room, server || defaultServer(), this.playerInfo());
+        void this.syncVoice();
+        return true;
+      },
       chapters: CHAPTERS,
       currentChapter: () => this.world.chapter,
       missions: () => this.world.missions,
@@ -338,6 +364,18 @@ export class Game {
     this.mapView.onOpen = () => this.openMap();
     this.net.onRace = (msg, from) => this.onRaceMessage(msg, from);
     this.net.onGroupPhoto = (from, name, at) => this.onGroupPhotoInvite(from, name, at);
+    // Signed-in players prove their name to the relay (never sent in tab rooms).
+    this.net.accountToken = () => this.account.token;
+    this.profile.onChange(() => {
+      if (this.account.signedIn && !this.cloudDue) this.cloudDue = performance.now() + 20_000;
+    });
+    window.setInterval(() => this.accountTick(), 5000);
+    if (this.account.signedIn)
+      window.setTimeout(() => {
+        void this.cloudSync().then((r) => {
+          if (r === 'conflict') this.menu.toast(t('acct.conflictToast'));
+        });
+      }, 3000);
     this.emoteWheel = new EmoteWheel(container);
     this.groupInvite = document.createElement('div');
     this.groupInvite.className = 'group-invite hidden';
@@ -610,6 +648,52 @@ export class Game {
     this.pet?.reset();
     this.startEmote('cheer');
   }
+
+  // ————— account: cloud save and presence —————
+
+  /** Pull once after signing in, then push this device's progress (asks when both changed). */
+  private async cloudSync(): Promise<'ok' | 'conflict' | 'offline'> {
+    const a = this.account;
+    if (!a.signedIn) return 'offline';
+    if (!this.cloudPulled) {
+      this.cloudPulled = true;
+      if (await a.pull()) {
+        if (!this.profile.isFresh()) return 'conflict';
+        this.useCloudSave();
+        return 'ok';
+      }
+    }
+    const r = await a.push(this.profile.data);
+    if (r === 'ok') this.cloudDue = 0;
+    return r;
+  }
+
+  private useCloudSave(): void {
+    const save = this.account.acceptCloud();
+    if (!save) return;
+    this.profile.replace(save);
+    this.cloudDue = 0;
+    this.buildPawnModels();
+    if (this.menu.screen !== 'none') this.menu.show(this.menu.screen);
+  }
+
+  /** Every few seconds: upload changes (at most every 20 s) and tell friends we're around. */
+  private accountTick(): void {
+    const a = this.account;
+    if (!a.signedIn) return;
+    const now = performance.now();
+    if (this.cloudDue && now >= this.cloudDue && !a.conflict) {
+      this.cloudDue = 0;
+      void this.cloudSync().then((r) => {
+        if (r === 'conflict') this.menu.toast(t('acct.conflictToast'));
+      });
+    }
+    if (now - this.presenceAt > 60_000 && onlineAllowed(this.options.family)) {
+      this.presenceAt = now;
+      a.presence(this.net.connected ? this.net.room : null);
+    }
+  }
+  private presenceAt = -Infinity;
 
   /** Free-roam handling for the current vehicle; amphibious ones may head out to sea. */
   private fitHubCar(): void {

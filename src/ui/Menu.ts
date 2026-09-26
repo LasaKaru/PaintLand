@@ -1,4 +1,5 @@
 import { LiveryEditor } from './LiveryEditor';
+import { AccountScreen, type AccountHost } from './AccountScreen';
 import { actionGroupLabel, actionLabel, itemLabel } from './names';
 import { checkPin, hashPin, isLocked, PIN_PATTERN, PinGuard } from '../core/Family';
 import { RoadStudio } from './RoadStudio';
@@ -40,10 +41,10 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'none';
 
 /** Everything the menu needs from the game. */
-export interface MenuHost {
+export interface MenuHost extends AccountHost {
   profile: Profile;
   runBenchmark(done: (r: BenchmarkResult) => void): void;
   testRoad(road: CustomRoad): void;
@@ -115,6 +116,7 @@ export class Menu {
     (road) => this.host.testRoad(road),
     (text) => this.toast(text),
   );
+  private readonly accountScreen: AccountScreen;
   private readonly liveryEditor = new LiveryEditor(
     (code) => {
       const p = this.host.profile;
@@ -131,6 +133,11 @@ export class Menu {
   private logoTaps: number[] = [];
 
   constructor(parent: HTMLElement, private readonly host: MenuHost) {
+    this.accountScreen = new AccountScreen(
+      host,
+      () => this.render(),
+      (m) => this.toast(m),
+    );
     this.root = document.createElement('div');
     this.root.className = 'menu';
     parent.appendChild(this.root);
@@ -163,6 +170,8 @@ export class Menu {
 
   show(screen: MenuScreen): void {
     this.cancelListening();
+    // Opening Account fetches fresh friends and club news.
+    if (screen === 'account' && this.screen !== 'account') this.accountScreen.load(true);
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
@@ -192,13 +201,16 @@ export class Menu {
       livery: () => `<div class="menu-panel side">${this.header(t('lv.title')).replace('data-nav="main"', 'data-nav="garage"')}<div class="panel-body" data-id="livery"></div></div>`,
       shop: () => this.shop(),
       multiplayer: () => this.multiplayer(),
+      account: () => `<div class="menu-panel">${this.header(t('acct.title'))}<div class="panel-body">${this.accountScreen.render()}</div></div>`,
       settings: () => this.settingsScreen(),
       trophies: () => this.trophiesScreen(),
       trials: () => this.trialsScreen(),
       race: () => this.raceScreen(),
       credits: () => this.credits(),
     }[s]();
-    this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
+    // Keep a message that's still showing across re-renders (async actions re-render after toasting).
+    const live = this.toastText && performance.now() < this.toastUntil;
+    this.root.innerHTML = `${body}<div class="menu-toast ${live ? 'show' : ''}" data-id="toast" role="status" aria-live="polite">${live ? escapeHtml(this.toastText) : ''}</div>`;
     const lv = s === 'livery' ? this.root.querySelector<HTMLElement>('[data-id="livery"]') : null;
     if (lv) this.liveryEditor.mount(lv, this.host.profile.vehicleLook(this.host.profile.data.vehicle).livery);
     if (focusSig && !newScreen) this.root.querySelector<HTMLElement>(focusSig)?.focus({ preventScroll: true });
@@ -264,13 +276,19 @@ export class Menu {
     if (el) el.textContent = `💧 ${this.host.profile.data.ink} ink`;
   }
 
+  private toastText = '';
+  private toastUntil = 0;
+
   toast(text: string): void {
+    if (!text) return;
+    this.toastText = text;
+    this.toastUntil = performance.now() + 2600;
     const el = this.root.querySelector<HTMLElement>('[data-id="toast"]');
     if (!el) return;
     el.textContent = text;
     el.classList.add('show');
     clearTimeout(this.toastTimer);
-    this.toastTimer = window.setTimeout(() => el.classList.remove('show'), 1800);
+    this.toastTimer = window.setTimeout(() => this.root.querySelector<HTMLElement>('[data-id="toast"]')?.classList.remove('show'), 2600);
   }
 
   // ————— screens —————
@@ -306,6 +324,7 @@ export class Menu {
         <button class="menu-item" data-nav="garage">${t('menu.garage')}</button>
         <button class="menu-item" data-nav="shop">${t('menu.shop')}</button>
         <button class="menu-item" data-nav="multiplayer">${t('menu.multiplayer')}</button>
+        <button class="menu-item" data-nav="account">👤 ${this.host.account.signedIn ? escapeHtml(this.host.account.name ?? '') : t('acct.title')}</button>
         <button class="menu-item" data-nav="trophies">${t('menu.trophies', { n: this.host.profile.data.trophies.length, total: TROPHIES.length })}</button>
         <button class="menu-item" data-nav="settings">${t('menu.settings')}</button>
         <button class="menu-item small" data-nav="intro">${t('menu.intro')}</button>
@@ -880,6 +899,10 @@ export class Menu {
 
   private onSubmit(e: SubmitEvent): void {
     const form = e.target as HTMLFormElement;
+    if (this.accountScreen.onSubmit(form)) {
+      e.preventDefault();
+      return;
+    }
     if (form.dataset.form === 'fam-new' || form.dataset.form === 'fam-unlock') {
       e.preventDefault();
       void this.familyPin(form);
@@ -902,6 +925,7 @@ export class Menu {
     this.host.uiSound();
     const d = el.dataset;
     const p = this.host.profile;
+    if (d.acct && this.accountScreen.onClick(el)) return;
     if (d.nav) {
       if (d.nav === 'enter') {
         this.host.unlockAudio();

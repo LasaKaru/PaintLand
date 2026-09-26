@@ -169,9 +169,9 @@ function emptyStats() {
 }
 
 /**
- * @param {{ dataDir: string, distDir?: string, live: () => { rooms: number, online: number, roomSizes: Record<string, number> } }} opts
+ * @param {{ dataDir: string, distDir?: string, live: () => { rooms: number, online: number, roomSizes: Record<string, number> }, accounts?: () => { accounts: number, clubs: number, online: number } | null }} opts
  */
-export function createAdmin({ dataDir, distDir, live }) {
+export function createAdmin({ dataDir, distDir, live, accounts = () => null }) {
   const file = (name) => join(dataDir, name);
   const logoDir = file('brand');
   const readJson = (name, fallback) => {
@@ -394,6 +394,8 @@ export function createAdmin({ dataDir, distDir, live }) {
         onlineNow: Math.max(recentBeats, l.online),
         inRooms: l.online,
         openReports: reports.filter((r) => r.status === 'open').length,
+        accounts: accounts()?.accounts ?? 0,
+        clubs: accounts()?.clubs ?? 0,
         rooms: l.rooms,
         sessions,
         avgSessionMin: sessions ? +(totalSec / sessions / 60).toFixed(1) : 0,

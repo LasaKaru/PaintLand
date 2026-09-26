@@ -226,9 +226,7 @@ export class Profile {
     try {
       const raw = localStorage.getItem(KEY);
       if (raw) {
-        const saved = JSON.parse(raw) as Partial<ProfileData>;
-        this.data = { ...this.data, ...saved, look: { ...this.data.look, ...saved.look }, tonics: { ...this.data.tonics, ...saved.tonics } };
-        for (const id of defaults().owned) if (!this.data.owned.includes(id)) this.data.owned.push(id);
+        this.hydrate(JSON.parse(raw) as Partial<ProfileData>);
         // Milestone 7 saves were handed every loot-only item by mistake: take them back once.
         if (!this.data.seen.includes('mig:loot')) {
           const loot = new Set(CATALOGUE.filter((i) => i.loot).map((i) => i.id));
@@ -239,6 +237,29 @@ export class Profile {
     } catch {
       /* storage blocked or corrupt: start fresh */
     }
+  }
+
+  /** Load saved data over the defaults (from this device or the cloud). */
+  private hydrate(saved: Partial<ProfileData>): void {
+    const base = defaults();
+    this.data = { ...base, ...saved, look: { ...base.look, ...saved.look }, tonics: { ...base.tonics, ...saved.tonics } };
+    if (!Array.isArray(this.data.owned)) this.data.owned = [];
+    if (!Array.isArray(this.data.seen)) this.data.seen = ['mig:loot'];
+    for (const id of base.owned) if (!this.data.owned.includes(id)) this.data.owned.push(id);
+  }
+
+  /** Nothing earned yet on this device (a cloud save can simply replace it). */
+  isFresh(): boolean {
+    const d = this.data;
+    const base = defaults();
+    return d.trophies.length === 0 && Object.keys(d.bestLap).length === 0 && d.missionsDone.length === 0 && Object.keys(d.sealed).length === 0 && d.ink <= base.ink && d.owned.length <= base.owned.length;
+  }
+
+  /** Replace everything with a cloud save the player chose to keep. */
+  replace(saved: Record<string, unknown>): void {
+    this.hydrate(saved as Partial<ProfileData>);
+    if (!this.data.seen.includes('mig:loot')) this.data.seen.push('mig:loot');
+    this.save();
   }
 
   onChange(fn: () => void): void {

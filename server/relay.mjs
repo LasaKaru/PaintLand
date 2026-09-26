@@ -24,6 +24,7 @@ import { WebSocketServer } from 'ws';
 import { randomUUID } from 'node:crypto';
 import { LIMITS, Strikes, checkRtc, cleanText, clientIp, validateState } from './validate.mjs';
 import { createAdmin } from './admin.mjs';
+import { createAccounts } from './accounts.mjs';
 
 const PORT = Number(process.env.PORT ?? 8787);
 const MAX_ROOM_ENV = process.env.MAX_ROOM ? Number(process.env.MAX_ROOM) : null;
@@ -83,13 +84,17 @@ const admin = createAdmin({
     }
     return { rooms: rooms.size, online, roomSizes };
   },
+  accounts: () => accounts.stats(),
 });
+// Player accounts (cloud saves, friends, clubs) share the same data folder.
+const accounts = createAccounts({ dataDir: DATA_DIR, isBanned: (n) => admin.isBanned(n) });
 const maxRoom = () => MAX_ROOM_ENV ?? admin.maxRoom();
 
 const http = createServer((req, res) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
-  admin
+  accounts
     .handle(req, res, url)
+    .then((handled) => handled || admin.handle(req, res, url))
     .then((handled) => {
       if (!handled) relayHttp(req, res, url);
     })
@@ -233,7 +238,18 @@ wss.on('connection', (socket, req) => {
       admin.logChat(room, name, msg.text);
     }
     if (msg.t === 'hello') {
-      msg.name = cleanText(msg.name, LIMITS.name) ?? 'Painter';
+      // A signed-in player proves their name with their session token (never passed on).
+      const user = typeof msg.acct === 'string' ? accounts.userForToken(msg.acct) : null;
+      delete msg.acct;
+      delete msg.verified;
+      if (user) {
+        msg.name = user.name;
+        msg.verified = true;
+      } else {
+        msg.name = cleanText(msg.name, LIMITS.name) ?? 'Painter';
+        // Guests can't pose as a registered player.
+        if (accounts.isTaken(msg.name)) msg.name = `${msg.name.slice(0, LIMITS.name - 6)} guest`;
+      }
       name = msg.name;
       if (admin.isBanned(name)) {
         socket.close(4004, 'banned');
@@ -264,3 +280,14 @@ wss.on('connection', (socket, req) => {
 });
 
 http.listen(PORT, () => console.log(`Inkroads relay listening on ws://localhost:${PORT} (rooms of up to ${maxRoom()}) · leaderboard ${verifyRun ? 'on' : 'off'} at http://localhost:${PORT}/leaderboard`));
+
+// Save accounts before the host stops the process (deploys, restarts).
+for (const sig of ['SIGTERM', 'SIGINT']) {
+  process.on(sig, () => {
+    try {
+      accounts.flush();
+    } finally {
+      process.exit(0);
+    }
+  });
+}

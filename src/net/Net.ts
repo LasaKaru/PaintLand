@@ -17,6 +17,8 @@ export interface PlayerInfo {
   vehicle: VehicleId;
   vlook: VehicleLook;
   chapter: string;
+  /** The relay checked this player's account: the name is really theirs. */
+  verified?: boolean;
 }
 
 export interface PlayerState {
@@ -182,8 +184,12 @@ export class NetClient {
     this.onPeersChanged?.();
   }
 
+  /** The account session token, sent only to a real relay server (which checks it and never passes it on). */
+  accountToken: (() => string | null) | null = null;
+
   sendHello(info: PlayerInfo): void {
-    this.transport?.send({ t: 'hello', ...info });
+    const acct = this.transport instanceof SocketTransport ? this.accountToken?.() : null;
+    this.transport?.send({ t: 'hello', ...info, ...(acct ? { acct } : {}) });
   }
 
   sendRace(msg: RaceMessage): void {
@@ -226,7 +232,8 @@ export class NetClient {
     peer.lastSeen = performance.now();
     switch (m.t) {
       case 'hello':
-        peer.info = { name: cleanText(m.name, 20) ?? 'Painter', look: m.look, vehicle: m.vehicle, vlook: m.vlook, chapter: m.chapter };
+        // Only a relay server can vouch for a name; tab rooms never do.
+        peer.info = { name: cleanText(m.name, 20) ?? 'Painter', look: m.look, vehicle: m.vehicle, vlook: m.vlook, chapter: m.chapter, verified: this.transport instanceof SocketTransport && m.verified === true };
         this.onPeersChanged?.();
         break;
       case 'state': {
