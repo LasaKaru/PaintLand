@@ -45,7 +45,9 @@ import { Pet, isPet } from '../models/Pets';
 import type { Emote } from '../models/Human';
 import type { GroupPhotoInvite } from '../net/Net';
 import { AccountClient } from '../net/Account';
+import { ModelKit } from '../models/ModelKit';
 import { paintMural } from '../world/Murals';
+import { CONTEST_INK, PAINT_INK, acceptScore, convoyTick, driftPoints, dropsNear, leaderTick, newContest, newConvoy, newPaintEvent, paintDrops, standings, stuntPoints, takeDrop, type Contest, type ContestMode, type PaintEvent, type TogetherMsg } from '../gameplay/Together';
 import { defaultServer } from '../net/Leaderboard';
 import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
@@ -181,6 +183,18 @@ export class Game {
   private pendingInvite: { from: string; at: GroupPhotoInvite; until: number } | null = null;
   private photoCountdown!: HTMLDivElement;
   private groupShotTimer = 0;
+  /** Playing together: a contest, a paint splash and a convoy (gameplay/Together.ts). */
+  private contest: Contest | null = null;
+  private contestSent = 0;
+  private contestShowUntil = 0;
+  private paintEvent: PaintEvent | null = null;
+  private paintMeshes: THREE.Mesh[] = [];
+  private readonly convoy = newConvoy();
+  private convoyPing = 0;
+  private togetherHud!: HTMLDivElement;
+  private togetherHudAt = 0;
+  /** What "Join" on the invite banner does (null = join the group photo). */
+  private inviteAction: (() => void) | null = null;
   /** Player account (cloud save, friends, clubs); optional. */
   readonly account = new AccountClient();
   private cloudPulled = false;
@@ -281,6 +295,8 @@ export class Game {
       profile: this.profile,
       account: this.account,
       currentMural: () => this.muralId,
+      together: (kind) => this.startTogether(kind),
+      togetherState: () => ({ roam: !!this.roamChapter(), online: this.net.connected, convoy: this.convoy.leading ? 'leading' : this.convoy.leader ? 'following' : null, busy: !!this.contest || !!this.paintEvent }),
       stickerAreas: () => [...this.areas.values()].map((a) => ({ id: a.id, name: a.title().name, places: a.places, secrets: a.secrets })),
       muralChanged: () => this.paintMurals(),
       socialAllowed: () => onlineAllowed(this.options.family),
@@ -370,6 +386,12 @@ export class Game {
     this.mapView.onOpen = () => this.openMap();
     this.net.onRace = (msg, from) => this.onRaceMessage(msg, from);
     this.net.onGroupPhoto = (from, name, at) => this.onGroupPhotoInvite(from, name, at);
+    this.net.onTogether = (from, name, msg) => this.onTogether(from, name, msg);
+    this.togetherHud = document.createElement('div');
+    this.togetherHud.className = 'together-hud hidden';
+    this.togetherHud.setAttribute('role', 'status');
+    this.togetherHud.setAttribute('aria-live', 'polite');
+    container.appendChild(this.togetherHud);
     // Signed-in players prove their name to the relay (never sent in tab rooms).
     this.net.accountToken = () => this.account.token;
     this.profile.onChange(() => {
@@ -389,8 +411,13 @@ export class Game {
     container.appendChild(this.groupInvite);
     this.groupInvite.addEventListener('click', (e) => {
       const b = (e.target as HTMLElement).closest<HTMLButtonElement>('button');
-      if (b?.dataset.gp === 'join') this.joinGroupPhoto();
-      else if (b) this.hideGroupInvite();
+      if (b?.dataset.gp === 'join') {
+        const act = this.inviteAction;
+        if (act) {
+          this.hideGroupInvite();
+          act();
+        } else this.joinGroupPhoto();
+      } else if (b) this.hideGroupInvite();
     });
     this.photoCountdown = document.createElement('div');
     this.photoCountdown.className = 'photo-countdown hidden';
@@ -618,6 +645,7 @@ export class Game {
     const me = this.mode === 'foot' ? this.hubWalker : this.hubCar;
     if (Math.hypot(me.x - at.x, me.z - at.z) > 80) return;
     this.pendingInvite = { from, at, until: performance.now() + 8000 };
+    this.inviteAction = null;
     this.groupInvite.innerHTML = `<span>📸 ${escapeHtml(t('group.invite', { name }))}</span><button class="btn primary" data-gp="join">${t('group.join')}</button><button class="btn" data-gp="no" aria-label="${t('group.dismiss')}">✕</button>`;
     this.groupInvite.classList.remove('hidden');
     window.setTimeout(() => {
@@ -627,6 +655,7 @@ export class Game {
 
   private hideGroupInvite(): void {
     this.pendingInvite = null;
+    this.inviteAction = null;
     this.groupInvite.classList.add('hidden');
   }
 
@@ -706,6 +735,252 @@ export class Game {
     }
   }
   private presenceAt = -Infinity;
+
+  // ————— playing together: convoys, contests, paint splashes —————
+
+  private showInvite(text: string, join: () => void): void {
+    this.pendingInvite = null;
+    this.groupInvite.innerHTML = `<span>${escapeHtml(text)}</span><button class="btn primary" data-gp="join">${t('group.join')}</button><button class="btn" data-gp="no" aria-label="${t('group.dismiss')}">✕</button>`;
+    this.groupInvite.classList.remove('hidden');
+    this.inviteAction = join;
+    const shown = this.groupInvite.innerHTML;
+    window.setTimeout(() => {
+      if (this.groupInvite.innerHTML === shown) this.hideGroupInvite();
+    }, 10_000);
+  }
+
+  /** Menu → Multiplayer → Play together. Returns a message to show, or null. */
+  private startTogether(kind: 'convoy' | ContestMode | 'paint'): string | null {
+    const chapter = this.roamChapter();
+    if (!chapter) return t('tg.needRoam');
+    if (kind === 'convoy') {
+      if (!this.net.connected) return t('tg.needRoom');
+      if (this.convoy.leading) {
+        this.convoy.leading = false;
+        this.convoy.followers.clear();
+        this.net.together({ type: 'convoy', on: false, chapter });
+        return t('tg.convoyEnded');
+      }
+      this.convoy.leader = null;
+      this.convoy.leading = true;
+      this.convoy.nextLeaderPay = 0;
+      this.net.together({ type: 'convoy', on: true, chapter });
+      return t('tg.convoyLead');
+    }
+    if (this.contest || this.paintEvent) return t('tg.busy');
+    const id = `${kind}-${Math.random().toString(36).slice(2, 10)}`;
+    if (kind === 'paint') {
+      const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+      const seed = Math.floor(Math.random() * 2 ** 30);
+      this.beginPaint(id, seed, p.x, p.z, this.net.peers.size + 1);
+      if (this.net.connected) this.net.together({ type: 'paint', id, seed, chapter, cx: p.x, cz: p.z });
+      return t('tg.paintSoon');
+    }
+    this.contest = newContest(id, kind, this.time);
+    if (this.net.connected) this.net.together({ type: 'contest', id, mode: kind, chapter });
+    return t('tg.contestSoon');
+  }
+
+  private beginPaint(id: string, seed: number, cx: number, cz: number, players: number): void {
+    const area = this.area!;
+    const drops = paintDrops(seed, cx, cz, (x, z) => area.world.resolve({ x, z }, 1.2) === null);
+    this.paintEvent = newPaintEvent(id, drops, this.time, players);
+    const colours = ['#d8463a', '#f4d23b', '#3e6fa8', '#e8559a', '#5dbb3f'];
+    this.clearPaintMeshes();
+    this.paintMeshes = drops.map((d, i) => {
+      const m = new THREE.Mesh(
+        new ModelKit().cylinder(0.45, 0.4, 0.6, 10, colours[i % colours.length], { position: [0, 0.3, 0], nightGlow: 1 }).cylinder(0.47, 0.47, 0.08, 10, '#2b2622', { position: [0, 0.62, 0] }).blob(0.3, colours[i % colours.length], { position: [0, 0.75, 0], scale: [1, 0.5, 1], detail: 0 }).build(0.01, i),
+        this.pickupMaterial,
+      );
+      m.position.set(d.x, HUB_Y, d.z);
+      this.scene.add(m);
+      return m;
+    });
+  }
+
+  private clearPaintMeshes(): void {
+    for (const m of this.paintMeshes) {
+      m.removeFromParent();
+      m.geometry.dispose();
+    }
+    this.paintMeshes = [];
+  }
+
+  private onTogether(from: string, name: string, msg: TogetherMsg): void {
+    const chapter = this.roamChapter();
+    if (this.options.blocked.includes(name)) return;
+    switch (msg.type) {
+      case 'convoy':
+        if (!msg.on) {
+          if (this.convoy.leader === from) {
+            this.convoy.leader = null;
+            this.menu.toast(t('tg.convoyOver', { name }));
+          }
+          return;
+        }
+        if (msg.chapter !== chapter || this.convoy.leading) return;
+        this.showInvite(`🚗 ${t('tg.convoyInvite', { name })}`, () => {
+          this.convoy.leader = from;
+          this.convoy.leaderName = name;
+          this.convoy.close = 0;
+        });
+        return;
+      case 'ping':
+        if (this.convoy.leading && msg.leader === this.net.selfId) this.convoy.followers.set(from, this.time);
+        return;
+      case 'contest':
+        if (msg.chapter !== chapter || this.contest || this.paintEvent) return;
+        this.showInvite(`🏁 ${t(msg.mode === 'drift' ? 'tg.driftInvite' : 'tg.stuntInvite', { name })}`, () => {
+          if (!this.contest && this.roamChapter() === msg.chapter) this.contest = newContest(msg.id, msg.mode, this.time);
+        });
+        return;
+      case 'score':
+        if (this.contest?.id === msg.id) acceptScore(this.contest, name, msg.score, this.time);
+        return;
+      case 'paint':
+        if (msg.chapter !== chapter || this.contest || this.paintEvent) return;
+        this.showInvite(`🎨 ${t('tg.paintInvite', { name })}`, () => {
+          if (!this.paintEvent && this.roamChapter() === msg.chapter) this.beginPaint(msg.id, msg.seed, msg.cx, msg.cz, this.net.peers.size + 1);
+        });
+        return;
+      case 'take':
+        if (this.paintEvent?.id === msg.id && takeDrop(this.paintEvent, msg.drop, false, this.time)) this.paintMeshes[msg.drop]?.removeFromParent();
+        return;
+    }
+  }
+
+  private contestLanding(air: number): void {
+    const c = this.contest;
+    if (!c || c.mode !== 'stunt' || this.time < c.startAt || this.time > c.endAt) return;
+    const pts = stuntPoints(air);
+    if (pts) {
+      c.mine += pts;
+      this.popAtPawn(`+${pts}`, 'good');
+    }
+  }
+
+  /** Per frame in a free-roam area. */
+  private togetherTick(dt: number): void {
+    const now = this.time;
+    const drive = this.mode === 'drive';
+    const me = drive ? this.hubCar : this.hubWalker;
+    // Contest.
+    const c = this.contest;
+    if (c && !c.done) {
+      if (c.mode === 'drift' && drive && now >= c.startAt && now <= c.endAt) c.mine += driftPoints(dt, Math.abs(this.hubCar.v), this.hubCar.drifting);
+      if (this.net.connected && now >= c.startAt && now - this.contestSent > 2) {
+        this.contestSent = now;
+        this.net.together({ type: 'score', id: c.id, score: Math.round(c.mine) });
+      }
+      if (now > c.endAt + 2) {
+        c.done = true;
+        const table = standings(c, this.profile.data.name);
+        const won = table[0].me && table.length > 1 && table[0].score > 0;
+        const ink = CONTEST_INK.part + (won ? CONTEST_INK.win : 0);
+        this.profile.earn(ink);
+        this.audio.cheer();
+        this.hud.lootCard(t(c.mode === 'drift' ? 'tg.drift' : 'tg.stunt'), '#f4d23b', won ? t('tg.youWon') : t('tg.place', { n: table.findIndex((r) => r.me) + 1 }), `+${ink} ink`);
+        this.contestShowUntil = now + 8;
+      }
+    } else if (c && now > this.contestShowUntil) this.contest = null;
+    // Paint splash.
+    const e = this.paintEvent;
+    if (e && !e.done) {
+      for (const i of dropsNear(e, me.x, me.z, drive ? 2.6 : 1.6)) {
+        if (!takeDrop(e, i, true, now)) continue;
+        this.paintMeshes[i]?.removeFromParent();
+        this.audio.chime(72 + (e.mine % 5) * 2);
+        if (this.net.connected) this.net.together({ type: 'take', id: e.id, drop: i });
+      }
+      for (const [i, m] of this.paintMeshes.entries()) if (m.parent) m.rotation.y = now * 1.5 + i;
+      if (e.team >= e.target || now > e.endAt) {
+        e.done = true;
+        const success = e.team >= e.target;
+        if (success) {
+          this.profile.earn(PAINT_INK);
+          this.audio.cheer();
+          this.splash = 1;
+        }
+        this.hud.lootCard(t('tg.paint'), '#e8559a', success ? t('tg.paintDone') : t('tg.paintMissed'), success ? `+${PAINT_INK} ink` : `${e.team}/${e.target}`);
+        window.setTimeout(() => {
+          if (this.paintEvent === e) {
+            this.paintEvent = null;
+            this.clearPaintMeshes();
+          }
+        }, 6000);
+      }
+    }
+    // Convoy.
+    const cv = this.convoy;
+    if (cv.leader) {
+      const peer = this.net.peers.get(cv.leader);
+      const snap = peer ? this.net.sample(peer) : null;
+      if (!peer || !snap || snap.chapter !== this.roamChapter()) {
+        if (!peer) cv.leader = null;
+      } else {
+        const dist = Math.hypot(snap.x - me.x, snap.s - HUB_S_OFFSET - me.z);
+        const ink = convoyTick(cv, dt, dist, drive ? Math.abs(this.hubCar.v) : 0);
+        if (ink) {
+          this.profile.earn(ink);
+          this.popAtPawn(`🚗 +${ink}`, 'good');
+        }
+        if (dist < 40 && now - this.convoyPing > 10) {
+          this.convoyPing = now;
+          this.net.together({ type: 'ping', leader: cv.leader });
+        }
+      }
+    }
+    const lead = leaderTick(cv, now);
+    if (lead) {
+      this.profile.earn(lead);
+      this.popAtPawn(`🚗 +${lead}`, 'good');
+    }
+    this.drawTogetherHud(me);
+  }
+
+  private drawTogetherHud(me: { x: number; z: number }): void {
+    if (this.time - this.togetherHudAt < 0.25) return;
+    this.togetherHudAt = this.time;
+    const now = this.time;
+    const lines: string[] = [];
+    const c = this.contest;
+    if (c) {
+      const title = t(c.mode === 'drift' ? 'tg.drift' : 'tg.stunt');
+      const left = now < c.startAt ? t('tg.startsIn', { s: Math.ceil(c.startAt - now) }) : c.done ? t('tg.finished') : t('tg.timeLeft', { s: Math.ceil(c.endAt - now) });
+      const rows = standings(c, this.profile.data.name)
+        .slice(0, 4)
+        .map((r, i) => `<li class="${r.me ? 'me' : ''}">${i + 1}. ${escapeHtml(r.name)} <b>${r.score}</b></li>`)
+        .join('');
+      lines.push(`<div><b>🏁 ${title}</b> · ${left}<ol>${rows}</ol></div>`);
+    }
+    const e = this.paintEvent;
+    if (e) {
+      const left = now < e.startAt ? t('tg.startsIn', { s: Math.ceil(e.startAt - now) }) : e.done ? t('tg.finished') : t('tg.timeLeft', { s: Math.ceil(e.endAt - now) });
+      const pct = Math.min(100, Math.round((100 * e.team) / e.target));
+      lines.push(`<div><b>🎨 ${t('tg.paint')}</b> · ${left}<div class="tg-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${e.target}" aria-valuenow="${e.team}"><i style="width:${pct}%"></i></div><small>${t('tg.team', { n: e.team, target: e.target, mine: e.mine })}</small></div>`);
+    }
+    if (this.convoy.leading) lines.push(`<div>🚗 ${t('tg.leading', { n: [...this.convoy.followers.values()].filter((at) => now - at < 30).length })}</div>`);
+    else if (this.convoy.leader) {
+      const peer = this.net.peers.get(this.convoy.leader);
+      const snap = peer ? this.net.sample(peer) : null;
+      const d = snap ? Math.round(Math.hypot(snap.x - me.x, snap.s - HUB_S_OFFSET - me.z)) : null;
+      lines.push(`<div>🚗 ${t('tg.following', { name: escapeHtml(this.convoy.leaderName) })}${d !== null ? ` · ${d} m` : ''}</div>`);
+    }
+    const html = lines.join('');
+    this.togetherHud.classList.toggle('hidden', !html || this.state === 'photo');
+    if (this.togetherHud.innerHTML !== html) this.togetherHud.innerHTML = html;
+  }
+
+  /** Leaving free roam ends what was going on. */
+  private endTogether(): void {
+    if (this.convoy.leading && this.net.connected) this.net.together({ type: 'convoy', on: false, chapter: 'hub' });
+    this.convoy.leading = false;
+    this.convoy.leader = null;
+    this.contest = null;
+    this.paintEvent = null;
+    this.clearPaintMeshes();
+    this.togetherHud.classList.add('hidden');
+  }
 
   /** Free-roam handling for the current vehicle; amphibious ones may head out to sea. */
   private fitHubCar(): void {
@@ -2220,6 +2495,8 @@ export class Game {
   }
 
   private enterHub(at?: HubSpot, areaId?: string): void {
+    // A new area: events from the old one end (their paint pots and scores belong there).
+    if (this.area && this.paintEvent) this.endTogether();
     const id = areaId ?? at?.area ?? this.area?.id ?? 'harbour';
     if (this.area && this.area.id !== id) this.area.show(false);
     const area = this.areaFor(id);
@@ -2288,6 +2565,7 @@ export class Game {
   private leaveHub(): void {
     if (!this.inHub) return;
     this.inHub = false;
+    this.endTogether();
     this.area?.show(false);
     this.world.group.visible = true;
     this.hud.setHub(false);
@@ -2326,6 +2604,7 @@ export class Game {
     };
     car.onLand = (air) => {
       this.timeScale = 1;
+      this.contestLanding(air);
       const stunt = this.stuntAir;
       this.stuntAir = null;
       this.profile.recordStat('bestAir', air);
@@ -2353,6 +2632,7 @@ export class Game {
   private hubStep(dt: number): void {
     const inp = this.input;
     const area = this.area!;
+    this.togetherTick(dt);
     // Traffic and people are solid.
     const bodies = area.dynamicBodies();
     for (const b of bodies) area.world.colliders.push({ type: 'circle', x: b.x, z: b.z, r: b.r });

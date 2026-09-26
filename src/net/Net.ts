@@ -1,3 +1,4 @@
+import { checkTogether, type TogetherMsg } from '../gameplay/Together';
 import { checkRtc, cleanText, validateState, type RtcMessage } from '../../server/validate.mjs';
 import type { TrialRun } from '../gameplay/TrialSim';
 import type { HumanLook } from '../models/Human';
@@ -156,6 +157,7 @@ export class NetClient {
   onPeersChanged: (() => void) | null = null;
   /** Voice chat signalling from a peer (already checked). */
   onRtc: ((from: string, msg: RtcMessage) => void) | null = null;
+  onTogether: ((from: string, name: string, msg: TogetherMsg) => void) | null = null;
   /** Someone is taking a group photo at (x, z) in a free-roam area and invites others to join. */
   onGroupPhoto: ((from: string, name: string, at: GroupPhotoInvite) => void) | null = null;
   /** Our id as the other players see it (the relay's, or ours in tab rooms). */
@@ -198,6 +200,11 @@ export class NetClient {
 
   sendRtc(msg: RtcMessage): void {
     this.transport?.send(msg);
+  }
+
+  /** Convoys, contests and paint splashes (see gameplay/Together.ts). */
+  together(msg: TogetherMsg): void {
+    this.transport?.send({ t: 'emote', kind: 'together', msg });
   }
 
   groupPhoto(at: GroupPhotoInvite): void {
@@ -271,6 +278,11 @@ export class NetClient {
       case 'emote': {
         const e = m as unknown as Record<string, unknown>;
         const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 5000;
+        if (e.kind === 'together') {
+          const tm = checkTogether(e.msg);
+          if (tm) this.onTogether?.(pid, peer.info?.name ?? 'Painter', tm);
+          break;
+        }
         if (e.kind === 'photo' && typeof e.chapter === 'string' && e.chapter.length <= 24 && num(e.x) && num(e.z) && num(e.yaw))
           this.onGroupPhoto?.(pid, peer.info?.name ?? 'Painter', { chapter: e.chapter, x: e.x, z: e.z, yaw: e.yaw });
         break;

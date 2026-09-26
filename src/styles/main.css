@@ -710,3 +710,12 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .sticker small { font-size: 11px; }
 .sticker.got { border-style: solid; border-color: #2b2622; background: #fffaf0; color: #2b2622; transform: rotate(-2deg); box-shadow: 0 2px 0 rgba(0, 0, 0, 0.15); }
 .sticker.got:nth-child(even) { transform: rotate(2deg); }
+
+/* Playing together: contest / paint / convoy panel */
+.together-hud { position: fixed; left: 50%; top: 132px; transform: translateX(-50%); z-index: 12; min-width: 220px; max-width: min(360px, 90vw); padding: 8px 12px; border: 2px solid #2b2622; border-radius: 12px; background: rgba(246, 240, 228, 0.94); color: #2b2622; font-size: 13px; pointer-events: none; }
+.together-hud.hidden { display: none; }
+.together-hud ol { margin: 4px 0 0; padding-left: 18px; }
+.together-hud li.me { font-weight: bold; color: #b0352a; }
+.together-hud > div + div { margin-top: 6px; border-top: 1px dashed #c8b89a; padding-top: 6px; }
+.tg-bar { height: 8px; margin: 4px 0; border: 1px solid #2b2622; border-radius: 6px; overflow: hidden; background: #fffaf0; }
+.tg-bar i { display: block; height: 100%; background: linear-gradient(90deg, #d8463a, #f4d23b, #3e6fa8); }

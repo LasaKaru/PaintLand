@@ -60,6 +60,9 @@ export interface MenuHost extends AccountHost {
   startMission(m: MissionDef): void;
   lookChanged(): void;
   vehicleChanged(): void;
+  /** Play together (convoys, contests, paint splashes); returns a message to show. */
+  together(kind: 'convoy' | 'drift' | 'stunt' | 'paint'): string | null;
+  togetherState(): { roam: boolean; online: boolean; convoy: 'leading' | 'following' | null; busy: boolean };
   /** Free-roam areas visited so far (sticker book pages). */
   stickerAreas(): StickerArea[];
   /** The mural board being painted (Menu → mural). */
@@ -501,6 +504,20 @@ export class Menu {
     </div>`;
   }
 
+  private togetherSection(): string {
+    const st = this.host.togetherState();
+    const note = st.roam ? t('tg.hint') : t('tg.needRoam');
+    const dis = st.roam ? '' : 'disabled';
+    const busy = st.busy ? 'disabled' : '';
+    return `<h4>🤝 ${t('tg.title')}</h4><p class="menu-hint">${note}</p>
+      <div class="row wrap">
+        <button class="btn" data-together="convoy" ${dis} ${st.online ? '' : 'disabled'}>🚗 ${st.convoy === 'leading' ? t('tg.endConvoy') : t('tg.leadConvoy')}</button>
+        <button class="btn" data-together="drift" ${dis} ${busy}>🌀 ${t('tg.drift')}</button>
+        <button class="btn" data-together="stunt" ${dis} ${busy}>🦘 ${t('tg.stunt')}</button>
+        <button class="btn" data-together="paint" ${dis} ${busy}>🎨 ${t('tg.paint')}</button>
+      </div>`;
+  }
+
   private stickersScreen(): string {
     const p = this.host.profile;
     const pages = stickerPages(p.data, this.host.stickerAreas(), { harbour: t('hub.name'), village: t('st.village'), city: t('city.name'), chapters: t('menu.chapters'), photos: t('st.photos'), garage: t('menu.garage') }, { secret: t('st.secret'), mural: t('st.mural') });
@@ -629,6 +646,7 @@ export class Menu {
           return `<div class="player-row"><span>${blocked ? '🚫 ' : '🎨 '}${escapeHtml(name)}</span>${voiceBtn}${reportBtn}<button class="btn small" data-action="block" data-name="${escapeHtml(name)}">${blocked ? t('mp.unblock') : t('mp.block')}</button></div>${form}`;
         })
         .join('')}</div>` : ''}
+      ${this.togetherSection()}
       ${isLocked(this.host.options().family) ? `<p class="fam-status" role="status">🔒 ${t('fam.mpNote')}</p>` : ''}
       ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
       ${this.toggle('o.voice', t('voice.setting'))}
@@ -981,6 +999,14 @@ export class Menu {
     const p = this.host.profile;
     if (d.acct && this.accountScreen.onClick(el)) return;
     if (this.galleryScreen.onClick(el)) return;
+    if (d.together) {
+      const msg = this.host.together(d.together as 'convoy' | 'drift' | 'stunt' | 'paint');
+      if (msg) this.toast(msg);
+      // Back to the game so the event can start.
+      if (this.host.togetherState().roam) this.host.resume();
+      else this.render();
+      return;
+    }
     if (d.stickerClaim) {
       const pg = stickerPages(p.data, this.host.stickerAreas(), {}, { secret: '', mural: '' }).find((x) => x.id === d.stickerClaim);
       if (pg && pageDone(pg) && p.markSeen(`stickers:${pg.id}`)) {
