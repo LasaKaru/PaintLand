@@ -33,6 +33,7 @@ import { checkTrophies } from '../gameplay/Trophies';
 import { Wildlife } from '../world/Wildlife';
 import { Village } from '../world/Village';
 import { Voice } from '../net/Voice';
+import { seatRider, unseatRider } from '../models/Rider';
 import { api } from '../net/Api';
 import { familyCaps, onlineAllowed } from './Family';
 import { BENCH_MEASURE, BENCH_SPOTS, BENCH_WARMUP, scoreBenchmark, type BenchmarkResult } from '../render/Benchmark';
@@ -470,13 +471,10 @@ export class Game {
     this.humanModel.root.removeFromParent();
     const h = this.profile.data.look.height ?? 1;
     if (this.mode === 'drive' && this.showcaseTarget !== 'character') {
-      this.vehicle.seat.add(this.humanModel.root);
-      this.humanModel.root.position.set(0, -0.45, 0);
-      this.humanModel.root.quaternion.identity();
-      this.humanModel.root.scale.setScalar(0.85 * h);
+      seatRider(this.vehicle, this.humanModel, h);
     } else {
       this.scene.add(this.humanModel.root);
-      this.humanModel.root.scale.setScalar(h);
+      unseatRider(this.humanModel, h);
     }
   }
 
@@ -1332,7 +1330,8 @@ export class Game {
     }
     if (this.state === 'menu') {
       if (inp.consume('pause')) {
-        if (this.menu.screen !== 'main') this.menu.show('main');
+        if (this.menu.screen === 'livery') this.menu.show('garage');
+        else if (this.menu.screen !== 'main') this.menu.show('main');
         else if (this.resumeSnapshot) this.resumeFromMenu();
       }
       return;

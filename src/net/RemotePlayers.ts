@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { seatRider, unseatRider } from '../models/Rider';
 import type { RoadPath } from '../road/RoadPath';
 import { createFrame } from '../road/RoadPath';
 import { HumanModel } from '../models/Human';
@@ -106,14 +107,10 @@ export class RemotePlayers {
 
   private seat(av: Avatar, mode: 'drive' | 'foot'): void {
     av.human.root.removeFromParent();
-    if (mode === 'drive') {
-      av.vehicle.seat.add(av.human.root);
-      av.human.root.position.set(0, -0.45, 0);
-      av.human.root.quaternion.identity();
-      av.human.root.scale.setScalar(0.85 * (av.human.look.height ?? 1));
-    } else {
+    if (mode === 'drive') seatRider(av.vehicle, av.human, av.human.look.height ?? 1);
+    else {
       this.scene.add(av.human.root);
-      av.human.root.scale.setScalar(av.human.look.height ?? 1);
+      unseatRider(av.human, av.human.look.height ?? 1);
     }
     av.mode = mode;
   }

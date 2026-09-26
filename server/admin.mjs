@@ -204,6 +204,8 @@ export function createAdmin({ dataDir, distDir, live }) {
   const tokens = new Map();
   const attempts = new Map();
   const lastBeat = new Map();
+  /** day:session keys already counted as crashed (in memory; a restart may count one twice). */
+  const crashedSessions = new Set();
   let dirty = false;
   setInterval(() => {
     if (!dirty) return;
@@ -316,6 +318,23 @@ export function createAdmin({ dataDir, distDir, live }) {
       case 'link':
         count(`${ev.type}:${key(data.id)}`);
         break;
+      case 'error': {
+        // Uncaught errors from the game: grouped by message, and the session counts as crashed.
+        const msg = clean(data.msg, 200).replace(/\d{4,}/g, 'N');
+        if (!msg) return;
+        const errors = (stats.errors ??= {});
+        const e = (errors[msg] ??= { msg, where: clean(data.where, 80), top: clean(data.top, 160), count: 0, first: now, last: now });
+        e.count++;
+        e.last = now;
+        const keys = Object.keys(errors);
+        if (keys.length > 200) delete errors[keys.reduce((a, b) => (errors[a].last < errors[b].last ? a : b))];
+        const crashKey = `${d}:${clean(sid, 40)}`;
+        if (data.fatal !== false && !crashedSessions.has(crashKey)) {
+          crashedSessions.add(crashKey);
+          dayRec.crashed = (dayRec.crashed ?? 0) + 1;
+        }
+        break;
+      }
       case 'benchmark':
         // Which preset devices get recommended (no raw timings are stored).
         count(`bench:${key(data.rec)}`);
@@ -331,6 +350,21 @@ export function createAdmin({ dataDir, distDir, live }) {
         return;
     }
     dirty = true;
+  }
+
+  /** Crash-free sessions over the last 7 days, and the most common errors. */
+  function health(now) {
+    let sessions = 0;
+    let crashed = 0;
+    for (let i = 0; i < 7; i++) {
+      const r = stats.days[day(now - i * 86400_000)];
+      sessions += r?.sessions ?? 0;
+      crashed += r?.crashed ?? 0;
+    }
+    const top = Object.values(stats.errors ?? {})
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 15);
+    return { sessions7: sessions, crashed7: crashed, crashFree7: sessions ? +(100 * (1 - Math.min(crashed, sessions) / sessions)).toFixed(2) : 100, errors: top };
   }
 
   function dashboard() {
@@ -379,6 +413,7 @@ export function createAdmin({ dataDir, distDir, live }) {
       links: group('link:'),
       sponsors: config.sponsors.map((s) => ({ id: s.id, name: s.name, enabled: s.enabled, ...(stats.sponsors[s.id] ?? { views: 0, clicks: 0 }) })),
       helao2: stats.sponsors.helao2 ?? { views: 0, clicks: 0 },
+      health: health(now),
       roomSizes: l.roomSizes,
       since: stats.since,
     };

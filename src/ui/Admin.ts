@@ -22,6 +22,7 @@ interface Stats {
   links: Row[];
   sponsors: { id: string; name: string; enabled: boolean; views: number; clicks: number }[];
   helao2: { views: number; clicks: number };
+  health?: { sessions7: number; crashed7: number; crashFree7: number; errors: { msg: string; where: string; top: string; count: number; first: number; last: number }[] };
   roomSizes: Record<string, number>;
   since: number;
 }
@@ -211,6 +212,7 @@ export class AdminPanel {
     const s = this.stats;
     if (!s) return '<p class="menu-hint">Loading numbers…</p>';
     const t = s.totals;
+    const h = s.health ?? { sessions7: 0, crashed7: 0, crashFree7: 100, errors: [] };
     const tile = (label: string, value: string, sub = ''): string => `<div class="stat-tile"><div class="label">${label}</div><div class="stat-value">${value}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ''}</div>`;
     const spark = (key: 'players' | 'playHours'): number[] => s.days.slice(-14).map((d) => d[key]);
     const rooms = Object.entries(s.roomSizes);
@@ -224,11 +226,17 @@ export class AdminPanel {
         ${tile('Open reports', fmt(t.openReports ?? 0), t.openReports ? '👥 Players & chat to review' : 'all clear')}
         ${tile('Sessions', fmt(t.sessions), `avg ${t.avgSessionMin} min`)}
         ${tile('Hours played', fmt(t.playHours), sparkline(spark('playHours')))}
+        ${tile('Crash-free sessions', `${h.crashFree7}%`, `last 7 days · ${fmt(h.crashed7)} of ${fmt(h.sessions7)} hit an error · goal 99.5%`)}
       </div>
       <div class="grid2">
         <section class="viz-card"><h3>Players per day <small>last 30 days</small></h3>${lineChart(s.days.map((d) => ({ x: d.day, y: d.players })), 'players')}</section>
         <section class="viz-card"><h3>Hours played per day <small>last 30 days</small></h3>${lineChart(s.days.map((d) => ({ x: d.day, y: d.playHours })), 'hours')}</section>
       </div>
+      <section class="viz-card"><h3>Errors from players' games <small>most frequent first</small></h3>
+        ${h.errors.length ? `<table class="admin-table"><thead><tr><th>Message</th><th>Where</th><th class="num">Times</th><th>Last seen</th></tr></thead><tbody>${h.errors
+          .map((e) => `<tr><td>${esc(e.msg)}${e.top ? `<br><small>${esc(e.top)}</small>` : ''}</td><td>${esc(e.where)}</td><td class="num">${fmt(e.count)}</td><td>${new Date(e.last).toLocaleString()}</td></tr>`)
+          .join('')}</tbody></table>` : '<p class="menu-hint">No errors reported. 🎉</p>'}
+      </section>
       <section class="viz-card"><h3>Sponsor and logo performance</h3>
         <table class="admin-table"><thead><tr><th>Board</th><th>Status</th><th class="num">Views</th><th class="num">Visits</th><th class="num">Visit rate</th></tr></thead><tbody>
         ${sponsorRows.map((r) => `<tr><td>${esc(r.name)}</td><td>${r.enabled ? '● showing' : '○ hidden'}</td><td class="num">${fmt(r.views)}</td><td class="num">${fmt(r.clicks)}</td><td class="num">${r.views ? ((r.clicks / r.views) * 100).toFixed(1) + '%' : '—'}</td></tr>`).join('')}

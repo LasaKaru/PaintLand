@@ -95,6 +95,7 @@ export class Menu {
   private wardrobeTab = 'hair';
   private benchResult: BenchmarkResult | null = null;
   private reportFor: string | null = null;
+  private renderedScreen: MenuScreen | null = null;
   private familyUnlocked = false;
   private readonly pinGuard = new PinGuard();
   private readonly roadStudio = new RoadStudio(
@@ -161,6 +162,10 @@ export class Menu {
       this.root.innerHTML = '';
       return;
     }
+    // Keyboard users: remember the focused control so it keeps focus after the redraw.
+    const focusSig = focusSignature(this.root);
+    const newScreen = this.renderedScreen !== s;
+    this.renderedScreen = s;
     const body = {
       splash: () => this.splash(),
       main: () => this.main(),
@@ -183,6 +188,10 @@ export class Menu {
     this.root.innerHTML = `${body}<div class="menu-toast" data-id="toast"></div>`;
     const lv = s === 'livery' ? this.root.querySelector<HTMLElement>('[data-id="livery"]') : null;
     if (lv) this.liveryEditor.mount(lv, this.host.profile.vehicleLook(this.host.profile.data.vehicle).livery);
+    if (focusSig && !newScreen) this.root.querySelector<HTMLElement>(focusSig)?.focus({ preventScroll: true });
+    else if (newScreen && (document.activeElement === document.body || this.root.contains(document.activeElement) || !document.activeElement))
+      // A new screen: put focus at its start (the menu, or the Back button).
+      this.root.querySelector<HTMLElement>('.menu-panel button, .menu-item, button')?.focus({ preventScroll: true });
     const rs = s === 'roadstudio' ? this.root.querySelector<HTMLElement>('[data-id="roadstudio"]') : null;
     if (rs) this.roadStudio.mount(rs);
     accessible(this.root);
@@ -1197,4 +1206,16 @@ export function escapeHtml(s: string): string {
 function todayKey(): string {
   const d = new Date();
   return `${d.getFullYear()}-${d.getMonth() + 1}-${d.getDate()}`;
+}
+
+/** A selector for the focused control inside `root` (from its data attributes), to refocus it after a redraw. */
+function focusSignature(root: HTMLElement): string | null {
+  const el = document.activeElement as HTMLElement | null;
+  if (!el || !root.contains(el)) return null;
+  const attrs = Object.entries(el.dataset)
+    .map(([k, v]) => `[data-${k.replace(/[A-Z]/g, (c) => `-${c.toLowerCase()}`)}="${CSS.escape(v ?? '')}"]`)
+    .join('');
+  if (attrs) return `${el.tagName.toLowerCase()}${attrs}`;
+  const name = el.getAttribute('name');
+  return name ? `${el.tagName.toLowerCase()}[name="${CSS.escape(name)}"]` : null;
 }

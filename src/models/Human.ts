@@ -70,6 +70,9 @@ export class HumanModel {
   private phase = Math.random() * 6;
   private blend = 0;
   private readonly headMeshes: THREE.Mesh[] = [];
+  private hatMesh: THREE.Mesh | null = null;
+  private hatOff = false;
+  private headShown = true;
 
   constructor(readonly look: HumanLook = DEFAULT_HUMAN_LOOK) {
     this.root.name = 'human';
@@ -150,12 +153,19 @@ export class HumanModel {
       .blob(0.03, '#f09a8a', { position: [0.12, 0.19, -0.16], scale: [1, 0.6, 0.4], detail: 0, roughness: 0 });
     addFace(headKit, look);
     addHair(headKit, look);
+    const hatKit = new ModelKit();
+    addHat(hatKit, look);
     addAccessory(headKit, torso, look.acc ?? 'none');
     this.chest.add(mesh(torso.build(0.012, 2)));
     addGlasses(headKit, look.glasses ?? 'none');
     const headMesh = mesh(headKit.build(0.008, 4));
     this.head.add(headMesh);
     this.headMeshes.push(headMesh);
+    if (!hatKit.isEmpty) {
+      this.hatMesh = mesh(hatKit.build(0.008, 5));
+      this.head.add(this.hatMesh);
+      this.headMeshes.push(this.hatMesh);
+    }
 
     const sleeve = topStyle === 'tee' || topStyle === 'dress' ? look.skin : look.top;
     for (const side of [-1, 1]) {
@@ -194,7 +204,18 @@ export class HumanModel {
 
   /** Hide the head in first person so it never covers the lens. */
   setHeadVisible(visible: boolean): void {
-    for (const m of this.headMeshes) m.visible = visible;
+    this.headShown = visible;
+    for (const m of this.headMeshes) m.visible = visible && !(m === this.hatMesh && this.hatOff);
+  }
+
+  /** Take the hat off (a tall hat in a low car) or put it back on. */
+  setHatVisible(visible: boolean): void {
+    this.hatOff = !visible;
+    this.setHeadVisible(this.headShown);
+  }
+
+  get hatVisible(): boolean {
+    return !!this.hatMesh && !this.hatOff;
   }
 
   /**
@@ -296,6 +317,10 @@ function addHair(k: ModelKit, look: HumanLook): void {
     case 'bald':
       break;
   }
+}
+
+/** The hat (its own mesh, so it can come off in a low car). */
+function addHat(k: ModelKit, look: HumanLook): void {
   switch (look.hat) {
     case 'straw':
       k.cylinder(0.34, 0.34, 0.03, 14, '#e8c872', { position: [0, 0.42, 0], pattern: Pattern.Thatch });

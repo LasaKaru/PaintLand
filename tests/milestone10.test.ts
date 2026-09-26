@@ -291,3 +291,11 @@ describe('Family settings (parental controls)', async () => {
     expect(g.wait(61_000)).toBe(0);
   });
 });
+
+describe('Crash reporting', async () => {
+  const { tidyError } = await import('../src/net/CrashReporter');
+  it('keeps error messages short and strips addresses', () => {
+    expect(tidyError('Failed at https://play.inkroads.com/assets/index-abc.js?v=2:10:5')).toBe('Failed at index-abc.js:10:5');
+    expect(tidyError('x'.repeat(500)).length).toBe(200);
+  });
+});

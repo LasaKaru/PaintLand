@@ -188,7 +188,11 @@ export class Input {
       for (const action of this.actionsForKey(e.code)) this.buffered.add(action);
     }
     this.down.add(e.code);
-    if (e.code === 'Space' || e.code.startsWith('Arrow') || e.code === 'Tab') e.preventDefault();
+    // Stop the page scrolling while driving, but leave the keys alone on menu
+    // buttons and fields: Tab moves focus and Space/arrows press and choose
+    // (keyboard-only players need both).
+    const onGameSurface = e.target === document.body || e.target instanceof HTMLCanvasElement || e.target === document.documentElement;
+    if (onGameSurface && (e.code === 'Space' || e.code.startsWith('Arrow'))) e.preventDefault();
   };
 
   private onKeyUp = (e: KeyboardEvent): void => {
@@ -398,7 +402,10 @@ function sharedOk(a: ActionName, b: ActionName): boolean {
   return pairs.some(([x, y]) => (a === x && b === y) || (a === y && b === x));
 }
 
+/** Typing text (game keys off) — but checkboxes, sliders and buttons are not typing, so Escape still works there. */
 function isTyping(target: EventTarget | null): boolean {
   const el = target as HTMLElement | null;
-  return !!el && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable);
+  if (!el) return false;
+  if (el.tagName === 'INPUT') return !['checkbox', 'radio', 'range', 'button', 'submit', 'color'].includes((el as HTMLInputElement).type);
+  return el.tagName === 'TEXTAREA' || el.tagName === 'SELECT' || el.isContentEditable;
 }

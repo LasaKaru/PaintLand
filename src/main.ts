@@ -19,9 +19,12 @@ import '@fontsource/noto-sans-jp/400.css';
 import '@fontsource/noto-sans-kr/400.css';
 import './styles/main.css';
 import { Game } from './core/Game';
+import { installCrashReporter, reportError } from './net/CrashReporter';
 import { lang, setLang } from './core/i18n';
 
 void setLang(lang());
+
+installCrashReporter();
 
 const app = document.getElementById('app');
 if (!app) throw new Error('#app missing');
@@ -35,6 +38,7 @@ game
   })
   .catch((err: unknown) => {
     console.error(err);
+    reportError(`Start failed: ${err instanceof Error ? err.message : String(err)}`, 'init', err instanceof Error ? err.stack ?? '' : '');
     const msg = document.createElement('div');
     msg.className = 'card';
     msg.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-width:460px;font-family:monospace';
