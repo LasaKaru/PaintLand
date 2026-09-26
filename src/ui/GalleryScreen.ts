@@ -113,6 +113,7 @@ export class GalleryScreen {
     void a.call<{ id: string }>('/api/gallery/publish', 'POST', { code }).then((r) => {
       this.toast(r.ok ? t('gal.published') : (r.reason ?? t('gal.offline')));
       if (r.ok) {
+        this.host.profile.addStat('published');
         this.sort = 'new';
         this.page = 0;
         this.roads = null;
@@ -188,6 +189,7 @@ export class GalleryScreen {
       void a.call<{ road: GalleryRoad }>('/api/gallery/rate', 'POST', { id: d.galRate, stars: Number(d.stars) }).then((res) => {
         if (!res.ok || !res.data) return this.toast(res.reason ?? t('gal.offline'));
         this.roads = (this.roads ?? []).map((r) => (r.id === res.data!.road.id ? res.data!.road : r));
+        this.host.profile.addStat('ratings');
         this.toast(t('gal.thanks'));
         this.rerender();
       });

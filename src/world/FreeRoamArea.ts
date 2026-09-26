@@ -1,3 +1,4 @@
+import type { PlacedPocket } from './Pockets';
 import type { MuralBoard } from './Murals';
 import type * as THREE from 'three';
 import type { FreeWorld, Ramp } from '../gameplay/FreeRoam';
@@ -97,6 +98,8 @@ export interface FreeRoamArea {
   /** Data for the paper map; `paint` gives each district's paint 0..1. */
   /** Paintable mural boards in this area. */
   readonly murals: MuralBoard[];
+  /** Hidden pockets (off the map) in this area. */
+  readonly pockets: PlacedPocket[];
   /** Where the quay ends and the sea begins (z), if the area has a sea. */
   readonly seaZ?: number;
   mapInfo(paint: (districtId: string) => number): MapInfo;

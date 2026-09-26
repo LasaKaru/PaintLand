@@ -6,15 +6,34 @@ import { ENGINE_PROFILES, HORN_PROFILES, type EngineSound, type EngineProfile, t
 export interface Station {
   freq: string;
   name: string;
-  style: 'lofi' | 'acoustic' | 'ambient' | 'island';
+  style: 'lofi' | 'acoustic' | 'ambient' | 'island' | 'baila' | 'chip' | 'jazz' | 'raga';
   tracks: number;
 }
 
 export const STATIONS: Station[] = [
   { freq: '88.3', name: 'Paper Kite FM', style: 'lofi', tracks: 8 },
   { freq: '92.1', name: 'Harbour Hum', style: 'acoustic', tracks: 8 },
-  { freq: '97.7', name: 'Midnight Ink', style: 'ambient', tracks: 6 },
+  { freq: '97.7', name: 'Midnight Ink', style: 'ambient', tracks: 8 },
   { freq: '101.4', name: 'Serendib Beat', style: 'island', tracks: 8 },
+  { freq: '94.5', name: 'Baila Nights', style: 'baila', tracks: 8 },
+  { freq: '99.9', name: '8-Bit Brush', style: 'chip', tracks: 8 },
+  { freq: '104.2', name: 'Blue Hour Jazz', style: 'jazz', tracks: 8 },
+  { freq: '107.1', name: 'Monsoon Raga', style: 'raga', tracks: 8 },
+];
+
+/** Every station's tracks added up (the radio has 8 stations × 8 tracks). */
+export const TRACK_COUNT = STATIONS.reduce((n, s) => n + s.tracks, 0);
+
+/** Arpeggio shapes (chord-tone indexes); each track on a station picks its own. */
+const ARPS = [
+  [0, 1, 2, 3, 2, 1, 2, 3],
+  [0, 2, 1, 3, 0, 2, 1, 3],
+  [3, 2, 1, 0, 1, 2, 3, 2],
+  [0, 1, 2, 1, 3, 1, 2, 1],
+  [0, 0, 2, 2, 1, 1, 3, 3],
+  [0, 3, 2, 3, 1, 3, 2, 3],
+  [2, 1, 0, 1, 2, 3, 2, 1],
+  [0, 2, 3, 2, 1, 2, 3, 1],
 ];
 
 const midiToHz = (m: number): number => 440 * Math.pow(2, (m - 69) / 12);
@@ -29,6 +48,10 @@ const PROGRESSIONS = [
   [0, 2, 3, 4],
   [5, 4, 3, 4],
   [0, 5, 1, 4],
+  [0, 6, 5, 4],
+  [1, 4, 0, 5],
+  [0, 3, 1, 4],
+  [5, 1, 4, 0],
 ];
 
 /**
@@ -275,7 +298,8 @@ export class AudioEngine {
         this.pendingDef = null;
       }
       this.playStep(this.step, this.nextStepTime);
-      const swing = this.station.style === 'lofi' && this.step % 2 === 0 ? 1.12 : this.station.style === 'lofi' ? 0.88 : 1;
+      const swung = this.station.style === 'lofi' || this.station.style === 'jazz';
+      const swing = swung && this.step % 2 === 0 ? 1.16 : swung ? 0.84 : 1;
       this.nextStepTime += this.sixteenth * swing;
       this.step++;
     }
@@ -285,7 +309,7 @@ export class AudioEngine {
   }
 
   private chordDegrees(bar: number): number[] {
-    const prog = PROGRESSIONS[(this.trackIndex + this.stationIndex * 3) % PROGRESSIONS.length];
+    const prog = PROGRESSIONS[(this.trackIndex + this.stationIndex * 5) % PROGRESSIONS.length];
     const root = prog[bar % prog.length];
     return [root, root + 2, root + 4, root + 6];
   }
@@ -311,13 +335,14 @@ export class AudioEngine {
     }
     if (!this.radioOn) return;
     const style = this.station.style;
+    const arpShape = ARPS[(this.trackIndex * 3 + this.stationIndex) % ARPS.length];
 
     if (style === 'lofi') {
       if (s16 === 0 || s16 === 10) this.kick(t);
       if (s16 === 4 || s16 === 12) this.snare(t);
       if (s16 % 2 === 0) this.hat(t, s16 % 4 === 2 ? 0.05 : 0.03);
       if (s16 === 0 || s16 === 8) this.bass(midiToHz(this.degreeMidi(chord[0], -2)), t, 0.45);
-      if (s16 % 4 === 2) this.pluck(midiToHz(this.degreeMidi(chord[(s16 / 2 + bar) % 4], 0)), t, 0.035, 'sine');
+      if (s16 % 4 === 2) this.pluck(midiToHz(this.degreeMidi(chord[arpShape[(s16 / 2 + bar) % 8]], 0)), t, 0.035, 'sine');
     } else if (style === 'acoustic') {
       if (s16 % 2 === 0) this.pluck(midiToHz(this.degreeMidi(chord[[0, 2, 1, 2, 3, 2, 1, 2][s16 / 2]], 0)), t, 0.05, 'triangle');
       if (s16 === 0) this.bass(midiToHz(this.degreeMidi(chord[0], -2)), t, 0.8);
@@ -329,13 +354,37 @@ export class AudioEngine {
       if (s16 % 2 === 1) this.hat(t, 0.04);
       if ([0, 3, 6, 10, 13].includes(s16)) this.handDrum(t, s16 === 0 || s16 === 10 ? 'low' : 'high');
       if (s16 % 4 === 0 || s16 === 7 || s16 === 14) this.bass(midiToHz(this.degreeMidi(chord[s16 === 14 ? 2 : 0], -2)), t, 0.22);
-      const arp = [0, 1, 2, 3, 2, 1, 2, 3];
-      if (s16 % 2 === 0) this.pluck(midiToHz(this.degreeMidi(chord[arp[(s16 / 2 + bar) % 8]], 1)), t, 0.03, 'square', 0.25);
+      if (s16 % 2 === 0) this.pluck(midiToHz(this.degreeMidi(chord[arpShape[(s16 / 2 + bar) % 8]], 1)), t, 0.03, 'square', 0.25);
+    } else if (style === 'baila') {
+      // Baila: a bouncy 6/8 feel — bass on the one and the "and", strummed chords on the offbeats, a hand-drum shuffle.
+      if (s16 % 8 === 0) this.kick(t);
+      if (s16 % 8 === 0 || s16 % 8 === 6) this.bass(midiToHz(this.degreeMidi(chord[s16 % 8 === 6 ? 2 : 0], -2)), t, 0.25);
+      if (s16 % 4 === 2) for (const d of chord.slice(0, 3)) this.pluck(midiToHz(this.degreeMidi(d, 0)), t, 0.022, 'triangle', 0.3);
+      if ([0, 3, 6, 8, 11, 14].includes(s16)) this.handDrum(t, s16 % 8 === 0 ? 'low' : 'high');
+      if (s16 % 4 === 0 && bar % 2 === 1) this.pluck(midiToHz(this.degreeMidi(chord[arpShape[s16 / 4]], 1)), t, 0.03, 'sawtooth', 0.35);
+    } else if (style === 'chip') {
+      // 8-Bit Brush: fast square-wave arpeggios, a triangle bass and noise-hat ticks.
+      this.pluck(midiToHz(this.degreeMidi(chord[arpShape[s16 % 8]], 1)), t, 0.018, 'square', 0.12);
+      if (s16 % 4 === 0) this.bass(midiToHz(this.degreeMidi(chord[0], -1)), t, 0.18);
+      if (s16 === 0 || s16 === 8) this.kick(t);
+      if (s16 === 4 || s16 === 12) this.snare(t);
+      if (s16 % 2 === 1) this.hat(t, 0.02);
+    } else if (style === 'jazz') {
+      // Blue Hour Jazz: walking bass, ride-cymbal swing and soft seventh-chord comping.
+      if (s16 % 4 === 0) this.bass(midiToHz(this.degreeMidi(chord[arpShape[s16 / 4 + (bar % 2) * 4]], -2)), t, 0.3);
+      if (s16 % 4 === 0 || s16 % 8 === 6) this.hat(t, 0.035);
+      if (s16 === 6 || s16 === 14) for (const d of chord) this.pluck(midiToHz(this.degreeMidi(d, 0)), t, 0.014, 'sine', 0.9);
+      if (s16 === 4 || s16 === 12) this.snare(t);
+    } else if (style === 'raga') {
+      // Monsoon Raga: a drone on the tonic and fifth, tabla-style hand drums and a slow melodic line.
+      if (s16 === 0) for (const d of [0, 4]) this.pad(midiToHz(this.degreeMidi(d, -1)), t, (60 / this.bpm) * 4, 0.03);
+      if ([0, 3, 6, 8, 10, 12, 14].includes(s16)) this.handDrum(t, s16 === 0 || s16 === 8 ? 'low' : 'high');
+      if (s16 % 4 === 0) this.pluck(midiToHz(this.degreeMidi(arpShape[(s16 / 4 + bar) % 8] + (bar % 4 === 3 ? 4 : 0), 1)), t, 0.035, 'sawtooth', 1.4);
     } else {
       if (s16 === 0 || s16 === 8) this.pluck(midiToHz(this.degreeMidi(chord[bar % 4] + 7, 0)), t, 0.03, 'sine', 2.5);
     }
     // Intensity layers: extra drive when the ride gets fast (any station).
-    if (this.intensity > 0.55 && style !== 'island') {
+    if (this.intensity > 0.55 && style !== 'island' && style !== 'chip') {
       if (s16 % 2 === 1) this.hat(t, 0.025 * this.intensity);
       if (s16 % 8 === 4) this.handDrum(t, 'high');
     }

@@ -1,3 +1,4 @@
+import { POCKETS, POCKET_INK, POCKET_REACH } from '../world/Pockets';
 import * as THREE from 'three';
 import { Input } from './Input';
 import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Options';
@@ -584,6 +585,8 @@ export class Game {
 
   startEmote(e: Emote): void {
     this.emoteName = e;
+    this.profile.addStat('emotes');
+    this.profile.markSeen(`emote:${e}`);
     this.waveTimer = e === 'sitdown' ? Infinity : e === 'dance' ? 6 : 2.8;
   }
 
@@ -631,6 +634,7 @@ export class Game {
     pc.pitch = -0.1;
     this.startEmote('cheer');
     this.groupShotTimer = 6;
+    this.profile.addStat('groupPhotos');
   }
 
   private tickGroupPhoto(dt: number): void {
@@ -709,6 +713,7 @@ export class Game {
       area.group.add(group);
       this.festivalDecor.set(area.id, { festival, group });
     }
+    this.profile.markSeen(`festival:${festival}`);
     if (this.festivalGreeted !== festival) {
       this.festivalGreeted = festival;
       this.hud.lootCard(t(`fest.${festival}`), '#f4d23b', t(`fest.${festival}.hi`), t('fest.decorated'));
@@ -908,7 +913,10 @@ export class Game {
         const table = standings(c, this.profile.data.name);
         const won = table[0].me && table.length > 1 && table[0].score > 0;
         const ink = CONTEST_INK.part + (won ? CONTEST_INK.win : 0);
+        this.profile.addStat('contests');
+        if (won) this.profile.addStat('contestWins');
         this.profile.earn(ink);
+        this.checkTrophies();
         this.audio.cheer();
         this.hud.lootCard(t(c.mode === 'drift' ? 'tg.drift' : 'tg.stunt'), '#f4d23b', won ? t('tg.youWon') : t('tg.place', { n: table.findIndex((r) => r.me) + 1 }), `+${ink} ink`);
         this.contestShowUntil = now + 8;
@@ -928,7 +936,9 @@ export class Game {
         e.done = true;
         const success = e.team >= e.target;
         if (success) {
+          this.profile.addStat('paintSplashes');
           this.profile.earn(PAINT_INK);
+          this.checkTrophies();
           this.audio.cheer();
           this.splash = 1;
         }
@@ -953,6 +963,7 @@ export class Game {
         const ink = convoyTick(cv, dt, dist, drive ? Math.abs(this.hubCar.v) : 0);
         if (ink) {
           this.profile.earn(ink);
+          this.profile.addStat('convoyInk', ink);
           this.popAtPawn(`🚗 +${ink}`, 'good');
         }
         if (dist < 40 && now - this.convoyPing > 10) {
@@ -1689,6 +1700,7 @@ export class Game {
     if (def.weather) this.env.setWeather(def.weather);
     else if (prev?.weather) this.env.setWeather('clear');
     this.districtEnv = def.preset || def.weather ? { preset: def.preset, weather: def.weather } : null;
+    if (this.state === 'play' && this.world.chapter.id !== 'custom') this.profile.markSeen(`district:${def.id}`);
     if (this.state === 'play') this.hud.showDistrictTitle(def.kicker, def.name, def.poem);
     this.audio.setDistrict(def);
   }
@@ -2740,6 +2752,15 @@ export class Game {
       this.hud.lootCard(t('loot.secret'), '#f4d23b', t('loot.secretFound', { n: found, total: area.secrets.length }), `+100 ink · ${s.hint}`);
       this.checkTrophies();
     }
+    for (const pk of area.pockets) {
+      if (Math.hypot(x - pk.x, z - pk.z) > POCKET_REACH) continue;
+      if (!this.profile.markSeen(`pocket:${pk.def.id}`)) continue;
+      this.profile.earn(POCKET_INK);
+      this.audio.secret();
+      const all = POCKETS.filter((q) => this.profile.data.seen.includes(`pocket:${q.id}`)).length;
+      this.hud.lootCard(t('loot.pocket'), '#9a5bd6', pk.def.name, `+${POCKET_INK} ink · ${t('loot.pocketFound', { n: all, total: POCKETS.length })}`);
+      this.checkTrophies();
+    }
     const day = todayKey();
     for (const c of area.chests) {
       if (!c.mesh?.visible || Math.hypot(x - c.x, z - c.z) > 3) continue;
@@ -2927,6 +2948,7 @@ export class Game {
     const car = this.hubCar.lerp(alpha);
     const cam = this.rig.camera;
     const bob = this.hubCar.afloat ? Math.sin(this.time * 1.7) * 0.06 : 0;
+    if (this.hubCar.afloat && this.profile.markSeen('sailed')) this.checkTrophies();
     vm.root.position.set(car.x, HUB_Y + car.y + 0.02 + bob, car.z);
     vm.root.quaternion.setFromAxisAngle(_y, car.heading);
     const steer = this.mode === 'drive' ? this.input.steer() : 0;
@@ -3316,6 +3338,7 @@ export class Game {
     for (const s of area.stunts) markers.push({ kind: 'stunt', x: s.ramp.x, z: s.ramp.z });
     for (const c of area.chests) if (c.mesh?.visible) markers.push({ kind: 'chest', x: c.x, z: c.z, colour: RARITY_COLOURS[c.tier] });
     for (const s of area.secrets) if (seen.includes(`secret:${s.id}`)) markers.push({ kind: 'secret', x: s.x, z: s.z });
+    for (const pk of area.pockets) if (seen.includes(`pocket:${pk.def.id}`)) markers.push({ kind: 'zone', x: pk.x, z: pk.z, icon: '✨' });
     for (const tg of this.freeMissions.targets()) markers.push({ kind: 'mission', x: tg.x, z: tg.z });
     if (area.perahera?.active) {
       const c = area.perahera.centre();

@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { addMuralBoards, type MuralBoard } from './Murals';
+import { addPockets, type PlacedPocket } from './Pockets';
 import { Random } from '../core/Random';
 import { ModelKit, Pattern } from '../models/ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
@@ -56,6 +57,7 @@ export class Village implements FreeRoamArea {
   readonly group = new THREE.Group();
   readonly world: FreeWorld;
   readonly murals: MuralBoard[] = [];
+  readonly pockets: PlacedPocket[] = [];
   readonly seaZ = 70;
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -90, z: 4, heading: -Math.PI / 2 };
@@ -304,6 +306,7 @@ export class Village implements FreeRoamArea {
     this.zones.push({ kind: 'area', label: '⚓ Harbour Town', x: -108, z: 0, r: 6, area: 'harbour', colour: '#2f8f86' });
 
     this.murals.push(...addMuralBoards(this, 'village', this.spawn));
+    this.pockets.push(...addPockets(this));
     for (const z of this.zones) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.35, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
       ring.position.set(z.x, 0.1, z.z);

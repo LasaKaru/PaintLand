@@ -75,6 +75,7 @@ let nextObjectId = 1;
 const vertexShader = /* glsl */ `
 varying vec3 vViewPosition;
 varying vec3 vWorldPos;
+varying vec3 vLocalPos;
 varying float vInstance;
 attribute float pattern;
 varying float vPattern;
@@ -131,6 +132,7 @@ void main() {
     vInstance = 0.0;
   #endif
   vWorldPos = (modelMatrix * wp).xyz;
+  vLocalPos = transformed;
   vPattern = pattern;
   vec3 sn = smoothNormal;
   #ifdef USE_INSTANCING
@@ -185,6 +187,7 @@ uniform float uGloss;
 varying vec3 vViewPosition;
 varying vec3 vWorldPos;
 varying float vInstance;
+varying vec3 vLocalPos;
 varying float vPattern;
 varying vec3 vSmoothN;
 #ifdef USE_ROAD
@@ -321,10 +324,77 @@ vec3 roadPattern(vec3 base, vec2 uv, vec4 info) {
 }
 #endif
 
+// ————— Fabric prints (clothes) and pattern wraps (cars) —————
+// 15 stripes · 16 dots · 17 gingham · 18 flowers · 19 batik · 20 zigzag
+// 21 stars · 22 camo · 23 tartan · 24 waves. 25–34 are the same prints at car size.
+// They follow the object (not the world) so they don't slide when it moves.
+vec3 fabricPrint(vec3 base, float kind, vec3 nW) {
+  float size = 1.0;
+  if (kind > 24.5) { kind -= 10.0; size = 4.0; }
+  vec3 lp = vLocalPos / size;
+  vec3 an = abs(nW);
+  vec2 uv = an.y > 0.72 ? lp.xz : (an.x > an.z ? lp.zy : lp.xy);
+  float lum = dot(base, vec3(0.3, 0.55, 0.15));
+  // The second colour: light on dark cloth, dark on light cloth.
+  vec3 ink = lum < 0.45 ? mix(base, vec3(1.0, 0.97, 0.9), 0.72) : base * 0.42;
+  float m = 0.0;
+  if (kind < 15.5) {
+    m = step(0.5, fract(lp.y * 11.0));
+  } else if (kind < 16.5) {
+    vec2 q = uv * 16.0;
+    q.x += step(1.0, mod(floor(q.y), 2.0)) * 0.5;
+    m = 1.0 - smoothstep(0.2, 0.27, length(fract(q) - 0.5));
+  } else if (kind < 17.5) {
+    vec2 f = step(0.5, fract(uv * 9.0));
+    m = (f.x + f.y) * 0.5;
+  } else if (kind < 18.5) {
+    vec2 q = uv * 7.0;
+    q.x += step(1.0, mod(floor(q.y), 2.0)) * 0.5;
+    vec2 c = fract(q) - 0.5;
+    float a = atan(c.y, c.x);
+    float r = length(c);
+    float petal = 0.2 + 0.1 * cos(a * 5.0);
+    m = (1.0 - smoothstep(petal, petal + 0.03, r));
+    if (r < 0.08) return mix(base, vec3(0.96, 0.82, 0.25), 0.9);
+  } else if (kind < 19.5) {
+    float n = vnoise(uv * 5.0) + 0.5 * vnoise(uv * 11.0);
+    m = 1.0 - smoothstep(0.02, 0.07, abs(fract(n * 3.0) - 0.5));
+    m = max(m * 0.9, 0.0);
+  } else if (kind < 20.5) {
+    float zz = abs(fract(uv.x * 6.0) - 0.5) * 0.35;
+    m = step(0.5, fract(lp.y * 7.0 + zz));
+  } else if (kind < 21.5) {
+    vec2 q = uv * 8.0;
+    q.x += step(1.0, mod(floor(q.y), 2.0)) * 0.5;
+    vec2 c = fract(q) - 0.5;
+    float a = atan(c.y, c.x);
+    float star = 0.13 + 0.12 * pow(abs(cos(a * 2.5)), 6.0);
+    m = 1.0 - smoothstep(star, star + 0.03, length(c));
+  } else if (kind < 22.5) {
+    float n1 = vnoise(uv * 4.0 + 3.1);
+    float n2 = vnoise(uv * 4.0 - 7.7);
+    vec3 cam = base;
+    cam = mix(cam, base * 0.6, step(0.55, n1));
+    cam = mix(cam, mix(base, vec3(0.9, 0.85, 0.7), 0.45), step(0.62, n2));
+    return cam;
+  } else if (kind < 23.5) {
+    vec2 f = fract(uv * 5.0);
+    float band = step(0.7, f.x) + step(0.7, f.y);
+    float thin = (1.0 - smoothstep(0.0, 0.04, abs(f.x - 0.35))) + (1.0 - smoothstep(0.0, 0.04, abs(f.y - 0.35)));
+    vec3 col = mix(base, base * 0.55, min(band, 1.0) * 0.8);
+    return mix(col, vec3(0.95, 0.82, 0.3), min(thin, 1.0) * 0.8);
+  } else {
+    float w = sin(uv.x * 14.0) * 0.06;
+    m = 1.0 - smoothstep(0.08, 0.14, abs(fract(lp.y * 6.0 + w) - 0.5));
+  }
+  return mix(base, ink, m);
+}
+
 // ————— Surface patterns for props (docs/03 §3) —————
 // 1 brick/stucco · 2 roof tiles · 3 planks · 4 stone blocks · 5 leaves · 6 tea rows
 // 7 thatch · 8 grass · 9 sandstone strata · 10 marble
 vec3 surfacePattern(vec3 base, float kind, vec3 p, vec3 nW, float dist) {
+  if (kind > 14.5) return fabricPrint(base, kind, nW);
   if (kind > 13.5) {
     // 14 glitter paint: tiny bright flecks scattered through the colour.
     vec3 q = floor(p * 26.0);
@@ -407,7 +477,9 @@ float patternGloss(float kind) {
   if (kind < 11.5) return 0.03; // matte (rubber, cloth)
   if (kind < 12.5) return 0.95; // glass, chrome
   if (kind < 13.5) return 0.0;  // cloud
-  return 0.9;                   // glitter paint
+  if (kind < 14.5) return 0.9;  // glitter paint
+  if (kind < 24.5) return 0.05; // printed cloth
+  return -1.0;                  // car wraps: the body's own gloss
 }
 
 void main() {

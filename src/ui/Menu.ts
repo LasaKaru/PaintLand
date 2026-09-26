@@ -30,7 +30,7 @@ const LANKA_PRESETS: { id: string; label: StringKey; look: Partial<HumanLook> }[
 ];
 
 /** Garage item fields stored on the vehicle's look rather than the character's. */
-const VEHICLE_FIELDS = ['roofLoad', 'decal', 'spoiler', 'glow', 'finish', 'wheelStyle', 'exhaust', 'engine', 'horn'];
+const VEHICLE_FIELDS = ['roofLoad', 'decal', 'spoiler', 'glow', 'finish', 'wrap', 'wheelStyle', 'exhaust', 'engine', 'horn'];
 import { ROVER_TUNING } from '../gameplay/RoverController';
 import { randomLook, type HumanLook } from '../models/Human';
 import { fmt } from './Hud';
@@ -491,8 +491,8 @@ export class Menu {
     let content = '';
     if (tab === 'hair') content = `<h4>Style</h4>${this.items('hair', look.hairStyle, 'hairStyle')}<h4>Colour</h4>${this.swatches('hair', PALETTE.hair, look.hair)}`;
     if (tab === 'face') content = `<h4>Skin</h4>${this.swatches('skin', PALETTE.skin, look.skin)}<h4>${t('wr.eyes')}</h4>${this.items('eyes', look.eyes ?? 'dots', 'eyes')}<h4>${t('wr.mouth')}</h4>${this.items('mouth', look.mouth ?? 'smile', 'mouth')}<h4>${t('wr.details')}</h4>${this.items('facial', look.face ?? 'none', 'face')}<h4>Glasses</h4>${this.items('glasses', look.glasses ?? 'none', 'glasses')}<h4>Height</h4><input type="range" min="0.9" max="1.1" step="0.01" value="${look.height ?? 1}" data-range="height">`;
-    if (tab === 'top') content = `<h4>Top</h4>${this.items('top', look.topStyle ?? 'tee', 'topStyle')}<h4>Colour</h4>${this.swatches('top', PALETTE.cloth, look.top)}<h4>Scarf</h4>${this.swatches('scarf', PALETTE.cloth, look.scarf, true)}`;
-    if (tab === 'bottom') content = `<h4>Bottom</h4>${this.items('bottom', look.bottomStyle ?? 'trousers', 'bottomStyle')}<h4>Colour</h4>${this.swatches('bottom', PALETTE.cloth, look.bottom)}<h4>Shoes</h4>${this.swatches('shoes', PALETTE.cloth, look.shoes)}`;
+    if (tab === 'top') content = `<h4>Top</h4>${this.items('top', look.topStyle ?? 'tee', 'topStyle')}<h4>Colour</h4>${this.swatches('top', PALETTE.cloth, look.top)}<h4>${t('wr.print')}</h4>${this.items('print', look.print ?? 'none', 'print')}<h4>Scarf</h4>${this.swatches('scarf', PALETTE.cloth, look.scarf, true)}`;
+    if (tab === 'bottom') content = `<h4>Bottom</h4>${this.items('bottom', look.bottomStyle ?? 'trousers', 'bottomStyle')}<h4>Colour</h4>${this.swatches('bottom', PALETTE.cloth, look.bottom)}<h4>${t('wr.print')}</h4>${this.items('bprint', look.bottomPrint ?? 'none', 'bottomPrint')}<h4>Shoes</h4>${this.swatches('shoes', PALETTE.cloth, look.shoes)}`;
     if (tab === 'extras') content = `<h4>Hat</h4>${this.items('hat', look.hat, 'hat')}<h4>On your back</h4>${this.items('back', look.back ?? 'none', 'back')}<h4>${t('wr.acc')}</h4>${this.items('acc', look.acc ?? 'none', 'acc')}`;
     if (tab === 'pet') content = `<h4>${t('wr.pet')}</h4>${this.items('pet', look.pet ?? 'none', 'pet')}<p class="menu-hint">${t('wr.petHint')}</p>`;
     if (tab === 'outfits') content = this.outfitsTab();
@@ -585,6 +585,7 @@ export class Menu {
         <h4>Spoiler</h4>${this.items('spoiler', look.spoiler ?? 'none', 'spoiler')}
         <h4>Underglow</h4>${this.items('glow', look.glow ?? 'none', 'glow')}
         <h4>${t('gar.finish')}</h4>${this.items('finish', look.finish ?? 'gloss', 'finish')}
+        <h4>${t('gar.wrap')}</h4>${this.items('wrap', look.wrap ?? 'none', 'wrap')}
         <h4>${t('gar.wheels')}</h4>${this.items('wheels', look.wheelStyle ?? 'classic', 'wheelStyle')}
         <h4>${t('gar.exhaust')}</h4>${this.items('exhaust', look.exhaust ?? 'none', 'exhaust')}
         <h4>${t('gar.engine')}</h4>${this.items('engine', look.engine ?? defaultEngine(vid), 'engine')}

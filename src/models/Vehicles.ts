@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { ModelKit, Pattern } from './ModelKit';
+import { ModelKit, Pattern, applyPrint, printKind, type FabricPrint } from './ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
 import { ROVER_TUNING, type VehicleTuning } from '../gameplay/RoverController';
 import { decodeLivery, isEmptyLivery, paintLiveryCanvas } from '../gameplay/Livery';
@@ -11,10 +11,10 @@ export interface VehicleLook {
   trim: string;
   accent: string;
   hubs: string;
-  roofLoad: 'gramophone' | 'boombox' | 'flowers' | 'surfboard' | 'rack' | 'kayak' | 'lanterns' | 'none';
+  roofLoad: 'gramophone' | 'boombox' | 'flowers' | 'surfboard' | 'rack' | 'kayak' | 'lanterns' | 'luggage' | 'tent' | 'plant' | 'drum' | 'flag' | 'snowboard' | 'none';
   /** Paint job over the body colour (loot / shop). */
-  decal?: 'none' | 'stripes' | 'flames' | 'dots' | 'checker';
-  spoiler?: 'none' | 'lip' | 'wing';
+  decal?: 'none' | 'stripes' | 'flames' | 'dots' | 'checker' | 'lightning' | 'wave' | 'stars' | 'number' | 'lotus' | 'pinstripe';
+  spoiler?: 'none' | 'lip' | 'wing' | 'ducktail' | 'twin' | 'fin';
   /** Neon under the car (a colour), glowing at night. */
   glow?: string | null;
   /** A hand-painted picture on both sides (a livery share code, see Livery.ts). */
@@ -22,14 +22,16 @@ export interface VehicleLook {
   /** How the body paint looks: glossy (default), matte, glitter or chrome. */
   finish?: PaintFinish;
   wheelStyle?: WheelStyle;
-  exhaust?: 'none' | 'twin' | 'side' | 'stack';
+  exhaust?: 'none' | 'twin' | 'side' | 'stack' | 'quad' | 'trumpet';
+  /** A printed wrap over the body paint (the fabric prints at car size). */
+  wrap?: FabricPrint;
   /** Engine sound and horn (see audio/VehicleSounds.ts). */
   engine?: EngineSound;
   horn?: HornSound;
 }
 
 export type PaintFinish = 'gloss' | 'matte' | 'glitter' | 'chrome';
-export type WheelStyle = 'classic' | 'spoke' | 'slick' | 'whitewall';
+export type WheelStyle = 'classic' | 'spoke' | 'slick' | 'whitewall' | 'mag' | 'offroad' | 'disc' | 'star';
 
 export type VehicleId = 'rover' | 'tuktuk' | 'coupe' | 'buggy' | 'van' | 'scooter' | 'paperboat' | 'balloon' | 'bicycle' | 'tukracer';
 
@@ -511,6 +513,8 @@ export class VehicleModel {
     this.root.add(this.body);
     const mat = new PaintMaterial({ vertexColors: true, flat: true, gloss: 0.7 });
     const bodyGeo = def.build(look);
+    // A wrap prints over the paint first; the finish then covers what the wrap left plain.
+    applyPrint(bodyGeo, look.body, printKind(look.wrap, true), true);
     applyFinish(bodyGeo, look.body, look.finish);
     const bodyMesh = new THREE.Mesh(bodyGeo, mat);
     bodyMesh.castShadow = true;
@@ -669,7 +673,33 @@ function buildWheel(r: number, width: number, hubs: string, style: WheelStyle = 
     k.cylinder(r * 0.15, r * 0.15, Math.max(width, 0.08) + 0.04, 8, hubs, { rotation: [0, 0, Math.PI / 2] });
     return k.build(0.002, Math.round(r * 100) + 1);
   }
+  if (style === 'offroad') {
+    // Chunky knobbly tyres with a steel rim.
+    k.cylinder(r * 1.04, r * 1.04, width * 1.2, 12, TYRE, { pattern: Pattern.Matte, rotation: [0, 0, Math.PI / 2] });
+    for (let i = 0; i < 14; i++) {
+      const a = (i / 14) * Math.PI * 2;
+      k.box(width * 1.25, 0.07, 0.1, TYRE, { pattern: Pattern.Matte, position: [0, Math.cos(a) * r * 1.04, Math.sin(a) * r * 1.04], rotation: [a, 0, 0] });
+    }
+    k.cylinder(r * 0.5, r * 0.5, width * 1.2 + 0.02, 8, hubs, { rotation: [0, 0, Math.PI / 2], position: [-0.01, 0, 0] });
+    for (let i = 0; i < 6; i++) {
+      const a = (i / 6) * Math.PI * 2;
+      k.cylinder(0.025, 0.025, width * 1.2 + 0.05, 5, INK, { rotation: [0, 0, Math.PI / 2], position: [-0.02, Math.cos(a) * r * 0.32, Math.sin(a) * r * 0.32] });
+    }
+    return k.build(0.005, Math.round(r * 100) + 4);
+  }
   k.cylinder(r, r, width, 12, TYRE, { pattern: Pattern.Matte, rotation: [0, 0, Math.PI / 2] });
+  if (style === 'mag' || style === 'star' || style === 'disc') {
+    const rim = r * (style === 'disc' ? 0.74 : 0.66);
+    k.cylinder(rim, rim, width + 0.02, 14, hubs, { pattern: Pattern.Glass, rotation: [0, 0, Math.PI / 2], position: [-0.01, 0, 0] });
+    if (style === 'mag') for (let i = 0; i < 6; i++) k.box(0.03, r * 0.95, 0.1, INK, { position: [-width / 2 - 0.01, 0, 0], rotation: [(i / 6) * Math.PI, 0, 0] });
+    if (style === 'star')
+      for (let i = 0; i < 5; i++) {
+        const a = (i / 5) * Math.PI * 2;
+        k.cylinder(0.0, 0.07, r * 0.5, 3, INK, { position: [-width / 2 - 0.01, Math.cos(a) * r * 0.25, Math.sin(a) * r * 0.25], rotation: [a + Math.PI, 0, 0] });
+      }
+    if (style === 'disc') k.cylinder(r * 0.12, r * 0.12, width + 0.06, 8, INK, { rotation: [0, 0, Math.PI / 2], position: [-0.02, 0, 0] });
+    return k.build(0.004, Math.round(r * 100) + 5 + (style === 'star' ? 1 : style === 'disc' ? 2 : 0));
+  }
   if (style === 'whitewall') k.cylinder(r * 0.78, r * 0.78, width + 0.01, 12, '#f6f0e4', { rotation: [0, 0, Math.PI / 2] });
   if (style === 'slick') {
     // Smooth racing tyre, a five-spoke rim.
@@ -713,6 +743,43 @@ function buildBodyExtras(look: VehicleLook, bb: THREE.Box3): THREE.BufferGeometr
     case 'checker':
       for (const x of sides) for (let i = 0; i < 8; i++) for (let j = 0; j < 2; j++) if ((i + j) % 2 === 0) k.box(0.02, 0.1, 0.14, '#2b2622', { position: [x, y + j * 0.1, bb.min.z + d * 0.2 + i * 0.14] });
       break;
+    case 'lightning':
+      for (const x of sides)
+        [[-0.3, 0.08, 0.5], [0, -0.02, -0.6], [0.3, 0.06, 0.5]].forEach(([dz, dy, rot]) => k.box(0.02, 0.07, d * 0.3, '#f4d23b', { position: [x, y + dy, midZ + dz * d], rotation: [rot * 0.3, 0, 0] }));
+      break;
+    case 'wave':
+      for (const x of sides) for (let i = 0; i < 8; i++) k.box(0.02, 0.06, d * 0.11, accent, { position: [x, y + Math.sin(i * 1.2) * 0.07, bb.min.z + d * (0.12 + i * 0.1)], rotation: [Math.cos(i * 1.2) * 0.5, 0, 0] });
+      break;
+    case 'stars':
+      for (const x of sides)
+        for (let i = 0; i < 5; i++) k.add(new THREE.CircleGeometry(0.08 + (i % 2) * 0.03, 5).rotateY(x < 0 ? -Math.PI / 2 : Math.PI / 2), i % 2 ? '#f4d23b' : '#f6f0e4', { position: [x + (x < 0 ? -0.002 : 0.002), y + ((i * 7) % 3) * 0.06 - 0.05, bb.min.z + d * (0.15 + i * 0.17)] });
+      break;
+    case 'number':
+      // A racing roundel with a big "7".
+      for (const x of sides) {
+        const sx = x < 0 ? -1 : 1;
+        k.cylinder(0.2, 0.2, 0.02, 16, '#f6f0e4', { position: [x, y, midZ], rotation: [0, 0, Math.PI / 2] });
+        k.box(0.03, 0.04, 0.2, INK, { position: [x + sx * 0.008, y + 0.12, midZ] });
+        k.box(0.03, 0.04, 0.26, INK, { position: [x + sx * 0.008, y - 0.01, midZ + 0.02], rotation: [1.15, 0, 0] });
+      }
+      break;
+    case 'lotus':
+      // A lotus flower: petals fanned round a gold heart.
+      for (const x of sides) {
+        const sx = x < 0 ? -1 : 1;
+        for (let i = 0; i < 7; i++) {
+          const a = -1.2 + (i / 6) * 2.4;
+          k.blob(0.1, i % 2 ? '#f7b8cf' : '#e8559a', { position: [x, y + Math.cos(a) * 0.1, midZ + Math.sin(a) * 0.12], scale: [0.15, 1, 0.45], rotation: [a, 0, 0], detail: 0 });
+        }
+        k.blob(0.05, '#f4d23b', { position: [x + sx * 0.01, y, midZ], scale: [0.3, 1, 1], detail: 0 });
+      }
+      break;
+    case 'pinstripe':
+      for (const x of sides) {
+        k.box(0.02, 0.018, d * 0.85, accent, { position: [x, y + 0.14, midZ] });
+        for (const s of [-1, 1]) k.box(0.02, 0.018, 0.2, accent, { position: [x, y + 0.1, midZ + s * d * 0.43], rotation: [s * 0.4, 0, 0] });
+      }
+      break;
     default:
       break;
   }
@@ -723,6 +790,16 @@ function buildBodyExtras(look: VehicleLook, bb: THREE.Box3): THREE.BufferGeometr
     case 'wing':
       for (const s of [-0.35, 0.35]) k.box(0.06, 0.4, 0.08, '#2b2622', { position: [(bb.min.x + bb.max.x) / 2 + s * w, bb.min.y + h * 0.7, bb.max.z - 0.15] });
       k.box(w * 1.02, 0.06, 0.45, accent, { position: [(bb.min.x + bb.max.x) / 2, bb.min.y + h * 0.7 + 0.22, bb.max.z - 0.1], rotation: [0.12, 0, 0] });
+      break;
+    case 'ducktail':
+      k.box(w * 0.9, 0.08, 0.3, look.body, { position: [(bb.min.x + bb.max.x) / 2, bb.min.y + h * 0.6, bb.max.z + 0.05], rotation: [-0.45, 0, 0] });
+      break;
+    case 'twin':
+      for (const s of [-0.35, 0.35]) k.box(0.06, 0.55, 0.08, '#2b2622', { position: [(bb.min.x + bb.max.x) / 2 + s * w, bb.min.y + h * 0.75, bb.max.z - 0.15] });
+      for (const dy of [0.2, 0.42]) k.box(w * 1.02, 0.05, 0.36, accent, { position: [(bb.min.x + bb.max.x) / 2, bb.min.y + h * 0.75 + dy, bb.max.z - 0.1], rotation: [0.12, 0, 0] });
+      break;
+    case 'fin':
+      k.box(0.05, 0.4, d * 0.35, accent, { position: [(bb.min.x + bb.max.x) / 2, bb.max.y + 0.15, bb.max.z - d * 0.2], rotation: [0.25, 0, 0] });
       break;
     default:
       break;
@@ -740,6 +817,13 @@ function buildBodyExtras(look: VehicleLook, bb: THREE.Box3): THREE.BufferGeometr
         k.cylinder(0.06, 0.06, 0.9, 8, '#cfd6df', { pattern: Pattern.Glass, position: [cx + s * w, bb.min.y + h * 0.55, bb.max.z - 0.1] });
         k.cylinder(0.08, 0.06, 0.12, 8, INK, { position: [cx + s * w, bb.min.y + h * 0.55 + 0.5, bb.max.z - 0.1] });
       }
+      break;
+    case 'quad':
+      for (const s of [-0.3, -0.18, 0.18, 0.3]) k.cylinder(0.055, 0.065, 0.36, 8, '#cfd6df', { pattern: Pattern.Glass, position: [cx + s * w, bb.min.y + 0.33, bb.max.z - 0.05], rotation: [Math.PI / 2, 0, 0] });
+      break;
+    case 'trumpet':
+      // A flared brass pipe, like a trumpet bell.
+      k.add(new THREE.LatheGeometry([new THREE.Vector2(0.06, 0), new THREE.Vector2(0.07, 0.3), new THREE.Vector2(0.12, 0.45), new THREE.Vector2(0.2, 0.52)], 12).rotateX(Math.PI / 2), BRASS, { pattern: Pattern.Glass, position: [cx + 0.25 * w, bb.min.y + 0.35, bb.max.z - 0.2] });
       break;
     default:
       break;
@@ -793,6 +877,44 @@ function buildRoofLoad(look: VehicleLook): THREE.BufferGeometry | null {
         const x = -0.45 + i * 0.3;
         k.blob(0.12, i % 2 ? '#d8463a' : '#f4d23b', { position: [x, 0.36, 0], scale: [1, 1.2, 1], detail: 1, nightGlow: 1 });
       }
+      break;
+    case 'luggage':
+      k.box(0.7, 0.38, 0.5, '#9a5a32', { position: [-0.3, 0.19, 0], pattern: Pattern.Planks });
+      k.box(0.5, 0.3, 0.42, '#3e6fa8', { position: [0.35, 0.15, 0.05] });
+      k.box(0.36, 0.22, 0.34, '#d8463a', { position: [0.3, 0.41, 0.02] });
+      for (const x of [-0.45, -0.15]) k.box(0.04, 0.4, 0.52, '#e8c872', { position: [x, 0.19, 0] });
+      break;
+    case 'tent':
+      // A rooftop tent: a folded shell with a ladder.
+      k.box(1.2, 0.26, 0.9, '#5a7a3a', { position: [0, 0.13, 0] });
+      k.box(1.22, 0.05, 0.92, INK, { position: [0, 0.28, 0] });
+      for (const s of [-1, 1]) k.box(0.04, 0.9, 0.04, '#cfd6df', { position: [0.62, -0.2, s * 0.2] });
+      for (let i = 0; i < 4; i++) k.box(0.04, 0.03, 0.44, '#cfd6df', { position: [0.62, -0.55 + i * 0.25, 0] });
+      break;
+    case 'plant':
+      k.cylinder(0.25, 0.2, 0.3, 10, '#b85a32', { position: [0, 0.15, 0] });
+      for (let i = 0; i < 7; i++) {
+        const a = (i / 7) * Math.PI * 2;
+        k.blob(0.2, '#4f9a5a', { position: [Math.cos(a) * 0.25, 0.55, Math.sin(a) * 0.25], scale: [0.5, 1.4, 0.3], rotation: [Math.sin(a) * 0.6, 0, -Math.cos(a) * 0.6], detail: 0, pattern: Pattern.Leaves });
+      }
+      break;
+    case 'drum':
+      // A big geta bera (Kandyan drum) strapped on.
+      k.cylinder(0.3, 0.3, 0.8, 14, '#9a3a2a', { position: [0, 0.32, 0], rotation: [0, 0, Math.PI / 2] });
+      for (const x of [-0.41, 0.41]) k.cylinder(0.31, 0.31, 0.03, 14, '#f0e0c0', { position: [x, 0.32, 0], rotation: [0, 0, Math.PI / 2] });
+      for (let i = 0; i < 6; i++) k.box(0.8, 0.02, 0.02, '#e8c872', { position: [0, 0.32 + Math.cos((i / 6) * Math.PI * 2) * 0.305, Math.sin((i / 6) * Math.PI * 2) * 0.305] });
+      break;
+    case 'flag':
+      k.cylinder(0.025, 0.025, 1.5, 6, INK, { position: [0.4, 0.75, 0.3] });
+      k.box(0.02, 0.4, 0.6, look.accent, { position: [0.4, 1.3, 0.02] });
+      k.box(0.022, 0.12, 0.6, look.trim, { position: [0.4, 1.3, 0.02] });
+      break;
+    case 'snowboard':
+      k.box(1.2, 0.04, 0.04, INK, { position: [0, 0.08, -0.3] });
+      k.box(1.2, 0.04, 0.04, INK, { position: [0, 0.08, 0.3] });
+      k.box(1.5, 0.03, 0.3, '#9a5bd6', { position: [0, 0.12, 0] });
+      k.box(0.2, 0.08, 0.26, INK, { position: [-0.35, 0.17, 0] });
+      k.box(0.2, 0.08, 0.26, INK, { position: [0.35, 0.17, 0] });
       break;
     default:
       return null;

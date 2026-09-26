@@ -6,7 +6,8 @@ import { ACTION_INFO, type ActionName } from '../core/Input';
 export function itemLabel(item: ShopItem | string): string {
   const i = typeof item === 'string' ? CATALOGUE.find((c) => c.id === item) : item;
   if (!i) return String(item);
-  const key = `item.${i.id}` as StringKey;
+  // Fabric prints and car wraps share one name per print.
+  const key = (i.category === 'print' || i.category === 'bprint' || i.category === 'wrap' ? `print.${i.value}` : `item.${i.id}`) as StringKey;
   const s = t(key);
   return s === key ? i.name : s;
 }

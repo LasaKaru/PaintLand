@@ -35,6 +35,38 @@ export const Pattern = {
   Glitter: 14,
 } as const;
 
+/** Fabric prints for clothes, and the same prints as car wraps (see fabricPrint in the shader). */
+export const PRINTS = ['stripes', 'dots', 'gingham', 'flowers', 'batik', 'zigzag', 'stars', 'camo', 'tartan', 'waves'] as const;
+export type FabricPrint = (typeof PRINTS)[number] | 'none';
+
+/** The shader pattern for a print: 15–24 at clothes size, 25–34 at car size. */
+export function printKind(print: FabricPrint | undefined, car = false): number {
+  const i = print && print !== 'none' ? PRINTS.indexOf(print) : -1;
+  return i < 0 ? 0 : 15 + i + (car ? 10 : 0);
+}
+
+/**
+ * Print a pattern on every plain part of `geo` painted exactly `colour`
+ * (the top, the trousers, the car body). Returns how many vertices changed.
+ */
+export function applyPrint(geo: THREE.BufferGeometry, colour: string, kind: number, alsoPlanks = false): number {
+  if (!kind) return 0;
+  const col = geo.getAttribute('color') as THREE.BufferAttribute | undefined;
+  const pat = geo.getAttribute('pattern') as THREE.BufferAttribute | undefined;
+  if (!col || !pat) return 0;
+  const c = new THREE.Color(colour);
+  let n = 0;
+  for (let i = 0; i < col.count; i++) {
+    const p = pat.getX(i);
+    if (p !== 0 && !(alsoPlanks && p === Pattern.Planks)) continue;
+    if (Math.abs(col.getX(i) - c.r) + Math.abs(col.getY(i) - c.g) + Math.abs(col.getZ(i) - c.b) > 0.004) continue;
+    pat.setX(i, kind);
+    n++;
+  }
+  if (n) pat.needsUpdate = true;
+  return n;
+}
+
 /**
  * A tiny modelling toolkit: add primitives with a colour and a transform,
  * then bake them into one flat-shaded, vertex-coloured geometry.

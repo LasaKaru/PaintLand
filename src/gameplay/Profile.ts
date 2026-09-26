@@ -1,13 +1,14 @@
 import { DEFAULT_HUMAN_LOOK, type HumanLook } from '../models/Human';
 import type { DailyState, Streak } from './Challenges';
 import { VEHICLES, type VehicleId, type VehicleLook } from '../models/Vehicles';
+import { PRINTS } from '../models/ModelKit';
 import type { TonicId } from './Collectibles';
 
 /** Something the player can own. `apply` is the look field it sets when equipped. */
 export interface ShopItem {
   id: string;
   name: string;
-  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow' | 'eyes' | 'mouth' | 'facial' | 'acc' | 'finish' | 'wheels' | 'exhaust' | 'engine' | 'horn' | 'pet' | 'pack';
+  category: 'hair' | 'hat' | 'top' | 'bottom' | 'glasses' | 'back' | 'vehicle' | 'roof' | 'tonic' | 'decal' | 'spoiler' | 'glow' | 'eyes' | 'mouth' | 'facial' | 'acc' | 'finish' | 'wheels' | 'exhaust' | 'engine' | 'horn' | 'pet' | 'pack' | 'print' | 'bprint' | 'wrap';
   price: number;
   value: string;
   /** 0 common, 1 rare, 2 epic, 3 legendary (loot drops). */
@@ -143,6 +144,41 @@ export const CATALOGUE: ShopItem[] = [
   { id: 'pet:cat', name: 'Paper cat', category: 'pet', price: 200, value: 'cat' },
   { id: 'pet:fox', name: 'Little fox', category: 'pet', price: 260, value: 'fox' },
   { id: 'pet:crane', name: 'Origami crane', category: 'pet', price: 0, value: 'crane', rarity: 2, loot: true },
+  // Content pack: more hair, hats, glasses, tops, bottoms, faces and things to carry.
+  ...([['afro', 'Afro', 60], ['mohawk', 'Mohawk', 70], ['pigtails', 'Pigtails', 50], ['topknot', 'Top knot', 50], ['spiky', 'Spiky hair', 60]] as const).map(([v, name, price]) => ({ id: `hair:${v}`, name, category: 'hair' as const, price, value: v })),
+  ...([['bucket', 'Bucket hat', 60], ['tophat', 'Top hat', 120], ['visor', 'Sun visor', 50], ['headband', 'Headband', 30], ['bandana', 'Bandana', 40], ['chef', 'Chef’s hat', 80], ['pirate', 'Pirate hat', 110], ['party', 'Party hat', 40]] as const).map(([v, name, price]) => ({ id: `hat:${v}`, name, category: 'hat' as const, price, value: v })),
+  { id: 'hat:halo', name: 'Golden halo', category: 'hat', price: 0, value: 'halo', rarity: 3, loot: true },
+  ...([['star', 'Star glasses', 70], ['heart', 'Heart glasses', 70], ['goggles', 'Driving goggles', 90], ['monocle', 'Monocle', 100], ['shield', 'Shield shades', 110]] as const).map(([v, name, price]) => ({ id: `glasses:${v}`, name, category: 'glasses' as const, price, value: v })),
+  ...([['jacket', 'Open jacket', 120], ['vest', 'Waistcoat', 80], ['kurta', 'Kurta', 110]] as const).map(([v, name, price]) => ({ id: `top:${v}`, name, category: 'top' as const, price, value: v })),
+  ...([['cargo', 'Cargo trousers', 70], ['maxi', 'Long skirt', 80]] as const).map(([v, name, price]) => ({ id: `bottom:${v}`, name, category: 'bottom' as const, price, value: v })),
+  { id: 'eyes:lashes', name: 'Long lashes', category: 'eyes', price: 30, value: 'lashes' },
+  { id: 'eyes:hearts', name: 'Heart eyes', category: 'eyes', price: 0, value: 'hearts', rarity: 1, loot: true },
+  { id: 'mouth:tongue', name: 'Cheeky tongue', category: 'mouth', price: 20, value: 'tongue' },
+  { id: 'mouth:fangs', name: 'Little fangs', category: 'mouth', price: 0, value: 'fangs', rarity: 1, loot: true },
+  { id: 'facial:gems', name: 'Face gems', category: 'facial', price: 60, value: 'gems' },
+  { id: 'facial:whiskers', name: 'Painted whiskers', category: 'facial', price: 40, value: 'whiskers' },
+  ...([['lei', 'Flower garland', 60], ['medal', 'Gold medal', 90], ['pearls', 'Pearl necklace', 80], ['tie', 'Necktie', 40]] as const).map(([v, name, price]) => ({ id: `acc:${v}`, name, category: 'acc' as const, price, value: v })),
+  ...([['kite', 'Paper kite', 80], ['rabana', 'Rabana drum', 120], ['balloons', 'Balloons', 60], ['easel', 'Painter’s easel', 90]] as const).map(([v, name, price]) => ({ id: `back:${v}`, name, category: 'back' as const, price, value: v })),
+  { id: 'back:jetpack', name: 'Jetpack', category: 'back', price: 0, value: 'jetpack', rarity: 3, loot: true },
+  // Fabric prints for the top and the bottom, and the same prints as car wraps.
+  ...(['print', 'bprint', 'wrap'] as const).flatMap((category) => [
+    { id: `${category}:none`, name: 'Plain', category, price: 0, value: 'none' },
+    ...PRINTS.map((v, i) => ({ id: `${category}:${v}`, name: cap(v), category, price: (category === 'wrap' ? 120 : 40) + i * 10, value: v as string })),
+  ]),
+  // More garage parts.
+  ...([['lightning', 'Lightning bolt', 160], ['wave', 'Ocean wave', 140], ['stars', 'Starry sides', 150], ['number', 'Racing number', 120], ['lotus', 'Lotus flower', 180], ['pinstripe', 'Pinstripes', 100]] as const).map(([v, name, price]) => ({ id: `decal:${v}`, name, category: 'decal' as const, price, value: v })),
+  { id: 'spoiler:ducktail', name: 'Ducktail', category: 'spoiler', price: 130, value: 'ducktail' },
+  { id: 'spoiler:twin', name: 'Twin wing', category: 'spoiler', price: 0, value: 'twin', rarity: 2, loot: true },
+  { id: 'spoiler:fin', name: 'Shark fin', category: 'spoiler', price: 160, value: 'fin' },
+  ...([['#9a5bd6', 'purple', 'Purple underglow'], ['#ff8a2e', 'orange', 'Orange underglow'], ['#f6f0ff', 'white', 'Moonlight underglow'], ['#ff3a3a', 'red', 'Red underglow'], ['#3e6fff', 'blue', 'Blue underglow']] as const).map(([value, v, name], i) => ({ id: `glow:${v}`, name, category: 'glow' as const, price: 150 + i * 20, value })),
+  ...([['mag', 'Mag wheels', 120], ['offroad', 'Off-road tyres', 150], ['disc', 'Disc wheels', 90], ['star', 'Star rims', 130]] as const).map(([v, name, price]) => ({ id: `wheels:${v}`, name, category: 'wheels' as const, price, value: v })),
+  { id: 'exhaust:quad', name: 'Quad pipes', category: 'exhaust', price: 150, value: 'quad' },
+  { id: 'exhaust:trumpet', name: 'Brass trumpet pipe', category: 'exhaust', price: 0, value: 'trumpet', rarity: 2, loot: true },
+  ...([['luggage', 'Suitcases', 80], ['tent', 'Rooftop tent', 160], ['plant', 'Potted plant', 60], ['drum', 'Kandyan drum', 140], ['flag', 'Flag', 50], ['snowboard', 'Snowboard', 110]] as const).map(([v, name, price]) => ({ id: `roof:${v}`, name, category: 'roof' as const, price, value: v })),
+  { id: 'engine:turbo', name: 'Turbo whoosh', category: 'engine', price: 180, value: 'turbo' },
+  { id: 'engine:tuk', name: 'Tuk-tuk putter', category: 'engine', price: 60, value: 'tuk' },
+  { id: 'engine:jet', name: 'Jet roar', category: 'engine', price: 0, value: 'jet', rarity: 3, loot: true },
+  ...([['conch', 'Conch shell', 80], ['melody', 'Little tune', 60], ['honk', 'Goose honk', 40], ['chime', 'Temple chime', 70]] as const).map(([v, name, price]) => ({ id: `horn:${v}`, name, category: 'horn' as const, price, value: v })),
   { id: 'tonic:magnet', name: 'Magnet tonic', category: 'tonic', price: 30, value: 'magnet' },
   { id: 'tonic:feather', name: 'Feather tonic', category: 'tonic', price: 40, value: 'feather' },
   { id: 'tonic:fizzy', name: 'Fizzy Ink', category: 'tonic', price: 35, value: 'fizzy' },
@@ -292,7 +328,7 @@ export class Profile {
 
   /** Items a look uses that aren't owned yet (so a preset can offer to buy them). */
   missingFor(look: Partial<HumanLook>): ShopItem[] {
-    const fields: [keyof HumanLook, ShopItem['category']][] = [['hairStyle', 'hair'], ['hat', 'hat'], ['topStyle', 'top'], ['bottomStyle', 'bottom'], ['glasses', 'glasses'], ['back', 'back'], ['eyes', 'eyes'], ['mouth', 'mouth'], ['face', 'facial'], ['acc', 'acc'], ['pet', 'pet']];
+    const fields: [keyof HumanLook, ShopItem['category']][] = [['hairStyle', 'hair'], ['hat', 'hat'], ['topStyle', 'top'], ['bottomStyle', 'bottom'], ['glasses', 'glasses'], ['back', 'back'], ['eyes', 'eyes'], ['mouth', 'mouth'], ['face', 'facial'], ['acc', 'acc'], ['pet', 'pet'], ['print', 'print'], ['bottomPrint', 'bprint']];
     const out: ShopItem[] = [];
     for (const [field, category] of fields) {
       const v = look[field];
@@ -307,7 +343,7 @@ export class Profile {
   wearOutfit(look: Partial<HumanLook>): number {
     const missing = this.missingFor(look);
     const next = { ...this.data.look, ...look };
-    const fieldOf: Partial<Record<ShopItem['category'], keyof HumanLook>> = { hair: 'hairStyle', hat: 'hat', top: 'topStyle', bottom: 'bottomStyle', glasses: 'glasses', back: 'back', eyes: 'eyes', mouth: 'mouth', facial: 'face', acc: 'acc', pet: 'pet' };
+    const fieldOf: Partial<Record<ShopItem['category'], keyof HumanLook>> = { hair: 'hairStyle', hat: 'hat', top: 'topStyle', bottom: 'bottomStyle', glasses: 'glasses', back: 'back', eyes: 'eyes', mouth: 'mouth', facial: 'face', acc: 'acc', pet: 'pet', print: 'print', bprint: 'bottomPrint' };
     for (const m of missing) {
       const f = fieldOf[m.category];
       if (f) (next as unknown as Record<string, unknown>)[f] = (this.data.look as unknown as Record<string, unknown>)[f];

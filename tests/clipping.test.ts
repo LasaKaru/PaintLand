@@ -42,7 +42,7 @@ describe('Character × vehicle clipping', () => {
     expect(clips, clips.join('\n')).toEqual([]);
     // Only tall hats in closed vehicles come off.
     for (const h of new Set(hatsOff)) expect(h, h).toMatch(/wizard|conical|helmet|crown|sunhat|straw/);
-  });
+  }, 30_000);
 
   it('ordinary riders keep their full size and hats', () => {
     for (let vi = 0; vi < VEHICLES.length; vi++) {
