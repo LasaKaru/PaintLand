@@ -43,17 +43,18 @@ jobs:
             desktop/package-lock.json
       - run: npm ci
       - run: npm test
-      - name: Build the game
-        run: npm run build
-        env:
-          VITE_API_BASE: ${{ vars.INKROADS_API_BASE || vars.PAINTLAND_API_BASE }}
-          VITE_SERVER_WS: ${{ vars.INKROADS_SERVER_WS || vars.PAINTLAND_SERVER_WS }}
       - name: Version
         id: version
         shell: bash
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then v="${GITHUB_REF#refs/tags/v}"; else v="0.1.${GITHUB_RUN_NUMBER}"; fi
           echo "version=$v" >> "$GITHUB_OUTPUT"
+      - name: Build the game
+        run: npm run build
+        env:
+          VITE_API_BASE: ${{ vars.INKROADS_API_BASE || vars.PAINTLAND_API_BASE }}
+          INKROADS_VERSION: ${{ steps.version.outputs.version }}
+          VITE_SERVER_WS: ${{ vars.INKROADS_SERVER_WS || vars.PAINTLAND_SERVER_WS }}
       - name: Desktop shell tests
         working-directory: desktop
         run: |

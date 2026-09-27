@@ -81,7 +81,43 @@ interface Whoami {
   used: string;
 }
 
-type Tab = 'dashboard' | 'branding' | 'links' | 'sponsors' | 'business' | 'players' | 'security';
+/** What /api/admin/health returns (server/admin.mjs healthReport). */
+interface PerfRow {
+  key: string;
+  minutes: number;
+  fps: number;
+  slow: number;
+}
+interface CrashGroup {
+  id: string;
+  msg: string;
+  top: string;
+  where: string;
+  status: 'open' | 'regressed' | 'resolved' | 'ignored';
+  count: number;
+  fatal: number;
+  first: number;
+  last: number;
+  resolvedAt: number;
+  week: number;
+  trend: number[];
+  versions: Row[];
+  devices: Row[];
+  places: Row[];
+}
+interface Health {
+  crashFree7: { sessions: number; crashed: number; rate: number };
+  crashFree30: { sessions: number; crashed: number; rate: number };
+  open: number;
+  regressed: number;
+  days: { day: string; sessions: number; crashed: number; crashFree: number; fps: number; slow: number }[];
+  versions: { ver: string; first: number; sessions: number; crashed: number; crashFree: number; fps: number; slow: number; minutes: number }[];
+  groups: CrashGroup[];
+  perf: { minutes: number; fps: number; slow: number; slowFps: number; places: PerfRow[]; devices: PerfRow[]; quality: PerfRow[]; platforms: PerfRow[] };
+}
+type CrashFilter = 'active' | 'resolved' | 'ignored' | 'all';
+
+type Tab = 'dashboard' | 'health' | 'branding' | 'links' | 'sponsors' | 'business' | 'players' | 'security';
 
 const TOKEN = 'paintland.admin';
 const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
@@ -102,6 +138,10 @@ export class AdminPanel {
   /** The contest picture being looked at (a data URL). */
   private photoView: { id: string; image: string } | null = null;
   private stats: Stats | null = null;
+  private health: Health | null = null;
+  private crashFilter: CrashFilter = 'active';
+  /** The error group whose details are open. */
+  private crashOpen = '';
   private newCodes: string[] = [];
   private config: ServerConfig | null = null;
   private chat: { chat: { at: number; room: string; name: string; text: string }[]; banned: string[] } | null = null;
@@ -161,14 +201,16 @@ export class AdminPanel {
 
   private async loadAll(): Promise<void> {
     this.render();
-    const [stats, config] = await Promise.all([this.call<Stats>('/api/admin/stats'), this.call<ServerConfig>('/api/admin/config')]);
+    const [stats, config, health] = await Promise.all([this.call<Stats>('/api/admin/stats'), this.call<ServerConfig>('/api/admin/config'), this.call<Health>('/api/admin/health')]);
     if (!this.token) return;
     this.stats = stats;
     this.config = config;
+    this.health = health;
     this.render();
     clearInterval(this.timer);
     this.timer = window.setInterval(() => {
       if (this.open && this.tab === 'dashboard') void this.call<Stats>('/api/admin/stats').then((s) => s && ((this.stats = s), this.render()));
+      if (this.open && this.tab === 'health') void this.call<Health>('/api/admin/health').then((h) => h && ((this.health = h), this.render()));
     }, 15000);
   }
 
@@ -232,8 +274,8 @@ export class AdminPanel {
   }
 
   private panel(): string {
-    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['business', '🎟 Pass & challenges'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
-    const body = { dashboard: () => this.dashboard(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), business: () => this.businessTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
+    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['health', '🩺 Crashes & speed'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['business', '🎟 Pass & challenges'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
+    const body = { dashboard: () => this.dashboard(), health: () => this.healthTab(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), business: () => this.businessTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
     return `<div class="card admin-panel">
       <div class="admin-head">
         <div class="admin-brand"><img src="${esc(this.config?.company.logo ? apiUrl(this.config.company.logo) : COMPANY_LOGO)}" alt=""><span class="hand">${esc(this.config?.company.name ?? 'HelaO2')} · Inkroads admin</span></div>
@@ -265,13 +307,13 @@ export class AdminPanel {
         ${tile('Open reports', fmt(t.openReports ?? 0), t.openReports ? '👥 Players & chat to review' : 'all clear')}
         ${tile('Sessions', fmt(t.sessions), `avg ${t.avgSessionMin} min`)}
         ${tile('Hours played', fmt(t.playHours), sparkline(spark('playHours')))}
-        ${tile('Crash-free sessions', `${h.crashFree7}%`, `last 7 days · ${fmt(h.crashed7)} of ${fmt(h.sessions7)} hit an error · goal 99.5%`)}
+        ${tile('Crash-free sessions', `${h.crashFree7}%`, `last 7 days · ${fmt(h.crashed7)} of ${fmt(h.sessions7)} hit an error · goal 99.5% · details in 🩺 Crashes & speed`)}
       </div>
       <div class="grid2">
         <section class="viz-card"><h3>Players per day <small>last 30 days</small></h3>${lineChart(s.days.map((d) => ({ x: d.day, y: d.players })), 'players')}</section>
         <section class="viz-card"><h3>Hours played per day <small>last 30 days</small></h3>${lineChart(s.days.map((d) => ({ x: d.day, y: d.playHours })), 'hours')}</section>
       </div>
-      <section class="viz-card"><h3>Errors from players' games <small>most frequent first</small></h3>
+      <section class="viz-card"><h3>Errors from players' games <small>top open errors · resolve or ignore them in 🩺 Crashes & speed</small></h3>
         ${h.errors.length ? `<table class="admin-table"><thead><tr><th>Message</th><th>Where</th><th class="num">Times</th><th>Last seen</th></tr></thead><tbody>${h.errors
           .map((e) => `<tr><td>${esc(e.msg)}${e.top ? `<br><small>${esc(e.top)}</small>` : ''}</td><td>${esc(e.where)}</td><td class="num">${fmt(e.count)}</td><td>${new Date(e.last).toLocaleString()}</td></tr>`)
           .join('')}</tbody></table>` : '<p class="menu-hint">No errors reported. 🎉</p>'}
@@ -296,6 +338,85 @@ export class AdminPanel {
         <section class="viz-card"><h3>Multiplayer rooms now</h3>${rooms.length ? `<table class="admin-table"><tbody>${rooms.map(([r, n]) => `<tr><td>${esc(r)}</td><td class="num">${n} player${n === 1 ? '' : 's'}</td></tr>`).join('')}</tbody></table>` : '<p class="menu-hint">Nobody in a room right now.</p>'}</section>
       </div>
       <div class="row wrap"><button class="btn" data-admin="export">⬇ Export all analytics (JSON)</button><span class="menu-hint">Counting since ${new Date(s.since).toLocaleDateString()}. Anonymous: one random id per browser, no names or addresses.</span></div>`;
+  }
+
+  // ————— crashes and performance —————
+
+  private healthTab(): string {
+    const h = this.health;
+    if (!h) return '<p class="menu-hint">Loading crash and performance numbers…</p>';
+    const tile = (label: string, value: string, sub = '', warn = false): string => `<div class="stat-tile${warn ? ' warn' : ''}"><div class="label">${label}</div><div class="stat-value">${value}</div>${sub ? `<div class="stat-sub">${sub}</div>` : ''}</div>`;
+    const date = (t: number): string => (t ? new Date(t).toLocaleDateString() : '—');
+    const ago = (t: number): string => {
+      const m = Math.round((Date.now() - t) / 60000);
+      return m < 60 ? `${m} min ago` : m < 48 * 60 ? `${Math.round(m / 60)} h ago` : `${Math.round(m / 1440)} days ago`;
+    };
+    const fpsCell = (fps: number): string => `<span class="${fps && fps < h.perf.slowFps ? 'bad' : fps < 50 ? 'meh' : 'good'}">${fps || '—'}</span>`;
+    const perfTable = (title: string, rows: PerfRow[], note = ''): string =>
+      `<section class="viz-card"><h3>${title} <small>slowest first</small></h3>${rows.length ? `<div class="table-scroll"><table class="admin-table"><thead><tr><th></th><th class="num">Avg fps</th><th class="num">Slow minutes</th><th class="num">Minutes played</th></tr></thead><tbody>${rows
+        .map((r) => `<tr><td>${esc(r.key)}</td><td class="num">${fpsCell(r.fps)}</td><td class="num">${r.slow}%</td><td class="num">${fmt(r.minutes)}</td></tr>`)
+        .join('')}</tbody></table></div>` : '<p class="menu-hint">No play minutes yet.</p>'}${note ? `<p class="menu-hint">${note}</p>` : ''}</section>`;
+    const shown = h.groups.filter((g) => (this.crashFilter === 'all' ? true : this.crashFilter === 'active' ? g.status === 'open' || g.status === 'regressed' : g.status === this.crashFilter));
+    const badge = (g: CrashGroup): string => `<span class="crash-status ${g.status}">${{ open: 'open', regressed: '⚠ regressed', resolved: '✓ fixed', ignored: 'ignored' }[g.status]}</span>`;
+    const chips = (rows: Row[]): string => rows.map((r) => `<span class="crash-chip">${esc(r.key)} · ${fmt(r.value)}</span>`).join(' ') || '—';
+    const groupRow = (g: CrashGroup): string => {
+      const open = this.crashOpen === g.id;
+      const actions = g.status === 'open' || g.status === 'regressed'
+        ? `<button class="btn small" data-crash="${g.id}" data-crash-action="resolve" title="Mark as fixed. If it shows up again in a newer build, it comes back as regressed.">✓ Fixed</button><button class="btn small" data-crash="${g.id}" data-crash-action="ignore">Ignore</button>`
+        : `<button class="btn small" data-crash="${g.id}" data-crash-action="reopen">Reopen</button>`;
+      return `<tr class="crash-row${open ? ' open' : ''}">
+        <td><button class="linkish" data-crash-open="${g.id}" aria-expanded="${open}">${open ? '▾' : '▸'} ${esc(g.msg)}</button>${g.top ? `<br><small>${esc(g.top)}</small>` : ''}</td>
+        <td>${badge(g)}</td>
+        <td class="num">${fmt(g.week)}</td>
+        <td class="num">${fmt(g.count)}${g.fatal < g.count ? `<br><small>${fmt(g.fatal)} crashed</small>` : ''}</td>
+        <td>${sparkline(g.trend)}</td>
+        <td>${ago(g.last)}</td>
+        <td class="row">${actions}</td>
+      </tr>${open ? `<tr class="crash-detail"><td colspan="7">
+        <div class="grid3">
+          <div><b>Builds</b><br>${chips(g.versions)}</div>
+          <div><b>Devices</b><br>${chips(g.devices)}</div>
+          <div><b>Where in the game</b><br>${chips(g.places)}</div>
+        </div>
+        <p class="menu-hint">Reported from: ${esc(g.where) || '—'} · first seen ${date(g.first)}${g.resolvedAt ? ` · marked fixed ${date(g.resolvedAt)}` : ''} · id ${g.id}</p>
+      </td></tr>` : ''}`;
+    };
+    const cf = h.crashFree7;
+    // Only days with data: a day nobody played isn't 100% crash-free or 0 fps.
+    const since = (pts: { x: string; y: number }[], unit: string): string => (pts.length >= 2 ? lineChart(pts, unit) : `<p class="menu-hint">${pts.length ? `${pts[0].x}: ${pts[0].y} ${unit}. The chart starts after a second day of play.` : 'No data yet.'}</p>`);
+    return `
+      <div class="kpi-row">
+        ${tile('Crash-free (7 days)', `${cf.rate}%`, `${fmt(cf.crashed)} of ${fmt(cf.sessions)} sessions crashed · goal 99.5%`, cf.sessions > 0 && cf.rate < 99.5)}
+        ${tile('Crash-free (30 days)', `${h.crashFree30.rate}%`, `${fmt(h.crashFree30.sessions)} sessions`)}
+        ${tile('Open errors', fmt(h.open), h.regressed ? `⚠ ${h.regressed} came back after a fix` : 'errors not yet fixed or ignored', h.regressed > 0)}
+        ${tile('Average frame rate', h.perf.minutes ? `${h.perf.fps} fps` : '—', `last 30 days · ${fmt(h.perf.minutes)} play minutes`)}
+        ${tile('Slow minutes', h.perf.minutes ? `${h.perf.slow}%` : '—', `minutes under ${h.perf.slowFps} fps`, h.perf.slow > 10)}
+      </div>
+      <div class="grid2">
+        <section class="viz-card"><h3>Crash-free sessions per day <small>%, last 30 days</small></h3>${since(h.days.filter((d) => d.sessions > 0).map((d) => ({ x: d.day, y: d.crashFree })), '% crash-free')}</section>
+        <section class="viz-card"><h3>Average frame rate per day <small>fps, last 30 days</small></h3>${since(h.days.filter((d) => d.fps > 0).map((d) => ({ x: d.day, y: d.fps })), 'fps')}</section>
+      </div>
+      <section class="viz-card"><h3>Errors <small>grouped by message and where in the code · click one for builds, devices and places</small></h3>
+        <div class="row wrap">${(['active', 'resolved', 'ignored', 'all'] as CrashFilter[])
+          .map((f) => `<button class="btn small${this.crashFilter === f ? ' primary' : ''}" data-crash-filter="${f}">${{ active: 'Open', resolved: 'Fixed', ignored: 'Ignored', all: 'All' }[f]} (${h.groups.filter((g) => (f === 'all' ? true : f === 'active' ? g.status === 'open' || g.status === 'regressed' : g.status === f)).length})</button>`)
+          .join('')}</div>
+        ${shown.length ? `<div class="table-scroll"><table class="admin-table crash-table"><thead><tr><th>Error</th><th>Status</th><th class="num">7 days</th><th class="num">All time</th><th>14-day trend</th><th>Last seen</th><th></th></tr></thead><tbody>${shown.map(groupRow).join('')}</tbody></table></div>` : `<p class="menu-hint">${this.crashFilter === 'active' ? 'No open errors. 🎉' : 'Nothing here.'}</p>`}
+        <p class="menu-hint">✓ Fixed hides an error until it shows up in a build released after you marked it. Then it comes back as <b>regressed</b>. Players on older builds can still send it; those don't count. Ignore hides it for good (it keeps counting).</p>
+      </section>
+      <section class="viz-card"><h3>By build <small>newest first</small></h3>
+        ${h.versions.length ? `<div class="table-scroll"><table class="admin-table"><thead><tr><th>Build</th><th>First seen</th><th class="num">Sessions</th><th class="num">Crash-free</th><th class="num">Avg fps</th><th class="num">Slow minutes</th></tr></thead><tbody>${h.versions
+          .map((v) => `<tr><td>${esc(v.ver)}</td><td>${date(v.first)}</td><td class="num">${fmt(v.sessions)}</td><td class="num"><span class="${v.sessions && v.crashFree < 99.5 ? 'bad' : 'good'}">${v.crashFree}%</span></td><td class="num">${fpsCell(v.fps)}</td><td class="num">${v.minutes ? `${v.slow}%` : '—'}</td></tr>`)
+          .join('')}</tbody></table></div>` : '<p class="menu-hint">No builds reported yet. Builds report their version from this update on.</p>'}
+      </section>
+      <div class="grid2">
+        ${perfTable('Frame rate by place', h.perf.places, 'Towns and chapters where players spend minutes under the slow line are the ones to optimise first.')}
+        <div>
+          ${perfTable('By graphics quality', h.perf.quality)}
+          ${perfTable('By device', h.perf.devices)}
+          ${perfTable('Web or desktop app', h.perf.platforms)}
+        </div>
+      </div>
+      <p class="menu-hint">Each playing minute sends its average frame rate. Errors come from the crash reporter (up to 8 per session). All anonymous, and nothing is sent when a player turns statistics off.</p>`;
   }
 
   // ————— settings tabs —————
@@ -502,13 +623,29 @@ export class AdminPanel {
   // ————— events —————
 
   private async onClick(e: MouseEvent): Promise<void> {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban], [data-report-ban], [data-report-dismiss], [data-road-keep], [data-road-remove], [data-photo-view], [data-photo-show], [data-photo-hide], [data-photo-remove], [data-photo-close]');
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban], [data-report-ban], [data-report-dismiss], [data-road-keep], [data-road-remove], [data-photo-view], [data-photo-show], [data-photo-hide], [data-photo-remove], [data-photo-close], [data-crash], [data-crash-open], [data-crash-filter]');
     if (!el) return;
     const d = el.dataset;
     if (d.tab) {
       this.tab = d.tab as Tab;
       if (this.tab === 'players') this.chat = null;
       this.render();
+      return;
+    }
+    if (d.crashFilter) {
+      this.crashFilter = d.crashFilter as CrashFilter;
+      return this.render();
+    }
+    if (d.crashOpen) {
+      this.crashOpen = this.crashOpen === d.crashOpen ? '' : d.crashOpen;
+      return this.render();
+    }
+    if (d.crash && d.crashAction) {
+      const r = await this.call<{ ok: boolean }>('/api/admin/crash', 'POST', { id: d.crash, action: d.crashAction });
+      if (r?.ok) {
+        this.health = (await this.call<Health>('/api/admin/health')) ?? this.health;
+        this.flash(d.crashAction === 'resolve' ? 'Marked as fixed.' : d.crashAction === 'ignore' ? 'Ignored.' : 'Reopened.');
+      }
       return;
     }
     if (d.admin === 'close') return this.hide();

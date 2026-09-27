@@ -14,6 +14,8 @@
 //   GET  /api/admin/chat                                   → recent chat for moderation
 //   POST /api/admin/ban           { name, ban }            → ban / unban a player name
 //   GET  /api/admin/export                                 → all analytics as JSON
+//   GET  /api/admin/health                                 → crash groups, crash-free by build, frame rates
+//   POST /api/admin/crash         { id, action }           → resolve / ignore / reopen an error group
 //   GET  /api/admin/codes                                  → Patron codes issued / redeemed per season
 //   POST /api/admin/codes         { count, season }        → new one-use Patron codes (shown once)
 //   POST /api/admin/patron        { name, season }         → give an account the Patron track
@@ -29,7 +31,7 @@
 // data/admin.json once changed (or the ADMIN_EMAIL / ADMIN_PASSWORD env vars).
 // Analytics are anonymous: a random id per browser, no names, no IP addresses kept.
 
-import { createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
+import { createHash, createHmac, randomBytes, randomUUID, scryptSync, timingSafeEqual } from 'node:crypto';
 import { existsSync, mkdirSync, readFileSync, statSync, unlinkSync, writeFileSync } from 'node:fs';
 import { extname, join, normalize } from 'node:path';
 import { cleanText, clientIp } from './validate.mjs';
@@ -215,6 +217,57 @@ export function checkPassword(password, rec) {
   return a.length === b.length && timingSafeEqual(a, b);
 }
 
+/** Frame rates under this count as a slow play minute on the dashboard. */
+export const SLOW_FPS = 30;
+const MAX_CRASH_GROUPS = 300;
+const MAX_VERSIONS = 40;
+
+/**
+ * An error's group: its message plus the top stack frame, with build hashes and
+ * line/column numbers taken out so the same bug groups across releases.
+ */
+export function crashSignature(msg, top) {
+  const frame = String(top ?? '')
+    .replace(/[-.][A-Za-z0-9_]{8,}(?=\.m?js)/g, '')
+    .replace(/:\d+(:\d+)?/g, '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return `${String(msg ?? '').trim()} @ ${frame}`;
+}
+
+export function crashId(msg, top) {
+  return createHash('sha1').update(crashSignature(msg, top)).digest('hex').slice(0, 12);
+}
+
+/** Percent of sessions without a crash (100 when there were none). */
+function rate(sessions, crashed) {
+  return sessions ? +(100 * (1 - Math.min(crashed, sessions) / sessions)).toFixed(2) : 100;
+}
+
+/** Count one more in a small keyed tally, dropping the smallest entry past `max`. */
+function bump(o, k, max) {
+  o[k] = (o[k] ?? 0) + 1;
+  const keys = Object.keys(o);
+  if (keys.length > max) delete o[keys.reduce((a, b) => (o[a] <= o[b] ? a : b))];
+}
+
+function rows(o, n) {
+  return Object.entries(o ?? {})
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, n)
+    .map(([key, value]) => ({ key, value }));
+}
+
+/** One play minute at `fps` into a performance bucket. */
+function addPerf(o, k, fps, max) {
+  const b = (o[k] ??= { minutes: 0, fpsSum: 0, slow: 0 });
+  b.minutes++;
+  b.fpsSum += fps;
+  if (fps < SLOW_FPS) b.slow++;
+  const keys = Object.keys(o);
+  if (keys.length > max) delete o[keys.reduce((a, b2) => (o[a].minutes <= o[b2].minutes ? a : b2))];
+}
+
 function emptyStats() {
   return { players: {}, days: {}, counters: {}, sponsors: {}, since: Date.now() };
 }
@@ -350,6 +403,10 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
         dayRec.sessions++;
         p.lang = key(data.lang);
         p.device = key(data.device);
+        p.quality = key(data.quality);
+        p.ver = key(data.ver ?? 'unknown');
+        p.platform = key(data.platform ?? 'web');
+        versionRec(p.ver, now).sessions++;
         count(`lang:${key(data.lang)}`);
         count(`device:${key(data.device)}`);
         count(`quality:${key(data.quality)}`);
@@ -361,6 +418,21 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
         dayRec.playSec += sec;
         if (data.fps) count(`fps:${Math.min(144, Math.round((Number(data.fps) || 0) / 10) * 10)}`);
         if (data.where) count(`time:${key(data.where)}`, sec);
+        if (data.fps) {
+          // Performance dashboard: one play minute at this frame rate, by place, device, quality and version.
+          const fps = Math.min(240, Math.max(1, Number(data.fps) || 0));
+          if (data.q) p.quality = key(data.q);
+          const perf = (stats.perf ??= { places: {}, devices: {}, quality: {}, platforms: {}, days: {} });
+          addPerf(perf.places, key(data.where ?? 'other'), fps, 150);
+          addPerf(perf.devices, p.device ?? 'other', fps, 20);
+          addPerf(perf.quality, p.quality ?? 'other', fps, 20);
+          addPerf(perf.platforms, p.platform ?? 'web', fps, 10);
+          addPerf(perf.days, d, fps, 400);
+          const v = versionRec(p.ver ?? 'unknown', now);
+          v.minutes = (v.minutes ?? 0) + 1;
+          v.fpsSum = (v.fpsSum ?? 0) + fps;
+          if (fps < SLOW_FPS) v.slow = (v.slow ?? 0) + 1;
+        }
         break;
       }
       case 'play':
@@ -375,19 +447,35 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
         count(`${ev.type}:${key(data.id)}`);
         break;
       case 'error': {
-        // Uncaught errors from the game: grouped by message, and the session counts as crashed.
+        // Uncaught errors from the game, grouped by signature (message + top stack frame);
+        // the session counts as crashed once.
         const msg = clean(data.msg, 200).replace(/\d{4,}/g, 'N');
         if (!msg) return;
-        const errors = (stats.errors ??= {});
-        const e = (errors[msg] ??= { msg, where: clean(data.where, 80), top: clean(data.top, 160), count: 0, first: now, last: now });
-        e.count++;
-        e.last = now;
-        const keys = Object.keys(errors);
-        if (keys.length > 200) delete errors[keys.reduce((a, b) => (errors[a].last < errors[b].last ? a : b))];
+        const top = clean(data.top, 160);
+        const id = crashId(msg, top);
+        const crashes = (stats.crashes ??= {});
+        const ver = p.ver ?? 'unknown';
+        const fatal = data.fatal !== false;
+        let g = crashes[id];
+        if (!g) {
+          g = crashes[id] = { id, msg, top, where: clean(data.where, 80), count: 0, fatal: 0, first: now, last: now, status: 'open', days: {}, versions: {}, devices: {}, places: {} };
+          const ids = Object.keys(crashes);
+          if (ids.length > MAX_CRASH_GROUPS) delete crashes[ids.reduce((a, b) => (crashes[a].last < crashes[b].last ? a : b))];
+        }
+        g.count++;
+        if (fatal) g.fatal++;
+        g.last = now;
+        bump(g.days, d, 40);
+        bump(g.versions, ver, 20);
+        bump(g.devices, `${p.platform ?? 'web'}/${p.device ?? 'other'}`, 12);
+        bump(g.places, key(data.place ?? data.where ?? 'other'), 20);
+        // Marked fixed, but seen again in a build that came out after the fix → regressed.
+        if (g.status === 'resolved' && (stats.versions?.[ver]?.first ?? 0) > (g.resolvedAt ?? now)) g.status = 'regressed';
         const crashKey = `${d}:${clean(sid, 40)}`;
-        if (data.fatal !== false && !crashedSessions.has(crashKey)) {
+        if (fatal && !crashedSessions.has(crashKey)) {
           crashedSessions.add(crashKey);
           dayRec.crashed = (dayRec.crashed ?? 0) + 1;
+          versionRec(ver, now).crashed++;
         }
         break;
       }
@@ -422,19 +510,108 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
     dirty = true;
   }
 
-  /** Crash-free sessions over the last 7 days, and the most common errors. */
-  function health(now) {
+  /** A build (the game version string) as the dashboard tracks it. */
+  function versionRec(ver, now) {
+    const versions = (stats.versions ??= {});
+    let v = versions[ver];
+    if (!v) {
+      v = versions[ver] = { first: now, last: now, sessions: 0, crashed: 0, minutes: 0, fpsSum: 0, slow: 0 };
+      const all = Object.keys(versions);
+      if (all.length > MAX_VERSIONS) delete versions[all.reduce((a, b) => (versions[a].last < versions[b].last ? a : b))];
+    }
+    v.last = now;
+    return v;
+  }
+
+  // Errors from before crash groups existed: keep them, grouped the new way.
+  for (const e of Object.values(stats.errors ?? {})) {
+    const id = crashId(e.msg, e.top ?? '');
+    const crashes = (stats.crashes ??= {});
+    crashes[id] ??= { id, msg: e.msg, top: e.top ?? '', where: e.where ?? '', count: e.count, fatal: e.count, first: e.first, last: e.last, status: 'open', days: {}, versions: {}, devices: {}, places: {} };
+  }
+  delete stats.errors;
+
+  /** Crash-free sessions over the last `n` days. */
+  function crashFree(now, n) {
     let sessions = 0;
     let crashed = 0;
-    for (let i = 0; i < 7; i++) {
+    for (let i = 0; i < n; i++) {
       const r = stats.days[day(now - i * 86400_000)];
       sessions += r?.sessions ?? 0;
       crashed += r?.crashed ?? 0;
     }
-    const top = Object.values(stats.errors ?? {})
+    return { sessions, crashed, rate: rate(sessions, crashed) };
+  }
+
+  /** Crash-free sessions over the last 7 days, and the most common open errors (the dashboard tiles). */
+  function health(now) {
+    const w = crashFree(now, 7);
+    const top = Object.values(stats.crashes ?? {})
+      .filter((g) => g.status !== 'ignored' && g.status !== 'resolved')
       .sort((a, b) => b.count - a.count)
-      .slice(0, 15);
-    return { sessions7: sessions, crashed7: crashed, crashFree7: sessions ? +(100 * (1 - Math.min(crashed, sessions) / sessions)).toFixed(2) : 100, errors: top };
+      .slice(0, 5)
+      .map((g) => ({ msg: g.msg, where: g.where, top: g.top, count: g.count, first: g.first, last: g.last }));
+    return { sessions7: w.sessions, crashed7: w.crashed, crashFree7: w.rate, errors: top };
+  }
+
+  /** Everything the Crashes & performance tab shows. */
+  function healthReport(now) {
+    const days = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = day(now - i * 86400_000);
+      const r = stats.days[d];
+      const p = stats.perf?.days?.[d];
+      days.push({ day: d, sessions: r?.sessions ?? 0, crashed: r?.crashed ?? 0, crashFree: rate(r?.sessions ?? 0, r?.crashed ?? 0), fps: p ? +(p.fpsSum / p.minutes).toFixed(1) : 0, slow: p ? +((100 * p.slow) / p.minutes).toFixed(1) : 0 });
+    }
+    const recent = (g, n) => {
+      let c = 0;
+      for (let i = 0; i < n; i++) c += g.days?.[day(now - i * 86400_000)] ?? 0;
+      return c;
+    };
+    const order = { regressed: 0, open: 1, resolved: 2, ignored: 3 };
+    const groups = Object.values(stats.crashes ?? {})
+      .map((g) => ({
+        id: g.id, msg: g.msg, top: g.top, where: g.where, status: g.status, count: g.count, fatal: g.fatal, first: g.first, last: g.last, resolvedAt: g.resolvedAt ?? 0,
+        week: recent(g, 7),
+        trend: Array.from({ length: 14 }, (_, i) => g.days?.[day(now - (13 - i) * 86400_000)] ?? 0),
+        versions: rows(g.versions, 6), devices: rows(g.devices, 6), places: rows(g.places, 6),
+      }))
+      .sort((a, b) => order[a.status] - order[b.status] || b.week - a.week || b.count - a.count)
+      .slice(0, 100);
+    const versions = Object.entries(stats.versions ?? {})
+      .map(([ver, v]) => ({ ver, first: v.first, last: v.last, sessions: v.sessions, crashed: v.crashed, crashFree: rate(v.sessions, v.crashed), fps: v.minutes ? +(v.fpsSum / v.minutes).toFixed(1) : 0, slow: v.minutes ? +((100 * v.slow) / v.minutes).toFixed(1) : 0, minutes: v.minutes }))
+      .sort((a, b) => b.first - a.first)
+      .slice(0, 12);
+    const perf = stats.perf ?? { places: {}, devices: {}, quality: {}, platforms: {}, days: {} };
+    const table = (o, n) =>
+      Object.entries(o ?? {})
+        .filter(([, b]) => b.minutes > 0)
+        .map(([k, b]) => ({ key: k, minutes: b.minutes, fps: +(b.fpsSum / b.minutes).toFixed(1), slow: +((100 * b.slow) / b.minutes).toFixed(1) }))
+        .sort((a, b) => a.fps - b.fps)
+        .slice(0, n);
+    const all = Object.entries(perf.days ?? {})
+      .filter(([d]) => d >= day(now - 29 * 86400_000))
+      .map(([, b]) => b);
+    const minutes = all.reduce((s, b) => s + b.minutes, 0);
+    return {
+      crashFree7: crashFree(now, 7),
+      crashFree30: crashFree(now, 30),
+      open: groups.filter((g) => g.status === 'open' || g.status === 'regressed').length,
+      regressed: groups.filter((g) => g.status === 'regressed').length,
+      days,
+      versions,
+      groups,
+      perf: {
+        minutes,
+        fps: minutes ? +(all.reduce((s, b) => s + b.fpsSum, 0) / minutes).toFixed(1) : 0,
+        slow: minutes ? +((100 * all.reduce((s, b) => s + b.slow, 0)) / minutes).toFixed(1) : 0,
+        slowFps: SLOW_FPS,
+        places: table(perf.places, 40),
+        devices: table(perf.devices, 12),
+        quality: table(perf.quality, 12),
+        platforms: table(perf.platforms, 6),
+      },
+    };
   }
 
   function dashboard() {
@@ -687,6 +864,17 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
           }
           writeJson('reports.json', reports);
           return send(res, 200, { ok: true }), true;
+        }
+        if (route === 'health' && method === 'GET') return send(res, 200, healthReport(Date.now())), true;
+        if (route === 'crash' && method === 'POST') {
+          const b = await readBody(req, 2000);
+          const g = stats.crashes?.[String(b.id ?? '')];
+          const status = { resolve: 'resolved', ignore: 'ignored', reopen: 'open' }[String(b.action)];
+          if (!g || !status) return send(res, 400, { ok: false, reason: 'Unknown error group or action.' }), true;
+          g.status = status;
+          if (status === 'resolved') g.resolvedAt = Date.now();
+          dirty = true;
+          return send(res, 200, { ok: true, status }), true;
         }
         if (route === 'export' && method === 'GET') return send(res, 200, stats, { 'content-disposition': 'attachment; filename="paintland-analytics.json"' }), true;
       } catch (e) {

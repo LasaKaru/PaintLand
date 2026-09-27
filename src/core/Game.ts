@@ -68,7 +68,7 @@ import { brandSpotsFor, routeSpots } from '../brand/BrandSpots';
 import { loadBrand, onBrandChange, type BrandLogo } from '../brand/Brand';
 import { clearPainted } from '../brand/Watercolour';
 import { analytics } from '../net/Analytics';
-import { reportError } from '../net/CrashReporter';
+import { APP_VERSION, reportError, setCrashPlace } from '../net/CrashReporter';
 import { FrameGuard, SafePoint, StuckWatch, finite, freeSpot } from './Guard';
 import { AdminPanel } from '../ui/Admin';
 import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
@@ -635,11 +635,14 @@ export class Game {
     };
     await step(0.05, 'mixing paint…');
     analytics.enabled = this.options.analytics;
+    setCrashPlace(() => this.crashPlace());
     analytics.start({
       lang: document.documentElement.lang,
       device: matchMedia('(pointer: coarse)').matches ? 'touch' : 'desktop',
       quality: this.settings.quality,
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ver: APP_VERSION,
+      platform: location.protocol === 'app:' ? 'desktop' : 'web',
     });
     onBrandChange(() => {
       clearPainted();
@@ -2311,6 +2314,13 @@ export class Game {
    * player back somewhere safe; if that doesn't help either, the game stops
    * and offers to try again, go to the menu, or reload (progress is saved).
    */
+  /** Where the player is, for crash grouping: the town or chapter, or the screen. */
+  private crashPlace(): string {
+    if (this.state === 'hub' || (this.state === 'paused' && this.inHub)) return this.area?.id ?? 'hub';
+    if (this.state === 'play' || this.state === 'paused' || this.state === 'photo') return this.world?.chapter.id ?? this.state;
+    return this.state;
+  }
+
   private frameError(err: unknown): void {
     const e = err instanceof Error ? err : new Error(String(err));
     console.error(e);
@@ -2501,7 +2511,7 @@ export class Game {
     this.beatTimer -= dt;
     if (this.beatTimer <= 0) {
       this.beatTimer = 60;
-      if (this.state === 'play' || this.state === 'hub' || this.state === 'paused' || this.state === 'photo') analytics.track('beat', { sec: 60, fps: Math.round(this.fps), where: this.inHub ? this.area?.id : this.world.chapter.id });
+      if (this.state === 'play' || this.state === 'hub' || this.state === 'paused' || this.state === 'photo') analytics.track('beat', { sec: 60, fps: Math.round(this.fps), where: this.inHub ? this.area?.id : this.world.chapter.id, q: this.settings.quality });
     }
     this.dailyTimer -= dt;
     if (this.dailyTimer <= 0 && (this.state === 'play' || this.state === 'hub')) {

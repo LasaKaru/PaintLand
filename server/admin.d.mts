@@ -16,6 +16,11 @@ export declare const DEFAULT_CONFIG: AdminConfig;
 export declare const DEFAULT_ADMIN: { email: string; salt: string; hash: string };
 export declare function safeUrl(s: unknown): string;
 export declare function sanitizeConfig(input: unknown, current: AdminConfig): AdminConfig;
+/** Frame rates under this count as a slow play minute on the dashboard. */
+export declare const SLOW_FPS: number;
+/** An error's group key: the message plus the top stack frame without build hashes or line numbers. */
+export declare function crashSignature(msg: string, top: string): string;
+export declare function crashId(msg: string, top: string): string;
 export declare function hashPassword(password: string, salt?: string): { salt: string; hash: string };
 export declare function checkPassword(password: string, rec: { salt: string; hash: string }): boolean;
 export declare function createAdmin(opts: { dataDir: string; distDir?: string; live: () => { rooms: number; online: number; roomSizes: Record<string, number> }; accounts?: () => { accounts: number; clubs: number; online: number } | null; gallery?: () => { reported(): unknown[]; moderate(id: string, action: 'remove' | 'keep'): boolean; stats(): { roads: number; hidden: number } } | null; store?: () => import('./store.mjs').Store | null; photos?: () => { recent(): unknown[]; moderate(id: string, action: 'hide' | 'show' | 'remove'): boolean; image(id: string): string | null } | null }): {
