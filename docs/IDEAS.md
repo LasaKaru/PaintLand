@@ -16,7 +16,7 @@ Grouped by purpose, with a rough size: S = a few days, M = 1–2 weeks, L = a mo
 | A7 | **Offline single-player** that never needs the server (with multiplayer optional) | Paid games must work without your server | S–M |
 | A8 | **Settings for photosensitivity**: turn off fireworks and flashes | Accessibility; ratings | S |
 | A9 | **Privacy policy** page and in-game link | Required once accounts and analytics exist | S |
-| A10 | **Proper music**: commissioned or licensed tracks alongside the procedural radio, plus a real trailer soundtrack | Music is half of the mood | M |
+| A10 ⏳ | **Proper music** (player, manifest and credits built; recordings needed, see docs/MUSIC.md): commissioned or licensed tracks alongside the procedural radio, plus a real trailer soundtrack | Music is half of the mood | M |
 | A11 ★ | **Demo** (the Sketch chapter and Harbour Town) for Steam Next Fest | Biggest free source of wishlists | S |
 
 ## B. Creative features that make Inkroads different
