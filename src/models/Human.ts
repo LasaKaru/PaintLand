@@ -1,3 +1,4 @@
+import { BONE, CLIP_LOOPS, humanClips, type ClipName } from './HumanClips';
 import * as THREE from 'three';
 import { ModelKit, Pattern, applyPrint, printKind, type FabricPrint } from './ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
@@ -64,19 +65,37 @@ export const isEmote = (v: unknown): v is Emote => typeof v === 'string' && (EMO
 export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote;
 
 const INK = '#2b2622';
+const _clipQ = new THREE.Quaternion();
+const _clipV = new THREE.Vector3();
+
+/** A clip playing on a character, fading in or out. */
+interface ClipLayer {
+  name: ClipName;
+  time: number;
+  weight: number;
+  target: number;
+  fade: number;
+  samplers: { bone: THREE.Object3D; position: boolean; interp: THREE.Interpolant }[];
+}
 
 /**
- * A paper-doll character: big head, strong silhouette, rigid limbs on pivots
- * animated procedurally (docs/03 §6, docs/05 §3.4). Height ≈ 1.6 m, faces -Z,
+ * A paper-doll character: big head, strong silhouette, rigid body parts on a
+ * skeleton of named bones (Hips, Spine, Head, LeftArm…, see HumanClips.ts).
+ * Walking, running and the emotes are procedural; keyframed clips (throw,
+ * pilot, climb, land) are crossfaded over them (docs/03 §6, docs/05 §3.4).
+ * The parts are rigid (not a skinned mesh). Height ≈ 1.6 m, faces -Z,
  * origin at the feet.
  */
 export class HumanModel {
   readonly root = new THREE.Group();
-  readonly hips = new THREE.Group();
-  readonly chest = new THREE.Group();
-  readonly head = new THREE.Group();
-  private readonly legs: { hip: THREE.Group; knee: THREE.Group }[] = [];
-  private readonly arms: { shoulder: THREE.Group; elbow: THREE.Group }[] = [];
+  readonly hips = new THREE.Bone();
+  readonly chest = new THREE.Bone();
+  readonly head = new THREE.Bone();
+  private readonly legs: { hip: THREE.Bone; knee: THREE.Bone }[] = [];
+  private readonly arms: { shoulder: THREE.Bone; elbow: THREE.Bone }[] = [];
+  /** Every bone, for tools and for binding clips. */
+  readonly skeleton: THREE.Skeleton;
+  private layers: ClipLayer[] = [];
   private phase = Math.random() * 6;
   private blend = 0;
   private readonly headMeshes: THREE.Mesh[] = [];
@@ -86,6 +105,9 @@ export class HumanModel {
 
   constructor(readonly look: HumanLook = DEFAULT_HUMAN_LOOK) {
     this.root.name = 'human';
+    this.hips.name = BONE.hips;
+    this.chest.name = BONE.spine;
+    this.head.name = BONE.head;
     const mat = new PaintMaterial({ vertexColors: true, flat: true, gloss: 0.08 });
     const topPrint = printKind(look.print);
     const bottomPrint = printKind(look.bottomPrint);
@@ -238,7 +260,8 @@ export class HumanModel {
 
     const sleeve = topStyle === 'tee' || topStyle === 'dress' || topStyle === 'osariya' || topStyle === 'vest' ? look.skin : look.top;
     for (const side of [-1, 1]) {
-      const shoulder = new THREE.Group();
+      const shoulder = new THREE.Bone();
+      shoulder.name = side < 0 ? BONE.leftArm : BONE.rightArm;
       shoulder.position.set(side * 0.25, 0.44, 0);
       const upperKit = new ModelKit().cylinder(0.055, 0.05, 0.3, 6, topStyle === 'tee' || topStyle === 'osariya' ? look.top : sleeve, { position: [0, -0.15, 0] });
       if (topStyle === 'vest') upperKit.cylinder(0.075, 0.07, 0.06, 6, look.top, { position: [0, -0.01, 0] });
@@ -246,7 +269,8 @@ export class HumanModel {
       if (topStyle === 'osariya') upperKit.blob(0.08, look.top, { position: [0, -0.06, 0], scale: [1, 0.9, 1], detail: 0 });
       const upper = upperKit.build(0.006, side);
       shoulder.add(mesh(upper));
-      const elbow = new THREE.Group();
+      const elbow = new THREE.Bone();
+      elbow.name = side < 0 ? BONE.leftForeArm : BONE.rightForeArm;
       elbow.position.y = -0.3;
       const fore = new ModelKit()
         .cylinder(0.045, 0.04, 0.26, 6, sleeve, { position: [0, -0.13, 0] })
@@ -259,13 +283,15 @@ export class HumanModel {
     }
 
     for (const side of [-1, 1]) {
-      const hip = new THREE.Group();
+      const hip = new THREE.Bone();
+      hip.name = side < 0 ? BONE.leftUpLeg : BONE.rightUpLeg;
       hip.position.set(side * 0.1, -0.06, 0);
       const thigh = new ModelKit().cylinder(0.075, 0.065, 0.42, 6, bottomStyle === 'shorts' ? look.bottom : legColour, { position: [0, -0.21, 0], scale: bottomStyle === 'shorts' ? [1, 0.5, 1] : [1, 1, 1] }).cylinder(0.06, 0.06, 0.24, 6, look.skin, { position: [0, -0.3, 0] });
       // Cargo trousers: a big patch pocket on each thigh.
       if (bottomStyle === 'cargo' && !longSkirt) thigh.box(0.03, 0.12, 0.1, shadeHex(look.bottom, 0.82), { position: [side * 0.075, -0.24, 0] });
       hip.add(mesh(thigh.build(0.006, side + 5)));
-      const knee = new THREE.Group();
+      const knee = new THREE.Bone();
+      knee.name = side < 0 ? BONE.leftLeg : BONE.rightLeg;
       knee.position.y = -0.42;
       const shin = new ModelKit()
         .cylinder(0.06, 0.05, 0.36, 6, (bottomStyle === 'trousers' || bottomStyle === 'cargo') && !longSkirt ? look.bottom : look.skin, { position: [0, -0.18, 0] })
@@ -276,6 +302,71 @@ export class HumanModel {
       this.hips.add(hip);
       this.legs.push({ hip, knee });
     }
+    this.skeleton = new THREE.Skeleton([this.hips, this.chest, this.head, ...this.arms.flatMap((a) => [a.shoulder, a.elbow]), ...this.legs.flatMap((l) => [l.hip, l.knee])]);
+  }
+
+  /** The clip playing most strongly now, if any. */
+  get clip(): ClipName | null {
+    let best: ClipLayer | null = null;
+    for (const l of this.layers) if (l.target > 0 && (!best || l.weight > best.weight)) best = l;
+    return best?.name ?? null;
+  }
+
+  /**
+   * Crossfade into a keyframed clip over `fade` seconds (others fade out).
+   * One-shot clips (throw, land) fade back to the procedural motion by themselves.
+   */
+  play(name: ClipName, fade = 0.15): void {
+    for (const l of this.layers) if (l.name !== name) l.target = 0;
+    let layer = this.layers.find((l) => l.name === name);
+    if (!layer) {
+      const clip = humanClips()[name];
+      const samplers: ClipLayer['samplers'] = [];
+      for (const track of clip.tracks) {
+        const [boneName, prop] = track.name.split('.');
+        const bone = this.skeleton.getBoneByName(boneName);
+        if (!bone) continue;
+        const position = prop === 'position';
+        const size = position ? 3 : 4;
+        const interp = position ? new THREE.LinearInterpolant(track.times, track.values, size, new Float32Array(size)) : new THREE.QuaternionLinearInterpolant(track.times, track.values, size, new Float32Array(size));
+        samplers.push({ bone, position, interp });
+      }
+      layer = { name, time: 0, weight: 0, target: 1, fade, samplers };
+      this.layers.push(layer);
+    }
+    // Restart a one-shot clip (another throw), keep a looping one going.
+    if (!CLIP_LOOPS[name] || layer.target === 0) layer.time = 0;
+    layer.target = 1;
+    layer.fade = fade;
+  }
+
+  /** Fade a clip (or every clip) back out to the procedural motion. */
+  stop(name?: ClipName, fade = 0.2): void {
+    for (const l of this.layers)
+      if (!name || l.name === name) {
+        l.target = 0;
+        l.fade = fade;
+      }
+  }
+
+  /** Blend the playing clips over the pose the procedural code just set. */
+  private applyClips(dt: number): void {
+    for (const l of this.layers) {
+      const clip = humanClips()[l.name];
+      l.time += dt;
+      if (CLIP_LOOPS[l.name]) l.time %= clip.duration;
+      else if (l.time >= clip.duration - l.fade) l.target = 0;
+      const step = dt / Math.max(0.01, l.fade);
+      l.weight = l.target > l.weight ? Math.min(l.target, l.weight + step) : Math.max(l.target, l.weight - step);
+      if (l.weight <= 0) continue;
+      const t = Math.min(l.time, clip.duration);
+      for (const s of l.samplers) {
+        const v = s.interp.evaluate(t);
+        if (s.position) s.bone.position.lerp(_clipV.set(v[0], v[1], v[2]), l.weight);
+        else s.bone.quaternion.slerp(_clipQ.set(v[0], v[1], v[2], v[3]), l.weight);
+      }
+    }
+    this.layers = this.layers.filter((l) => l.weight > 0 || l.target > 0);
   }
 
   /** Hide the head in first person so it never covers the lens. */
@@ -298,6 +389,11 @@ export class HumanModel {
    * Procedural animation. `speed` in m/s drives stride; poses blend smoothly.
    */
   animate(dt: number, pose: HumanPose, speed: number, time: number): void {
+    this.procedural(dt, pose, speed, time);
+    if (this.layers.length) this.applyClips(dt);
+  }
+
+  private procedural(dt: number, pose: HumanPose, speed: number, time: number): void {
     const moving = pose === 'walk' || pose === 'run';
     this.blend += ((moving ? 1 : 0) - this.blend) * Math.min(1, dt * 8);
     const stride = pose === 'run' ? 1.0 : 0.6;

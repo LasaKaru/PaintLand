@@ -3432,13 +3432,14 @@ export class Game {
       const from = { x: w.x, y: w.y + 1.6, z: w.z };
       const v = this.aimVelocity();
       if (b.throw(me, from, v, now, true)) {
+        this.humanModel.play('throw', 0.06);
         this.audio.blip(520, 0.06, 'triangle', 0.05);
         if (this.net.connected && b.teams.size > this.battleBots.length + 1) this.net.together({ type: 'shot', id: b.setup.id, x: from.x, y: from.y, z: from.z, vx: v.x, vy: v.y, vz: v.z });
       }
     }
     // Bots (solo games): walk, dodge, throw.
     const rnd = Math.random;
-    for (const { bot } of this.battleBots) {
+    for (const { bot, model } of this.battleBots) {
       if (!b.live(now) || (b.out.get(bot.id) ?? 0) > 0) continue;
       const enemies = [...(bot.team !== myTeam && this.mode === 'foot' ? [{ x: w.x, z: w.z }] : []), ...this.battleBots.filter((o) => o.bot.team !== bot.team && (b.out.get(o.bot.id) ?? 0) <= 0).map((o) => o.bot)];
       const step = botStep(bot, b, enemies, dt, rnd);
@@ -3448,7 +3449,10 @@ export class Game {
         bot.x = p.x;
         bot.z = p.z;
       } else bot.goal = null;
-      if (step.throw) b.throw(bot.id, { x: bot.x, y: 1.6, z: bot.z }, step.throw, now);
+      if (step.throw && b.throw(bot.id, { x: bot.x, y: 1.6, z: bot.z }, step.throw, now)) {
+        bot.heading = Math.atan2(-step.throw.x, -step.throw.z);
+        model.play('throw', 0.06);
+      }
     }
     // Balloons fly; they can hit you and the bots here (friends decide for themselves).
     const targets = [...(this.mode === 'foot' ? [{ id: me, team: myTeam, x: w.x, z: w.z }] : []), ...this.battleBots.map(({ bot }) => ({ id: bot.id, team: bot.team, x: bot.x, z: bot.z }))];
@@ -3634,6 +3638,7 @@ export class Game {
     unseatRider(this.humanModel, h);
     this.planeMesh.add(this.humanModel.root);
     this.humanModel.root.position.copy(PLANE_SEAT);
+    this.humanModel.play('pilot', 0.3);
     this.hidePet();
     this.showRings(course);
     if (this.planeStand) this.planeStand.visible = false;
@@ -3673,6 +3678,7 @@ export class Game {
     this.hud.compass(null);
     this.humanModel.root.removeFromParent();
     this.scene.add(this.humanModel.root);
+    this.humanModel.stop('pilot');
   }
 
   /** Down again: on your feet where you landed, or back at the launch ring. */
@@ -3693,6 +3699,7 @@ export class Game {
     this.updateHeadVisibility();
     this.placePlaneStand(area);
     if (how === 'landed') {
+      this.humanModel.play('land', 0.08);
       this.audio.chime(67);
       this.popAtPawn(t('fly.landed'), 'good');
       if (g.airTime > 5) this.profile.addStat('landings');
@@ -3759,7 +3766,7 @@ export class Game {
     const m = this.planeMesh!;
     m.position.set(p.x, HUB_Y + p.y, p.z);
     m.rotation.set(p.pitch, p.heading, -p.roll, 'YXZ');
-    this.humanModel.animate(dt, 'ride', 0, this.time);
+    this.humanModel.animate(dt, 'idle', 0, this.time);
     const fwd = _v4.set(-Math.sin(p.heading), 0, -Math.cos(p.heading));
     const back = 9 * this.rig.zoom;
     desired.copy(m.position).addScaledVector(fwd, -back).add(_v5.set(0, 2.6 * this.rig.zoom - Math.sin(p.pitch) * back, 0));

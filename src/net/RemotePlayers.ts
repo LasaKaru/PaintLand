@@ -69,7 +69,7 @@ export class RemotePlayers {
         av.vehicle.roll(snap.v * dt);
         av.human.animate(dt, av.vehicle.def.seatPose, 0, time);
       } else if (snap.mode === 'fly') {
-        av.human.animate(dt, 'ride', 0, time);
+        av.human.animate(dt, 'idle', 0, time);
       } else {
         av.human.animate(dt, snap.v > 5 ? 'run' : snap.v > 0.4 ? 'walk' : isEmote(snap.pose) ? snap.pose : 'idle', snap.v, time);
       }
@@ -129,6 +129,8 @@ export class RemotePlayers {
   private seat(av: Avatar, mode: 'drive' | 'foot' | 'fly'): void {
     av.human.root.removeFromParent();
     if (av.plane) av.plane.visible = mode === 'fly';
+    if (mode === 'fly') av.human.play('pilot', 0.3);
+    else av.human.stop('pilot');
     if (mode === 'drive') seatRider(av.vehicle, av.human, av.human.look.height ?? 1);
     else if (mode === 'fly') {
       if (!av.plane) {
