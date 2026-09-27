@@ -6,7 +6,7 @@ import { ENGINE_PROFILES, HORN_PROFILES, type EngineSound, type EngineProfile, t
 export interface Station {
   freq: string;
   name: string;
-  style: 'lofi' | 'acoustic' | 'ambient' | 'island' | 'baila' | 'chip' | 'jazz' | 'raga';
+  style: 'lofi' | 'acoustic' | 'ambient' | 'island' | 'baila' | 'chip' | 'jazz' | 'raga' | 'studio';
   tracks: number;
 }
 
@@ -20,6 +20,34 @@ export const STATIONS: Station[] = [
   { freq: '104.2', name: 'Blue Hour Jazz', style: 'jazz', tracks: 8 },
   { freq: '107.1', name: 'Monsoon Raga', style: 'raga', tracks: 8 },
 ];
+
+/** A recorded track for the Inkroads Studio station (public/music/manifest.json). */
+export interface StudioTrack {
+  title: string;
+  artist: string;
+  /** Who may use it and how (shown in the credits). */
+  license: string;
+  /** Path under the game, e.g. music/harbour-morning.webm. */
+  file: string;
+  /** Length in seconds, when the file itself doesn't say (recorded WebM). */
+  seconds?: number;
+}
+
+const TRACK_FILE = /^music\/[a-z0-9][a-z0-9-]{0,60}\.(webm|ogg|opus|mp3|m4a)$/;
+
+/** Only well-formed tracks with a file inside music/ (never another site). */
+export function cleanSoundtrack(manifest: unknown): StudioTrack[] {
+  const list = (manifest as { tracks?: unknown })?.tracks;
+  if (!Array.isArray(list)) return [];
+  const str = (v: unknown, max: number): string => (typeof v === 'string' ? v.replace(/[<>]/g, '').trim().slice(0, max) : '');
+  return list
+    .map((t: Record<string, unknown>) => ({ title: str(t?.title, 80), artist: str(t?.artist, 80), license: str(t?.license, 160), file: str(t?.file, 80), seconds: typeof t?.seconds === 'number' && t.seconds > 0 && t.seconds < 3600 ? t.seconds : undefined }))
+    .filter((t) => t.title && t.license && TRACK_FILE.test(t.file))
+    .slice(0, 100);
+}
+
+/** The recorded-music station (only when the soundtrack has tracks). */
+export const STUDIO_STATION: Station = { freq: '109.5', name: 'Inkroads Studio', style: 'studio', tracks: 0 };
 
 /** Every station's tracks added up (the radio has 8 stations × 8 tracks). */
 export const TRACK_COUNT = STATIONS.reduce((n, s) => n + s.tracks, 0);
@@ -93,6 +121,10 @@ export class AudioEngine {
 
   radioOn = true;
   stationIndex = 0;
+  /** Recorded tracks (the Inkroads Studio station). */
+  studio: StudioTrack[] = [];
+  private studioEl: HTMLAudioElement | null = null;
+  private studioTrack = -1;
   trackIndex = 0;
   private def: DistrictDef | null = null;
   private pendingDef: DistrictDef | null = null;
@@ -120,6 +152,7 @@ export class AudioEngine {
   start(): void {
     if (this.ctx) {
       void this.ctx.resume();
+      this.syncStudio();
       return;
     }
     const Ctx = window.AudioContext ?? (window as unknown as { webkitAudioContext: typeof AudioContext }).webkitAudioContext;
@@ -266,22 +299,102 @@ export class AudioEngine {
 
   toggleRadio(): void {
     this.radioOn = !this.radioOn;
+    this.syncStudio();
   }
 
   nextTrack(): void {
-    this.trackIndex = (this.trackIndex + 1) % STATIONS[this.stationIndex].tracks;
+    this.trackIndex = (this.trackIndex + 1) % Math.max(1, this.station.tracks);
     this.step = Math.ceil(this.step / 16) * 16;
+    this.syncStudio();
   }
 
   nextStation(): void {
-    this.stationIndex = (this.stationIndex + 1) % STATIONS.length;
+    this.stationIndex = (this.stationIndex + 1) % (STATIONS.length + (this.studio.length ? 1 : 0));
     this.trackIndex = 0;
     this.radioOn = true;
     this.blip(880, 0.05, 'triangle', 0.08);
+    this.syncStudio();
   }
 
   get station(): Station {
-    return STATIONS[this.stationIndex];
+    return this.studioActive ? { ...STUDIO_STATION, tracks: this.studio.length } : STATIONS[this.stationIndex];
+  }
+
+  /** Is the recorded-music station tuned in? */
+  get studioActive(): boolean {
+    return this.stationIndex === STATIONS.length && this.studio.length > 0;
+  }
+
+  /** What the radio card shows under the station name. */
+  get trackLabel(): string {
+    if (this.studioActive) {
+      const tr = this.studio[this.trackIndex % this.studio.length];
+      return tr.artist ? `${tr.title} · ${tr.artist}` : tr.title;
+    }
+    return `track ${String(this.trackIndex + 1).padStart(2, '0')} / ${String(this.station.tracks).padStart(2, '0')}`;
+  }
+
+  /** Record what the game plays for a while (tools/render-music.mjs uses this to render tracks). */
+  record(seconds: number, mime = 'audio/webm;codecs=opus'): Promise<Blob | null> {
+    const ctx = this.ctx;
+    if (!ctx || typeof MediaRecorder === 'undefined') return Promise.resolve(null);
+    const dest = ctx.createMediaStreamDestination();
+    // Music only (effects off), lifted to a healthy level for a file.
+    const lift = ctx.createGain();
+    lift.gain.value = 1.6;
+    const sfx = this.sfxBus.gain.value;
+    this.sfxBus.gain.value = 0;
+    const limit = ctx.createDynamicsCompressor();
+    limit.threshold.value = -4;
+    limit.ratio.value = 20;
+    limit.attack.value = 0.002;
+    this.master.connect(lift).connect(limit).connect(dest);
+    const rec = new MediaRecorder(dest.stream, { mimeType: mime, audioBitsPerSecond: 96_000 });
+    const chunks: Blob[] = [];
+    rec.ondataavailable = (e) => e.data.size && chunks.push(e.data);
+    return new Promise((resolve) => {
+      rec.onstop = () => {
+        this.master.disconnect(lift);
+        this.sfxBus.gain.value = sfx;
+        resolve(new Blob(chunks, { type: mime }));
+      };
+      rec.start(1000);
+      setTimeout(() => rec.stop(), seconds * 1000);
+    });
+  }
+
+  /** Load the recorded soundtrack (public/music/manifest.json); none is fine. */
+  async loadSoundtrack(base = import.meta.env?.BASE_URL ?? '/'): Promise<void> {
+    try {
+      const res = await fetch(`${base}music/manifest.json`, { cache: 'no-cache' });
+      if (!res.ok) return;
+      this.studio = cleanSoundtrack(await res.json()).map((t) => ({ ...t, file: `${base}${t.file}` }));
+    } catch {
+      this.studio = [];
+    }
+  }
+
+  /** Play or pause the recorded track to match the radio (through the music bus, so volume and muffling apply). */
+  private syncStudio(): void {
+    const ctx = this.ctx;
+    const want = this.studioActive && this.radioOn && !!ctx;
+    if (!want) {
+      this.studioEl?.pause();
+      return;
+    }
+    if (!this.studioEl) {
+      const el = new Audio();
+      el.preload = 'auto';
+      el.addEventListener('ended', () => this.nextTrack());
+      ctx!.createMediaElementSource(el).connect(this.musicBus);
+      this.studioEl = el;
+    }
+    const i = this.trackIndex % this.studio.length;
+    if (this.studioTrack !== i) {
+      this.studioTrack = i;
+      this.studioEl.src = this.studio[i].file;
+    }
+    void this.studioEl.play().catch(() => undefined);
   }
 
   private get sixteenth(): number {
@@ -304,6 +417,12 @@ export class AudioEngine {
       this.step++;
     }
     const barsPerTrack = 32;
+    if (this.studioActive) {
+      const el = this.studioEl;
+      const len = el && Number.isFinite(el.duration) && el.duration > 0 ? el.duration : this.studio[this.trackIndex % this.studio.length]?.seconds ?? 0;
+      this.trackProgress = el && len ? Math.min(1, el.currentTime / len) : 0;
+      return;
+    }
     this.trackProgress = (this.step % (barsPerTrack * 16)) / (barsPerTrack * 16);
     if (this.step % (barsPerTrack * 16) === 0 && this.step > 0) this.trackIndex = (this.trackIndex + 1) % this.station.tracks;
   }
@@ -328,6 +447,8 @@ export class AudioEngine {
     const chord = this.chordDegrees(bar);
     if (s16 % 4 === 0) this.lastBeatTime = t;
 
+    // A recorded track is playing: the band and pad sit out (the picked-up notes still ring).
+    if (this.studioActive && this.radioOn) return;
     // The pad always plays (quietly with the radio off) so notes have a bed.
     if (s16 === 0) {
       const padLevel = this.radioOn ? 0.05 : 0.025;

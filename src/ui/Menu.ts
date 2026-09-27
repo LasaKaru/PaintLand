@@ -62,6 +62,8 @@ export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHo
   reportPlayer(name: string, reason: string, note: string, block: boolean): Promise<boolean>;
   toggleVoiceMute(name: string): void;
   chapters: ChapterDef[];
+  /** Recorded tracks on the Inkroads Studio station (for the credits). */
+  soundtrack?(): { title: string; artist: string; license: string }[];
   currentChapter(): ChapterDef;
   missions(): MissionDef[];
   play(chapterId: string): void;
@@ -1049,8 +1051,12 @@ export class Menu {
   private credits(): string {
     return `<div class="menu-panel">${this.header('Credits')}
       <p><b>Inkroads</b> — a watercolour road game made with Three.js.</p>
-      <p>Everything you see is painted in code: every house, tree, landmark, vehicle and person is built procedurally, then inked and washed by the renderer. Every song is generated live in the district’s key.</p>
+      <p>Everything you see is painted in code: every house, tree, landmark, vehicle and person is built procedurally, then inked and washed by the renderer. The radio’s eight stations are generated live in the district’s key; the Inkroads Studio station plays recorded tracks.</p>
       <p>Places visited: Colombo’s Lotus Tower and Galle Face Green, Sigiriya, Ella and the Nine Arch Bridge, Mirissa; the Great Wall, the Colosseum, the Taj Mahal, Machu Picchu, Christ the Redeemer, Chichen Itza and Petra — all as loving sketches, not replicas.</p>
+      ${(() => {
+        const music = this.host.soundtrack?.() ?? [];
+        return music.length ? `<h4>Music · Inkroads Studio (109.5)</h4><ul class="credits-music">${music.map((m) => `<li><b>${escapeHtml(m.title)}</b>${m.artist ? ` — ${escapeHtml(m.artist)}` : ''}<br><small>${escapeHtml(m.license)}</small></li>`).join('')}</ul>` : '';
+      })()}
     </div>`;
   }
 

@@ -76,6 +76,7 @@ import { submitRun } from '../net/Leaderboard';
 import { HUB_S_OFFSET } from '../net/RemotePlayers';
 import { t, type StringKey } from './i18n';
 import type { RoverInput } from '../gameplay/RoverController';
+import type { DistrictDef } from '../world/Districts';
 import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
 import { MailClient, postcardImage, type VisitedHome } from '../net/Mail';
@@ -336,6 +337,7 @@ export class Game {
       account: this.account,
       currentMural: () => this.muralId,
       clearTrails: () => this.clearTrails(),
+      soundtrack: () => this.audio.studio,
       mail: this.mail,
       homeChanged: () => this.refreshHome(true),
       visitHome: (name) => this.visitHome(name),
@@ -520,6 +522,7 @@ export class Game {
       brushClear: () => this.skyBrush.clear(),
     });
     this.scene.add(this.skyBrush.particles.points);
+    void this.audio.loadSoundtrack();
     // Painting weather into the photo: drag on the picture while a brush is chosen.
     const canvas = this.renderer.domElement;
     const paintAt = (e: PointerEvent): void => {
@@ -2523,7 +2526,7 @@ export class Game {
     hud.setClock(this.env.clockText(), this.env.bandLabel(), this.env.presetId, this.env.auto, this.env.weatherLabel);
     hud.setStatus(totals.notes, totals.noteTotal, this.env.bandLabel(), this.settings.vibe);
     const st = this.audio.station;
-    hud.setRadio(st.freq, st.name, `track ${String(this.audio.trackIndex + 1).padStart(2, '0')} / ${String(st.tracks).padStart(2, '0')}`, this.audio.trackProgress, this.audio.radioOn);
+    hud.setRadio(st.freq, st.name, this.audio.trackLabel, this.audio.trackProgress, this.audio.radioOn);
     if (this.state !== 'play' && this.state !== 'paused') return;
     const defs = this.world.districts;
     hud.setTimer(true, defs[this.district].name, this.districtTime, this.lapTime, this.profile.data.bestLap[this.lapKey()] ?? null, this.lapNo);
@@ -3407,7 +3410,7 @@ export class Game {
     const title = area.title();
     this.hud.setSpeed(displaySpeed(kmh, this.options.units), this.hubCar.boostMeter, this.hubCar.boosting || this.hubCar.burst > 0, title.name, 0, 'down is down', this.mode === 'foot', this.options.units === 'mph' ? 'mph' : 'km/h');
     const st = this.audio.station;
-    this.hud.setRadio(st.freq, st.name, `track ${String(this.audio.trackIndex + 1).padStart(2, '0')} / ${String(st.tracks).padStart(2, '0')}`, this.audio.trackProgress, this.audio.radioOn);
+    this.hud.setRadio(st.freq, st.name, this.audio.trackLabel, this.audio.trackProgress, this.audio.radioOn);
     this.audio.update(this.mode === 'drive' ? Math.abs(this.hubCar.v) : this.hubWalker.speed, this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y);
     this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...area.ambienceAt(player.x, player.z) });
     this.audioFrame(this.mode === 'drive' && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
@@ -4002,6 +4005,26 @@ export class Game {
   /** Leave photo mode (films and tests). */
   debugPhotoExit(): void {
     if (this.state === 'photo') this.exitPhoto();
+  }
+
+  /**
+   * Render a piece of the procedural score to a WebM (Opus) data URL
+   * (tools/render-music.mjs): a station's band in a district's key and tempo.
+   */
+  async debugRenderMusic(station: number, district: DistrictDef, seconds: number): Promise<string | null> {
+    this.unlockAudio();
+    const a = this.audio;
+    a.stationIndex = station;
+    a.trackIndex = 0;
+    a.radioOn = true;
+    a.setDistrict(district);
+    const blob = await a.record(seconds);
+    if (!blob) return null;
+    return await new Promise((resolve) => {
+      const r = new FileReader();
+      r.onload = () => resolve(String(r.result));
+      r.readAsDataURL(blob);
+    });
   }
 
   /** Paint trail state, for tests. */
