@@ -145,6 +145,10 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'ring-courses-10', name: 'Sky Painter', text: 'Finish 10 ring courses.', icon: '🌤', reward: 300, progress: stat('courses', 10) },
   { id: 'soft-landings', name: 'Feather Touch', text: 'Make 10 gentle landings with the paper plane.', icon: '🪶', reward: 120, progress: stat('landings', 10) },
   { id: 'flown-10k', name: 'Long Glide', text: 'Fly 10 km in paper planes.', icon: '🛫', reward: 200, progress: stat('flown', 10000) },
+  { id: 'paint-battle', name: 'Balloon Fight', text: 'Play a paint battle.', icon: '🎈', reward: 60, progress: stat('battles', 1) },
+  { id: 'battle-win', name: 'Colour Captain', text: 'Win a paint battle.', icon: '🏳️‍🌈', reward: 120, progress: stat('battleWins', 1) },
+  { id: 'battle-wins-10', name: 'Paint Champion', text: 'Win 10 paint battles.', icon: '🏆', reward: 400, progress: stat('battleWins', 10) },
+  { id: 'battle-splats-50', name: 'Splat Master', text: 'Splat 50 players (or bots) with paint balloons.', icon: '💦', reward: 200, progress: stat('battleHits', 50) },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

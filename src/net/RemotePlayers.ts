@@ -38,6 +38,8 @@ export class RemotePlayers {
   hidden: ((name: string) => boolean) | null = null;
   /** Is this peer talking on voice chat right now? */
   speaking: ((id: string) => boolean) | null = null;
+  /** A little HTML before the name (the team dot in a paint battle). */
+  badge: ((id: string) => string) | null = null;
 
   constructor(private readonly scene: THREE.Scene, private readonly labels: HTMLElement) {}
 
@@ -84,7 +86,7 @@ export class RemotePlayers {
         av.label.style.left = `${(head.x * 0.5 + 0.5) * window.innerWidth}px`;
         av.label.style.top = `${(-head.y * 0.5 + 0.5) * window.innerHeight}px`;
         const chat = peer.chat && peer.chat.until > performance.now() ? `<div class="bubble">${escapeHtml(peer.chat.text)}</div>` : '';
-        const html = `${chat}<span>${this.speaking?.(peer.id) ? '🔊 ' : ''}${escapeHtml(peer.info.name)}${peer.info.verified ? ' <b class="verified" title="Signed-in player">✓</b>' : ''}</span>`;
+        const html = `${chat}<span>${this.badge?.(peer.id) ?? ''}${this.speaking?.(peer.id) ? '🔊 ' : ''}${escapeHtml(peer.info.name)}${peer.info.verified ? ' <b class="verified" title="Signed-in player">✓</b>' : ''}</span>`;
         if (av.label.innerHTML !== html) av.label.innerHTML = html;
       }
     }

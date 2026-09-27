@@ -19,6 +19,8 @@ const BUTTONS: ButtonDef[] = [
   { id: 'drift', label: 'DRIFT', hold: 'drift', cls: 'small drift' },
   { id: 'photo', label: '📷', tap: 'photo', cls: 'small photo' },
   { id: 'emote', label: '🙏', tap: 'emote', cls: 'small emote' },
+  // Throw a paint balloon: only shown in a paint battle.
+  { id: 'fire', label: '🎈', hold: 'fire', cls: 'mid fire' },
   // Push-to-talk: only shown while voice chat is on.
   { id: 'talk', label: '🎙', hold: 'talk', cls: 'mid talk' },
 ];
@@ -86,6 +88,11 @@ export class TouchControls {
   /** Show the push-to-talk button (voice chat on). */
   setVoice(on: boolean): void {
     this.root.classList.toggle('voice', on);
+  }
+
+  /** Show the throw button (in a paint battle). */
+  setBattle(on: boolean): void {
+    this.root.classList.toggle('battle', on);
   }
 
   /** Only while driving or walking (not in menus or photo mode). */

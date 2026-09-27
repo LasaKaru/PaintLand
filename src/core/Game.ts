@@ -14,7 +14,7 @@ import { CHAPTERS, chapterById, setCustomChapter } from '../world/Chapters';
 import { encodeRoad, roadChapter, type CustomRoad } from '../creator/CustomRoad';
 import { World } from '../world/World';
 import { VehicleModel, vehicleById, tuningFor } from '../models/Vehicles';
-import { HumanModel } from '../models/Human';
+import { DEFAULT_HUMAN_LOOK, HumanModel, type HumanLook } from '../models/Human';
 import { RoverController } from '../gameplay/RoverController';
 import { HumanController } from '../gameplay/HumanController';
 import { Autopilot } from '../gameplay/Autopilot';
@@ -89,6 +89,7 @@ import { Hub as HarbourHub } from '../world/Hub';
 import { Hills } from '../world/Hills';
 import { CourseRun, Glider, courseInk, makeCourse, type Airspace, type Course, type GliderEvent } from '../gameplay/Glider';
 import { PLANE_SEAT, buildFlightRing, buildPaperPlane, buildPlaneStand } from '../models/PaperPlane';
+import { BATTLE, PaintBattle, PaintGrid, TEAM_COLOURS, TEAM_TRAIL, botStep, landingPoint, makeBots, splitTeams, throwVelocity, type BattleSetup, type Bot, type Team } from '../gameplay/PaintBattle';
 import type { PocketKind } from '../world/Pockets';
 import { DOTS_PER_MESSAGE, TrailBrush, TrailLayer, TrailStore, nearestTrailColour, packDots, type TrailDot } from '../gameplay/PaintTrail';
 
@@ -218,6 +219,16 @@ export class Game {
   private contestSent = 0;
   private contestShowUntil = 0;
   private paintEvent: PaintEvent | null = null;
+  /** Paint battle (gameplay/PaintBattle.ts): the rules, bots in a solo game, and what's drawn. */
+  private battle: PaintBattle | null = null;
+  private battleHost = '';
+  private battleBots: { bot: Bot; model: HumanModel }[] = [];
+  private readonly battlePaint = new TrailLayer(8000);
+  private balloonMeshes: THREE.Mesh[] = [];
+  private battleAim: THREE.Mesh | null = null;
+  private battleShowUntil = 0;
+  private battleResult: [number, number] | null = null;
+  private battleDab = 0;
   private paintMeshes: THREE.Mesh[] = [];
   private readonly convoy = newConvoy();
   private convoyPing = 0;
@@ -386,7 +397,7 @@ export class Game {
       pendingEntry: () => this.contestImg,
       clearEntry: () => (this.contestImg = null),
       together: (kind) => this.startTogether(kind),
-      togetherState: () => ({ roam: !!this.roamChapter(), online: this.net.connected, convoy: this.convoy.leading ? 'leading' : this.convoy.leader ? 'following' : null, busy: !!this.contest || !!this.paintEvent }),
+      togetherState: () => ({ roam: !!this.roamChapter(), online: this.net.connected, convoy: this.convoy.leading ? 'leading' : this.convoy.leader ? 'following' : null, busy: !!this.contest || !!this.paintEvent || !!this.battle }),
       stickerAreas: () => [...this.areas.values()].map((a) => ({ id: a.id, name: a.title().name, places: a.places, secrets: a.secrets })),
       muralChanged: () => this.paintMurals(),
       socialAllowed: () => onlineAllowed(this.options.family),
@@ -480,10 +491,15 @@ export class Game {
     this.net.onGroupPhoto = (from, name, at) => this.onGroupPhotoInvite(from, name, at);
     this.net.onTrail = (_from, name, place, dots) => this.onRemoteTrail(name, place, dots);
     this.scene.add(this.trailLayer.group);
+    this.scene.add(this.battlePaint.group);
     // Keep the trail when the tab or app closes between autosaves.
     addEventListener('pagehide', () => this.trailStore.save());
     document.addEventListener('visibilitychange', () => document.hidden && this.trailStore.save());
     this.net.onTogether = (from, name, msg) => this.onTogether(from, name, msg);
+    this.remotes.badge = (id) => {
+      const team = this.battle?.teams.get(id);
+      return team === undefined ? '' : `<b style="color:${TEAM_COLOURS[team]}">●</b> `;
+    };
     this.togetherHud = document.createElement('div');
     this.togetherHud.className = 'together-hud hidden';
     this.togetherHud.setAttribute('role', 'status');
@@ -1086,7 +1102,7 @@ export class Game {
   }
 
   /** Menu → Multiplayer → Play together. Returns a message to show, or null. */
-  private startTogether(kind: 'convoy' | ContestMode | 'paint'): string | null {
+  private startTogether(kind: 'convoy' | ContestMode | 'paint' | 'battle'): string | null {
     const chapter = this.roamChapter();
     if (!chapter) return t('tg.needRoam');
     if (kind === 'convoy') {
@@ -1103,8 +1119,20 @@ export class Game {
       this.net.together({ type: 'convoy', on: true, chapter });
       return t('tg.convoyLead');
     }
-    if (this.contest || this.paintEvent) return t('tg.busy');
+    if (this.contest || this.paintEvent || this.battle) return t('tg.busy');
     const id = `${kind}-${Math.random().toString(36).slice(2, 10)}`;
+    if (kind === 'battle') {
+      const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+      const me = this.selfBattleId();
+      // Friends in the same place play; alone (or offline), bots fill two teams of three.
+      const friends = this.net.connected ? [...this.net.peers.values()].filter((q) => q.info?.chapter === chapter && !this.options.blocked.includes(q.info?.name ?? '')).map((q) => q.id).slice(0, 15) : [];
+      const setup: BattleSetup = friends.length
+        ? { id, cx: p.x, cz: p.z, teams: splitTeams([me, ...friends]) }
+        : { id, cx: p.x, cz: p.z, teams: [[me, 0]] };
+      this.beginBattle(setup, me, friends.length === 0);
+      if (friends.length) this.net.together({ type: 'battle', id, chapter, cx: p.x, cz: p.z, teams: setup.teams });
+      return t('pb.soon');
+    }
     if (kind === 'paint') {
       const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
       const seed = Math.floor(Math.random() * 2 ** 30);
@@ -1182,6 +1210,39 @@ export class Game {
       case 'take':
         if (this.paintEvent?.id === msg.id && takeDrop(this.paintEvent, msg.drop, false, this.time)) this.paintMeshes[msg.drop]?.removeFromParent();
         return;
+      case 'battle': {
+        const me = this.selfBattleId();
+        if (msg.chapter !== chapter || this.contest || this.paintEvent || this.battle || !msg.teams.some(([id]) => id === me)) return;
+        this.showInvite(`🎈 ${t('pb.invite', { name })}`, () => {
+          if (!this.battle && this.roamChapter() === msg.chapter) this.beginBattle({ id: msg.id, cx: msg.cx, cz: msg.cz, teams: msg.teams }, from, false);
+        });
+        return;
+      }
+      case 'shot': {
+        const b = this.battle;
+        if (!b || b.setup.id !== msg.id) return;
+        // The throw has to start near where that player really is.
+        const peer = this.net.peers.get(from);
+        const snap = peer ? this.net.sample(peer) : null;
+        if (!snap || Math.hypot(snap.x - msg.x, snap.s - HUB_S_OFFSET - msg.z) > 8) return;
+        b.throw(from, { x: msg.x, y: msg.y, z: msg.z }, { x: msg.vx, y: msg.vy, z: msg.vz }, this.time);
+        return;
+      }
+      case 'result':
+        // The host's count settles it, so everyone sees the same winner.
+        if (this.battle?.setup.id === msg.id && from === this.battleHost) this.battleResult = [msg.pink / 1000, msg.teal / 1000];
+        return;
+      case 'splatted': {
+        const b = this.battle;
+        if (!b || b.setup.id !== msg.id || !b.teams.has(from)) return;
+        b.out.set(from, BATTLE.respawn);
+        if (msg.by === this.selfBattleId()) {
+          b.hits++;
+          this.audio.chime(76);
+          this.popAtPawn(t('pb.gotThem', { name }), 'good');
+        }
+        return;
+      }
     }
   }
 
@@ -1251,6 +1312,7 @@ export class Game {
         }, 6000);
       }
     }
+    this.battleTick(dt);
     // Convoy.
     const cv = this.convoy;
     if (cv.leader) {
@@ -1301,6 +1363,14 @@ export class Game {
       const pct = Math.min(100, Math.round((100 * e.team) / e.target));
       lines.push(`<div><b>🎨 ${t('tg.paint')}</b> · ${left}<div class="tg-bar" role="progressbar" aria-valuemin="0" aria-valuemax="${e.target}" aria-valuenow="${e.team}"><i style="width:${pct}%"></i></div><small>${t('tg.team', { n: e.team, target: e.target, mine: e.mine })}</small></div>`);
     }
+    const b = this.battle;
+    if (b) {
+      const left = now < b.startAt ? t('tg.startsIn', { s: Math.ceil(b.startAt - now) }) : b.done ? t('tg.finished') : t('tg.timeLeft', { s: Math.ceil(b.endAt - now) });
+      const [pa, pb] = this.battleResult ?? b.shares();
+      const my = b.teams.get(this.selfBattleId()) ?? 0;
+      const tank = Math.round(b.tank * 100);
+      lines.push(`<div><b>🎈 ${t('pb.title')}</b> · ${left}<div class="tg-bar pb-bar"><i style="width:${(pa * 100).toFixed(1)}%;background:${TEAM_COLOURS[0]}"></i><i style="width:${(pb * 100).toFixed(1)}%;background:${TEAM_COLOURS[1]};margin-left:auto"></i></div><small>${t('pb.score', { pink: Math.round(pa * 100), teal: Math.round(pb * 100) })} · ${t(my === 0 ? 'pb.youPink' : 'pb.youTeal')} · 🎈 ${tank}% · ${t('pb.hits', { n: b.hits })}</small></div>`);
+    }
     if (this.convoy.leading) lines.push(`<div>🚗 ${t('tg.leading', { n: [...this.convoy.followers.values()].filter((at) => now - at < 30).length })}</div>`);
     else if (this.convoy.leader) {
       const peer = this.net.peers.get(this.convoy.leader);
@@ -1321,6 +1391,7 @@ export class Game {
     this.contest = null;
     this.paintEvent = null;
     this.clearPaintMeshes();
+    this.endBattle();
     this.togetherHud.classList.add('hidden');
   }
 
@@ -3055,7 +3126,8 @@ export class Game {
     } else {
       // The parked car is solid while walking.
       area.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: 1.4 });
-      const move = inp.moveAxes();
+      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0;
+      const move = out ? { x: 0, y: 0 } : inp.moveAxes();
       this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, area.world);
       area.world.colliders.pop();
     }
@@ -3263,6 +3335,228 @@ export class Game {
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
       this.openMenu('mural');
+    }
+  }
+
+  // ————— paint battle —————
+
+  private selfBattleId(): string {
+    return this.net.selfId || 'me';
+  }
+
+  /** Set up a paint battle: the arena, teams (and bots in a solo game), and send everyone to their base. */
+  private beginBattle(setup: BattleSetup, host: string, withBots: boolean): void {
+    const area = this.area;
+    if (!area) return;
+    this.endBattle();
+    const grid = new PaintGrid(setup.cx, setup.cz, BATTLE.radius, (x, z) => area.world.resolve({ x, z }, 0.3) === null);
+    const me = this.selfBattleId();
+    const teams = new Map(setup.teams);
+    if (withBots) {
+      const seed = Math.floor(Math.random() * 1000);
+      const probe = new PaintBattle({ ...setup, teams: [] }, grid, this.time);
+      const bots = [...makeBots(2, 0, probe.base(0), seed), ...makeBots(3, 1, probe.base(1), seed)];
+      for (const bot of bots) {
+        teams.set(bot.id, bot.team);
+        const look: HumanLook = { ...DEFAULT_HUMAN_LOOK, top: TEAM_COLOURS[bot.team], hair: ['#2b2622', '#6b3b2a', '#c8452e', '#e3c07a'][bot.name.length % 4], hat: 'none', pet: 'none' };
+        const model = new HumanModel(look);
+        this.scene.add(model.root);
+        this.battleBots.push({ bot, model });
+      }
+    }
+    this.battle = new PaintBattle({ ...setup, teams: [...teams] }, grid, this.time);
+    this.battleHost = host;
+    this.battleResult = null;
+    this.battlePaint.set([]);
+    this.battleDab = 0;
+    for (const { bot } of this.battleBots) {
+      const p = { x: bot.x, z: bot.z };
+      area.world.resolve(p, 0.5);
+      bot.x = p.x;
+      bot.z = p.z;
+    }
+    // Out of the car, and off to your team's side.
+    if (this.flight) this.stopFlight();
+    const team = teams.get(me) ?? 0;
+    this.sendToBase(team);
+    this.touchUi?.setBattle(true);
+    this.audio.chime(64);
+    this.hud.lootCard(t('pb.title'), TEAM_COLOURS[team], t(team === 0 ? 'pb.youPink' : 'pb.youTeal'), t('pb.how'));
+  }
+
+  private sendToBase(team: Team): void {
+    const b = this.battle;
+    const area = this.area;
+    if (!b || !area) return;
+    const base = b.base(team);
+    const p = { x: base.x + (Math.random() - 0.5) * 4, z: base.z + (Math.random() - 0.5) * 4 };
+    area.world.resolve(p, 0.6);
+    const face = Math.atan2(-(b.grid.cx - p.x), -(b.grid.cz - p.z));
+    if (this.mode === 'drive') {
+      this.hubCar.v = 0;
+      this.mode = 'foot';
+      this.seatHuman();
+      this.updateHeadVisibility();
+    }
+    this.hubWalker.place(p.x, p.z, face);
+    this.hubCam.yaw = face;
+    this.hubCam.snap = true;
+  }
+
+  private endBattle(): void {
+    this.battle = null;
+    for (const { model } of this.battleBots) model.root.removeFromParent();
+    this.battleBots = [];
+    for (const m of this.balloonMeshes) m.visible = false;
+    if (this.battleAim) this.battleAim.visible = false;
+    this.battlePaint.set([]);
+    this.touchUi?.setBattle(false);
+  }
+
+  /** Where your throw goes: the way the camera faces, higher when you look up. */
+  private aimVelocity(): { x: number; y: number; z: number } {
+    return throwVelocity(this.hubCam.yaw, 0.55 - this.hubCam.pitch * 0.7);
+  }
+
+  private battleTick(dt: number): void {
+    const b = this.battle;
+    const area = this.area;
+    if (!b || !area) return;
+    const now = this.time;
+    const me = this.selfBattleId();
+    const w = this.hubWalker;
+    const myTeam = b.teams.get(me) ?? 0;
+    // Your throws (held: one every BATTLE.gap seconds while the tank lasts).
+    const wantThrow = this.input.consume('fire') || this.input.held('fire');
+    if (wantThrow && this.mode === 'foot' && !this.flight && this.state === 'hub') {
+      const from = { x: w.x, y: w.y + 1.6, z: w.z };
+      const v = this.aimVelocity();
+      if (b.throw(me, from, v, now, true)) {
+        this.audio.blip(520, 0.06, 'triangle', 0.05);
+        if (this.net.connected && b.teams.size > this.battleBots.length + 1) this.net.together({ type: 'shot', id: b.setup.id, x: from.x, y: from.y, z: from.z, vx: v.x, vy: v.y, vz: v.z });
+      }
+    }
+    // Bots (solo games): walk, dodge, throw.
+    const rnd = Math.random;
+    for (const { bot } of this.battleBots) {
+      if (!b.live(now) || (b.out.get(bot.id) ?? 0) > 0) continue;
+      const enemies = [...(bot.team !== myTeam && this.mode === 'foot' ? [{ x: w.x, z: w.z }] : []), ...this.battleBots.filter((o) => o.bot.team !== bot.team && (b.out.get(o.bot.id) ?? 0) <= 0).map((o) => o.bot)];
+      const step = botStep(bot, b, enemies, dt, rnd);
+      const p = { x: bot.x + step.dx * 4.2 * dt, z: bot.z + step.dz * 4.2 * dt };
+      area.world.resolve(p, 0.4);
+      if (b.grid.inside(p.x, p.z)) {
+        bot.x = p.x;
+        bot.z = p.z;
+      } else bot.goal = null;
+      if (step.throw) b.throw(bot.id, { x: bot.x, y: 1.6, z: bot.z }, step.throw, now);
+    }
+    // Balloons fly; they can hit you and the bots here (friends decide for themselves).
+    const targets = [...(this.mode === 'foot' ? [{ id: me, team: myTeam, x: w.x, z: w.z }] : []), ...this.battleBots.map(({ bot }) => ({ id: bot.id, team: bot.team, x: bot.x, z: bot.z }))];
+    // After the whistle the paint is frozen, so the count everyone sees stays put.
+    for (const e of b.done ? [] : b.update(dt, targets, { id: me, x: w.x, z: w.z })) {
+      if (e.kind === 'splat') {
+        this.battlePaint.add({ x: e.x, y: HUB_Y + 0.02 + (this.battleDab++ % 400) * 0.0004, z: e.z, nx: 0, ny: 1, nz: 0, c: TEAM_TRAIL[e.team], r: BATTLE.splat });
+        this.particles.emit('splash', _v5.set(e.x, HUB_Y + 0.3, e.z), _v4.set(0, 3, 0), 12, 0.5);
+        if (Math.hypot(e.x - w.x, e.z - w.z) < 25) this.audio.blip(160 + Math.random() * 60, 0.08, 'sine', 0.05);
+        continue;
+      }
+      if (e.victim === me) {
+        b.splatted++;
+        this.splash = 1;
+        this.audio.bump();
+        this.popAtPawn(t('pb.splatted'), 'info');
+        if (this.net.connected && b.teams.size > this.battleBots.length + 1) this.net.together({ type: 'splatted', id: b.setup.id, by: e.by });
+        this.sendToBase(myTeam);
+      } else {
+        const bb = this.battleBots.find((o) => o.bot.id === e.victim);
+        if (bb) {
+          const base = b.base(bb.bot.team);
+          bb.bot.x = base.x + (Math.random() - 0.5) * 4;
+          bb.bot.z = base.z + (Math.random() - 0.5) * 4;
+          bb.bot.goal = null;
+        }
+      }
+      if (e.by === me) {
+        b.hits++;
+        this.audio.chime(76);
+        this.popAtPawn(t('pb.hit'), 'good');
+      }
+    }
+    // The end: the host's count is the one everyone shows.
+    if (!b.done && now > b.endAt + 1) {
+      b.done = true;
+      b.balloons.length = 0;
+      const shares = b.shares();
+      if (this.battleHost === me && this.net.connected && b.teams.size > this.battleBots.length + 1) this.net.together({ type: 'result', id: b.setup.id, pink: Math.round(shares[0] * 1000), teal: Math.round(shares[1] * 1000) });
+      window.setTimeout(() => this.finishBattle(b), this.battleHost === me ? 0 : 2500);
+    }
+    if (b.done && now > this.battleShowUntil && this.battleShowUntil > 0) {
+      this.battleShowUntil = 0;
+      this.endBattle();
+    }
+  }
+
+  private finishBattle(b: PaintBattle): void {
+    if (this.battle !== b) return;
+    const [pa, pb] = (this.battleResult ??= b.shares());
+    const my = b.teams.get(this.selfBattleId()) ?? 0;
+    const win = pa === pb ? null : pa > pb ? 0 : 1;
+    const won = win === my;
+    const ink = BATTLE.ink.part + (won ? BATTLE.ink.win : 0);
+    this.profile.earn(ink);
+    this.profile.addStat('battles');
+    if (won) this.profile.addStat('battleWins');
+    this.profile.addStat('battleHits', b.hits);
+    this.profile.save();
+    this.checkTrophies();
+    if (won) {
+      this.audio.cheer();
+      this.splash = 1;
+    }
+    const title = win === null ? t('pb.draw') : t(win === 0 ? 'pb.pinkWins' : 'pb.tealWins');
+    this.hud.lootCard(t('pb.title'), win === null ? '#f4d23b' : TEAM_COLOURS[win], title, `${t('pb.score', { pink: Math.round(pa * 100), teal: Math.round(pb * 100) })} · +${ink} ink`);
+    this.battleShowUntil = this.time + 8;
+  }
+
+  /** Balloons in the air, the bots, and where your throw would land. */
+  private drawBattle(dt: number): void {
+    const b = this.battle;
+    if (!b) return;
+    while (this.balloonMeshes.length < b.balloons.length) {
+      const m = new THREE.Mesh(new ModelKit().blob(0.28, '#ffffff', { detail: 1 }).build(0), this.pickupMaterial);
+      this.scene.add(m);
+      this.balloonMeshes.push(m);
+    }
+    this.balloonMeshes.forEach((m, i) => {
+      const bl = b.balloons[i];
+      m.visible = !!bl;
+      if (!bl) return;
+      if (m.userData.team !== bl.team) {
+        m.geometry.dispose();
+        m.geometry = new ModelKit().blob(0.28, TEAM_COLOURS[bl.team], { detail: 1 }).build(0);
+        m.userData.team = bl.team;
+      }
+      m.position.set(bl.x, HUB_Y + bl.y, bl.z);
+    });
+    for (const { bot, model } of this.battleBots) {
+      const out = (b.out.get(bot.id) ?? 0) > 0;
+      model.root.position.set(bot.x, HUB_Y, bot.z);
+      model.root.rotation.set(0, bot.heading, 0);
+      model.root.visible = !out || Math.floor(this.time * 8) % 2 === 0;
+      model.animate(dt, b.live(this.time) && !out ? 'run' : 'idle', b.live(this.time) ? 4 : 0, this.time);
+    }
+    // The landing spot of your next throw.
+    if (!this.battleAim) {
+      this.battleAim = new THREE.Mesh(new ModelKit().cylinder(0.9, 0.9, 0.05, 20, '#ffffff', { nightGlow: 1 }).build(0), this.pickupMaterial);
+      this.scene.add(this.battleAim);
+    }
+    const aim = this.mode === 'foot' && b.live(this.time) && this.state === 'hub';
+    this.battleAim.visible = aim;
+    if (aim) {
+      const w = this.hubWalker;
+      const land = landingPoint({ x: w.x, y: w.y + 1.6, z: w.z }, this.aimVelocity());
+      this.battleAim.position.set(land.x, HUB_Y + 0.08, land.z);
+      this.battleAim.scale.setScalar(0.8 + Math.sin(this.time * 6) * 0.1);
     }
   }
 
@@ -3660,6 +3954,7 @@ export class Game {
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t('prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
     const boardText = this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
     this.hud.setPrompt(this.state === 'photo' || this.flight ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
+    this.drawBattle(dt);
     if (this.flight) this.updateFlightHud(cam);
     else this.updateMissionHud(player.x, player.z, cam);
     this.mapView.setArea(area.mapInfo((id) => this.districtState(area).find((d) => d.district.id === id)?.paint ?? 1));

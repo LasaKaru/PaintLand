@@ -15,7 +15,7 @@ export type ActionName =
   | 'respawn' | 'pause' | 'studio' | 'photo' | 'hud'
   | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather'
   | 'drink' | 'cycleTonic' | 'emote' | 'chat' | 'talk'
-  | 'shiftUp' | 'shiftDown' | 'map' | 'trail';
+  | 'shiftUp' | 'shiftDown' | 'map' | 'trail' | 'fire';
 
 export type Bindings = Record<ActionName, string[]>;
 
@@ -62,6 +62,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   shiftUp: ['Period'],
   shiftDown: ['Comma'],
   trail: ['KeyL'],
+  fire: ['KeyX', 'Mouse0'],
 };
 
 /** Names and groups for the Controls screen. */
@@ -81,6 +82,7 @@ export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' 
   { action: 'crouch', label: 'Walk slowly', group: 'On foot' },
   { action: 'interact', label: 'Get in / out · talk', group: 'On foot' },
   { action: 'emote', label: 'Emote wheel', group: 'On foot' },
+  { action: 'fire', label: 'Throw a paint balloon (paint battle)', group: 'On foot' },
   { action: 'talk', label: 'Push to talk (voice chat)', group: 'Game' },
   { action: 'camera', label: 'Change camera', group: 'Camera' },
   { action: 'fovDown', label: 'Narrower view', group: 'Camera' },
@@ -103,6 +105,7 @@ export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' 
 
 /** Short label for a KeyboardEvent.code. */
 export function keyLabel(code: string): string {
+  if (code === 'Mouse0') return 'Left click';
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Arrow')) return { ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→' }[code] ?? code;
@@ -130,6 +133,7 @@ const PAD_BUTTONS: Partial<Record<ActionName, number[]>> = {
   honk: [10],
   drink: [12],
   emote: [4],
+  fire: [5, 7],
 };
 
 const STORAGE_KEY = 'paintland.bindings.v1';
@@ -168,6 +172,15 @@ export class Input {
     window.addEventListener('keyup', this.onKeyUp);
     window.addEventListener('blur', () => this.down.clear());
     element.addEventListener('mousemove', this.onMouseMove);
+    // The left mouse button works like a key ('Mouse0'), for throwing in a paint battle.
+    element.addEventListener('mousedown', (e) => {
+      if (e.button !== 0) return;
+      if (!this.down.has('Mouse0')) for (const action of this.actionsForKey('Mouse0')) this.buffered.add(action);
+      this.down.add('Mouse0');
+    });
+    window.addEventListener('mouseup', (e) => {
+      if (e.button === 0) this.down.delete('Mouse0');
+    });
     element.addEventListener('wheel', this.onWheel, { passive: true });
     document.addEventListener('pointerlockchange', () => {
       this.pointerLocked = document.pointerLockElement === element;

@@ -71,7 +71,7 @@ export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHo
   lookChanged(): void;
   vehicleChanged(): void;
   /** Play together (convoys, contests, paint splashes); returns a message to show. */
-  together(kind: 'convoy' | 'drift' | 'stunt' | 'paint'): string | null;
+  together(kind: 'convoy' | 'drift' | 'stunt' | 'paint' | 'battle'): string | null;
   togetherState(): { roam: boolean; online: boolean; convoy: 'leading' | 'following' | null; busy: boolean };
   /** Free-roam areas visited so far (sticker book pages). */
   stickerAreas(): StickerArea[];
@@ -593,6 +593,7 @@ export class Menu {
         <button class="btn" data-together="drift" ${dis} ${busy}>🌀 ${t('tg.drift')}</button>
         <button class="btn" data-together="stunt" ${dis} ${busy}>🦘 ${t('tg.stunt')}</button>
         <button class="btn" data-together="paint" ${dis} ${busy}>🎨 ${t('tg.paint')}</button>
+        <button class="btn" data-together="battle" ${dis} ${busy}>🎈 ${t('pb.title')}</button>
       </div>`;
   }
 
@@ -1138,7 +1139,7 @@ export class Menu {
       return;
     }
     if (d.together) {
-      const msg = this.host.together(d.together as 'convoy' | 'drift' | 'stunt' | 'paint');
+      const msg = this.host.together(d.together as 'convoy' | 'drift' | 'stunt' | 'paint' | 'battle');
       if (msg) this.toast(msg);
       // Back to the game so the event can start.
       if (this.host.togetherState().roam) this.host.resume();

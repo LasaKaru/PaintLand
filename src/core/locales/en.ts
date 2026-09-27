@@ -904,6 +904,21 @@ const en = {
   'fly.crashed': 'Crumpled! Back to the ring.',
   'fly.splash': 'Splash! A soggy plane… back to the ring.',
   'fly.stall': 'Too slow! Dive to pick up speed.',
+  'ctl.fire': 'Throw a paint balloon (paint battle)',
+  'pb.title': 'Paint battle',
+  'pb.soon': 'Paint battle in 5 seconds: head for the middle!',
+  'pb.invite': '{name} started a paint battle. Join in?',
+  'pb.how': 'X or click to throw · look up to throw further · paint more ground than the other team',
+  'pb.youPink': 'You are on the pink team',
+  'pb.youTeal': 'You are on the teal team',
+  'pb.score': 'Pink {pink}% · Teal {teal}%',
+  'pb.hits': '{n} splats',
+  'pb.hit': 'Splat!',
+  'pb.gotThem': 'You splatted {name}!',
+  'pb.splatted': 'Splatted! Back to your base.',
+  'pb.pinkWins': 'The pink team wins!',
+  'pb.tealWins': 'The teal team wins!',
+  'pb.draw': 'A draw!',
 } as const;
 
 export default en;

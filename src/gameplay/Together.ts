@@ -24,7 +24,11 @@ export type TogetherMsg =
   | { type: 'contest'; id: string; mode: ContestMode; chapter: string }
   | { type: 'score'; id: string; score: number }
   | { type: 'paint'; id: string; seed: number; chapter: string; cx: number; cz: number }
-  | { type: 'take'; id: string; drop: number };
+  | { type: 'take'; id: string; drop: number }
+  | { type: 'battle'; id: string; chapter: string; cx: number; cz: number; teams: [string, 0 | 1][] }
+  | { type: 'shot'; id: string; x: number; y: number; z: number; vx: number; vy: number; vz: number }
+  | { type: 'splatted'; id: string; by: string }
+  | { type: 'result'; id: string; pink: number; teal: number };
 
 const finite = (v: unknown, max = 1e7): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) <= max;
 const idOk = (v: unknown): v is string => typeof v === 'string' && /^[\w-]{1,40}$/.test(v);
@@ -47,6 +51,21 @@ export function checkTogether(m: unknown): TogetherMsg | null {
       return idOk(x.id) && finite(x.seed, 2 ** 31) && chapterOk(x.chapter) && finite(x.cx, 5000) && finite(x.cz, 5000) ? { type: 'paint', id: x.id, seed: x.seed, chapter: x.chapter, cx: x.cx, cz: x.cz } : null;
     case 'take':
       return idOk(x.id) && Number.isInteger(x.drop) && (x.drop as number) >= 0 && (x.drop as number) < PAINT_DROPS ? { type: 'take', id: x.id, drop: x.drop as number } : null;
+    case 'battle': {
+      if (!idOk(x.id) || !chapterOk(x.chapter) || !finite(x.cx, 5000) || !finite(x.cz, 5000) || !Array.isArray(x.teams) || x.teams.length < 2 || x.teams.length > 16) return null;
+      const teams: [string, 0 | 1][] = [];
+      for (const e of x.teams) {
+        if (!Array.isArray(e) || !idOk(e[0]) || (e[1] !== 0 && e[1] !== 1)) return null;
+        teams.push([e[0], e[1]]);
+      }
+      return { type: 'battle', id: x.id, chapter: x.chapter, cx: x.cx, cz: x.cz, teams };
+    }
+    case 'shot':
+      return idOk(x.id) && finite(x.x, 5000) && finite(x.y, 100) && finite(x.z, 5000) && finite(x.vx, 40) && finite(x.vy, 40) && finite(x.vz, 40) ? { type: 'shot', id: x.id, x: x.x, y: x.y, z: x.z, vx: x.vx, vy: x.vy, vz: x.vz } : null;
+    case 'splatted':
+      return idOk(x.id) && idOk(x.by) ? { type: 'splatted', id: x.id, by: x.by } : null;
+    case 'result':
+      return idOk(x.id) && Number.isInteger(x.pink) && Number.isInteger(x.teal) && (x.pink as number) >= 0 && (x.teal as number) >= 0 && (x.pink as number) + (x.teal as number) <= 1000 ? { type: 'result', id: x.id, pink: x.pink as number, teal: x.teal as number } : null;
     default:
       return null;
   }

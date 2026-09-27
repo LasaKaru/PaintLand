@@ -182,6 +182,12 @@ There are 8 stations of live-generated music plus **Inkroads Studio (109.5)**, w
 | **V** | Push to talk (voice chat, when turned on in Settings) |
 
 - **Menu → Multiplayer:** join a room with friends, race each other (results are checked by the server), or play together: convoys, drift and stunt contests, and co-op paint splashes.
+- **🎈 Paint battle** (Menu → Multiplayer → Play together, in any town): pink team against teal team for 2 minutes.
+  - Throw paint balloons with **X** or **left click** (gamepad **RB/RT**, touch **🎈**). Hold it down to keep throwing.
+  - Look up to throw further. A marker on the ground shows where the balloon will land.
+  - Balloons paint the ground in your team's colour. A direct hit sends the other player back to their base for 3 seconds.
+  - Your paint tank refills, and faster while you stand on your own colour.
+  - The team that painted more of the ground wins. Alone or offline, bots fill both teams.
 - **Menu → Account:** sign in (a name and password, no email) to keep your progress in the cloud, add friends and join a club.
 - **Postcards and homes:** friends can send each other postcards and visit each other's homes in Harbour Town (Menu → Account first).
 - **Mute, block and report** from the player list. Parents can lock chat, voice and online play in **Settings → Family** with a PIN.
