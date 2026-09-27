@@ -81,7 +81,7 @@ function waterBeside(d: Decorator, span: Span, side: number, dist: number, width
   const right = mid.right.clone().setY(0).normalize();
   const yaw = Math.atan2(mid.tangent.x, mid.tangent.z);
   const len = span.end - span.start + 60;
-  d.place(new ModelKit().box(1, 1, 1, colour, { pattern: Pattern.Glass }).build(0, 5), d.worldMatrix(mid.position.clone().addScaledVector(right, side * (dist + width / 2)).setY(0), yaw, new THREE.Vector3(width, 2.1, len)), false);
+  d.place(d.floats(new ModelKit().box(1, 1, 1, colour, { pattern: Pattern.Glass }).build(0, 5)), d.worldMatrix(mid.position.clone().addScaledVector(right, side * (dist + width / 2)).setY(0), yaw, new THREE.Vector3(width, 2.1, len)), false);
 }
 
 function hills(d: Decorator, span: Span, rnd: Random, kind: Parameters<typeof buildHill>[3], count: number, dist: [number, number], size: [number, number], height: [number, number]): void {
@@ -426,7 +426,7 @@ const dressGalle: Dresser = (d, span, rnd) => {
   waterBeside(d, span, 1, 16, 200, '#3f8fb0');
   landmarkBeside(d, span, 0.55, 1, 12, buildGalleLighthouse(), 'Galle lighthouse', 26, 5);
   landmarkBeside(d, span, 0.25, -1, 14, buildClockTower(), 'Galle Fort clock tower', 16, 4);
-  const fisher = buildStiltFisher();
+  const fisher = d.floats(buildStiltFisher());
   for (let i = 0; i < 9; i++) {
     const { p, face } = beside(d, span, 0.7 + i * 0.03, 1, 30 + (i % 3) * 6);
     d.place(fisher, d.worldMatrix(p.setY(0), face), false);

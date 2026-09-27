@@ -23,6 +23,7 @@ function groundUnder(d: Decorator, s0: number, s1: number, colour: string, patte
     if (h < 1) continue;
     const yaw = Math.atan2(f.tangent.x, f.tangent.z);
     kit.box(half * 2 + 10, h, step + 1, colour, { position: [f.position.x, h / 2 - 0.2, f.position.z], rotation: [0, yaw, 0], pattern });
+    d.addLand(f.position.x, f.position.z, half + 5);
   }
   if (!kit.isEmpty) d.place(kit.build(0.1, 4), new THREE.Matrix4(), false);
 }
@@ -80,9 +81,9 @@ const dressHalong: Dresser = (d, span, rnd) => {
     const r = rnd.range(10, 26);
     const p = f.position.clone().addScaledVector(f.right, (rnd.chance(0.5) ? -1 : 1) * (r + rnd.range(18, 160))).setY(0);
     if (d.nearRoad(p, r + 8)) continue;
-    d.place(buildKarst(rnd.fork(i), r, rnd.range(35, 90)), d.worldMatrix(p, rnd.range(0, 6)), false);
+    d.place(d.floats(buildKarst(rnd.fork(i), r, rnd.range(35, 90))), d.worldMatrix(p, rnd.range(0, 6)), false);
   }
-  const junks = [0, 1, 2].map((i) => buildJunk(rnd.fork(i + 50)));
+  const junks = [0, 1, 2].map((i) => d.floats(buildJunk(rnd.fork(i + 50))));
   for (let i = 0; i < 12; i++) {
     const p = d.scatter(rnd, 30, 260, 0.2, 20);
     const s = rnd.range(span.start, span.end);

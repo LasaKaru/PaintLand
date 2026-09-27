@@ -206,7 +206,7 @@ const dressBeach: Dresser = (d, span, rnd) => {
   const mid = d.sample((span.start + span.end) / 2);
   const beachPos = mid.position.clone().addScaledVector(mid.right, 70).setY(0);
   d.place(new ModelKit().cylinder(1, 1, 1.2, 16, '#f1dca0', { pattern: Pattern.Grass }).build(0, 1), d.worldMatrix(beachPos, 0, new THREE.Vector3(120, 1, 60)), false);
-  const oruwa = buildOruwa();
+  const oruwa = d.floats(buildOruwa());
   for (let i = 0; i < 8; i++) d.place(oruwa, d.worldMatrix(beachPos.clone().add(new THREE.Vector3(rnd.range(-160, 160), 0.3, rnd.range(60, 160))), rnd.range(0, 6), 1.6), false);
   const tail = new ModelKit()
     .blob(3, '#4a5a78', { position: [0, 3, 0], scale: [0.6, 1.4, 0.6], detail: 1 })
@@ -247,7 +247,7 @@ export function serendibBackground(d: Decorator, rnd: Random): void {
   commonSky(d, rnd, 26);
   // Land follows the inland districts; the seafront and Mirissa keep the sea.
   landAlong(d, d.path.spanOf(1)?.start ?? 0, d.path.spanOf(4)?.end ?? d.path.length, 240, '#7fbb3a');
-  const islands = [0, 1, 2].map((i) => buildIsland(rnd.fork(i), rnd.range(20, 34), true));
+  const islands = [0, 1, 2].map((i) => d.floats(buildIsland(rnd.fork(i), rnd.range(20, 34), true)));
   for (let i = 0; i < 12; i++) {
     const p = d.scatter(rnd, 500, 1300, 0, 120);
     if (p) d.place(rnd.pick(islands), d.worldMatrix(p, rnd.range(0, 6)), false);
@@ -260,7 +260,7 @@ export function serendibBackground(d: Decorator, rnd: Random): void {
   // Adam's Peak on the horizon.
   const peak = d.scatter(rnd, 900, 1300, 0, 300);
   if (peak) d.place(buildPeak(rnd, 180, 420, 0.6), d.worldMatrix(peak, 0), false);
-  const oruwa = buildOruwa();
+  const oruwa = d.floats(buildOruwa());
   const centre = d.path.bounds().getCenter(new THREE.Vector3());
   for (let i = 0; i < 16; i++) d.place(oruwa, d.worldMatrix(new THREE.Vector3(centre.x + rnd.range(-800, 800), 0.3, centre.z + rnd.range(-800, 800)), rnd.range(0, 6), 1.6), false);
   const kiteGeo = buildKite('#f08a2e');

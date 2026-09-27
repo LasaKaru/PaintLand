@@ -256,7 +256,7 @@ export const SKETCH_DRESSERS = {
 /** Islands, floating rocks, crayons, clouds, paper boats and the pier. */
 export function sketchBackground(d: Decorator, rnd: Random): void {
   commonSky(d, rnd);
-  const islands = [0, 1, 2, 3].map((i) => buildIsland(rnd.fork(i), rnd.range(18, 34)));
+  const islands = [0, 1, 2, 3].map((i) => d.floats(buildIsland(rnd.fork(i), rnd.range(18, 34))));
   for (let i = 0; i < 16; i++) {
     const p = d.scatter(rnd, 380, 1100, 0, 90);
     if (p) d.place(rnd.pick(islands), d.worldMatrix(p, rnd.range(0, 6)), false);
@@ -271,7 +271,7 @@ export function sketchBackground(d: Decorator, rnd: Random): void {
     const p = d.scatter(rnd, 200, 600, [140, 320], 50);
     if (p) d.addFloater(buildCrayon(rnd.pick(crayonColours), rnd.range(16, 34)), p, rnd.range(-0.2, 0.2), 0);
   }
-  const boat = buildPaperBoat();
+  const boat = d.floats(buildPaperBoat());
   const centre = d.path.bounds().getCenter(new THREE.Vector3());
   for (let i = 0; i < 30; i++) {
     const p = new THREE.Vector3(centre.x + rnd.range(-700, 700), 0.2, centre.z + rnd.range(-700, 700));
@@ -319,6 +319,7 @@ export function landUnder(d: Decorator, colour: string, pattern: number, margin 
     .cylinder(1, 1, 1, 40, colour, { position: [0, 0.45, 0], pattern })
     .build(0, 1);
   d.place(land, d.worldMatrix(centre, 0, new THREE.Vector3(r, 1, r)), false);
+  d.addLand(centre.x, centre.z, r);
 }
 
 /** Land along part of the route: overlapping painted discs make a natural coastline. */
@@ -332,5 +333,6 @@ export function landAlong(d: Decorator, s0: number, s1: number, radius: number, 
     const r = radius * (0.85 + ((s * 0.013) % 0.3));
     d.place(sand, d.worldMatrix(p, 0, new THREE.Vector3(r, 1, r)), false);
     d.place(grass, d.worldMatrix(p, 0, new THREE.Vector3(r, 1, r)), false);
+    d.addLand(p.x, p.z, r);
   }
 }

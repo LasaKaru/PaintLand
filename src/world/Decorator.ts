@@ -6,6 +6,7 @@ import { PaintMaterial } from '../render/PaintMaterial';
 import type { DistrictDef, DressStyle } from './Districts';
 import type { ChapterDef } from './Chapters';
 import { DRESSERS } from './dress';
+import { ModelKit, Pattern } from '../models/ModelKit';
 
 /** A sphere the camera must not enter (docs/05 §5.2 "collision"). */
 export interface CameraBlocker {
@@ -50,6 +51,12 @@ export class Decorator {
   readonly movers: Mover[] = [];
   readonly material = new PaintMaterial({ vertexColors: true, flat: true });
   private readonly buckets = new Map<THREE.BufferGeometry, THREE.Matrix4[]>();
+  /** Painted land (discs, x/z/radius): anything standing at sea level must be on one. */
+  readonly land: { x: number; z: number; r: number }[] = [];
+  /** Things meant to be in the water (boats, sea rocks, islands). */
+  private readonly waterOk = new Set<THREE.BufferGeometry>();
+  /** Islets added under things that would otherwise stand in the sea (for tests and tools). */
+  readonly islets: { x: number; z: number; r: number; height: number; verts: number }[] = [];
   private readonly castShadow = new Set<THREE.BufferGeometry>();
   private readonly frame: RoadFrame = createFrame();
   private readonly basis = new THREE.Matrix4();
@@ -68,11 +75,69 @@ export class Decorator {
       dress(this, span, rnd, def);
     }
     this.chapter.background(this, new Random(hashString(this.chapter.id + ':bg')));
+    this.groundStrays();
     this.flush();
     return this.group;
   }
 
   // ————— placement helpers —————
+
+  /** Record painted land (for the "nothing stands in the sea" check). */
+  addLand(x: number, z: number, r: number): void {
+    this.land.push({ x, z, r });
+  }
+
+  /** Is (x, z) on painted land (at least `margin` metres in)? */
+  onLand(x: number, z: number, margin = 0): boolean {
+    return this.land.some((l) => Math.hypot(x - l.x, z - l.z) <= l.r - margin);
+  }
+
+  /** Is this geometry meant to be in the water? */
+  isWaterOk(geometry: THREE.BufferGeometry): boolean {
+    return this.waterOk.has(geometry);
+  }
+
+  /** Mark a geometry as meant to be in the water (boats, sea rocks, islands). */
+  floats(geometry: THREE.BufferGeometry): THREE.BufferGeometry {
+    this.waterOk.add(geometry);
+    return geometry;
+  }
+
+  /**
+   * A last check before building: anything standing at sea level (a house,
+   * a tower, a tree) that isn't on painted land gets a small sandy islet
+   * under it, so nothing ever stands in the water.
+   */
+  private groundStrays(): void {
+    const box = new THREE.Box3();
+    const size = new THREE.Vector3();
+    const centre = new THREE.Vector3();
+    const need: { x: number; z: number; r: number }[] = [];
+    for (const [geo, matrices] of this.buckets) {
+      if (this.waterOk.has(geo)) continue;
+      if (!geo.boundingBox) geo.computeBoundingBox();
+      for (const m of matrices) {
+        box.copy(geo.boundingBox!).applyMatrix4(m);
+        box.getSize(size);
+        // Standing at sea level (not a floating thing, not ground itself).
+        if (box.min.y < -1.2 || box.min.y > 1.4 || size.y < 1.6) continue;
+        box.getCenter(centre);
+        const r = Math.max(size.x, size.z) / 2;
+        if (this.onLand(centre.x, centre.z, Math.min(r, 6)) || need.some((n) => Math.hypot(n.x - centre.x, n.z - centre.z) < n.r - Math.min(r, 6))) continue;
+        need.push({ x: centre.x, z: centre.z, r: r + 5 });
+        this.islets.push({ x: centre.x, z: centre.z, r: r + 5, height: size.y, verts: geo.attributes.position.count });
+      }
+    }
+    if (!need.length) return;
+    const sand = new ModelKit().cylinder(1.12, 1.2, 1, 20, '#ead7ae', { position: [0, 0.15, 0], pattern: Pattern.Grass }).build(0, 7);
+    const grass = new ModelKit().cylinder(1, 1.02, 1, 20, '#8cbf5a', { position: [0, 0.4, 0], pattern: Pattern.Grass }).build(0, 8);
+    for (const n of need) {
+      const m = this.worldMatrix(new THREE.Vector3(n.x, 0, n.z), (n.x * 0.37) % 6.28, new THREE.Vector3(n.r, 1, n.r));
+      this.place(sand, m, false);
+      this.place(grass, m.clone(), false);
+      this.addLand(n.x, n.z, n.r);
+    }
+  }
 
   sample(s: number, out: RoadFrame = createFrame()): RoadFrame {
     return this.path.sample(s, out);
