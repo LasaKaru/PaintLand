@@ -753,5 +753,8 @@ const ru: Locale = {
   'pass.kind.missions': 'Выполнить {target} заданий',
   'pass.kind.pockets': 'Найти {target} тайных уголков',
   'pass.kind.secrets': 'Найти {target} золотых горшков',
+  'net.offline': 'Вы не в сети. Онлайн-функции вернутся вместе со связью; всё остальное работает.',
+  'priv.link': 'Политика конфиденциальности',
+  'priv.close': 'Закрыть',
 };
 export default ru;

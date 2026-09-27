@@ -183,6 +183,13 @@ export class Menu {
     this.root.addEventListener('input', (e) => this.onInput(e));
     this.root.addEventListener('change', (e) => this.onInput(e));
     host.profile.onChange(() => this.refreshInk());
+    // The privacy policy opens over the game (it also works inside the desktop app).
+    this.root.addEventListener('click', (e) => {
+      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-privacy]');
+      if (!a) return;
+      e.preventDefault();
+      showPrivacy();
+    });
     this.root.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]');
       if (a) analytics.track(a.dataset.link === 'sponsor-logo' ? 'sponsor_click' : 'link', { id: a.dataset.id ?? a.dataset.link });
@@ -845,6 +852,7 @@ export class Menu {
           ${this.toggle('o.autoWeather', 'Weather changes by itself')}
           ${this.toggle('o.minimap', 'Minimap in free roam')}
           ${this.toggle('o.analytics', t('set.analytics'))}
+          <p class="menu-hint"><a href="privacy.html" data-privacy="1">${t('priv.link')}</a></p>
           ${this.choice('o.chat', t('set.chat'), [['filtered', t('set.chatFiltered')], ['on', t('set.chatOn')], ['off', t('set.chatOff')]])}
           ${this.slider('o.dayMinutes', 'Length of an auto day', 4, 40, 1, (v) => `${v} min`)}
           ${this.choice('o.season', t('set.season'), [['auto', t('set.auto')], ['off', t('set.off')], ['spring', t('season.spring')], ['summer', t('season.summer')], ['autumn', t('season.autumn')], ['winter', t('season.winter')]])}
@@ -1419,4 +1427,15 @@ function focusSignature(root: HTMLElement): string | null {
   if (attrs) return `${el.tagName.toLowerCase()}${attrs}`;
   const name = el.getAttribute('name');
   return name ? `${el.tagName.toLowerCase()}[name="${CSS.escape(name)}"]` : null;
+}
+
+/** The privacy policy (public/privacy.html) in a dialog over the game. */
+export function showPrivacy(): void {
+  document.querySelector('.privacy-dialog')?.remove();
+  const d = document.createElement('dialog');
+  d.className = 'privacy-dialog';
+  d.innerHTML = `<form method="dialog"><button class="btn small" aria-label="${t('priv.close')}">✕ ${t('priv.close')}</button></form><iframe src="privacy.html" title="${t('priv.link')}"></iframe>`;
+  document.body.appendChild(d);
+  d.addEventListener('close', () => d.remove());
+  d.showModal();
 }

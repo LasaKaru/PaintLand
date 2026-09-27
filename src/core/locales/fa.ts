@@ -753,5 +753,8 @@ const fa: Locale = {
   'pass.kind.missions': '{target} مأموریت را تمام کنید',
   'pass.kind.pockets': '{target} گوشهٔ پنهان پیدا کنید',
   'pass.kind.secrets': '{target} کوزهٔ طلایی پیدا کنید',
+  'net.offline': 'شما آفلاین هستید. با برگشتن اتصال، امکانات آنلاین هم برمی‌گردند؛ بقیه چیزها کار می‌کنند.',
+  'priv.link': 'سیاست حریم خصوصی',
+  'priv.close': 'بستن',
 };
 export default fa;

@@ -753,5 +753,8 @@ const hi: Locale = {
   'pass.kind.missions': '{target} मिशन पूरे करें',
   'pass.kind.pockets': '{target} छिपे कोने खोजें',
   'pass.kind.secrets': '{target} सुनहरे मटके खोजें',
+  'net.offline': 'आप ऑफ़लाइन हैं। कनेक्शन लौटने पर ऑनलाइन सुविधाएँ भी लौट आएँगी; बाकी सब काम करता है।',
+  'priv.link': 'गोपनीयता नीति',
+  'priv.close': 'बंद करें',
 };
 export default hi;

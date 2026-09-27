@@ -753,5 +753,8 @@ const bn: Locale = {
   'pass.kind.missions': '{target} মিশন শেষ করুন',
   'pass.kind.pockets': '{target} লুকানো কোণ খুঁজুন',
   'pass.kind.secrets': '{target} সোনার হাঁড়ি খুঁজুন',
+  'net.offline': 'আপনি অফলাইনে আছেন। সংযোগ ফিরলে অনলাইন সুবিধাও ফিরবে; বাকি সব চলবে।',
+  'priv.link': 'গোপনীয়তা নীতি',
+  'priv.close': 'বন্ধ করুন',
 };
 export default bn;

@@ -753,5 +753,8 @@ const sw: Locale = {
   'pass.kind.missions': 'Maliza misheni {target}',
   'pass.kind.pockets': 'Tafuta kona {target} zilizofichwa',
   'pass.kind.secrets': 'Tafuta vyungu {target} vya dhahabu',
+  'net.offline': 'Uko nje ya mtandao. Vipengele vya mtandaoni vitarudi muunganisho ukirudi; mengine yote yanafanya kazi.',
+  'priv.link': 'Sera ya faragha',
+  'priv.close': 'Funga',
 };
 export default sw;

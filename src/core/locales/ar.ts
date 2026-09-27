@@ -753,5 +753,8 @@ const ar: Locale = {
   'pass.kind.missions': 'أنهِ {target} مهام',
   'pass.kind.pockets': 'اعثر على {target} زوايا مخفية',
   'pass.kind.secrets': 'اعثر على {target} أوانٍ ذهبية',
+  'net.offline': 'أنت غير متصل. تعود الميزات عبر الإنترنت عند عودة الاتصال؛ كل ما عدا ذلك يعمل.',
+  'priv.link': 'سياسة الخصوصية',
+  'priv.close': 'إغلاق',
 };
 export default ar;

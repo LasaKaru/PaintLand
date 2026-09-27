@@ -270,10 +270,7 @@ Interact" notice because of chat.
 ### Legal
 
 - **EULA:** optional. Steam has a default subscriber agreement.
-- **Privacy policy URL:** needed. The game has optional accounts (name and password, no email),
-  anonymous analytics, crash reports, and chat logs for moderation. Write a short policy on your
-  website saying what is stored, why, for how long, and how to delete it (Menu → Account →
-  Delete account deletes everything).
+- **Privacy policy URL:** needed. The policy is written: `public/privacy.html`, served at `https://<your server>/privacy.html` and shown inside the game (Settings → Accessibility, and Account). Put that URL in Steamworks. Check it's still accurate before release (it names HelaO2 and support@helao2.com).
 - **Copyright line:** `© 2026 HelaO2. All rights reserved.`
 
 ## 8. Uploading the game (SteamPipe)

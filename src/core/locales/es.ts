@@ -753,5 +753,8 @@ const es: Locale = {
   'pass.kind.missions': 'Completa {target} misiones',
   'pass.kind.pockets': 'Encuentra {target} rincones escondidos',
   'pass.kind.secrets': 'Encuentra {target} vasijas doradas',
+  'net.offline': 'Estás sin conexión. Las funciones en línea volverán con la conexión; todo lo demás funciona.',
+  'priv.link': 'Política de privacidad',
+  'priv.close': 'Cerrar',
 };
 export default es;

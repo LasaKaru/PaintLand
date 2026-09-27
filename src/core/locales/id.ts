@@ -753,5 +753,8 @@ const id: Locale = {
   'pass.kind.missions': 'Selesaikan {target} misi',
   'pass.kind.pockets': 'Temukan {target} sudut tersembunyi',
   'pass.kind.secrets': 'Temukan {target} guci emas',
+  'net.offline': 'Kamu sedang offline. Fitur online kembali saat koneksi pulih; yang lain tetap berjalan.',
+  'priv.link': 'Kebijakan privasi',
+  'priv.close': 'Tutup',
 };
 export default id;

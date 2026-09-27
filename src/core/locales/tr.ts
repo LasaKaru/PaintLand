@@ -753,5 +753,8 @@ const tr: Locale = {
   'pass.kind.missions': '{target} görevi bitir',
   'pass.kind.pockets': '{target} gizli köşe bul',
   'pass.kind.secrets': '{target} altın çömlek bul',
+  'net.offline': 'Çevrimdışısın. Bağlantı dönünce çevrimiçi özellikler de döner; geri kalan her şey çalışır.',
+  'priv.link': 'Gizlilik politikası',
+  'priv.close': 'Kapat',
 };
 export default tr;

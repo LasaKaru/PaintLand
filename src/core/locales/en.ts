@@ -751,6 +751,9 @@ const en = {
   'pass.kind.missions': 'Finish {target} missions',
   'pass.kind.pockets': 'Find {target} hidden pockets',
   'pass.kind.secrets': 'Find {target} golden pots',
+  'net.offline': 'You’re offline. Online features come back when the connection does; everything else works.',
+  'priv.link': 'Privacy policy',
+  'priv.close': 'Close',
 } as const;
 
 export default en;

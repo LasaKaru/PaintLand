@@ -753,5 +753,8 @@ const ko: Locale = {
   'pass.kind.missions': '미션 {target}개 완료하기',
   'pass.kind.pockets': '숨은 장소 {target}곳 찾기',
   'pass.kind.secrets': '황금 항아리 {target}개 찾기',
+  'net.offline': '오프라인 상태예요. 연결이 돌아오면 온라인 기능도 돌아와요. 나머지는 모두 작동해요.',
+  'priv.link': '개인정보 처리방침',
+  'priv.close': '닫기',
 };
 export default ko;

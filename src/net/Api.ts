@@ -4,6 +4,8 @@
  * built game; in development Vite proxies /api to it). A different server can
  * be set from the admin login screen.
  */
+import { t } from '../core/i18n';
+
 const KEY = 'paintland.api';
 
 export function apiBase(): string {
@@ -47,10 +49,10 @@ export async function api<T>(path: string, opts: { method?: string; body?: unkno
     });
     const type = res.headers.get('content-type') ?? '';
     const data = type.includes('json') ? ((await res.json()) as T & { reason?: string }) : null;
-    if (!data) return { ok: false, status: res.status, data: null, reason: 'The admin server is not reachable. Start it with npm run server.' };
+    if (!data) return { ok: false, status: res.status, data: null, reason: t('net.offline') };
     return { ok: res.ok, status: res.status, data, reason: (data as { reason?: string }).reason };
   } catch {
-    return { ok: false, status: 0, data: null, reason: 'The admin server is not reachable. Start it with npm run server.' };
+    return { ok: false, status: 0, data: null, reason: t('net.offline') };
   } finally {
     clearTimeout(timer);
   }

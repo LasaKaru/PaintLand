@@ -753,5 +753,8 @@ const ur: Locale = {
   'pass.kind.missions': '{target} مشن مکمل کریں',
   'pass.kind.pockets': '{target} چھپے کونے ڈھونڈیں',
   'pass.kind.secrets': '{target} سنہری مٹکے ڈھونڈیں',
+  'net.offline': 'آپ آف لائن ہیں۔ کنکشن واپس آنے پر آن لائن سہولتیں بھی لوٹ آئیں گی؛ باقی سب کام کرتا ہے۔',
+  'priv.link': 'رازداری کی پالیسی',
+  'priv.close': 'بند کریں',
 };
 export default ur;

@@ -753,5 +753,8 @@ const si: Locale = {
   'pass.kind.missions': 'මෙහෙයුම් {target} ක් අවසන් කරන්න',
   'pass.kind.pockets': 'සැඟවුණු කොන් {target} ක් සොයන්න',
   'pass.kind.secrets': 'රන් බඳුන් {target} ක් සොයන්න',
+  'net.offline': 'ඔබ නොබැඳි ය. සම්බන්ධතාව ආපසු ආ විට මාර්ගගත විශේෂාංග ද එයි; අනෙක් සියල්ල ක්‍රියා කරයි.',
+  'priv.link': 'රහස්‍යතා ප්‍රතිපත්තිය',
+  'priv.close': 'වසන්න',
 };
 export default si;

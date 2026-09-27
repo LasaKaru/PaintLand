@@ -753,5 +753,8 @@ const vi: Locale = {
   'pass.kind.missions': 'Hoàn thành {target} nhiệm vụ',
   'pass.kind.pockets': 'Tìm {target} góc bí mật',
   'pass.kind.secrets': 'Tìm {target} hũ vàng',
+  'net.offline': 'Bạn đang ngoại tuyến. Tính năng trực tuyến sẽ trở lại khi có kết nối; mọi thứ khác vẫn hoạt động.',
+  'priv.link': 'Chính sách quyền riêng tư',
+  'priv.close': 'Đóng',
 };
 export default vi;

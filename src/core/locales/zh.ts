@@ -753,5 +753,8 @@ const zh: Locale = {
   'pass.kind.missions': '完成 {target} 个任务',
   'pass.kind.pockets': '找到 {target} 个隐藏角落',
   'pass.kind.secrets': '找到 {target} 个金罐',
+  'net.offline': '你已离线。连接恢复后在线功能也会恢复；其他一切照常可用。',
+  'priv.link': '隐私政策',
+  'priv.close': '关闭',
 };
 export default zh;

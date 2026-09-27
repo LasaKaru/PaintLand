@@ -753,5 +753,8 @@ const ta: Locale = {
   'pass.kind.missions': '{target} பணிகளை முடி',
   'pass.kind.pockets': '{target} மறைந்த மூலைகளைக் கண்டுபிடி',
   'pass.kind.secrets': '{target} தங்கப் பானைகளைக் கண்டுபிடி',
+  'net.offline': 'நீங்கள் இணைப்பில் இல்லை. இணைப்பு திரும்பும்போது இணைய அம்சங்களும் திரும்பும்; மற்றவை அனைத்தும் இயங்கும்.',
+  'priv.link': 'தனியுரிமைக் கொள்கை',
+  'priv.close': 'மூடு',
 };
 export default ta;

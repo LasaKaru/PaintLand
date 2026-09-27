@@ -88,7 +88,7 @@ export class AccountScreen {
 
   private signedOut(): string {
     return `<p>${t('acct.why')}</p>
-      <p class="menu-hint">${t('acct.privacy')}</p>
+      <p class="menu-hint">${t('acct.privacy')} <a href="privacy.html" data-privacy="1">${t('priv.link')}</a></p>
       <h4>${t('acct.signIn')}</h4>
       <form class="report-form" data-form="acct-login">
         <label>${t('acct.name')}<input class="text-input" name="name" autocomplete="username" maxlength="20" required></label>

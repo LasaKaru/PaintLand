@@ -753,5 +753,8 @@ const ja: Locale = {
   'pass.kind.missions': 'ミッションを {target} 個クリア',
   'pass.kind.pockets': '隠れスポットを {target} か所見つける',
   'pass.kind.secrets': '金の壺を {target} 個見つける',
+  'net.offline': 'オフラインです。接続が戻るとオンライン機能も戻ります。それ以外はすべて使えます。',
+  'priv.link': 'プライバシーポリシー',
+  'priv.close': '閉じる',
 };
 export default ja;

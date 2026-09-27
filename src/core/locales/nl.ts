@@ -753,5 +753,8 @@ const nl: Locale = {
   'pass.kind.missions': 'Voltooi {target} missies',
   'pass.kind.pockets': 'Vind {target} verborgen hoekjes',
   'pass.kind.secrets': 'Vind {target} gouden potten',
+  'net.offline': 'Je bent offline. Online functies komen terug met de verbinding; al het andere werkt.',
+  'priv.link': 'Privacybeleid',
+  'priv.close': 'Sluiten',
 };
 export default nl;

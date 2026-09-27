@@ -753,5 +753,8 @@ const th: Locale = {
   'pass.kind.missions': 'ทำภารกิจ {target} อย่าง',
   'pass.kind.pockets': 'หามุมลับ {target} แห่ง',
   'pass.kind.secrets': 'หาหม้อทอง {target} ใบ',
+  'net.offline': 'คุณออฟไลน์อยู่ ฟีเจอร์ออนไลน์จะกลับมาเมื่อเชื่อมต่อได้ ส่วนอื่นใช้ได้ตามปกติ',
+  'priv.link': 'นโยบายความเป็นส่วนตัว',
+  'priv.close': 'ปิด',
 };
 export default th;

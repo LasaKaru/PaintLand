@@ -738,3 +738,10 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
   .pass-row { grid-template-columns: 26px 1fr; }
   .pass-row .pass-cell.patron { grid-column: 2; }
 }
+
+/* Privacy policy dialog */
+.privacy-dialog { width: min(860px, 94vw); height: min(86vh, 900px); padding: 0; border: 2px solid var(--ink); border-radius: 12px; background: var(--paper); display: flex; flex-direction: column; }
+.privacy-dialog:not([open]) { display: none; }
+.privacy-dialog form { display: flex; justify-content: flex-end; padding: 8px; }
+.privacy-dialog iframe { flex: 1; border: 0; width: 100%; background: #fbf6ea; }
+.privacy-dialog::backdrop { background: rgba(20, 16, 12, 0.45); }
