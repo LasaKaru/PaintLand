@@ -84,7 +84,7 @@ jobs:
         uses: actions/attest-build-provenance@v2
         with:
           subject-path: desktop/release/*.exe
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Inkroads-Windows-${{ steps.version.outputs.version }}
           path: |
@@ -110,7 +110,7 @@ jobs:
           fi
           npx electron-builder --win appx --x64 --publish never "${args[@]}"
           ls -la release/*.appx
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: Inkroads-MicrosoftStore-${{ steps.version.outputs.version }}
           path: desktop/release/*.appx
