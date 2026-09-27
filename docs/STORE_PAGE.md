@@ -24,11 +24,14 @@ edit: store reviewers and players check.
 
 > **Inkroads is a road trip through living watercolour paintings.**
 >
-> Drive a little rover along roads that loop, dive and roll through five
+> Drive a little rover along roads that loop, dive and roll through eight
 > painted chapters: the Sketch, Serendib (Sri Lanka), the Wonders of the
-> World, Lantern Roads across Asia, and Postcards from the Nile to the tea
-> hills of Ella. There are 33 districts, each with its own music. The notes
-> you pick up play along with it, on the beat.
+> World, Lantern Roads across Asia, Postcards from the Nile to the tea hills
+> of Ella, City Lights (Paris, London, Venice, Amsterdam, Barcelona,
+> Istanbul, Dubai), Skylines (New York, the Golden Gate, Rio, Tokyo,
+> Singapore, Sydney) and an Island Road Trip across Sri Lanka from Colombo
+> to Galle. There are 52 districts, each with its own music. The notes you
+> pick up play along with it, on the beat.
 >
 > **Roam three towns.** Harbour Town, Lantern Village and Serendib City are
 > open to explore on foot or on wheels. There are 20 hidden pockets, murals
@@ -62,7 +65,7 @@ edit: store reviewers and players check.
 - 10 vehicles, 99 garage parts, 131 wardrobe items
 - Online play: convoys, contests, co-op events, verified races, voice (opt-in)
 - Road Studio with a shared gallery and weekly contest
-- 100 trophies, sticker books and seasonal goals
+- 108 trophies, sticker books and seasonal goals
 - 24 languages; accessible menus
 - Buy once; no pay-to-win
 

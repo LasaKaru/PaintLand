@@ -58,8 +58,12 @@ export const TROPHIES: TrophyDef[] = [
     ['wonders', 'Wonders of the Sketchbook', '🏛'],
     ['lanterns', 'Lantern Roads', '🏮'],
     ['postcards', 'Postcards', '💌'],
+    ['citylights', 'City Lights', '🗼'],
+    ['skylines', 'Skylines', '🌉'],
+    ['islandtrip', 'Island Road Trip', '🛺'],
   ].map(([id, name, icon]) => ({ id: `lap-${id}`, name: `Finished: ${name}`, text: `Finish a lap of ${name}.`, icon, reward: 80, progress: (p: Profile): [number, number] => [p.data.bestLap[id] !== undefined ? 1 : 0, 1] })),
   { id: 'chapters-5', name: 'Every Page Turned', text: 'Finish a lap of all five chapters.', icon: '📖', reward: 400, progress: (p) => [['sketch', 'serendib', 'wonders', 'lanterns', 'postcards'].filter((c) => p.data.bestLap[c] !== undefined).length, 5] },
+  { id: 'chapters-8', name: 'The Whole Sketchbook', text: 'Finish a lap of all eight chapters.', icon: '🌍', reward: 800, progress: (p) => [['sketch', 'serendib', 'wonders', 'lanterns', 'postcards', 'citylights', 'skylines', 'islandtrip'].filter((c) => p.data.bestLap[c] !== undefined).length, 8] },
   { id: 'laps-50', name: 'Road Regular', text: 'Finish 50 laps.', icon: '🛞', reward: 250, progress: stat('laps', 50) },
   { id: 'laps-100', name: 'Centurion', text: 'Finish 100 laps.', icon: '💯', reward: 500, progress: stat('laps', 100) },
   { id: 'notes-5000', name: 'Symphony', text: 'Collect 5,000 notes.', icon: '🎻', reward: 400, progress: stat('notes', 5000) },
@@ -123,6 +127,10 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'kyoto-night', name: 'Lantern Lane', text: 'Drive through Kyoto by night.', icon: '🌙', reward: 60, progress: seenCount('district:kyoto-night', 1) },
   { id: 'monsoon', name: 'Monsoon Driver', text: 'Drive through Kandy and Ella in the rain.', icon: '☔', reward: 120, progress: (p) => [['district:kandy', 'district:ella'].filter((k) => p.data.seen.includes(k)).length, 2] },
   { id: 'pyramids', name: 'Old Wonders', text: 'Drive past the pyramids of Giza.', icon: '🐫', reward: 60, progress: seenCount('district:nile', 1) },
+  { id: 'europe', name: 'Grand Tour', text: 'Drive through Paris, London, Venice, Amsterdam and Barcelona.', icon: '🥐', reward: 150, progress: (p) => [['paris', 'london', 'venice', 'amsterdam', 'barcelona'].filter((d) => p.data.seen.includes(`district:${d}`)).length, 5] },
+  { id: 'golden-gate', name: 'Fog Over the Gate', text: 'Drive across the Golden Gate Bridge.', icon: '🌁', reward: 60, progress: seenCount('district:sanfrancisco', 1) },
+  { id: 'skylines-6', name: 'Skyline Collector', text: 'See all six skylines: New York, San Francisco, Rio, Tokyo, Singapore and Sydney.', icon: '🏙', reward: 200, progress: (p) => [['newyork', 'sanfrancisco', 'rio', 'tokyo', 'singapore', 'sydney'].filter((d) => p.data.seen.includes(`district:${d}`)).length, 6] },
+  { id: 'lanka-trip', name: 'Coast to Hills to Coast', text: 'Drive the island road trip from Colombo to Galle.', icon: '🐆', reward: 200, progress: (p) => [['colombo', 'kandyday', 'nuwaraeliya', 'ellaroad', 'yala', 'galle'].filter((d) => p.data.seen.includes(`district:${d}`)).length, 6] },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

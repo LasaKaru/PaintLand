@@ -7,7 +7,7 @@ Grouped by purpose, with a rough size: S = a few days, M = 1–2 weeks, L = a mo
 
 | # | What | Why | Size |
 | --- | --- | --- | --- |
-| A1 ★ | **Steam achievements** from the 100 trophies (`steamworks.js`) | Players expect them; they drive playtime | S |
+| A1 ★ | **Steam achievements** from the 108 trophies (`steamworks.js`) | Players expect them; they drive playtime | S |
 | A2 ★ | **Steam Cloud** saves | Expected on Steam; stops lost progress | S |
 | A3 ★ | **Steam Deck check**: UI at 1280×800, gamepad-only menus, on-screen keyboard | "Deck Verified" is a big badge | M |
 | A4 | Full **gamepad navigation** in every menu (road studio, livery painter, wardrobe) | Needed for "Full controller support" | M |
@@ -29,7 +29,7 @@ Grouped by purpose, with a rough size: S = a few days, M = 1–2 weeks, L = a mo
 | B4 | **Rhythm roads**: roads where notes line up with the beat, and hitting them in time paints the sky. A "Songbook" of perfect runs | M |
 | B5 ★ | **Weather painter**: in photo mode, brush rain, snow, cherry petals or fireflies onto part of the sky | S–M |
 | B6 | **Story mode, "The Lost Palette"**: a gentle story across the chapters about a painter whose colours were scattered, with mission givers as characters and a hand-painted cutscene at each chapter's end | L |
-| B7 ★ | **Sri Lanka road trip chapter**: Colombo → Kandy → Nuwara Eliya → Ella → Yala → Galle, with tuk-tuks, elephants crossing, tea pickers, a train race on the Nine Arch Bridge and a surf beach | L |
+| B7 ★ ✅ | **Sri Lanka road trip chapter** (built: chapter 8, *Island Road Trip*): Colombo → Kandy → Nuwara Eliya → Ella → Yala → Galle, with tuk-tuks, elephants crossing, tea pickers, a train race on the Nine Arch Bridge and a surf beach | L |
 | B8 | **Seasonal events on Steam**: Vesak lantern-making, an Avurudu pillow fight and kana mutti mini-game, Diwali rangoli drawing contests, a Christmas snow chapter | M each |
 | B9 | **Time trial ghosts from friends** on every road, and "beat your friend" notifications | S |
 | B10 | **Pets with jobs**: the fox finds pockets, the crane carries postcards, the cat naps on your roof | S–M |

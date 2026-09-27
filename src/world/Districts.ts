@@ -14,7 +14,13 @@ export type DressStyle =
   // Chapter 4 · Lantern Roads
   | 'torii' | 'bamboo' | 'halong' | 'lanterntown' | 'himalaya' | 'greatwave' | 'fuji'
   // Chapter 5 · Postcards
-  | 'nile' | 'santorini' | 'kyoto' | 'kandy' | 'ella';
+  | 'nile' | 'santorini' | 'kyoto' | 'kandy' | 'ella'
+  // Chapter 6 · City Lights
+  | 'paris' | 'london' | 'venice' | 'amsterdam' | 'barcelona' | 'istanbul' | 'dubai'
+  // Chapter 7 · Skylines
+  | 'newyork' | 'sanfrancisco' | 'rio' | 'tokyo' | 'singapore' | 'sydney'
+  // Chapter 8 · Island Road Trip
+  | 'colombo' | 'kandyday' | 'nuwaraeliya' | 'ellaroad' | 'yala' | 'galle';
 export type ScaleName = 'major' | 'minor';
 
 export interface DistrictDef {

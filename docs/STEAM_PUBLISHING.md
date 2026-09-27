@@ -87,7 +87,7 @@ Steam's editor accepts simple BBCode (`[h2]`, `[b]`, `[list]`, `[img]`). Paste t
 
 ```
 [h2]A road trip through living watercolour paintings[/h2]
-Drive a little rover along roads that loop, dive and roll through five painted chapters: the Sketch, Serendib (Sri Lanka), the Wonders of the World, Lantern Roads across Asia, and Postcards from the Nile to the tea hills of Ella. There are 33 districts, each with its own music. The notes you pick up play along with it, on the beat.
+Drive a little rover along roads that loop, dive and roll through eight painted chapters: the Sketch, Serendib (Sri Lanka), the Wonders of the World, Lantern Roads across Asia, Postcards from the Nile to the tea hills of Ella, City Lights (Paris, London, Venice, Amsterdam, Barcelona, Istanbul, Dubai), Skylines (New York, the Golden Gate, Rio, Tokyo, Singapore, Sydney) and an Island Road Trip across Sri Lanka from Colombo to Galle. There are 52 districts, each with its own music. The notes you pick up play along with it, on the beat.
 
 [h2]Roam three towns[/h2]
 Harbour Town, Lantern Village and Serendib City are open to explore on foot or on wheels. There are 20 hidden pockets, murals to paint, photos to take, and sketched districts to bring back to colour. The towns dress up for Vesak, Sinhala and Tamil New Year and Diwali, and change with the seasons.
@@ -361,7 +361,7 @@ The game runs fine on Steam without these, but players expect them:
 
 | Feature | How | Effort |
 | --- | --- | --- |
-| **Achievements** | Map the 100 trophies to Steam achievements. Add `steamworks.js` to the Electron app and call `activate('ACH_ID')` when a trophy unlocks (`checkTrophies` in `src/core/Game.ts`). Upload 100 icons (64×64, colour and grey) | 1–2 days |
+| **Achievements** | Map the 108 trophies to Steam achievements. Add `steamworks.js` to the Electron app and call `activate('ACH_ID')` when a trophy unlocks (`checkTrophies` in `src/core/Game.ts`). Upload 100 icons (64×64, colour and grey) | 1–2 days |
 | **Steam Cloud** | Easiest: *Auto-Cloud* on the save folder (`%APPDATA%/Inkroads/Local Storage`). Or save the profile to a file and sync that | ½ day |
 | **Overlay** | With `steamworks.js`, call `electronEnableSteamOverlay()`. Test it: Electron and the overlay don't always get along | ½ day |
 | **Steam names and friends** | Use the Steam name as the player name, and Steam friends for invites (rich presence plus "join game") | 2–3 days |
