@@ -228,6 +228,9 @@ admin panel works from either address.
 
 ## 5. Your own server (VPS) with the deploy kit
 
+> **Full step-by-step guide:** [SELF_HOSTING.md](SELF_HOSTING.md) (security, swap,
+> backups and restore, updates, troubleshooting). The short version is below.
+
 This is cheapest for many players, and needed for a TURN voice relay.
 
 1. Rent a small Linux VPS (e.g. DigitalOcean, Hetzner, Vultr, AWS Lightsail)

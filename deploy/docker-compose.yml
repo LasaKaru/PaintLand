@@ -80,12 +80,21 @@ services:
     profiles: [voice]
     restart: unless-stopped
     network_mode: host
+    environment:
+      TURN_SECRET: ${TURN_SECRET:-}
+    # The secret is checked here, when the relay starts, so the game and Caddy
+    # run fine without one (a required variable in the file would stop them too).
+    entrypoint:
+      - sh
+      - -c
+      - '[ -n "$$TURN_SECRET" ] || { echo "Set TURN_SECRET in deploy/.env to use the voice relay (openssl rand -hex 32)."; exit 1; }; exec docker-entrypoint.sh "$$@"'
+      - turn
     command:
       - -n
       - --log-file=stdout
       - --realm=${DOMAIN}
       - --use-auth-secret
-      - --static-auth-secret=${TURN_SECRET:?set TURN_SECRET in deploy/.env to use voice relay}
+      - --static-auth-secret=${TURN_SECRET:-}
       - --listening-port=3478
       - --min-port=49160
       - --max-port=49200

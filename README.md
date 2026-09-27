@@ -6,6 +6,10 @@
 
 **Running the game?** The **[admin guide](docs/ADMIN.md)** covers how to open the admin panel, change the password, and what you can manage.
 
+**The story:** **[The Lost Palette](docs/STORY.md)**: the characters, the prologue, the eight colours and the ending.
+
+**Your own server:** **[Self-hosting guide](docs/SELF_HOSTING.md)**: host the whole game on a Linux server, step by step.
+
 *Paint the road. Then drive up it.* Prefer it real? One slider turns the sketchbook into a realistically lit world with HDR light, reflections, fog and depth of field.
 
 This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
