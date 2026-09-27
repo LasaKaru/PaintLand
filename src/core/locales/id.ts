@@ -889,5 +889,9 @@ const id: Locale = {
   'ws.worn': 'Livery terpasang! Lihat di garasi.',
   'ws.agreement': 'Terbit. Setujui perjanjian Workshop di Steam agar orang lain bisa melihatnya.',
   'ws.published': 'Terbit di Steam Workshop!',
+  'menu.hills': '🍃 Bukit Teh',
+  'hills.kicker': 'Kota keempat',
+  'hills.name': 'Bukit Teh',
+  'hills.poem': 'Teh di setiap lereng, kereta biru kecil, dan air terjun di antara awan',
 };
 export default id;

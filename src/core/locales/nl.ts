@@ -889,5 +889,9 @@ const nl: Locale = {
   'ws.worn': 'Lak erop! Bekijk hem in de garage.',
   'ws.agreement': 'Gepubliceerd. Accepteer de Workshop-overeenkomst in Steam zodat anderen het zien.',
   'ws.published': 'Gepubliceerd in de Steam Workshop!',
+  'menu.hills': '🍃 Theeheuvels',
+  'hills.kicker': 'Vierde stadje',
+  'hills.name': 'Theeheuvels',
+  'hills.poem': 'Thee op elke helling, een blauw treintje en een waterval in de wolken',
 };
 export default nl;

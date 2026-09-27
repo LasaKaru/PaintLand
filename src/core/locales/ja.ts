@@ -889,5 +889,9 @@ const ja: Locale = {
   'ws.worn': 'カラーリングを着せました！ ガレージで見てみよう。',
   'ws.agreement': '公開しました。他の人に見えるように Steam でワークショップ規約に同意してください。',
   'ws.published': 'Steam ワークショップに公開しました！',
+  'menu.hills': '🍃 ティーヒルズ',
+  'hills.kicker': '4つめの町',
+  'hills.name': 'ティーヒルズ',
+  'hills.poem': 'どの斜面にも茶畑、青い小さな汽車、雲の中の滝',
 };
 export default ja;

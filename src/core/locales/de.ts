@@ -889,5 +889,9 @@ const de: Locale = {
   'ws.worn': 'Lackierung angelegt! Schau in die Garage.',
   'ws.agreement': 'Veröffentlicht. Akzeptiere in Steam die Werkstatt-Vereinbarung, damit andere es sehen.',
   'ws.published': 'In der Steam-Werkstatt veröffentlicht!',
+  'menu.hills': '🍃 Teehügel',
+  'hills.kicker': 'Viertes Städtchen',
+  'hills.name': 'Teehügel',
+  'hills.poem': 'Tee an jedem Hang, ein kleiner blauer Zug und ein Wasserfall in den Wolken',
 };
 export default de;

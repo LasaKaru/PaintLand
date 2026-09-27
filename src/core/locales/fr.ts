@@ -889,5 +889,9 @@ const fr: Locale = {
   'ws.worn': 'Livrée appliquée ! Va la voir au garage.',
   'ws.agreement': 'Publié. Accepte l’accord du Workshop dans Steam pour que les autres le voient.',
   'ws.published': 'Publié sur le Workshop Steam !',
+  'menu.hills': '🍃 Collines du Thé',
+  'hills.kicker': 'Quatrième village',
+  'hills.name': 'Collines du Thé',
+  'hills.poem': 'Du thé sur chaque pente, un petit train bleu et une cascade dans les nuages',
 };
 export default fr;

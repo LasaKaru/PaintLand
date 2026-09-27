@@ -34,12 +34,24 @@ export interface ChainMission {
   requires?: string;
 }
 
-export const CHAINS: { id: string; name: string; icon: string; blurb: string }[] = [
-  { id: 'tuktuk', name: 'Tuk-Tuk Tales', icon: '🛺', blurb: 'Nimal needs a driver for his busiest day.' },
-  { id: 'palette', name: 'The Painter’s Palette', icon: '🎨', blurb: 'Amaya is out of colours and the city is full of them.' },
-  { id: 'stunts', name: 'Stunt School', icon: '🏁', blurb: 'Ravi teaches jumps. Ravi does not teach landings.' },
-  { id: 'secrets', name: 'City Secrets', icon: '🗝', blurb: 'An old storyteller knows where the city hides things.' },
+/** A free-roam area with mission chains. */
+export type ChainArea = 'city' | 'hills' | 'harbour' | 'village';
+
+export const CHAINS: { id: string; name: string; icon: string; blurb: string; area: ChainArea }[] = [
+  { id: 'tuktuk', name: 'Tuk-Tuk Tales', icon: '🛺', blurb: 'Nimal needs a driver for his busiest day.', area: 'city' },
+  { id: 'palette', name: 'The Painter’s Palette', icon: '🎨', blurb: 'Amaya is out of colours and the city is full of them.', area: 'city' },
+  { id: 'stunts', name: 'Stunt School', icon: '🏁', blurb: 'Ravi teaches jumps. Ravi does not teach landings.', area: 'city' },
+  { id: 'secrets', name: 'City Secrets', icon: '🗝', blurb: 'An old storyteller knows where the city hides things.', area: 'city' },
+  { id: 'tea', name: 'The Tea Trail', icon: '🍃', blurb: 'Malini picks the best tea in the hills, and she needs a fast pair of wheels.', area: 'hills' },
+  { id: 'rail', name: 'The Hill Country Line', icon: '🚂', blurb: 'Stationmaster Perera runs the little blue train. Things keep going wrong.', area: 'hills' },
+  { id: 'harbour', name: 'Harbour Errands', icon: '⚓', blurb: 'Anura the harbourmaster always has one more job.', area: 'harbour' },
+  { id: 'lantern', name: 'Lantern Night', icon: '🏮', blurb: 'Linh is getting the village ready for the lantern festival.', area: 'village' },
 ];
+
+/** The free-roam area a chain mission is played in. */
+export function missionArea(m: ChainMission): ChainArea {
+  return CHAINS.find((c) => c.id === m.chain)?.area ?? 'city';
+}
 
 const T = (x: number, z: number, r = 8): Target => ({ x, z, r });
 
@@ -134,6 +146,100 @@ export const CITY_MISSIONS: ChainMission[] = [
       { kind: 'photo', text: 'Take a photo of the city', targets: [T(60, -572, 40)] },
     ],
     reward: { ink: 350 },
+  },
+  // ————— The Tea Trail (Tea Hills) —————
+  {
+    id: 'te-1', chain: 'tea', title: 'Morning pick', giver: 'Malini the tea picker',
+    intro: 'Only the top two leaves and a bud! Walk between the terrace rows and pick from four bushes, then take the basket to the tea factory.',
+    steps: [
+      { kind: 'onfoot', text: 'Pick tea between the terrace rows', targets: [T(22, -40.5, 4), T(-30, -49.5, 4), T(34, -58.5, 4), T(-18, -67.5, 4)] },
+      { kind: 'goto', text: 'Take the basket to the tea factory', targets: [T(84, -70, 8)] },
+    ],
+    reward: { ink: 150 },
+  },
+  {
+    id: 'te-2', chain: 'tea', title: 'Fresh to the train', giver: 'Malini the tea picker', requires: 'te-1',
+    intro: 'The first chests of the season are packed. Get them from the factory to the station platform before the train leaves!',
+    steps: [
+      { kind: 'goto', text: 'Collect the tea chests at the factory', targets: [T(84, -70, 8)] },
+      { kind: 'deliver', text: 'Deliver them to the station platform', targets: [T(50, 30, 8)], time: 55 },
+    ],
+    reward: { ink: 230, item: 'hat:straw' },
+  },
+  {
+    id: 'te-3', chain: 'tea', title: 'Tea for the town', giver: 'Malini the tea picker', requires: 'te-2',
+    intro: 'Every shop on the main street wants a packet of the new tea. Five stops, in order, against the clock.',
+    steps: [{ kind: 'checkpoints', text: 'Deliver to every shop in order', targets: [T(46, -9, 6), T(90, 5, 6), T(-60, -5, 6), T(-96, 5, 6), T(0, -12, 6)], time: 70 }],
+    reward: { ink: 320 },
+  },
+  // ————— The Hill Country Line (Tea Hills) —————
+  {
+    id: 'rl-1', chain: 'rail', title: 'Lost luggage', giver: 'Stationmaster Perera',
+    intro: 'The morning train shook four suitcases loose. They are all over town. Find them, any order.',
+    steps: [{ kind: 'collect', text: 'Find the lost suitcases', targets: [T(-100, 56, 5), T(-20, 48, 5), T(98, 34, 5), T(-60, 18, 5)] }],
+    reward: { ink: 160 },
+  },
+  {
+    id: 'rl-2', chain: 'rail', title: 'Tea-bush leap', giver: 'Stationmaster Perera', requires: 'rl-1',
+    intro: 'The level crossing is jammed. Perera says the quickest way over is the tea-bush ramp by the lake. He is not joking.',
+    steps: [{ kind: 'stunt', text: 'Land the tea-bush leap', targets: [T(-70, 50, 9)], stunt: 'hills-leap' }],
+    reward: { ink: 220, item: 'glow:green' },
+  },
+  {
+    id: 'rl-3', chain: 'rail', title: 'Postcard from the falls', giver: 'Stationmaster Perera', requires: 'rl-2',
+    intro: 'The railway wants a new poster. Go to the waterfall and take the photo everyone will see at the station.',
+    steps: [
+      { kind: 'goto', text: 'Go to the waterfall', targets: [T(-92, -58, 10)] },
+      { kind: 'photo', text: 'Take a photo of the falls (P, then Save)', targets: [T(-92, -58, 34)] },
+    ],
+    reward: { ink: 300 },
+  },
+  // ————— Harbour Errands (Harbour Town) —————
+  {
+    id: 'hb-1', chain: 'harbour', title: 'Fish for the café', giver: 'Anura the harbourmaster',
+    intro: 'The morning catch is in! Pick it up from the harbour stalls and rush it to the café tables before it gets warm.',
+    steps: [
+      { kind: 'goto', text: 'Pick up the fish at the harbour stalls', targets: [T(-36, 50, 7)] },
+      { kind: 'deliver', text: 'Rush it to the café tables', targets: [T(26, 24, 6)], time: 30 },
+    ],
+    reward: { ink: 120 },
+  },
+  {
+    id: 'hb-2', chain: 'harbour', title: 'Open the gates', giver: 'Anura the harbourmaster', requires: 'hb-1',
+    intro: 'Every morning someone has to check the painted gates. Today that someone is you. Against the clock!',
+    steps: [{ kind: 'checkpoints', text: 'Visit every gate in order', targets: [T(0, -96, 8), T(-96, 0, 8), T(96, 0, 8), T(0, 30, 8)], time: 60 }],
+    reward: { ink: 200 },
+  },
+  {
+    id: 'hb-3', chain: 'harbour', title: 'Lighthouse at sunset', giver: 'Anura the harbourmaster', requires: 'hb-2',
+    intro: 'Walk down to the quay by the lighthouse and take a picture for the harbour office wall.',
+    steps: [
+      { kind: 'onfoot', text: 'Walk to the quay by the lighthouse', targets: [T(60, 62, 6)] },
+      { kind: 'photo', text: 'Photograph the lighthouse (P, then Save)', targets: [T(60, 62, 30)] },
+    ],
+    reward: { ink: 260, item: 'hat:flowers' },
+  },
+  // ————— Lantern Night (Lantern Village) —————
+  {
+    id: 'ln-1', chain: 'lantern', title: 'Lantern paper', giver: 'Linh the lantern maker',
+    intro: 'The wind scattered Linh’s coloured paper all over the village. Bring back four sheets.',
+    steps: [{ kind: 'collect', text: 'Collect the lantern paper', targets: [T(60, -5, 5), T(-70, 5, 5), T(0, -70, 5), T(-50, -60, 5)] }],
+    reward: { ink: 130 },
+  },
+  {
+    id: 'ln-2', chain: 'lantern', title: 'Light the gates', giver: 'Linh the lantern maker', requires: 'ln-1',
+    intro: 'Race up the torii tunnel lighting every lantern post, then round to the pagoda garden.',
+    steps: [{ kind: 'checkpoints', text: 'Light the lanterns in order', targets: [T(0, -30, 6), T(0, -60, 6), T(0, -90, 6), T(45, -30, 7), T(80, -64, 7)], time: 60 }],
+    reward: { ink: 210, item: 'roof:lanterns' },
+  },
+  {
+    id: 'ln-3', chain: 'lantern', title: 'Pagoda at dusk', giver: 'Linh the lantern maker', requires: 'ln-2',
+    intro: 'The lanterns are lit. Walk into the pagoda garden and take the photo for the festival poster.',
+    steps: [
+      { kind: 'onfoot', text: 'Walk into the pagoda garden', targets: [T(45, -34, 6)] },
+      { kind: 'photo', text: 'Photograph the pagoda (P, then Save)', targets: [T(45, -40, 30)] },
+    ],
+    reward: { ink: 280 },
   },
 ];
 

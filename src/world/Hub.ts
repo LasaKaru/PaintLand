@@ -370,6 +370,15 @@ export class Hub implements FreeRoamArea {
     this.put(west, -104, 26, Math.PI / 2);
     this.world.circle(-104, 26, 0.4);
     this.zones.push({ kind: 'area', label: '🏮 Lantern Village', x: -104, z: 40, r: 7, area: 'village', colour: '#e0432f' });
+    // …and the hill road north-east to Tea Hills.
+    const hillSign = new ModelKit()
+      .box(0.3, 4, 0.3, '#7a5a3a', { position: [0, 2, 0] })
+      .box(6, 1.4, 0.2, '#2d8a5a', { position: [0, 4, 0], nightGlow: 1 })
+      .blob(0.55, '#4f9a4a', { position: [0, 2.9, 0.2], scale: [1.2, 0.8, 1], detail: 1 })
+      .build(0.01);
+    this.put(hillSign, 96, -96, -Math.PI / 4);
+    this.world.circle(96, -96, 0.4);
+    this.zones.push({ kind: 'area', label: '🍃 Tea Hills', x: 90, z: -90, r: 7, area: 'hills', colour: '#2d8a5a' });
     // A kicker ramp on the harbour front and boost pads down the avenue.
     this.world.ramps.push({ x: -40, z: 52, heading: Math.PI / 2, halfWidth: 3, halfLength: 2.2, power: 6, stunt: false });
     this.put(new ModelKit().box(6, 1.3, 4.4, '#e4dccb', { position: [0, 0.15, 0], rotation: [0.3, 0, 0], pattern: Pattern.Planks }).build(0), -40, 52, Math.PI / 2);

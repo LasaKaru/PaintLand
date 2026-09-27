@@ -92,10 +92,13 @@ export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHo
   enterHub(): void;
   enterCity(): void;
   enterVillage(): void;
+  enterHills(): void;
   startCityMission(id: string): void;
   cancelCityMission(): void;
   /** Id of the open-world mission in progress, if any. */
   cityMission(): string | null;
+  /** The free-roam area you are in (null in a chapter or the menu). */
+  freeArea?(): string | null;
   uiSound(): void;
   startTrial(chapterId: string): void;
   startRace(chapterId: string): void;
@@ -144,6 +147,8 @@ export class Menu {
   private readonly passScreen: PassScreen;
   private readonly homeScreen: HomeScreen;
   private readonly contestScreen: ContestScreen;
+  /** The town whose mission board is open (set by the game at a board; the city from the main menu). */
+  boardArea: string | null = null;
   private readonly festivalGames: FestivalGames;
   private readonly workshopScreen: WorkshopScreen;
   /** The same painter, for mural boards in the free-roam areas. */
@@ -414,6 +419,7 @@ export class Menu {
         <button class="menu-item" data-nav="hub">${t('menu.hub')}</button>
         <button class="menu-item" data-nav="city">${t('menu.city')}</button>
         <button class="menu-item" data-nav="village">${t('menu.village')}</button>
+        <button class="menu-item" data-nav="hills">${t('menu.hills')}</button>
         <button class="menu-item" data-nav="daily">${t('daily.menu')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="roadstudio">🛣 ${t('rs.title')}</button>
@@ -499,7 +505,10 @@ export class Menu {
   private cityMissionsScreen(): string {
     const done = this.host.profile.data.seen.filter((s) => s.startsWith('cm:')).map((s) => s.slice(3));
     const current = this.host.cityMission();
-    const chains = CHAINS.map((c) => {
+    // The board shows this town's chains (the city's from the main menu).
+    const here = this.boardArea ?? 'city';
+    const shown = CHAINS.filter((c) => c.area === (CHAINS.some((x) => x.area === here) ? here : 'city'));
+    const chains = shown.map((c) => {
       const rows = CITY_MISSIONS.filter((m) => m.chain === c.id)
         .map((m) => {
           const isDone = done.includes(m.id);
@@ -516,7 +525,7 @@ export class Menu {
       return `<h3 class="hand">${c.icon} ${c.name}</h3><p class="menu-hint">${c.blurb}</p><div class="mission-grid">${rows}</div>`;
     }).join('');
     const cancel = current ? `<button class="btn" data-citymission="cancel">${t('cm.cancel')}</button>` : '';
-    return `<div class="menu-panel wide">${this.header(t('cm.title'))}<p class="menu-hint">${t('cm.intro')} (${done.length} / ${CITY_MISSIONS.length})</p>${cancel}${chains}</div>`;
+    return `<div class="menu-panel wide">${this.header(t('cm.title'))}<p class="menu-hint">${t('cm.intro')} (${done.length} / ${CITY_MISSIONS.length})</p>${cancel}<div class="row"><button class="btn" data-nav="missions">📋 ${t('menu.missions')}</button></div>${chains}</div>`;
   }
 
   private missionsScreen(): string {
@@ -614,7 +623,7 @@ export class Menu {
 
   private stickersScreen(): string {
     const p = this.host.profile;
-    const pages = stickerPages(p.data, this.host.stickerAreas(), { harbour: t('hub.name'), village: t('st.village'), city: t('city.name'), chapters: t('menu.chapters'), photos: t('st.photos'), garage: t('menu.garage') }, { secret: t('st.secret'), mural: t('st.mural') });
+    const pages = stickerPages(p.data, this.host.stickerAreas(), { harbour: t('hub.name'), village: t('st.village'), city: t('city.name'), hills: t('hills.name'), chapters: t('menu.chapters'), photos: t('st.photos'), garage: t('menu.garage') }, { secret: t('st.secret'), mural: t('st.mural') });
     const total = pages.reduce((n, pg) => n + pg.stickers.filter((x) => x.got).length, 0);
     const all = pages.reduce((n, pg) => n + pg.stickers.length, 0);
     const html = pages
@@ -1153,8 +1162,12 @@ export class Menu {
       else if (d.nav === 'hub') this.host.enterHub();
       else if (d.nav === 'city') this.host.enterCity();
       else if (d.nav === 'village') this.host.enterVillage();
+      else if (d.nav === 'hills') this.host.enterHills();
       else if (d.nav === 'resume') this.host.resume();
-      else this.show(d.nav as MenuScreen);
+      else {
+        if (d.nav === 'citymissions') this.boardArea = null;
+        this.show(d.nav as MenuScreen);
+      }
       return;
     }
     if (d.citymission) {

@@ -889,5 +889,9 @@ const pt: Locale = {
   'ws.worn': 'Pintura aplicada! Vê na garagem.',
   'ws.agreement': 'Publicado. Aceita o acordo do Workshop no Steam para que outros o vejam.',
   'ws.published': 'Publicado no Workshop do Steam!',
+  'menu.hills': '🍃 Colinas do Chá',
+  'hills.kicker': 'Quarta vila',
+  'hills.name': 'Colinas do Chá',
+  'hills.poem': 'Chá em cada encosta, um comboio azul pequenino e uma cascata nas nuvens',
 };
 export default pt;

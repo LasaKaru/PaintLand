@@ -889,5 +889,9 @@ const ko: Locale = {
   'ws.worn': '도색을 입혔어요! 차고에서 확인하세요.',
   'ws.agreement': '게시했어요. 다른 사람이 볼 수 있도록 Steam에서 창작마당 약관에 동의하세요.',
   'ws.published': 'Steam 창작마당에 게시했어요!',
+  'menu.hills': '🍃 차 언덕',
+  'hills.kicker': '네 번째 마을',
+  'hills.name': '차 언덕',
+  'hills.poem': '비탈마다 차밭, 작은 파란 기차, 구름 속 폭포',
 };
 export default ko;

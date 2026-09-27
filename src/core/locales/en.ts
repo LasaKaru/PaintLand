@@ -887,6 +887,10 @@ const en = {
   'ws.worn': 'Livery on! See it in the garage.',
   'ws.agreement': 'Published. Accept the Steam Workshop agreement in Steam so others can see it.',
   'ws.published': 'Published to the Steam Workshop!',
+  'menu.hills': '🍃 Tea Hills',
+  'hills.kicker': 'Hub four',
+  'hills.name': 'Tea Hills',
+  'hills.poem': 'Tea on every slope, a little blue train, and a waterfall in the clouds',
 } as const;
 
 export default en;

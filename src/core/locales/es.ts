@@ -889,5 +889,9 @@ const es: Locale = {
   'ws.worn': '¡Decoración puesta! Mírala en el garaje.',
   'ws.agreement': 'Publicado. Acepta el acuerdo del Workshop en Steam para que otros lo vean.',
   'ws.published': '¡Publicado en el Workshop de Steam!',
+  'menu.hills': '🍃 Colinas del Té',
+  'hills.kicker': 'Cuarto pueblo',
+  'hills.name': 'Colinas del Té',
+  'hills.poem': 'Té en cada ladera, un trenecito azul y una cascada entre las nubes',
 };
 export default es;

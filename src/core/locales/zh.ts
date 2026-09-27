@@ -889,5 +889,9 @@ const zh: Locale = {
   'ws.worn': '涂装已换上！去车库看看。',
   'ws.agreement': '已发布。请在 Steam 中接受创意工坊协议，其他人才能看到。',
   'ws.published': '已发布到 Steam 创意工坊！',
+  'menu.hills': '🍃 茶山',
+  'hills.kicker': '第四座小镇',
+  'hills.name': '茶山',
+  'hills.poem': '满坡茶园，一列蓝色小火车，云中还有一道瀑布',
 };
 export default zh;

@@ -889,5 +889,9 @@ const pl: Locale = {
   'ws.worn': 'Malowanie założone! Zobacz w garażu.',
   'ws.agreement': 'Opublikowano. Zaakceptuj umowę Warsztatu w Steamie, by inni mogli to zobaczyć.',
   'ws.published': 'Opublikowano w Warsztacie Steam!',
+  'menu.hills': '🍃 Herbaciane Wzgórza',
+  'hills.kicker': 'Czwarte miasteczko',
+  'hills.name': 'Herbaciane Wzgórza',
+  'hills.poem': 'Herbata na każdym zboczu, mały niebieski pociąg i wodospad w chmurach',
 };
 export default pl;

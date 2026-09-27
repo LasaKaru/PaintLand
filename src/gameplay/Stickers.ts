@@ -32,7 +32,7 @@ export interface StickerArea {
 }
 
 export const PAGE_REWARD = 150;
-export const AREA_PAGES = ['harbour', 'village', 'city'];
+export const AREA_PAGES = ['harbour', 'village', 'city', 'hills'];
 
 const VEHICLE_ICON: Record<string, string> = { rover: '🚙', tuktuk: '🛺', coupe: '🚗', buggy: '🏖', van: '🚐', scooter: '🛵', paperboat: '⛵', balloon: '🎈', bicycle: '🚲', tukracer: '🏁' };
 

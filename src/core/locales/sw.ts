@@ -889,5 +889,9 @@ const sw: Locale = {
   'ws.worn': 'Rangi imewekwa! Ione gereji.',
   'ws.agreement': 'Imechapishwa. Kubali makubaliano ya Workshop kwenye Steam ili wengine waione.',
   'ws.published': 'Imechapishwa kwenye Steam Workshop!',
+  'menu.hills': '🍃 Milima ya Chai',
+  'hills.kicker': 'Mji wa nne',
+  'hills.name': 'Milima ya Chai',
+  'hills.poem': 'Chai kila mteremko, treni ndogo ya bluu, na maporomoko mawinguni',
 };
 export default sw;

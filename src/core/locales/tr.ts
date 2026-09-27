@@ -889,5 +889,9 @@ const tr: Locale = {
   'ws.worn': 'Boyama giydirildi! Garajda bak.',
   'ws.agreement': "Yayımlandı. Başkaları görsün diye Steam'de Atölye sözleşmesini kabul et.",
   'ws.published': "Steam Atölyesi'nde yayımlandı!",
+  'menu.hills': '🍃 Çay Tepeleri',
+  'hills.kicker': 'Dördüncü kasaba',
+  'hills.name': 'Çay Tepeleri',
+  'hills.poem': 'Her yamaçta çay, küçük mavi bir tren ve bulutların arasında bir şelale',
 };
 export default tr;

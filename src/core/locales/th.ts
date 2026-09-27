@@ -889,5 +889,9 @@ const th: Locale = {
   'ws.worn': 'ใส่ลายรถแล้ว! ดูได้ในโรงรถ',
   'ws.agreement': 'เผยแพร่แล้ว ยอมรับข้อตกลง Workshop ใน Steam เพื่อให้คนอื่นเห็น',
   'ws.published': 'เผยแพร่ไปยัง Steam Workshop แล้ว!',
+  'menu.hills': '🍃 เนินชา',
+  'hills.kicker': 'เมืองที่สี่',
+  'hills.name': 'เนินชา',
+  'hills.poem': 'ไร่ชาทุกเนิน รถไฟสีฟ้าขบวนเล็ก และน้ำตกกลางเมฆ',
 };
 export default th;

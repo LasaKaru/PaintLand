@@ -81,7 +81,13 @@ export function villageSpots(): BoardSpot[] {
   ];
 }
 
+/** Tea Hills: the square, the station and the lakeside. */
+export function hillsSpots(): BoardSpot[] {
+  const toward = (x: number, z: number, tx: number, tz: number, style: BoardSpot['style'] = 'billboard'): BoardSpot => ({ x, z, yaw: Math.atan2(tx - x, tz - z), style });
+  return [toward(-15, 14, 0, 0), toward(15, 14, 0, 0), toward(-60, 56, -60, 62, 'banner'), toward(20, 46, 20, 40)];
+}
+
 /** Board spots for a free-roam area by id. */
 export function brandSpotsFor(id: string): BoardSpot[] {
-  return id === 'city' ? citySpots() : id === 'village' ? villageSpots() : hubSpots();
+  return id === 'city' ? citySpots() : id === 'village' ? villageSpots() : id === 'hills' ? hillsSpots() : hubSpots();
 }

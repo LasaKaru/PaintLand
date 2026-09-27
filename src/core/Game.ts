@@ -57,7 +57,7 @@ import { City } from '../world/City';
 import type { FreeRoamArea, StuntJump } from '../world/FreeRoamArea';
 import { buildBeacon, buildChest, buildPaintPot } from '../models/CityProps';
 import { openChest, RARITY_COLOURS, RARITY_NAMES } from '../gameplay/Loot';
-import { CHAINS, CITY_MISSIONS, FreeMissionTracker, type MissionEvent } from '../gameplay/CityMissions';
+import { CHAINS, CITY_MISSIONS, FreeMissionTracker, missionArea, type MissionEvent } from '../gameplay/CityMissions';
 import { districtProgress, inRect, type DistrictProgress, type Stroke } from '../gameplay/Restoration';
 import { CHALLENGES, bumpStreak, challengeAmount, challengeProgress, ensureDaily } from '../gameplay/Challenges';
 import { PHOTO_SUBJECTS, subjectsInFrame, type PhotoSubject } from '../gameplay/PhotoHunt';
@@ -86,6 +86,7 @@ import { cleanLantern, type LanternDesign } from '../ui/FestivalGames';
 import { photoUrl, type ContestState } from '../ui/ContestScreen';
 import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
 import { Hub as HarbourHub } from '../world/Hub';
+import { Hills } from '../world/Hills';
 import type { PocketKind } from '../world/Pockets';
 import { DOTS_PER_MESSAGE, TrailBrush, TrailLayer, TrailStore, nearestTrailColour, packDots, type TrailDot } from '../gameplay/PaintTrail';
 
@@ -431,11 +432,13 @@ export class Game {
       enterHub: () => this.enterHub(undefined, 'harbour'),
       enterCity: () => this.enterHub(undefined, 'city'),
       enterVillage: () => this.enterHub(undefined, 'village'),
+      enterHills: () => this.enterHub(undefined, 'hills'),
       runBenchmark: (done: (r: BenchmarkResult) => void) => this.runBenchmark(done),
       testRoad: (road: CustomRoad) => this.testRoad(road),
       startCityMission: (id) => this.startCityMission(id),
       cancelCityMission: () => this.freeMissions.cancel(),
       cityMission: () => this.freeMissions.mission?.id ?? null,
+      freeArea: () => (this.inHub && this.area ? this.area.id : null),
       uiSound: () => this.audio.uiClick(),
       startTrial: (id) => this.startTrial(id),
       startRace: (id) => this.startRaceForAll(id),
@@ -2824,7 +2827,7 @@ export class Game {
   private areaFor(id: string): FreeRoamArea {
     let area = this.areas.get(id);
     if (area) return area;
-    area = id === 'city' ? new City(this.hud.labels) : id === 'village' ? new Village(this.hud.labels) : new Hub(this.hud.labels);
+    area = id === 'city' ? new City(this.hud.labels) : id === 'village' ? new Village(this.hud.labels) : id === 'hills' ? new Hills(this.hud.labels) : new Hub(this.hud.labels);
     this.scene.add(area.group);
     if (area instanceof HarbourHub) queueMicrotask(() => this.refreshHome(false));
     // Company and sponsor boards, with solid posts.
@@ -2881,6 +2884,8 @@ export class Game {
     const area = this.areaFor(id);
     this.area = area;
     void this.refreshWinnerBoard();
+    // A free-roam mission belongs to its own town.
+    if (this.freeMissions.mission && missionArea(this.freeMissions.mission) !== id) this.freeMissions.cancel();
     this.menu.show('none');
     this.setShowcase(null);
     this.hud.letterbox(false);
@@ -3142,8 +3147,9 @@ export class Game {
   private startCityMission(id: string): void {
     const m = CITY_MISSIONS.find((q) => q.id === id);
     if (!m) return;
+    const where = missionArea(m);
     const snap = this.resumeSnapshot?.hub;
-    this.enterHub(snap?.area === 'city' ? snap : undefined, 'city');
+    this.enterHub(snap?.area === where ? snap : undefined, where);
     this.freeMissions.start(m);
     this.hud.lootCard(CHAINS.find((c) => c.id === m.chain)?.name ?? '', '#4a90c9', m.title, m.intro);
     this.audio.chime(67);
@@ -3217,7 +3223,11 @@ export class Game {
     else if (zone.kind === 'garage') this.openMenu('garage');
     else if (zone.kind === 'wardrobe') this.openMenu('wardrobe');
     else if (zone.kind === 'shop') this.openMenu('shop');
-    else if (zone.kind === 'missions') this.openMenu(this.area?.id === 'city' ? 'citymissions' : 'missions');
+    else if (zone.kind === 'missions') {
+      const here = this.area?.id ?? null;
+      this.menu.boardArea = here;
+      this.openMenu(CHAINS.some((c) => c.area === here) ? 'citymissions' : 'missions');
+    }
     else if (zone.kind === 'trophies') this.openMenu('trophies');
     else if (zone.kind === 'mailbox') this.openMenu('mailbox');
     else if (zone.kind === 'home') this.openMenu('home');
@@ -3425,7 +3435,7 @@ export class Game {
       splash: this.splash * 0.8,
       sunDir: this.env.sunDirection,
       sunColor: this.env.sunColour,
-      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.drawDistance()) * (area.id === 'city' ? 0.5 : area.id === 'village' ? 0.7 : 1),
+      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.drawDistance()) * (area.id === 'city' ? 0.5 : area.id === 'village' ? 0.7 : area.id === 'hills' ? 1.4 : 1),
       flash: this.env.flash,
       dofFocus: 10,
       dofAmount: 0,

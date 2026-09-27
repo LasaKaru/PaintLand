@@ -65,12 +65,12 @@ Stop the car and press **F** (or **E**) to get out and walk. Press it again near
 
 ## Towns and glowing rings
 
-There are three free-roam towns: **Harbour Town**, **Lantern Village** and **Serendib City**. A **glowing ring** on the ground is a place. Stand in it and press **E**:
+There are four free-roam towns: **Harbour Town**, **Lantern Village**, **Serendib City** and **Tea Hills** (up the hill road from Harbour Town). A **glowing ring** on the ground is a place. Stand in it and press **E**:
 
 - 🔧 **Garage:** vehicles, paint, parts, wraps and liveries
 - 👒 **Wardrobe:** clothes, outfits and pets
 - 🧪 **Shop:** tonics and extras
-- 📋 **Mission board:** missions to pick up
+- 📋 **Mission board:** that town's mission stories (and a button to the chapter missions)
 - 🏆 **Trophy hall:** your trophies
 - 📬 **Mailbox:** postcards from friends (in Harbour Town, by your house)
 - 🏡 **My home:** your house in Harbour Town: colours, keepsakes, trophy shelf, pinned postcards

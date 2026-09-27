@@ -889,5 +889,9 @@ const vi: Locale = {
   'ws.worn': 'Đã dùng nước sơn! Xem trong gara.',
   'ws.agreement': 'Đã đăng. Hãy chấp nhận thỏa thuận Workshop trong Steam để người khác thấy.',
   'ws.published': 'Đã đăng lên Steam Workshop!',
+  'menu.hills': '🍃 Đồi Chè',
+  'hills.kicker': 'Thị trấn thứ tư',
+  'hills.name': 'Đồi Chè',
+  'hills.poem': 'Chè phủ mọi sườn đồi, chuyến tàu xanh nhỏ và thác nước giữa mây',
 };
 export default vi;
