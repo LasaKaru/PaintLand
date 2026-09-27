@@ -25,7 +25,7 @@ export interface TrialRun extends TrialConfig {
 }
 
 /** Bump when physics changes so old runs are not compared with new ones. */
-export const TRIAL_VERSION = 1;
+export const TRIAL_VERSION = 2;
 
 const FLAG = { hop: 1, boost: 2, drift: 4, shiftUp: 8, shiftDown: 16 } as const;
 
