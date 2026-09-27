@@ -746,3 +746,6 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .privacy-dialog iframe { flex: 1; border: 0; width: 100%; background: #fbf6ea; }
 .privacy-dialog::backdrop { background: rgba(20, 16, 12, 0.45); }
 .trail-swatch { font: 700 10px var(--mono); color: var(--ink); width: auto; min-width: 28px; padding: 0 6px; border-radius: 14px; }
+.fest-canvas { display: block; max-width: 100%; border: 2px solid var(--ink); border-radius: 8px; background: #1f1c2e; margin: 8px 0; touch-action: none; }
+.fest-lantern { display: flex; flex-wrap: wrap; gap: 16px; align-items: flex-start; }
+.fest-lantern .fest-canvas { cursor: pointer; width: 300px; }

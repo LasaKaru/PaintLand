@@ -45,13 +45,14 @@ import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtSt
 import { TRAIL_COLOURS } from '../gameplay/PaintTrail';
 import { HomeScreen, type HomeHost } from './HomeScreen';
 import { ContestScreen, type ContestHost } from './ContestScreen';
+import { FestivalGames, type FestivalHost } from './FestivalGames';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'none';
 
 /** Everything the menu needs from the game. */
-export interface MenuHost extends AccountHost, HomeHost, ContestHost {
+export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHost {
   profile: Profile;
   runBenchmark(done: (r: BenchmarkResult) => void): void;
   testRoad(road: CustomRoad): void;
@@ -139,6 +140,7 @@ export class Menu {
   private readonly passScreen: PassScreen;
   private readonly homeScreen: HomeScreen;
   private readonly contestScreen: ContestScreen;
+  private readonly festivalGames: FestivalGames;
   /** The same painter, for mural boards in the free-roam areas. */
   private readonly muralEditor = new LiveryEditor(
     (code) => {
@@ -186,6 +188,11 @@ export class Menu {
       host,
       () => (this.screen === 'mailbox' || this.screen === 'home' || this.screen === 'postcard') && this.render(),
       (m) => this.toast(m),
+    );
+    this.festivalGames = new FestivalGames(
+      host,
+      (m) => this.toast(m),
+      () => this.screen === 'festival' && this.render(),
     );
     this.contestScreen = new ContestScreen(
       host,
@@ -270,6 +277,7 @@ export class Menu {
       multiplayer: () => this.multiplayer(),
       gallery: () => `<div class="menu-panel wide">${this.header(`🖼 ${t('gal.title')}`)}<div class="panel-body">${this.galleryScreen.render()}</div></div>`,
       pass: () => `<div class="menu-panel wide">${this.header(`🎟 ${t('pass.title')}`)}<div class="panel-body">${this.passScreen.render()}</div></div>`,
+      festival: () => `<div class="menu-panel wide">${this.header(`🏮 ${t('fg.title')}`)}<div class="panel-body" data-id="festival">${this.festivalGames.render()}</div></div>`,
       contest: () => `<div class="menu-panel wide">${this.header(`📸 ${t('pc.title')}`)}<div class="panel-body">${this.contestScreen.render()}</div></div>`,
       mailbox: () => `<div class="menu-panel wide">${this.header(`📬 ${t('mail.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('mailbox')}</div></div>`,
       home: () => `<div class="menu-panel">${this.header(`🏡 ${t('home.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('home')}</div></div>`,
@@ -286,6 +294,9 @@ export class Menu {
     this.root.innerHTML = `${body}<div class="menu-toast ${live ? 'show' : ''}" data-id="toast" role="status" aria-live="polite">${live ? escapeHtml(this.toastText) : ''}</div>`;
     const lv = s === 'livery' ? this.root.querySelector<HTMLElement>('[data-id="livery"]') : null;
     if (lv) this.liveryEditor.mount(lv, this.host.profile.vehicleLook(this.host.profile.data.vehicle).livery);
+    const fe = s === 'festival' ? this.root.querySelector<HTMLElement>('[data-id="festival"]') : null;
+    if (fe) this.festivalGames.mount(fe);
+    else this.festivalGames.unmount();
     const mu = s === 'mural' ? this.root.querySelector<HTMLElement>('[data-id="mural"]') : null;
     const muralId = this.host.currentMural();
     if (mu && muralId) this.muralEditor.mount(mu, this.host.profile.data.murals?.[muralId]);
@@ -395,6 +406,7 @@ export class Menu {
         <button class="menu-item" data-nav="roadstudio">🛣 ${t('rs.title')}</button>
         <button class="menu-item" data-nav="gallery">🖼 ${t('gal.title')}</button>
         <button class="menu-item" data-nav="contest">📸 ${t('pc.title')}</button>
+        <button class="menu-item" data-nav="festival">🏮 ${t('fg.title')}</button>
         <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
@@ -1064,6 +1076,7 @@ export class Menu {
     if (this.passScreen.onClick(el)) return;
     if (this.homeScreen.onClick(el)) return;
     if (this.contestScreen.onClick(el)) return;
+    if (this.festivalGames.onClick(el)) return;
     if (d.featured) {
       const r = buyFeatured(p, d.featured);
       this.toast(r === 'ok' ? `✓ ${itemLabel(d.featured)}` : r === 'poor' ? t('shop.poor') : '');

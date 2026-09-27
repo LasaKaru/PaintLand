@@ -80,6 +80,7 @@ import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
 import { MailClient, postcardImage, type VisitedHome } from '../net/Mail';
 import { SkyBrush } from '../gameplay/SkyBrush';
+import { cleanLantern, type LanternDesign } from '../ui/FestivalGames';
 import { photoUrl, type ContestState } from '../ui/ContestScreen';
 import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
 import { Hub as HarbourHub } from '../world/Hub';
@@ -342,6 +343,32 @@ export class Game {
       pendingPostcard: () => this.postcardImg,
       clearPostcard: () => (this.postcardImg = null),
       chatMode: () => this.options.chat,
+      lanterns: () => this.profile.data.lanterns ?? [],
+      saveLantern: (d) => {
+        const p = this.profile;
+        p.data.lanterns = [...(p.data.lanterns ?? []), d].slice(-3);
+        // Ink once a day for a new lantern.
+        if (p.markSeen(`lantern-day:${new Date().toDateString()}`)) p.data.ink += 60;
+        p.markSeen('lantern');
+        p.save();
+        this.refreshHome(true);
+        this.checkTrophies();
+      },
+      removeLantern: (i) => {
+        const p = this.profile;
+        p.data.lanterns = (p.data.lanterns ?? []).filter((_, k) => k !== i);
+        p.save();
+        this.refreshHome(true);
+      },
+      potReward: (pots) => {
+        const ink = pots * 20 * (resolveFestival(this.options.festival) === 'avurudu' ? 2 : 1);
+        this.profile.data.ink += ink;
+        this.profile.addStat('pots', pots);
+        this.profile.save();
+        this.checkTrophies();
+        return ink;
+      },
+      sound: (f, d) => this.audio.blip(f, d ?? 0.08, 'triangle', 0.05),
       pendingEntry: () => this.contestImg,
       clearEntry: () => (this.contestImg = null),
       together: (kind) => this.startTogether(kind),
@@ -775,7 +802,7 @@ export class Game {
     hub?.home.set(
       v
         ? { walls: v.home.walls, roof: v.home.roof, keepsakes: v.home.keepsakes as PocketKind[], trophies: v.home.trophies, owner: t('home.of', { name: v.name }) }
-        : { walls: layout.walls, roof: layout.roof, keepsakes: shownKeepsakes(layout, p.data.seen), trophies: p.data.trophies.length, owner: t('home.of', { name: p.data.name }) },
+        : { walls: layout.walls, roof: layout.roof, keepsakes: shownKeepsakes(layout, p.data.seen), trophies: p.data.trophies.length, owner: t('home.of', { name: p.data.name }), lanterns: (p.data.lanterns ?? []).map(cleanLantern).filter((l): l is LanternDesign => !!l) },
     );
     this.refreshWall();
     // Tell the server (friends visit what it has), at most every few seconds.

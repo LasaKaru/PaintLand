@@ -3,6 +3,7 @@ import { ModelKit, Pattern } from '../models/ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
 import { buildPocket, type PocketKind } from './Pockets';
 import { trophyCups } from '../gameplay/Home';
+import type { LanternDesign } from '../ui/FestivalGames';
 
 /** Where the home stands in Harbour Town (by the harbour gardens, open side facing the avenue). */
 export const HOME_SPOT = { x: -68, z: 42, yaw: Math.PI };
@@ -36,6 +37,8 @@ export interface HomeLook {
   trophies: number;
   /** Whose home is shown (a friend's when visiting). */
   owner: string;
+  /** Vesak lanterns hanging from the front beam. */
+  lanterns?: LanternDesign[];
 }
 
 /**
@@ -175,6 +178,22 @@ export function buildHome(look: HomeLook): THREE.BufferGeometry {
   k.cylinder(0.45, 0.45, 1.5, 10, '#d8463a', { position: [-W / 2 - 1.5, 0.75, D / 2 + 2] });
   k.cylinder(0.5, 0.5, 0.3, 10, trim, { position: [-W / 2 - 1.5, 1.6, D / 2 + 2] });
   k.box(0.6, 0.1, 0.1, trim, { position: [-W / 2 - 1.5, 1.2, D / 2 + 2.46] });
+  // Your Vesak lanterns, hanging from the front beam (they glow at night).
+  (look.lanterns ?? []).slice(0, 3).forEach((l, n) => {
+    const lx = (n - 1) * 5;
+    const ly = H - 1.6;
+    const lz = D / 2 + 0.2;
+    k.cylinder(0.02, 0.02, 1.1, 4, trim, { position: [lx, H - 0.55, lz] });
+    const star = l.frame === 'star';
+    for (let i = 0; i < 8; i++) {
+      const a = (i / 8) * Math.PI * 2;
+      const r = star && i % 2 ? 0.75 : 0.55;
+      k.box(0.44, l.frame === 'box' ? 0.9 : 0.8, 0.06, l.panels[i], { position: [lx + Math.sin(a) * r, ly, lz + Math.cos(a) * r], rotation: [0, a, 0], nightGlow: 1 });
+    }
+    k.box(0.9, 0.08, 0.9, trim, { position: [lx, ly + 0.45, lz] });
+    k.box(0.9, 0.08, 0.9, trim, { position: [lx, ly - 0.45, lz] });
+    for (let t = -1; t <= 1; t++) k.box(0.05, 0.7, 0.05, l.tassel, { position: [lx + t * 0.25, ly - 0.85, lz] });
+  });
   const geo = k.build(0.02);
   // Keepsakes from the pockets you found, small, on the floor.
   const parts = [geo];

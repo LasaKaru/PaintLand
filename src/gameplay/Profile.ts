@@ -204,6 +204,8 @@ export interface ProfileData {
   murals?: Record<string, string>;
   /** Your home in Harbour Town (colours and keepsakes on show). */
   home?: import('./Home').HomeLayout;
+  /** Vesak lanterns you made (they hang from your home). */
+  lanterns?: import('../ui/FestivalGames').LanternDesign[];
   /** Saved outfit sets. */
   outfits?: OutfitSet[];
   tonics: Record<TonicId, number>;
