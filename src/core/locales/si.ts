@@ -974,5 +974,17 @@ const si: Locale = {
   'end.thanks': 'ක්‍රීඩා කළාට ස්තූතියි',
   'end.keep': 'දිගටම පාට කරන්න',
   'end.keepSub': 'මුළු ලෝකයම තවමත් ඔබට ගවේෂණය කිරීමට',
+  'mission.again': '(ඔබ මෙය කලින් කළා — නැවතත් ත්‍යාගය ලැබේ!)',
+  'mission.reward': 'ත්‍යාගය: තීන්ත {n}.',
+  'tonic.none': 'ඉතිරි නැත — සාප්පුවෙන් ටොනික් මිලදී ගන්න',
+  'menu.keysReset': 'යතුරු යළි සකසන ලදී',
+  'lut.bad': 'මෙම ගොනුව ක්‍රීඩාවට කියවිය හැකි 3D .cube LUT එකක් නොවේ.',
+  'lut.loaded': 'වර්ණ ශ්‍රේණිය පූරණය විය: {name}',
+  'tonic.magnet.buff': 'ස්වර චුම්බකය',
+  'tonic.magnet.down': 'වේග වැඩිවීමක් නැත',
+  'tonic.feather.buff': 'උස් පැනීම්',
+  'tonic.feather.down': 'තිරිංග නැත',
+  'tonic.fizzy.buff': 'පෙණ තීන්ත +20%',
+  'tonic.fizzy.down': 'සෙලවෙයි',
 };
 export default si;

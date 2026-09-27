@@ -974,5 +974,17 @@ const bn: Locale = {
   'end.thanks': 'খেলার জন্য ধন্যবাদ',
   'end.keep': 'রাঙাতে থাকো',
   'end.keepSub': 'পুরো পৃথিবী এখনও তোমার ঘুরে দেখার জন্য',
+  'mission.again': '(এটা আগেও করেছ — আবারও পুরস্কার পাবে!)',
+  'mission.reward': 'পুরস্কার: {n} কালি।',
+  'tonic.none': 'আর নেই — দোকান থেকে টনিক কেনো',
+  'menu.keysReset': 'কী রিসেট হয়েছে',
+  'lut.bad': 'এই ফাইলটি এমন 3D .cube LUT নয় যা গেম পড়তে পারে।',
+  'lut.loaded': 'রঙের গ্রেড লোড হয়েছে: {name}',
+  'tonic.magnet.buff': 'সুরের চুম্বক',
+  'tonic.magnet.down': 'বুস্ট নেই',
+  'tonic.feather.buff': 'উঁচু লাফ',
+  'tonic.feather.down': 'ব্রেক নেই',
+  'tonic.fizzy.buff': 'ঝাঁঝালো কালি +২০%',
+  'tonic.fizzy.down': 'টলমলে',
 };
 export default bn;

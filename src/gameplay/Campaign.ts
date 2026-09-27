@@ -58,6 +58,11 @@ export function finaleReady(s: StoryState): boolean {
   return s.started && STORY_PAGES.every((p) => s.found.includes(p.chapter)) && !s.finale;
 }
 
+/** The ending should play at the edge: the finale is ready, or it was interrupted before the credits. */
+export function endingDue(s: StoryState): boolean {
+  return finaleReady(s) || (!!s.finale && !s.credits);
+}
+
 /** "Mission 3" etc.: the prologue and finale have names instead of numbers (null). */
 export function missionNumber(i: number): number | null {
   const step = CAMPAIGN[i];

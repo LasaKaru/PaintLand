@@ -974,5 +974,17 @@ const es: Locale = {
   'end.thanks': 'Gracias por jugar',
   'end.keep': 'Sigue pintando',
   'end.keepSub': 'Todo el mundo sigue siendo tuyo para explorar',
+  'mission.again': '(Ya lo hiciste: ¡vuelve a pagar!)',
+  'mission.reward': 'Recompensa: {n} de tinta.',
+  'tonic.none': 'No te quedan: compra tónicos en la tienda',
+  'menu.keysReset': 'Teclas restablecidas',
+  'lut.bad': 'Ese archivo no es una LUT 3D .cube que el juego pueda leer.',
+  'lut.loaded': 'Gradación de color cargada: {name}',
+  'tonic.magnet.buff': 'Imán de notas',
+  'tonic.magnet.down': 'Sin turbo',
+  'tonic.feather.buff': 'Saltos altos',
+  'tonic.feather.down': 'Sin frenos',
+  'tonic.fizzy.buff': 'Tinta burbujeante +20 %',
+  'tonic.fizzy.down': 'Tambaleante',
 };
 export default es;

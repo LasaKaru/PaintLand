@@ -974,5 +974,17 @@ const sw: Locale = {
   'end.thanks': 'Asante kwa kucheza',
   'end.keep': 'Endelea kupaka rangi',
   'end.keepSub': 'Dunia nzima bado ni yako kuichunguza',
+  'mission.again': '(Umeshafanya hili — linalipa tena!)',
+  'mission.reward': 'Zawadi: wino {n}.',
+  'tonic.none': 'Zimekwisha — nunua tonic dukani',
+  'menu.keysReset': 'Vitufe vimewekwa upya',
+  'lut.bad': 'Faili hiyo si LUT ya 3D .cube ambayo mchezo unaweza kusoma.',
+  'lut.loaded': 'Mpangilio wa rangi umepakiwa: {name}',
+  'tonic.magnet.buff': 'Sumaku ya noti',
+  'tonic.magnet.down': 'Hakuna kasi ya ziada',
+  'tonic.feather.buff': 'Miruko mirefu',
+  'tonic.feather.down': 'Hakuna breki',
+  'tonic.fizzy.buff': 'Wino wa povu +20%',
+  'tonic.fizzy.down': 'Kuyumbayumba',
 };
 export default sw;

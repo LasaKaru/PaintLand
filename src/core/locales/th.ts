@@ -974,5 +974,17 @@ const th: Locale = {
   'end.thanks': 'ขอบคุณที่เล่น',
   'end.keep': 'ระบายสีต่อไป',
   'end.keepSub': 'โลกทั้งใบยังรอให้คุณสำรวจ',
+  'mission.again': '(เคยทำแล้ว — แต่ได้รางวัลอีกครั้ง!)',
+  'mission.reward': 'รางวัล: หมึก {n}',
+  'tonic.none': 'หมดแล้ว — ซื้อยาบำรุงที่ร้าน',
+  'menu.keysReset': 'รีเซ็ตปุ่มแล้ว',
+  'lut.bad': 'ไฟล์นี้ไม่ใช่ LUT 3D .cube ที่เกมอ่านได้',
+  'lut.loaded': 'โหลดการปรับสีแล้ว: {name}',
+  'tonic.magnet.buff': 'แม่เหล็กโน้ต',
+  'tonic.magnet.down': 'ไม่มีบูสต์',
+  'tonic.feather.buff': 'กระโดดสูง',
+  'tonic.feather.down': 'ไม่มีเบรก',
+  'tonic.fizzy.buff': 'หมึกซ่า +20%',
+  'tonic.fizzy.down': 'โคลงเคลง',
 };
 export default th;

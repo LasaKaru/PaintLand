@@ -1507,7 +1507,7 @@ export class Menu {
         break;
       case 'reset-binds':
         this.host.input().resetBindings();
-        this.toast('Keys reset');
+        this.toast(t('menu.keysReset'));
         this.render();
         break;
     }
@@ -1555,12 +1555,12 @@ export class Menu {
       void file.text().then((text) => {
         const title = this.host.loadLut(text);
         if (!title) {
-          this.toast('That file isn’t a 3D .cube LUT the game can read.');
+          this.toast(t('lut.bad'));
           return;
         }
         this.host.studio().lut = 'custom';
         this.host.settingsChanged();
-        this.toast(`Colour grade loaded: ${title}`);
+        this.toast(t('lut.loaded', { name: title }));
         this.render();
       });
       return;

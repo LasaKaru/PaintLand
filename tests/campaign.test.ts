@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { CAMPAIGN, finaleReady, missionNumber, nextStep, progress, stepState } from '../src/gameplay/Campaign';
+import { CAMPAIGN, endingDue, finaleReady, missionNumber, nextStep, progress, stepState } from '../src/gameplay/Campaign';
 import { STORY_PAGES, type StoryState } from '../src/gameplay/Story';
 import { checkCheckpoint } from '../src/gameplay/Checkpoint';
 import { CHAPTERS } from '../src/world/Chapters';
@@ -39,6 +39,10 @@ describe('the campaign: prologue, eight missions, finale', () => {
     expect(nextStep(s)).toBe(CAMPAIGN.length);
     expect(progress(s)).toBe(1);
     expect(finaleReady(s)).toBe(false);
+    // An ending the player walked away from plays again, until the credits were seen.
+    expect(endingDue(s)).toBe(true);
+    s.credits = true;
+    expect(endingDue(s)).toBe(false);
   });
 
   it('only trusts checkpoints that make sense', () => {

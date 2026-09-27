@@ -972,6 +972,18 @@ const en = {
   'end.thanks': 'Thank you for playing',
   'end.keep': 'Keep painting',
   'end.keepSub': 'The whole world is still yours to explore',
+  'mission.again': '(You did this already — it pays again!)',
+  'mission.reward': 'Reward: {n} ink.',
+  'tonic.none': 'None left — buy tonics in the shop',
+  'menu.keysReset': 'Keys reset',
+  'lut.bad': 'That file isn’t a 3D .cube LUT the game can read.',
+  'lut.loaded': 'Colour grade loaded: {name}',
+  'tonic.magnet.buff': 'Note magnet',
+  'tonic.magnet.down': 'No boost',
+  'tonic.feather.buff': 'High jumps',
+  'tonic.feather.down': 'No brakes',
+  'tonic.fizzy.buff': 'Fizzy ink +20%',
+  'tonic.fizzy.down': 'Wobbly',
 } as const;
 
 export default en;

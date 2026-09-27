@@ -84,7 +84,7 @@ import { RemotePlayers } from '../net/RemotePlayers';
 import { MailClient, postcardImage, type VisitedHome } from '../net/Mail';
 import { SkyBrush } from '../gameplay/SkyBrush';
 import { STORY_END_INK, STORY_ENDING, STORY_INK, STORY_INTRO, STORY_PAGES, findColour, nextPage, storyState } from '../gameplay/Story';
-import { CAMPAIGN, finaleReady } from '../gameplay/Campaign';
+import { CAMPAIGN, endingDue, finaleReady } from '../gameplay/Campaign';
 import { checkCheckpoint, type Checkpoint } from '../gameplay/Checkpoint';
 import { cleanLantern, type LanternDesign } from '../ui/FestivalGames';
 import { photoUrl, type ContestState } from '../ui/ContestScreen';
@@ -105,10 +105,10 @@ type PawnMode = 'drive' | 'foot';
 
 const SIM_DT = 1 / 60;
 
-const TONICS: Record<TonicId, { buff: string; drawback: string; duration: number }> = {
-  magnet: { buff: 'Note magnet', drawback: 'No boost', duration: 10 },
-  feather: { buff: 'High jumps', drawback: 'No brakes', duration: 9 },
-  fizzy: { buff: 'Fizzy ink +20%', drawback: 'Wobbly', duration: 8 },
+const TONICS: Record<TonicId, { buff: StringKey; drawback: StringKey; duration: number }> = {
+  magnet: { buff: 'tonic.magnet.buff', drawback: 'tonic.magnet.down', duration: 10 },
+  feather: { buff: 'tonic.feather.buff', drawback: 'tonic.feather.down', duration: 9 },
+  fizzy: { buff: 'tonic.fizzy.buff', drawback: 'tonic.fizzy.down', duration: 8 },
 };
 
 const INTRO: Shot[] = [
@@ -321,6 +321,8 @@ export class Game {
   private varna: THREE.Group | null = null;
   /** The ending is playing. */
   private ending = false;
+  /** The ending's pending lines and credits, cancelled if the player leaves. */
+  private endingTimers: ReturnType<typeof setTimeout>[] = [];
   private dailyTimer = 0;
   private peraheraTime = 0;
   private peraheraAnnounced = false;
@@ -1739,6 +1741,7 @@ export class Game {
 
   private play(chapterId: string): void {
     analytics.track('play', { id: chapterId });
+    this.hud.closeDialog(false);
     this.leaveHub();
     this.loadChapter(chapterId);
     this.resumeSnapshot = null;
@@ -1911,7 +1914,7 @@ export class Game {
   private talkTo(m: MissionDef): void {
     const done = this.profile.data.missionsDone.includes(m.id);
     this.input.releasePointerLock();
-    this.hud.showDialog(m.giver.name, `${m.text}${done ? ' (You did this already — it pays again!)' : ''}  Reward: ${m.reward.ink} ink.`, () => this.acceptMission(m));
+    this.hud.showDialog(m.giver.name, `${m.text}${done ? ` ${t('mission.again')}` : ''}  ${t('mission.reward', { n: m.reward.ink })}`, () => this.acceptMission(m));
   }
 
   private acceptMission(m: MissionDef): void {
@@ -2621,14 +2624,14 @@ export class Game {
   }
 
   private drinkTonic(): void {
-    const t = this.selectedTonic;
-    if (!this.profile.useTonic(t)) {
-      this.popAtPawn('None left — buy tonics in the shop', 'info');
+    const tonic = this.selectedTonic;
+    if (!this.profile.useTonic(tonic)) {
+      this.popAtPawn(t('tonic.none'), 'info');
       return;
     }
-    this.tonics.set(t, TONICS[t].duration);
+    this.tonics.set(tonic, TONICS[tonic].duration);
     this.audio.chime(64);
-    this.popAtPawn(`${TONICS[t].buff}!`, 'good');
+    this.popAtPawn(`${t(TONICS[tonic].buff)}!`, 'good');
   }
 
   private render(dt: number, alpha: number): void {
@@ -2841,7 +2844,7 @@ export class Game {
     const kmh = this.mode === 'drive' ? this.rover.speedKmh : this.human.speed * 3.6;
     const gear = this.mode === 'drive' && this.rover.handling === 'realistic' ? `${this.rover.v < -0.3 ? 'R' : this.rover.gear} · ${Math.round(this.rover.rpm / 100) * 100} rpm` : undefined;
     hud.setSpeed(displaySpeed(kmh, this.options.units), this.rover.boostMeter, this.rover.boosting, defs[this.district].name, angle, label, this.mode === 'foot', this.options.units === 'mph' ? 'mph' : 'km/h', gear);
-    hud.setTonics([...this.tonics].map(([id, t]) => ({ buff: TONICS[id].buff, drawback: TONICS[id].drawback, remaining: t, total: TONICS[id].duration })));
+    hud.setTonics([...this.tonics].map(([id, left]) => ({ buff: t(TONICS[id].buff), drawback: t(TONICS[id].drawback), remaining: left, total: TONICS[id].duration })));
   }
 
   private popAt(world: THREE.Vector3, text: string, kind: 'good' | 'info' | 'big'): void {
@@ -3162,6 +3165,8 @@ export class Game {
   }
 
   private enterHub(at?: HubSpot, areaId?: string): void {
+    // A question from somewhere else (a mission offer, Varna) doesn't follow you here.
+    this.hud.closeDialog(false);
     // A new area: events from the old one end (their paint pots and scores belong there).
     if (this.area && this.paintEvent) this.endTogether();
     // Leaving a district with its own weather or time (Kandy's rain, Kyoto's night) puts them back.
@@ -3252,6 +3257,8 @@ export class Game {
     this.inHub = false;
     this.stopFlight();
     this.endViewing();
+    this.cancelEnding();
+    this.carDrop.active = false;
     this.applyWorldsEnd(false);
     if (this.planeStand) this.planeStand.visible = false;
     if (this.benches) this.benches.visible = false;
@@ -3380,7 +3387,7 @@ export class Game {
       this.saveAreaCheckpoint(false);
     }
     // The finale: sitting at the Edge of the World with all eight colours.
-    if (this.viewing?.zone.view?.id === 'we-edge' && this.viewing.t > 3 && !this.ending && finaleReady(storyState(this.profile.data))) this.startEnding();
+    if (this.viewing?.zone.view?.id === 'we-edge' && this.viewing.t > 3 && !this.ending && endingDue(storyState(this.profile.data))) this.startEnding();
     this.trackStats(dt);
   }
 
@@ -3950,10 +3957,12 @@ export class Game {
 
   /** The ending: the palette paints the sky over the World's End, then the credits. */
   private startEnding(): void {
+    this.cancelEnding();
     this.ending = true;
     const pr = this.profile;
+    const first = !storyState(pr.data).finale;
     pr.data.story = { ...storyState(pr.data), finale: true };
-    pr.earn(500);
+    if (first) pr.earn(500);
     pr.save();
     this.saveAreaCheckpoint(false);
     this.checkTrophies();
@@ -3963,13 +3972,25 @@ export class Game {
     // The story's last lines in the cinematic bars (the viewpoint had hidden the HUD).
     this.hud.root.classList.remove('hud-hidden');
     const lines = STORY_ENDING.split(/(?<=[.!?”])\s+/).filter(Boolean);
-    lines.forEach((line, i) => setTimeout(() => this.ending && this.hud.letterbox(true, line), 1500 + i * 5000));
-    setTimeout(() => this.showTheEnd(), 1500 + lines.length * 5000 + 1500);
+    lines.forEach((line, i) => this.endingTimers.push(setTimeout(() => this.ending && this.hud.letterbox(true, line), 1500 + i * 5000)));
+    this.endingTimers.push(setTimeout(() => this.showTheEnd(), 1500 + lines.length * 5000 + 1500));
+  }
+
+  /** Stop an ending in progress (the player left): no more lines, no card. */
+  private cancelEnding(): void {
+    for (const id of this.endingTimers) clearTimeout(id);
+    this.endingTimers = [];
+    document.querySelectorAll('.the-end').forEach((el) => el.remove());
+    if (this.ending) this.hud.letterbox(false);
+    this.ending = false;
   }
 
   private showTheEnd(): void {
     if (!this.ending) return;
+    this.endingTimers = [];
     this.hud.letterbox(false);
+    this.profile.data.story = { ...storyState(this.profile.data), credits: true };
+    this.profile.save();
     const el = document.createElement('div');
     el.className = 'the-end';
     el.setAttribute('role', 'dialog');

@@ -974,5 +974,17 @@ const zh: Locale = {
   'end.thanks': '感谢游玩',
   'end.keep': '继续作画',
   'end.keepSub': '整个世界仍等你去探索',
+  'mission.again': '(你已完成过这个——仍可再次获得奖励!)',
+  'mission.reward': '奖励:{n} 墨水。',
+  'tonic.none': '用完了——去商店买补剂吧',
+  'menu.keysReset': '按键已重置',
+  'lut.bad': '该文件不是游戏可读取的 3D .cube LUT。',
+  'lut.loaded': '已载入调色:{name}',
+  'tonic.magnet.buff': '音符磁铁',
+  'tonic.magnet.down': '无法加速',
+  'tonic.feather.buff': '高跳',
+  'tonic.feather.down': '没有刹车',
+  'tonic.fizzy.buff': '气泡墨水 +20%',
+  'tonic.fizzy.down': '摇摇晃晃',
 };
 export default zh;

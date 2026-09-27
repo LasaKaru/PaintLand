@@ -974,5 +974,17 @@ const ko: Locale = {
   'end.thanks': '플레이해 주셔서 고마워요',
   'end.keep': '계속 칠하기',
   'end.keepSub': '온 세상이 여전히 당신의 탐험을 기다려요',
+  'mission.again': '(이미 해 본 일이에요 — 또 보상을 받아요!)',
+  'mission.reward': '보상: 잉크 {n}',
+  'tonic.none': '남은 게 없어요 — 상점에서 토닉을 사세요',
+  'menu.keysReset': '키 설정을 초기화했어요',
+  'lut.bad': '이 파일은 게임이 읽을 수 있는 3D .cube LUT가 아니에요.',
+  'lut.loaded': '색 보정을 불러왔어요: {name}',
+  'tonic.magnet.buff': '음표 자석',
+  'tonic.magnet.down': '부스트 없음',
+  'tonic.feather.buff': '높은 점프',
+  'tonic.feather.down': '브레이크 없음',
+  'tonic.fizzy.buff': '톡톡 잉크 +20%',
+  'tonic.fizzy.down': '휘청휘청',
 };
 export default ko;

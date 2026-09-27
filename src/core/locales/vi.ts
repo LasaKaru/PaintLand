@@ -974,5 +974,17 @@ const vi: Locale = {
   'end.thanks': 'Cảm ơn bạn đã chơi',
   'end.keep': 'Tiếp tục tô màu',
   'end.keepSub': 'Cả thế giới vẫn chờ bạn khám phá',
+  'mission.again': '(Bạn đã làm việc này rồi — vẫn được thưởng tiếp!)',
+  'mission.reward': 'Phần thưởng: {n} mực.',
+  'tonic.none': 'Hết rồi — mua thuốc bổ ở cửa hàng',
+  'menu.keysReset': 'Đã đặt lại phím',
+  'lut.bad': 'Tệp này không phải LUT 3D .cube mà trò chơi đọc được.',
+  'lut.loaded': 'Đã tải chỉnh màu: {name}',
+  'tonic.magnet.buff': 'Nam châm nốt nhạc',
+  'tonic.magnet.down': 'Không tăng tốc',
+  'tonic.feather.buff': 'Nhảy cao',
+  'tonic.feather.down': 'Không phanh',
+  'tonic.fizzy.buff': 'Mực sủi bọt +20%',
+  'tonic.fizzy.down': 'Chao đảo',
 };
 export default vi;

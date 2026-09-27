@@ -974,5 +974,17 @@ const ja: Locale = {
   'end.thanks': '遊んでくれてありがとう',
   'end.keep': '描きつづける',
   'end.keepSub': '世界はまだまだあなたを待っています',
+  'mission.again': '(クリア済み — もう一度報酬がもらえます!)',
+  'mission.reward': '報酬: インク {n}',
+  'tonic.none': '残りなし — ショップでトニックを買おう',
+  'menu.keysReset': 'キー設定をリセットしました',
+  'lut.bad': 'このファイルはゲームが読める 3D .cube LUT ではありません。',
+  'lut.loaded': 'カラーグレードを読み込みました: {name}',
+  'tonic.magnet.buff': '音符マグネット',
+  'tonic.magnet.down': 'ブーストなし',
+  'tonic.feather.buff': 'ハイジャンプ',
+  'tonic.feather.down': 'ブレーキなし',
+  'tonic.fizzy.buff': 'シュワシュワインク +20%',
+  'tonic.fizzy.down': 'ふらふら',
 };
 export default ja;

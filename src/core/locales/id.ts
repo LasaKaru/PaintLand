@@ -974,5 +974,17 @@ const id: Locale = {
   'end.thanks': 'Terima kasih sudah bermain',
   'end.keep': 'Terus mewarnai',
   'end.keepSub': 'Seluruh dunia masih bisa kamu jelajahi',
+  'mission.again': '(Sudah pernah kamu selesaikan — tetap dapat hadiah lagi!)',
+  'mission.reward': 'Hadiah: {n} tinta.',
+  'tonic.none': 'Habis — beli tonik di toko',
+  'menu.keysReset': 'Tombol diatur ulang',
+  'lut.bad': 'Berkas itu bukan LUT 3D .cube yang bisa dibaca game.',
+  'lut.loaded': 'Gradasi warna dimuat: {name}',
+  'tonic.magnet.buff': 'Magnet nada',
+  'tonic.magnet.down': 'Tanpa dorongan',
+  'tonic.feather.buff': 'Lompatan tinggi',
+  'tonic.feather.down': 'Tanpa rem',
+  'tonic.fizzy.buff': 'Tinta soda +20%',
+  'tonic.fizzy.down': 'Goyah',
 };
 export default id;

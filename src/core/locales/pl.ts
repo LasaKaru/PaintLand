@@ -974,5 +974,17 @@ const pl: Locale = {
   'end.thanks': 'Dziękujemy za grę',
   'end.keep': 'Maluj dalej',
   'end.keepSub': 'Cały świat wciąż czeka na odkrycie',
+  'mission.again': '(Już to zrobiłeś — znowu dostaniesz nagrodę!)',
+  'mission.reward': 'Nagroda: {n} tuszu.',
+  'tonic.none': 'Nic nie zostało — kup toniki w sklepie',
+  'menu.keysReset': 'Klawisze zresetowane',
+  'lut.bad': 'Ten plik nie jest trójwymiarową LUT .cube, którą gra potrafi odczytać.',
+  'lut.loaded': 'Wczytano korekcję kolorów: {name}',
+  'tonic.magnet.buff': 'Magnes na nuty',
+  'tonic.magnet.down': 'Bez dopalacza',
+  'tonic.feather.buff': 'Wysokie skoki',
+  'tonic.feather.down': 'Bez hamulców',
+  'tonic.fizzy.buff': 'Musujący tusz +20%',
+  'tonic.fizzy.down': 'Chwiejnie',
 };
 export default pl;

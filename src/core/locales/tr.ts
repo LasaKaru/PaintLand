@@ -974,5 +974,17 @@ const tr: Locale = {
   'end.thanks': 'Oynadığın için teşekkürler',
   'end.keep': 'Boyamaya devam et',
   'end.keepSub': 'Bütün dünya hâlâ keşfetmen için seni bekliyor',
+  'mission.again': '(Bunu zaten yaptın — yine ödül var!)',
+  'mission.reward': 'Ödül: {n} mürekkep.',
+  'tonic.none': 'Hiç kalmadı — dükkândan tonik al',
+  'menu.keysReset': 'Tuşlar sıfırlandı',
+  'lut.bad': 'Bu dosya oyunun okuyabileceği bir 3B .cube LUT değil.',
+  'lut.loaded': 'Renk ayarı yüklendi: {name}',
+  'tonic.magnet.buff': 'Nota mıknatısı',
+  'tonic.magnet.down': 'Hızlanma yok',
+  'tonic.feather.buff': 'Yüksek zıplama',
+  'tonic.feather.down': 'Fren yok',
+  'tonic.fizzy.buff': 'Köpüklü mürekkep +%20',
+  'tonic.fizzy.down': 'Sallantılı',
 };
 export default tr;

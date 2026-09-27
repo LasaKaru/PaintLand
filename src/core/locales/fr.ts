@@ -974,5 +974,17 @@ const fr: Locale = {
   'end.thanks': 'Merci d’avoir joué',
   'end.keep': 'Continuer à peindre',
   'end.keepSub': 'Le monde entier reste à explorer',
+  'mission.again': '(Déjà fait — mais ça rapporte encore !)',
+  'mission.reward': 'Récompense : {n} d’encre.',
+  'tonic.none': 'Plus rien — achète des toniques à la boutique',
+  'menu.keysReset': 'Touches réinitialisées',
+  'lut.bad': 'Ce fichier n’est pas une LUT 3D .cube lisible par le jeu.',
+  'lut.loaded': 'Étalonnage chargé : {name}',
+  'tonic.magnet.buff': 'Aimant à notes',
+  'tonic.magnet.down': 'Pas de turbo',
+  'tonic.feather.buff': 'Grands sauts',
+  'tonic.feather.down': 'Pas de freins',
+  'tonic.fizzy.buff': 'Encre pétillante +20 %',
+  'tonic.fizzy.down': 'Tangue',
 };
 export default fr;

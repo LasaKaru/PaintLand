@@ -974,5 +974,17 @@ const ur: Locale = {
   'end.thanks': 'کھیلنے کا شکریہ',
   'end.keep': 'رنگتے رہیں',
   'end.keepSub': 'پوری دنیا اب بھی آپ کے دیکھنے کو باقی ہے',
+  'mission.again': '(یہ آپ پہلے کر چکے ہیں — پھر بھی انعام ملے گا!)',
+  'mission.reward': 'انعام: {n} سیاہی۔',
+  'tonic.none': 'کچھ نہیں بچا — دکان سے ٹانک خریدیں',
+  'menu.keysReset': 'کلیدیں دوبارہ ترتیب دی گئیں',
+  'lut.bad': 'یہ فائل ایسی 3D ‎.cube‎ LUT نہیں جسے گیم پڑھ سکے۔',
+  'lut.loaded': 'رنگ درجہ بندی لوڈ ہو گئی: {name}',
+  'tonic.magnet.buff': 'سُر مقناطیس',
+  'tonic.magnet.down': 'بوسٹ نہیں',
+  'tonic.feather.buff': 'اونچی چھلانگیں',
+  'tonic.feather.down': 'بریک نہیں',
+  'tonic.fizzy.buff': 'جھاگ دار سیاہی ‎+20%‎',
+  'tonic.fizzy.down': 'ڈگمگاہٹ',
 };
 export default ur;

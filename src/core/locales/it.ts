@@ -974,5 +974,17 @@ const it: Locale = {
   'end.thanks': 'Grazie per aver giocato',
   'end.keep': 'Continua a dipingere',
   'end.keepSub': 'Il mondo intero è ancora tuo da esplorare',
+  'mission.again': '(L’hai già fatto: paga di nuovo!)',
+  'mission.reward': 'Ricompensa: {n} di inchiostro.',
+  'tonic.none': 'Finiti: compra tonici al negozio',
+  'menu.keysReset': 'Tasti ripristinati',
+  'lut.bad': 'Quel file non è una LUT 3D .cube leggibile dal gioco.',
+  'lut.loaded': 'Correzione colore caricata: {name}',
+  'tonic.magnet.buff': 'Calamita per note',
+  'tonic.magnet.down': 'Niente turbo',
+  'tonic.feather.buff': 'Salti alti',
+  'tonic.feather.down': 'Niente freni',
+  'tonic.fizzy.buff': 'Inchiostro frizzante +20%',
+  'tonic.fizzy.down': 'Traballante',
 };
 export default it;

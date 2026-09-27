@@ -974,5 +974,17 @@ const ta: Locale = {
   'end.thanks': 'விளையாடியதற்கு நன்றி',
   'end.keep': 'தொடர்ந்து வண்ணம் பூசுங்கள்',
   'end.keepSub': 'முழு உலகமும் இன்னும் நீங்கள் ஆராய உள்ளது',
+  'mission.again': '(இதை ஏற்கனவே செய்துவிட்டீர்கள் — மீண்டும் பரிசு உண்டு!)',
+  'mission.reward': 'பரிசு: {n} மை.',
+  'tonic.none': 'எதுவும் இல்லை — கடையில் டானிக் வாங்குங்கள்',
+  'menu.keysReset': 'விசைகள் மீட்டமைக்கப்பட்டன',
+  'lut.bad': 'இந்தக் கோப்பு விளையாட்டு படிக்கக்கூடிய 3D .cube LUT அல்ல.',
+  'lut.loaded': 'வண்ணத் தரம் ஏற்றப்பட்டது: {name}',
+  'tonic.magnet.buff': 'இசைக் காந்தம்',
+  'tonic.magnet.down': 'வேகக் கூட்டல் இல்லை',
+  'tonic.feather.buff': 'உயரத் தாவல்',
+  'tonic.feather.down': 'பிரேக் இல்லை',
+  'tonic.fizzy.buff': 'நுரை மை +20%',
+  'tonic.fizzy.down': 'தள்ளாட்டம்',
 };
 export default ta;

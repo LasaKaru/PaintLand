@@ -974,5 +974,17 @@ const pt: Locale = {
   'end.thanks': 'Obrigado por jogar',
   'end.keep': 'Continue pintando',
   'end.keepSub': 'O mundo todo ainda é seu para explorar',
+  'mission.again': '(Você já fez isto — paga de novo!)',
+  'mission.reward': 'Recompensa: {n} de tinta.',
+  'tonic.none': 'Acabou: compre tônicos na loja',
+  'menu.keysReset': 'Teclas redefinidas',
+  'lut.bad': 'Esse arquivo não é uma LUT 3D .cube que o jogo consiga ler.',
+  'lut.loaded': 'Correção de cor carregada: {name}',
+  'tonic.magnet.buff': 'Ímã de notas',
+  'tonic.magnet.down': 'Sem turbo',
+  'tonic.feather.buff': 'Saltos altos',
+  'tonic.feather.down': 'Sem freios',
+  'tonic.fizzy.buff': 'Tinta efervescente +20%',
+  'tonic.fizzy.down': 'Cambaleante',
 };
 export default pt;

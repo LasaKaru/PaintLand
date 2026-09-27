@@ -974,5 +974,17 @@ const ar: Locale = {
   'end.thanks': 'شكرًا لأنك لعبت',
   'end.keep': 'واصل التلوين',
   'end.keepSub': 'العالم كله ما زال لك لتستكشفه',
+  'mission.again': '(أنجزت هذه من قبل — وستربح مجددًا!)',
+  'mission.reward': 'المكافأة: {n} حبر.',
+  'tonic.none': 'لم يبقَ شيء — اشترِ مقويات من المتجر',
+  'menu.keysReset': 'أُعيد ضبط المفاتيح',
+  'lut.bad': 'هذا الملف ليس ملف LUT ثلاثي الأبعاد ‎.cube‎ يمكن للعبة قراءته.',
+  'lut.loaded': 'تم تحميل تدرّج الألوان: {name}',
+  'tonic.magnet.buff': 'مغناطيس النغمات',
+  'tonic.magnet.down': 'بلا تسريع',
+  'tonic.feather.buff': 'قفزات عالية',
+  'tonic.feather.down': 'بلا مكابح',
+  'tonic.fizzy.buff': 'حبر فوّار ‎+20%‎',
+  'tonic.fizzy.down': 'ترنّح',
 };
 export default ar;

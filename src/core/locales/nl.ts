@@ -974,5 +974,17 @@ const nl: Locale = {
   'end.thanks': 'Bedankt voor het spelen',
   'end.keep': 'Blijf schilderen',
   'end.keepSub': 'De hele wereld ligt nog voor je open',
+  'mission.again': '(Al eens gedaan — levert opnieuw iets op!)',
+  'mission.reward': 'Beloning: {n} inkt.',
+  'tonic.none': 'Op — koop tonics in de winkel',
+  'menu.keysReset': 'Toetsen hersteld',
+  'lut.bad': 'Dat bestand is geen 3D-.cube-LUT die het spel kan lezen.',
+  'lut.loaded': 'Kleurcorrectie geladen: {name}',
+  'tonic.magnet.buff': 'Notenmagneet',
+  'tonic.magnet.down': 'Geen turbo',
+  'tonic.feather.buff': 'Hoge sprongen',
+  'tonic.feather.down': 'Geen remmen',
+  'tonic.fizzy.buff': 'Bruisinkt +20%',
+  'tonic.fizzy.down': 'Wiebelig',
 };
 export default nl;

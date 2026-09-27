@@ -974,5 +974,17 @@ const de: Locale = {
   'end.thanks': 'Danke fürs Spielen',
   'end.keep': 'Weitermalen',
   'end.keepSub': 'Die ganze Welt gehört noch dir',
+  'mission.again': '(Schon geschafft — gibt trotzdem wieder Lohn!)',
+  'mission.reward': 'Belohnung: {n} Tinte.',
+  'tonic.none': 'Keine mehr — kauf Tränke im Laden',
+  'menu.keysReset': 'Tasten zurückgesetzt',
+  'lut.bad': 'Diese Datei ist keine 3D-.cube-LUT, die das Spiel lesen kann.',
+  'lut.loaded': 'Farbstimmung geladen: {name}',
+  'tonic.magnet.buff': 'Notenmagnet',
+  'tonic.magnet.down': 'Kein Turbo',
+  'tonic.feather.buff': 'Hohe Sprünge',
+  'tonic.feather.down': 'Keine Bremsen',
+  'tonic.fizzy.buff': 'Sprudeltinte +20 %',
+  'tonic.fizzy.down': 'Wackelig',
 };
 export default de;

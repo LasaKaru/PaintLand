@@ -974,5 +974,17 @@ const ru: Locale = {
   'end.thanks': 'Спасибо за игру',
   'end.keep': 'Рисовать дальше',
   'end.keepSub': 'Весь мир всё ещё открыт для тебя',
+  'mission.again': '(Уже выполнено — но награда будет снова!)',
+  'mission.reward': 'Награда: {n} чернил.',
+  'tonic.none': 'Не осталось — купите тоники в магазине',
+  'menu.keysReset': 'Клавиши сброшены',
+  'lut.bad': 'Этот файл не является 3D LUT .cube, который игра может прочитать.',
+  'lut.loaded': 'Цветокоррекция загружена: {name}',
+  'tonic.magnet.buff': 'Магнит для нот',
+  'tonic.magnet.down': 'Без ускорения',
+  'tonic.feather.buff': 'Высокие прыжки',
+  'tonic.feather.down': 'Без тормозов',
+  'tonic.fizzy.buff': 'Шипучие чернила +20%',
+  'tonic.fizzy.down': 'Шатает',
 };
 export default ru;

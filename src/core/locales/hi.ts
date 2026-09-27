@@ -974,5 +974,17 @@ const hi: Locale = {
   'end.thanks': 'खेलने के लिए शुक्रिया',
   'end.keep': 'रंगते रहो',
   'end.keepSub': 'पूरी दुनिया अब भी आपके घूमने के लिए है',
+  'mission.again': '(यह तुम पहले कर चुके हो — फिर भी इनाम मिलेगा!)',
+  'mission.reward': 'इनाम: {n} स्याही।',
+  'tonic.none': 'कुछ नहीं बचा — दुकान से टॉनिक खरीदो',
+  'menu.keysReset': 'कुंजियाँ रीसेट हुईं',
+  'lut.bad': 'यह फ़ाइल ऐसा 3D .cube LUT नहीं है जिसे गेम पढ़ सके।',
+  'lut.loaded': 'रंग ग्रेड लोड हुआ: {name}',
+  'tonic.magnet.buff': 'सुर चुंबक',
+  'tonic.magnet.down': 'बूस्ट नहीं',
+  'tonic.feather.buff': 'ऊँची छलाँग',
+  'tonic.feather.down': 'ब्रेक नहीं',
+  'tonic.fizzy.buff': 'झागदार स्याही +20%',
+  'tonic.fizzy.down': 'डगमग',
 };
 export default hi;

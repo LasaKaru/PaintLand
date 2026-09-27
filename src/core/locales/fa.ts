@@ -974,5 +974,17 @@ const fa: Locale = {
   'end.thanks': 'ممنون که بازی کردی',
   'end.keep': 'رنگ کردن را ادامه بده',
   'end.keepSub': 'تمام دنیا هنوز برای کشف کردن مال توست',
+  'mission.again': '(این را قبلاً انجام دادی — باز هم جایزه دارد!)',
+  'mission.reward': 'جایزه: {n} جوهر.',
+  'tonic.none': 'چیزی نمانده — از فروشگاه تونیک بخر',
+  'menu.keysReset': 'کلیدها بازنشانی شد',
+  'lut.bad': 'این فایل یک LUT سه‌بعدی ‎.cube‎ قابل خواندن برای بازی نیست.',
+  'lut.loaded': 'درجه‌بندی رنگ بارگذاری شد: {name}',
+  'tonic.magnet.buff': 'آهن‌ربای نت',
+  'tonic.magnet.down': 'بدون شتاب',
+  'tonic.feather.buff': 'پرش‌های بلند',
+  'tonic.feather.down': 'بدون ترمز',
+  'tonic.fizzy.buff': 'جوهر گازدار ‎+20%‎',
+  'tonic.fizzy.down': 'لرزان',
 };
 export default fa;

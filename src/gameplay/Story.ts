@@ -102,6 +102,8 @@ export interface StoryState {
   found: string[];
   /** The finale was played: the sky over the World's End was painted. */
   finale?: boolean;
+  /** The credits were shown to the end (an interrupted ending plays again). */
+  credits?: boolean;
 }
 
 export function storyState(data: { story?: StoryState }): StoryState {
