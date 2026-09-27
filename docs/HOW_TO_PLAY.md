@@ -66,7 +66,7 @@ Stop the car and press **F** (or **E**) to get out and walk. Press it again near
 
 ## Towns and glowing rings
 
-There are four free-roam towns: **Harbour Town**, **Lantern Village**, **Serendib City** and **Tea Hills** (up the hill road from Harbour Town). A **glowing ring** on the ground is a place. Stand in it and press **E**:
+There are four free-roam towns: **Harbour Town**, **Lantern Village**, **Serendib City** and **Tea Hills** (up the hill road from Harbour Town). There's also a quiet place, **World's End** (see below). A **glowing ring** on the ground is a place. Stand in it and press **E**:
 
 - 🔧 **Garage:** vehicles, paint, parts, wraps and liveries
 - 👒 **Wardrobe:** clothes, outfits and pets
@@ -77,6 +77,7 @@ There are four free-roam towns: **Harbour Town**, **Lantern Village**, **Serendi
 - 🏡 **My home:** your house in Harbour Town: colours, keepsakes, trophy shelf, pinned postcards
 - 🎨 **Paint a mural:** paint on the mural walls
 - ✈ **Paper plane:** climb aboard and fly (see below)
+- 🌅 **Viewpoint:** a bench with a view. Sit down and the game goes quiet (see below)
 - **→ Chapter name:** a painted gate that takes you into that chapter
 
 | Key | What it does |
@@ -84,6 +85,21 @@ There are four free-roam towns: **Harbour Town**, **Lantern Village**, **Serendi
 | **M** | Paper map. Click a place you've discovered to travel there |
 
 Grey districts in Serendib City are still **sketches**. Paint them back to colour by finding secrets, stunt jumps, chests and missions. Golden paint pots and **20 hidden pockets** (little scenes off the map) are tucked into corners.
+
+---
+
+## World's End and the viewpoints
+
+**World's End** is the last page of the sketchbook: a calm floating island under the Milky Way. There are no shops, no traffic and no missions. It has a lake that mirrors the snowy mountains, a meadow of wildflowers with fireflies, lantern-lit woods, and a river that pours off the edge of the world into the stars. Get there by the 🌌 ring on Harbour Town's quay, or from **Menu → World's End**.
+
+**Viewpoints** are benches with a view: four at World's End and one in each of Harbour Town, Tea Hills and Lantern Village. Stand in the ring and press **E** to sit down:
+
+- The HUD goes away, and the camera slowly drifts and takes in the view.
+- Each bench has its own colour mood.
+- Move the mouse (or the right stick) to look around a little.
+- Press **E**, or just walk, to stand up. **P** takes a photo.
+
+Sitting at all seven viewpoints earns a trophy.
 
 ---
 

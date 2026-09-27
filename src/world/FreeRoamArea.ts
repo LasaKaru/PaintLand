@@ -9,7 +9,7 @@ import type { Perahera } from './Perahera';
 /** Ground height of every free-roam area above the sea. */
 export const AREA_Y = 2;
 
-export type ZoneKind = 'portal' | 'area' | 'garage' | 'wardrobe' | 'shop' | 'missions' | 'trophies' | 'mural' | 'mailbox' | 'home' | 'launch';
+export type ZoneKind = 'portal' | 'area' | 'garage' | 'wardrobe' | 'shop' | 'missions' | 'trophies' | 'mural' | 'mailbox' | 'home' | 'launch' | 'viewpoint';
 
 /** A glowing ring: a service (garage…), a gate to a chapter, or a road to another area. */
 export interface AreaZone {
@@ -22,6 +22,8 @@ export interface AreaZone {
   area?: string;
   /** Mural board id (kind 'mural'). */
   mural?: string;
+  /** A bench with a view (kind 'viewpoint'): which way to look, and the mood (a LUT look). */
+  view?: { id: string; yaw: number; pitch: number; lut: string; name: string };
   colour: string;
 }
 

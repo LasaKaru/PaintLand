@@ -934,5 +934,18 @@ const de: Locale = {
   'drop.coming': 'Dein Auto ist im Anflug!',
   'drop.noRoom': 'Hier ist kein Platz zum Landen. Versuch es an einer freieren Stelle.',
   'drop.notNow': 'Nicht während einer Farbschlacht!',
+  'menu.worldsend': '🌌 Das Ende der Welt',
+  'we.kicker': 'Die letzte Seite',
+  'we.name': 'Das Ende der Welt',
+  'we.poem': 'Wo das Skizzenbuch endet, beginnen die Sterne. Setz dich eine Weile.',
+  'view.hint': 'Beweg dich oder drück E zum Aufstehen',
+  'zone.viewpoint': '🌅 Aussichtspunkt',
+  'view.we-edge': 'Der Rand der Welt',
+  'view.we-lake': 'Der Spiegelsee',
+  'view.we-meadow': 'Die Milchstraßenwiese',
+  'view.we-falls': 'Der letzte Wasserfall',
+  'view.hb-quay': 'Der Kai im Abendrot',
+  'view.hl-lake': 'Die Bank am See',
+  'view.lv-lanterns': 'Der Laternenblick',
 };
 export default de;

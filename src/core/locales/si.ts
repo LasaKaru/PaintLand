@@ -934,5 +934,18 @@ const si: Locale = {
   'drop.coming': 'ඔබේ කාරය පහළට එනවා!',
   'drop.noRoom': 'මෙතන කාරයට බසින්න ඉඩ නැහැ. වඩා විවෘත තැනක් බලන්න.',
   'drop.notNow': 'තීන්ත සටනක් අතරතුර නොවේ!',
+  'menu.worldsend': '🌌 ලෝකයේ කෙළවර',
+  'we.kicker': 'අවසාන පිටුව',
+  'we.name': 'ලෝකයේ කෙළවර',
+  'we.poem': 'සිතුවම් පොත අවසන් වන තැන තරු ආරම්භ වේ. මඳක් වාඩි වන්න.',
+  'view.hint': 'නැගිටීමට චලනය වන්න හෝ E ඔබන්න',
+  'zone.viewpoint': '🌅 දර්ශන ස්ථානය',
+  'view.we-edge': 'ලෝකයේ කෙළවර',
+  'view.we-lake': 'දර්පණ විල',
+  'view.we-meadow': 'ක්ෂීරපථ තණබිම',
+  'view.we-falls': 'අවසාන දිය ඇල්ල',
+  'view.hb-quay': 'හිරු බැසීමේ තොටුපළ',
+  'view.hl-lake': 'විල අද්දර බංකුව',
+  'view.lv-lanterns': 'පහන් දර්ශනය',
 };
 export default si;

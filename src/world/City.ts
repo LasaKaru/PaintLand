@@ -629,6 +629,7 @@ export class City implements FreeRoamArea {
   }
 
   zoneLabel(z: AreaZone): string {
+    if (z.kind === 'viewpoint' && z.view) return `🌅 ${t(`view.${z.view.id}` as StringKey)}`;
     return z.kind === 'portal' || z.kind === 'area' ? z.label : t(`zone.${z.kind}` as StringKey);
   }
 

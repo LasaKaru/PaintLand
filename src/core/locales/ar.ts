@@ -934,5 +934,18 @@ const ar: Locale = {
   'drop.coming': 'سيارتك في طريقها إلى الأسفل!',
   'drop.noRoom': 'لا مكان لهبوط السيارة هنا. جرّب مكانًا أكثر اتساعًا.',
   'drop.notNow': 'ليس أثناء معركة الألوان!',
+  'menu.worldsend': '🌌 نهاية العالم',
+  'we.kicker': 'الصفحة الأخيرة',
+  'we.name': 'نهاية العالم',
+  'we.poem': 'حيث ينتهي دفتر الرسم تبدأ النجوم. اجلس قليلًا.',
+  'view.hint': 'تحرّك أو اضغط E لتنهض',
+  'zone.viewpoint': '🌅 مطلّ',
+  'view.we-edge': 'حافة العالم',
+  'view.we-lake': 'البحيرة المرآة',
+  'view.we-meadow': 'مرج درب التبانة',
+  'view.we-falls': 'الشلال الأخير',
+  'view.hb-quay': 'رصيف الغروب',
+  'view.hl-lake': 'مقعد ضفة البحيرة',
+  'view.lv-lanterns': 'مطلّ الفوانيس',
 };
 export default ar;

@@ -934,5 +934,18 @@ const pt: Locale = {
   'drop.coming': 'Seu carro está descendo!',
   'drop.noRoom': 'Não há espaço para o carro pousar aqui. Tente um lugar mais aberto.',
   'drop.notNow': 'Não durante uma batalha de tinta!',
+  'menu.worldsend': '🌌 O Fim do Mundo',
+  'we.kicker': 'A última página',
+  'we.name': 'O Fim do Mundo',
+  'we.poem': 'Onde o caderno acaba, as estrelas começam. Sente-se um pouco.',
+  'view.hint': 'Mova-se ou aperte E para levantar',
+  'zone.viewpoint': '🌅 Mirante',
+  'view.we-edge': 'A beira do mundo',
+  'view.we-lake': 'Lago Espelho',
+  'view.we-meadow': 'Campo da Via Láctea',
+  'view.we-falls': 'A última cascata',
+  'view.hb-quay': 'O cais ao pôr do sol',
+  'view.hl-lake': 'O banco à beira do lago',
+  'view.lv-lanterns': 'O mirante das lanternas',
 };
 export default pt;

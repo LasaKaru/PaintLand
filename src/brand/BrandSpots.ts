@@ -89,5 +89,7 @@ export function hillsSpots(): BoardSpot[] {
 
 /** Board spots for a free-roam area by id. */
 export function brandSpotsFor(id: string): BoardSpot[] {
+  // The World's End is a quiet place: no boards there.
+  if (id === 'worldsend') return [];
   return id === 'city' ? citySpots() : id === 'village' ? villageSpots() : id === 'hills' ? hillsSpots() : hubSpots();
 }

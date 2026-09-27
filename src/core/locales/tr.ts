@@ -934,5 +934,18 @@ const tr: Locale = {
   'drop.coming': 'Araban aşağı iniyor!',
   'drop.noRoom': 'Burada arabanın ineceği yer yok. Daha açık bir yer dene.',
   'drop.notNow': 'Boya savaşı sırasında olmaz!',
+  'menu.worldsend': '🌌 Dünyanın Sonu',
+  'we.kicker': 'Son sayfa',
+  'we.name': 'Dünyanın Sonu',
+  'we.poem': 'Eskiz defterinin bittiği yerde yıldızlar başlar. Biraz otur.',
+  'view.hint': "Kalkmak için hareket et ya da E'ye bas",
+  'zone.viewpoint': '🌅 Seyir noktası',
+  'view.we-edge': 'Dünyanın kenarı',
+  'view.we-lake': 'Ayna Göl',
+  'view.we-meadow': 'Samanyolu Çayırı',
+  'view.we-falls': 'Son şelale',
+  'view.hb-quay': 'Gün batımında rıhtım',
+  'view.hl-lake': 'Göl kenarındaki bank',
+  'view.lv-lanterns': 'Fener seyir noktası',
 };
 export default tr;

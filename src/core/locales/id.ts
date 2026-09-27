@@ -934,5 +934,18 @@ const id: Locale = {
   'drop.coming': 'Mobilmu sedang turun!',
   'drop.noRoom': 'Tidak ada ruang untuk mobil mendarat di sini. Coba tempat yang lebih lapang.',
   'drop.notNow': 'Jangan saat perang cat!',
+  'menu.worldsend': '🌌 Ujung Dunia',
+  'we.kicker': 'Halaman terakhir',
+  'we.name': 'Ujung Dunia',
+  'we.poem': 'Di mana buku sketsa berakhir, bintang-bintang bermula. Duduklah sebentar.',
+  'view.hint': 'Bergerak atau tekan E untuk berdiri',
+  'zone.viewpoint': '🌅 Titik pandang',
+  'view.we-edge': 'Tepi dunia',
+  'view.we-lake': 'Danau Cermin',
+  'view.we-meadow': 'Padang Bima Sakti',
+  'view.we-falls': 'Air terjun terakhir',
+  'view.hb-quay': 'Dermaga saat senja',
+  'view.hl-lake': 'Bangku tepi danau',
+  'view.lv-lanterns': 'Titik pandang lentera',
 };
 export default id;

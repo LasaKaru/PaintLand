@@ -934,5 +934,18 @@ const sw: Locale = {
   'drop.coming': 'Gari lako linashuka!',
   'drop.noRoom': 'Hakuna nafasi ya gari kutua hapa. Jaribu mahali wazi zaidi.',
   'drop.notNow': 'Si wakati wa vita vya rangi!',
+  'menu.worldsend': '🌌 Mwisho wa Dunia',
+  'we.kicker': 'Ukurasa wa mwisho',
+  'we.name': 'Mwisho wa Dunia',
+  'we.poem': 'Pale kitabu cha michoro kinapoishia, nyota zinaanza. Keti kidogo.',
+  'view.hint': 'Songa au bonyeza E kusimama',
+  'zone.viewpoint': '🌅 Mahali pa mandhari',
+  'view.we-edge': 'Ukingo wa dunia',
+  'view.we-lake': 'Ziwa Kioo',
+  'view.we-meadow': 'Uwanda wa Njia ya Maziwa',
+  'view.we-falls': 'Maporomoko ya mwisho',
+  'view.hb-quay': 'Gati wakati wa machweo',
+  'view.hl-lake': 'Benchi la kando ya ziwa',
+  'view.lv-lanterns': 'Mandhari ya taa',
 };
 export default sw;

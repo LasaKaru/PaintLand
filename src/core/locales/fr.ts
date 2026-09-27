@@ -934,5 +934,18 @@ const fr: Locale = {
   'drop.coming': 'Ta voiture descend du ciel !',
   'drop.noRoom': 'Pas de place pour que la voiture se pose ici. Essaie un endroit plus dégagé.',
   'drop.notNow': 'Pas pendant une bataille de peinture !',
+  'menu.worldsend': '🌌 Le Bout du Monde',
+  'we.kicker': 'La dernière page',
+  'we.name': 'Le Bout du Monde',
+  'we.poem': 'Là où finit le carnet, les étoiles commencent. Assieds-toi un moment.',
+  'view.hint': 'Bouge ou appuie sur E pour te lever',
+  'zone.viewpoint': '🌅 Point de vue',
+  'view.we-edge': 'Le bord du monde',
+  'view.we-lake': 'Le lac Miroir',
+  'view.we-meadow': 'La prairie de la Voie lactée',
+  'view.we-falls': 'La dernière cascade',
+  'view.hb-quay': 'Le quai au couchant',
+  'view.hl-lake': 'Le banc au bord du lac',
+  'view.lv-lanterns': 'Le belvédère des lanternes',
 };
 export default fr;

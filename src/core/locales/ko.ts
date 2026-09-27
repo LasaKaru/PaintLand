@@ -934,5 +934,18 @@ const ko: Locale = {
   'drop.coming': '차가 내려오고 있어요!',
   'drop.noRoom': '여기는 차가 내려앉을 자리가 없어요. 더 트인 곳에서 해 보세요.',
   'drop.notNow': '물감 대전 중에는 안 돼요!',
+  'menu.worldsend': '🌌 세상의 끝',
+  'we.kicker': '마지막 페이지',
+  'we.name': '세상의 끝',
+  'we.poem': '스케치북이 끝나는 곳에서 별이 시작돼요. 잠시 앉아 쉬어 가요.',
+  'view.hint': '움직이거나 E를 눌러 일어나기',
+  'zone.viewpoint': '🌅 전망 명소',
+  'view.we-edge': '세상의 가장자리',
+  'view.we-lake': '거울 호수',
+  'view.we-meadow': '은하수 초원',
+  'view.we-falls': '마지막 폭포',
+  'view.hb-quay': '노을 지는 부두',
+  'view.hl-lake': '호숫가 벤치',
+  'view.lv-lanterns': '등불 전망대',
 };
 export default ko;

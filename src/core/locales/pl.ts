@@ -934,5 +934,18 @@ const pl: Locale = {
   'drop.coming': 'Twoje auto już leci w dół!',
   'drop.noRoom': 'Tu nie ma miejsca na lądowanie auta. Spróbuj w bardziej otwartym miejscu.',
   'drop.notNow': 'Nie w trakcie bitwy na farby!',
+  'menu.worldsend': '🌌 Koniec Świata',
+  'we.kicker': 'Ostatnia strona',
+  'we.name': 'Koniec Świata',
+  'we.poem': 'Tam, gdzie kończy się szkicownik, zaczynają się gwiazdy. Posiedź chwilę.',
+  'view.hint': 'Rusz się albo naciśnij E, by wstać',
+  'zone.viewpoint': '🌅 Punkt widokowy',
+  'view.we-edge': 'Krawędź świata',
+  'view.we-lake': 'Lustrzane Jezioro',
+  'view.we-meadow': 'Łąka Drogi Mlecznej',
+  'view.we-falls': 'Ostatni wodospad',
+  'view.hb-quay': 'Nabrzeże o zachodzie',
+  'view.hl-lake': 'Ławka nad jeziorem',
+  'view.lv-lanterns': 'Latarniowy punkt widokowy',
 };
 export default pl;

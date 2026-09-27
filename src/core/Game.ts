@@ -7,7 +7,7 @@ import { clamp } from './MathUtil';
 import { createFrame } from '../road/RoadPath';
 import { PaintPipeline } from '../render/PaintPipeline';
 import { PaintMaterial, paintShared, setWash } from '../render/PaintMaterial';
-import { createSky, createWater, waterUniforms, skyUniforms } from '../render/SkyWater';
+import { createGalaxySky, createSky, createWater, galaxyUniforms, waterUniforms, skyUniforms } from '../render/SkyWater';
 import { applyArtStyle, applyQuality, loadStudio, saveStudio, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 import { Environment, TIME_PRESETS, type WeatherId } from '../world/Environment';
 import { CHAPTERS, chapterById, setCustomChapter } from '../world/Chapters';
@@ -89,7 +89,9 @@ import { photoUrl, type ContestState } from '../ui/ContestScreen';
 import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
 import { Hub as HarbourHub } from '../world/Hub';
 import { Hills } from '../world/Hills';
+import { WorldsEnd } from '../world/WorldsEnd';
 import { CourseRun, Glider, courseInk, makeCourse, type Airspace, type Course, type GliderEvent } from '../gameplay/Glider';
+import { buildBench } from '../models/Props';
 import { PLANE_SEAT, buildFlightRing, buildPaperPlane, buildParachute, buildPlaneStand } from '../models/PaperPlane';
 import { CarDrop, aheadOf } from '../gameplay/CarDrop';
 import { BATTLE, PaintBattle, PaintGrid, TEAM_COLOURS, TEAM_TRAIL, botStep, landingPoint, makeBots, splitTeams, throwVelocity, type BattleSetup, type Bot, type Team } from '../gameplay/PaintBattle';
@@ -157,6 +159,15 @@ export class Game {
   private readonly demo = new Autopilot({ speed: 36, lane: 0, followNotes: true, showOff: true });
   private readonly missions = new MissionTracker();
   private sky!: THREE.Mesh;
+  /** The sea, and the galaxy sky that replaces sky and sea at the World's End. */
+  private water!: THREE.Mesh;
+  private galaxy!: THREE.Mesh;
+  /** The light before entering the World's End (put back on leaving). */
+  private worldsEndEnv: { preset: string; auto: boolean } | null = null;
+  /** Sitting on a bench with a view (a 'viewpoint' zone). */
+  private viewing: { zone: HubZone; t: number; hudWas: boolean } | null = null;
+  private readonly viewLook = { yaw: 0, pitch: 0 };
+  private benches: THREE.Group | null = null;
   private readonly particles = new Particles();
   private readonly wildlife = new Wildlife();
   private readonly photo: PhotoMode;
@@ -278,7 +289,7 @@ export class Game {
   /** Calling the car: it drops from the sky on a paper parachute (gameplay/CarDrop.ts). */
   private readonly carDrop = new CarDrop();
   private chute: THREE.Mesh | null = null;
-  private chuteFold = 0;
+  private chuteFold = 1;
   private callHold = 0;
   /** The paper plane (flight mode): its physics, the ring course in progress, and the meshes. */
   private readonly glider = new Glider();
@@ -467,6 +478,7 @@ export class Game {
       enterCity: () => this.enterHub(undefined, 'city'),
       enterVillage: () => this.enterHub(undefined, 'village'),
       enterHills: () => this.enterHub(undefined, 'hills'),
+      enterWorldsEnd: () => this.enterHub(undefined, 'worldsend'),
       runBenchmark: (done: (r: BenchmarkResult) => void) => this.runBenchmark(done),
       testRoad: (road: CustomRoad) => this.testRoad(road),
       startCityMission: (id) => this.startCityMission(id),
@@ -625,7 +637,9 @@ export class Game {
     });
     void loadBrand();
     this.sky = createSky();
-    this.scene.add(this.sky, createWater(), this.particles.points, this.wildlife.group);
+    this.water = createWater();
+    this.galaxy = createGalaxySky();
+    this.scene.add(this.sky, this.galaxy, this.water, this.particles.points, this.wildlife.group);
     this.env = new Environment(this.scene);
     this.env.onThunder = (d) => {
       this.audio.thunder(d);
@@ -1479,6 +1493,7 @@ export class Game {
     }
     // The sky dome sits just inside the far plane.
     this.sky?.scale.setScalar((this.drawDistance() * 0.9) / 3000);
+    this.galaxy?.scale.setScalar((this.drawDistance() * 0.88) / 2900);
     this.audio.musicVolume = s.musicVolume;
     this.audio.noteVolume = s.musicBox;
     this.audio.engineVolume = s.engineHum;
@@ -3082,7 +3097,7 @@ export class Game {
   private areaFor(id: string): FreeRoamArea {
     let area = this.areas.get(id);
     if (area) return area;
-    area = id === 'city' ? new City(this.hud.labels) : id === 'village' ? new Village(this.hud.labels) : id === 'hills' ? new Hills(this.hud.labels) : new Hub(this.hud.labels);
+    area = id === 'city' ? new City(this.hud.labels) : id === 'village' ? new Village(this.hud.labels) : id === 'hills' ? new Hills(this.hud.labels) : id === 'worldsend' ? new WorldsEnd(this.hud.labels) : new Hub(this.hud.labels);
     this.scene.add(area.group);
     if (area instanceof HarbourHub) queueMicrotask(() => this.refreshHome(false));
     // Company and sponsor boards, with solid posts.
@@ -3139,6 +3154,9 @@ export class Game {
     if (this.area && this.area.id !== id) this.area.show(false);
     const area = this.areaFor(id);
     this.area = area;
+    this.endViewing();
+    this.applyWorldsEnd(id === 'worldsend');
+    this.placeBenches(area);
     void this.refreshWinnerBoard();
     // A free-roam mission belongs to its own town.
     if (this.freeMissions.mission && missionArea(this.freeMissions.mission) !== id) this.freeMissions.cancel();
@@ -3209,7 +3227,10 @@ export class Game {
     if (!this.inHub) return;
     this.inHub = false;
     this.stopFlight();
+    this.endViewing();
+    this.applyWorldsEnd(false);
     if (this.planeStand) this.planeStand.visible = false;
+    if (this.benches) this.benches.visible = false;
     this.endTogether();
     this.area?.show(false);
     this.world.group.visible = true;
@@ -3300,7 +3321,7 @@ export class Game {
     } else {
       // The parked car is solid while walking (once it has landed, if it was called).
       area.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: this.carDrop.active ? 0 : 1.4 });
-      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0;
+      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0 || !!this.viewing;
       const move = out ? { x: 0, y: 0 } : inp.moveAxes();
       this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, area.world);
       area.world.colliders.pop();
@@ -3422,6 +3443,18 @@ export class Game {
 
   private hubInput(dt: number): void {
     const inp = this.input;
+    if (this.viewing) {
+      if (inp.consume('photo')) return this.enterPhoto();
+      const m = inp.moveAxes();
+      if (inp.consume('interact') || inp.consume('hop') || inp.consume('respawn') || Math.hypot(m.x, m.y) > 0.5) this.endViewing();
+      else {
+        // A little look around with the mouse or right stick.
+        const look = inp.takeLook(dt);
+        this.viewLook.yaw = clamp(this.viewLook.yaw - look.dx * 0.002, -0.7, 0.7);
+        this.viewLook.pitch = clamp(this.viewLook.pitch - look.dy * 0.0015, -0.35, 0.45);
+      }
+      return;
+    }
     if (this.flight) {
       if (inp.consume('photo')) return this.enterPhoto();
       if (inp.consume('map')) return this.openMap();
@@ -3516,6 +3549,7 @@ export class Game {
     else if (zone.kind === 'mailbox') this.openMenu('mailbox');
     else if (zone.kind === 'home') this.openMenu('home');
     else if (zone.kind === 'launch') this.startFlight(zone);
+    else if (zone.kind === 'viewpoint') this.enterViewpoint(zone);
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
       this.openMenu('mural');
@@ -3746,6 +3780,96 @@ export class Game {
       this.battleAim.position.set(land.x, HUB_Y + 0.08, land.z);
       this.battleAim.scale.setScalar(0.8 + Math.sin(this.time * 6) * 0.1);
     }
+  }
+
+  // ————— the World's End and viewpoints —————
+
+  /** Galaxy for sky and sea, and a clear night, while at the World's End; the old light back after. */
+  private applyWorldsEnd(on: boolean): void {
+    this.galaxy.visible = on;
+    this.sky.visible = !on;
+    this.water.visible = !on;
+    if (on && !this.worldsEndEnv) {
+      this.worldsEndEnv = { preset: this.env.presetId, auto: this.env.auto };
+      this.env.setAuto(false);
+      this.env.setWeather('clear');
+      this.env.setPreset('night');
+    } else if (!on && this.worldsEndEnv) {
+      const e = this.worldsEndEnv;
+      this.worldsEndEnv = null;
+      this.env.setPreset(e.preset);
+      this.env.setAuto(e.auto);
+    }
+  }
+
+  /** A bench at every viewpoint in this area, facing the view. */
+  private placeBenches(area: FreeRoamArea): void {
+    if (this.benches) {
+      this.benches.removeFromParent();
+      for (const c of this.benches.children) (c as THREE.Mesh).geometry?.dispose();
+    }
+    const geo = buildBench();
+    const g = new THREE.Group();
+    for (const z of area.zones) {
+      if (z.kind !== 'viewpoint' || !z.view) continue;
+      const m = new THREE.Mesh(geo, this.pickupMaterial);
+      m.position.set(z.x, HUB_Y, z.z);
+      m.rotation.y = z.view.yaw;
+      m.scale.setScalar(1.3);
+      g.add(m);
+    }
+    this.benches = g;
+    this.scene.add(g);
+  }
+
+  /** Sit on the bench: the HUD goes, the camera slowly takes in the view. */
+  private enterViewpoint(zone: HubZone): void {
+    if (!zone.view || this.viewing || !this.area) return;
+    if (this.mode === 'drive') {
+      if (Math.abs(this.hubCar.v) > 4) {
+        this.popAtPawn(t('prompt.slowDown'), 'info');
+        return;
+      }
+      this.hubCar.v = 0;
+      this.mode = 'foot';
+      this.seatHuman();
+      this.updateHeadVisibility();
+    }
+    this.hubWalker.place(zone.x, zone.z, zone.view.yaw);
+    this.viewLook.yaw = this.viewLook.pitch = 0;
+    this.viewing = { zone, t: 0, hudWas: this.hudHidden };
+    this.hudHidden = true;
+    this.hud.root.classList.add('hud-hidden');
+    this.audio.chime(62);
+    this.menu.toast(`${this.area.zoneLabel(zone)} · ${t('view.hint')}`);
+    if (this.profile.markSeen(`view:${zone.view.id}`)) this.checkTrophies();
+  }
+
+  private endViewing(): void {
+    const v = this.viewing;
+    if (!v) return;
+    this.viewing = null;
+    this.hudHidden = v.hudWas;
+    this.hud.root.classList.toggle('hud-hidden', this.hudHidden);
+    this.hubCam.yaw = (v.zone.view?.yaw ?? this.hubCam.yaw) + Math.PI;
+    this.hubCam.pitch = 0.15;
+    this.profile.addStat('viewSeconds', Math.round(v.t));
+  }
+
+  /** The slow camera at a viewpoint: behind the bench, drifting and easing out, looking along the view. */
+  private viewpointCamera(dt: number, desired: THREE.Vector3, look: THREE.Vector3): void {
+    const v = this.viewing!;
+    const view = v.zone.view!;
+    v.t += dt;
+    const calm = this.settings.reducedMotion ? 0.3 : 1;
+    const yaw = view.yaw + Math.sin(v.t * 0.045) * 0.22 * calm + this.viewLook.yaw;
+    const pitch = view.pitch + Math.sin(v.t * 0.031) * 0.04 * calm + this.viewLook.pitch;
+    const fx = -Math.sin(yaw);
+    const fz = -Math.cos(yaw);
+    const ease = Math.min(v.t, 25) / 25;
+    const back = 3.2 + ease * 2.2 * calm;
+    desired.set(v.zone.x - fx * back, HUB_Y + 1.9 + ease * 0.8 * calm, v.zone.z - fz * back);
+    look.set(v.zone.x + fx * 40, HUB_Y + 1.4 + Math.tan(pitch) * 40, v.zone.z + fz * 40);
   }
 
   // ————— calling the car —————
@@ -4120,7 +4244,7 @@ export class Game {
       hm.root.position.set(w.x, HUB_Y + w.y, w.z);
       hm.root.quaternion.setFromAxisAngle(_y, w.heading);
       this.tickEmote(dt, this.hubWalker.speed);
-      hm.animate(dt, this.waveTimer > 0 ? this.emoteName : this.hubWalker.pose, this.hubWalker.speed, this.time);
+      hm.animate(dt, this.viewing ? 'sit' : this.waveTimer > 0 ? this.emoteName : this.hubWalker.pose, this.hubWalker.speed, this.time);
       this.updatePet(dt, hm.root);
       if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
         this.footstepTimer -= dt * this.hubWalker.speed;
@@ -4135,6 +4259,7 @@ export class Game {
       const dist = 5.2 * this.rig.zoom;
       look.copy(focus).add(_v4.set(0, 1.6, 0));
       desired.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist).add(look);
+      if (this.viewing) this.viewpointCamera(dt, desired, look);
     } else {
       this.humanModel.animate(dt, vm.def.seatPose, 0, this.time);
       // Pull back and up during a stunt so the landing is in view.
@@ -4162,13 +4287,16 @@ export class Game {
       cam.position.copy(this.hubCam.pos);
       cam.up.set(0, 1, 0);
       const burst = this.hubCar.burst > 0 ? 8 : 0;
-      cam.fov += (this.settings.fov + Math.min(10, Math.max(0, this.hubCar.v - 18) * 0.5) + burst - cam.fov) * Math.min(1, dt * 6);
+      const calm = this.viewing ? -10 : 0;
+      cam.fov += (this.settings.fov + calm + Math.min(10, Math.max(0, this.hubCar.v - 18) * 0.5) + burst - cam.fov) * Math.min(1, dt * (this.viewing ? 1.5 : 6));
       cam.updateProjectionMatrix();
       cam.lookAt(this.hubCam.look);
       cam.updateMatrixWorld();
     }
 
     this.sky.position.copy(cam.position);
+    this.galaxy.position.copy(cam.position);
+    galaxyUniforms.uTime.value = this.time;
     this.env.update(dt, focus, cam, this.settings.reducedMotion || this.options.calmLighting);
     paintShared.uTime.value = this.time;
     skyUniforms.uTime.value = this.time;
@@ -4256,10 +4384,12 @@ export class Game {
       splash: this.splash * 0.8,
       sunDir: this.env.sunDirection,
       sunColor: this.env.sunColour,
-      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.drawDistance()) * (area.id === 'city' ? 0.5 : area.id === 'village' ? 0.7 : area.id === 'hills' ? 1.4 : 1),
+      fogDensity: this.env.fogDensity * Math.max(1, 3000 / this.drawDistance()) * (area.id === 'city' ? 0.5 : area.id === 'village' ? 0.7 : area.id === 'hills' ? 1.4 : area.id === 'worldsend' ? 0.45 : 1),
       flash: this.env.flash,
       dofFocus: 10,
       dofAmount: 0,
+      // A bench's own mood while sitting; the World's End has a dreamy grade unless you chose one.
+      lut: this.viewing?.zone.view?.lut ?? (area.id === 'worldsend' && this.settings.lut === 'none' ? 'dream' : undefined),
     };
     this.pipeline.render(this.scene, cam, dt, this.time, this.lastFx);
   }

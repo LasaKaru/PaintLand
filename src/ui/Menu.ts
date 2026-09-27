@@ -95,6 +95,7 @@ export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHo
   enterCity(): void;
   enterVillage(): void;
   enterHills(): void;
+  enterWorldsEnd(): void;
   startCityMission(id: string): void;
   cancelCityMission(): void;
   /** Id of the open-world mission in progress, if any. */
@@ -443,6 +444,7 @@ export class Menu {
         <button class="menu-item" data-nav="city">${t('menu.city')}</button>
         <button class="menu-item" data-nav="village">${t('menu.village')}</button>
         <button class="menu-item" data-nav="hills">${t('menu.hills')}</button>
+        <button class="menu-item" data-nav="worldsend">${t('menu.worldsend')}</button>
         <button class="menu-item" data-nav="daily">${t('daily.menu')}</button>
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="roadstudio">🛣 ${t('rs.title')}</button>
@@ -1190,6 +1192,7 @@ export class Menu {
       else if (d.nav === 'city') this.host.enterCity();
       else if (d.nav === 'village') this.host.enterVillage();
       else if (d.nav === 'hills') this.host.enterHills();
+      else if (d.nav === 'worldsend') this.host.enterWorldsEnd();
       else if (d.nav === 'resume') this.host.resume();
       else {
         if (d.nav === 'citymissions') this.boardArea = null;

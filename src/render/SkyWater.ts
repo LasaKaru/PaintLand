@@ -208,3 +208,107 @@ export function createWater(): THREE.Mesh {
   mesh.frustumCulled = false;
   return mesh;
 }
+
+export const galaxyUniforms = {
+  uTime: { value: 0 },
+  uRealism: paintShared.uRealism,
+};
+
+/**
+ * The sky at the World's End: deep space all around (below the edge too),
+ * the Milky Way as a painted band with dust lanes and nebula colour, layers
+ * of twinkling stars, a ringed planet and the odd shooting star.
+ */
+export function createGalaxySky(): THREE.Mesh {
+  const material = new THREE.ShaderMaterial({
+    glslVersion: THREE.GLSL3,
+    side: THREE.BackSide,
+    depthWrite: true,
+    uniforms: galaxyUniforms,
+    vertexShader: /* glsl */ `
+      varying vec3 vDir;
+      void main() {
+        vDir = normalize((modelMatrix * vec4(position, 1.0)).xyz - cameraPosition);
+        gl_Position = projectionMatrix * viewMatrix * modelMatrix * vec4(position, 1.0);
+      }
+    `,
+    fragmentShader: /* glsl */ `
+      ${mrtHeader}
+      uniform float uTime; uniform float uRealism;
+      varying vec3 vDir;
+      float hash31(vec3 p) { p = fract(p * vec3(443.897, 441.423, 437.195)); p += dot(p, p.yzx + 19.19); return fract((p.x + p.y) * p.z); }
+      float fbm3(vec3 p) { return fbm(p.xy * 1.3 + p.z * 0.7) * 0.6 + fbm(p.yz * 1.7 - p.x * 0.5) * 0.4; }
+      // Stars on a grid of cells in 3D; each cell has at most one star.
+      float stars(vec3 d, float scale, float thresh, float size) {
+        vec3 p = d * scale;
+        vec3 cell = floor(p);
+        float h = hash31(cell);
+        if (h < thresh) return 0.0;
+        vec3 centre = cell + 0.5 + (vec3(hash31(cell + 1.3), hash31(cell + 2.7), hash31(cell + 5.1)) - 0.5) * 0.6;
+        float dist = length(p - centre);
+        float twinkle = 0.7 + 0.3 * sin(uTime * (1.0 + h * 3.0) + h * 40.0);
+        // A bright core and a soft glow, big enough to survive the painted look.
+        float glow = smoothstep(size, 0.0, dist) * 0.5 + smoothstep(size * 0.35, 0.0, dist);
+        return glow * twinkle * (0.4 + 0.6 * (h - thresh) / (1.0 - thresh));
+      }
+      void main() {
+        vec3 d = normalize(vDir);
+        // Deep space: indigo overhead, violet toward the edge, darker below.
+        vec3 col = mix(vec3(0.05, 0.04, 0.13), vec3(0.16, 0.09, 0.26), smoothstep(0.6, -0.1, d.y));
+        col = mix(col, vec3(0.03, 0.03, 0.09), smoothstep(-0.1, -0.8, d.y));
+        // The Milky Way: a tilted band around the sky.
+        vec3 n = normalize(vec3(0.35, 0.55, 0.76));
+        float b = dot(d, n);
+        float band = exp(-b * b / 0.018);
+        float core = exp(-pow(length(d - normalize(vec3(-0.6, 0.35, -0.72))), 2.0) / 0.35);
+        float clouds = fbm3(d * 3.0);
+        float dust = smoothstep(0.45, 0.75, fbm3(d * 7.0 + 3.0)) * exp(-b * b / 0.004);
+        vec3 glow = mix(vec3(0.55, 0.45, 0.85), vec3(1.0, 0.82, 0.62), core);
+        col += glow * band * (0.35 + 0.8 * clouds) * (0.7 + core * 1.1);
+        col *= 1.0 - dust * 0.55 * band;
+        // Nebulae: soft pink and teal washes near the band.
+        float neb = fbm3(d * 2.2 + 7.0);
+        col += vec3(0.85, 0.3, 0.55) * smoothstep(0.55, 0.85, neb) * 0.22 * (0.4 + band);
+        col += vec3(0.2, 0.7, 0.75) * smoothstep(0.6, 0.9, fbm3(d * 2.6 - 4.0)) * 0.16 * (0.3 + band);
+        // Stars: many faint ones, fewer bright ones, and more inside the band.
+        float s = stars(d, 80.0, 0.9, 0.42) * 0.9 + stars(d, 45.0, 0.94, 0.4) * 1.3 + stars(d, 22.0, 0.975, 0.3) * 2.0;
+        s += stars(d, 120.0, 0.8, 0.45) * band * 1.2;
+        vec3 starCol = mix(vec3(0.8, 0.88, 1.0), vec3(1.0, 0.9, 0.75), hash31(floor(d * 90.0)));
+        col += starCol * s;
+        // A ringed planet low over the edge.
+        vec3 pd = normalize(vec3(0.55, 0.12, 0.83));
+        float pa = acos(clamp(dot(d, pd), -1.0, 1.0));
+        float planet = smoothstep(0.075, 0.072, pa);
+        vec3 lit = normalize(vec3(-0.6, 0.5, 0.2));
+        vec3 local = normalize(d - pd * dot(d, pd) + 1e-5);
+        float shade = clamp(0.55 + dot(local, lit) * 0.6 * (pa / 0.075), 0.3, 1.1);
+        vec3 planetCol = mix(vec3(0.93, 0.7, 0.55), vec3(0.8, 0.5, 0.6), 0.5 + 0.5 * sin(dot(d, vec3(0.0, 60.0, 10.0))));
+        col = mix(col, planetCol * shade, planet);
+        vec3 ringN = normalize(vec3(0.15, 0.95, -0.25));
+        float ringR = pa / 0.075;
+        float onRing = smoothstep(0.012, 0.0, abs(dot(d - pd, ringN))) * step(1.25, ringR) * step(ringR, 2.1);
+        col = mix(col, vec3(0.95, 0.85, 0.7) * (0.6 + 0.4 * sin(ringR * 40.0)), onRing * (1.0 - planet * step(dot(d - pd, ringN), 0.0)) * 0.8);
+        // A shooting star now and then.
+        float period = 9.0;
+        float k = floor(uTime / period);
+        float ft = fract(uTime / period);
+        vec3 a0 = normalize(vec3(hash21(vec2(k, 1.0)) - 0.5, 0.35 + hash21(vec2(k, 2.0)) * 0.4, hash21(vec2(k, 3.0)) - 0.5));
+        vec3 dirS = normalize(cross(a0, vec3(0.0, 1.0, 0.0)));
+        vec3 head = normalize(a0 + dirS * ft * 0.5);
+        vec3 toD = d - head;
+        float along = dot(toD, -dirS);
+        float across = length(toD + dirS * along);
+        float trail = smoothstep(0.004, 0.0, across) * smoothstep(0.18, 0.0, along) * step(0.0, along) * smoothstep(0.35, 0.0, ft) * step(ft, 0.35);
+        col += vec3(1.0, 0.95, 0.85) * trail;
+        gColor = vec4(col, clamp(s * 0.8 + trail + band * core * 0.3, 0.0, 1.0));
+        gNormal = vec4(0.5, 0.5, 0.5, 0.0);
+      }
+    `,
+  });
+  const mesh = new THREE.Mesh(new THREE.SphereGeometry(2900, 48, 24), material);
+  mesh.frustumCulled = false;
+  mesh.renderOrder = -1;
+  mesh.name = 'galaxy';
+  mesh.visible = false;
+  return mesh;
+}

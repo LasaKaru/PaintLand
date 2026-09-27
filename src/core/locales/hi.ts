@@ -934,5 +934,18 @@ const hi: Locale = {
   'drop.coming': 'आपकी कार नीचे आ रही है!',
   'drop.noRoom': 'यहाँ कार के उतरने की जगह नहीं है। किसी खुली जगह पर कोशिश करो।',
   'drop.notNow': 'रंग युद्ध के दौरान नहीं!',
+  'menu.worldsend': '🌌 दुनिया का छोर',
+  'we.kicker': 'आख़िरी पन्ना',
+  'we.name': 'दुनिया का छोर',
+  'we.poem': 'जहाँ स्केचबुक ख़त्म होती है, वहाँ तारे शुरू होते हैं। थोड़ी देर बैठो।',
+  'view.hint': 'उठने के लिए चलो या E दबाओ',
+  'zone.viewpoint': '🌅 नज़ारा',
+  'view.we-edge': 'दुनिया का छोर',
+  'view.we-lake': 'दर्पण झील',
+  'view.we-meadow': 'आकाशगंगा का मैदान',
+  'view.we-falls': 'आख़िरी झरना',
+  'view.hb-quay': 'सूर्यास्त का घाट',
+  'view.hl-lake': 'झील किनारे की बेंच',
+  'view.lv-lanterns': 'लालटेन नज़ारा',
 };
 export default hi;

@@ -934,5 +934,18 @@ const es: Locale = {
   'drop.coming': '¡Tu coche está bajando!',
   'drop.noRoom': 'Aquí no hay sitio para que aterrice el coche. Prueba en un lugar más abierto.',
   'drop.notNow': '¡No durante una batalla de pintura!',
+  'menu.worldsend': '🌌 El Fin del Mundo',
+  'we.kicker': 'La última página',
+  'we.name': 'El Fin del Mundo',
+  'we.poem': 'Donde termina el cuaderno, empiezan las estrellas. Siéntate un rato.',
+  'view.hint': 'Muévete o pulsa E para levantarte',
+  'zone.viewpoint': '🌅 Mirador',
+  'view.we-edge': 'El borde del mundo',
+  'view.we-lake': 'Lago Espejo',
+  'view.we-meadow': 'Prado de la Vía Láctea',
+  'view.we-falls': 'La última cascada',
+  'view.hb-quay': 'El muelle al atardecer',
+  'view.hl-lake': 'El banco junto al lago',
+  'view.lv-lanterns': 'El mirador de los farolillos',
 };
 export default es;

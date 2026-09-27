@@ -934,5 +934,18 @@ const ja: Locale = {
   'drop.coming': '車が降りてきます！',
   'drop.noRoom': 'ここには車が降りる場所がありません。もっと開けた場所で試してください。',
   'drop.notNow': 'ペンキバトル中はだめ！',
+  'menu.worldsend': '🌌 世界の果て',
+  'we.kicker': '最後のページ',
+  'we.name': '世界の果て',
+  'we.poem': 'スケッチブックが終わるところで、星がはじまる。少し座っていこう。',
+  'view.hint': '動くか E を押して立ち上がる',
+  'zone.viewpoint': '🌅 展望スポット',
+  'view.we-edge': '世界のふち',
+  'view.we-lake': '鏡の湖',
+  'view.we-meadow': '天の川の草原',
+  'view.we-falls': '最後の滝',
+  'view.hb-quay': '夕暮れの波止場',
+  'view.hl-lake': '湖畔のベンチ',
+  'view.lv-lanterns': 'ランタンの見晴らし台',
 };
 export default ja;

@@ -932,6 +932,19 @@ const en = {
   'drop.coming': 'Your car is on its way down!',
   'drop.noRoom': 'No room for the car to land here. Try a more open spot.',
   'drop.notNow': 'Not during a paint battle!',
+  'menu.worldsend': "🌌 World's End",
+  'we.kicker': 'The last page',
+  'we.name': "World's End",
+  'we.poem': 'Where the sketchbook ends, the stars begin. Sit a while.',
+  'view.hint': 'Move or press E to stand up',
+  'zone.viewpoint': '🌅 Viewpoint',
+  'view.we-edge': 'The Edge of the World',
+  'view.we-lake': 'Mirror Lake',
+  'view.we-meadow': 'Milky Way Meadow',
+  'view.we-falls': 'The Last Waterfall',
+  'view.hb-quay': 'The Quay at Sunset',
+  'view.hl-lake': 'The Lakeside Bench',
+  'view.lv-lanterns': 'The Lantern Lookout',
 } as const;
 
 export default en;

@@ -305,6 +305,7 @@ export class Village implements FreeRoamArea {
     this.world.circle(-104, -9, 0.4);
     this.zones.push({ kind: 'area', label: '⚓ Harbour Town', x: -108, z: 0, r: 6, area: 'harbour', colour: '#2f8f86' });
     this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -60, z: 4, r: 4, colour: '#f6f0e4' });
+    this.zones.push({ kind: 'viewpoint', label: '🌅 The Lantern Lookout', x: 0, z: 50, r: 2.6, colour: '#c9b8f0', view: { id: 'lv-lanterns', yaw: 0, pitch: 0.1, lut: 'dream', name: 'The Lantern Lookout' } });
 
     this.murals.push(...addMuralBoards(this, 'village', this.spawn));
     this.pockets.push(...addPockets(this));
@@ -380,6 +381,7 @@ export class Village implements FreeRoamArea {
   }
 
   zoneLabel(z: AreaZone): string {
+    if (z.kind === 'viewpoint' && z.view) return `🌅 ${t(`view.${z.view.id}` as StringKey)}`;
     return z.kind === 'portal' || z.kind === 'area' ? z.label : t(`zone.${z.kind}` as StringKey);
   }
 

@@ -934,5 +934,18 @@ const it: Locale = {
   'drop.coming': 'La tua auto sta scendendo!',
   'drop.noRoom': 'Qui non c’è spazio per far atterrare l’auto. Prova in un punto più aperto.',
   'drop.notNow': 'Non durante una battaglia di colori!',
+  'menu.worldsend': '🌌 La Fine del Mondo',
+  'we.kicker': 'L’ultima pagina',
+  'we.name': 'La Fine del Mondo',
+  'we.poem': 'Dove finisce il quaderno, cominciano le stelle. Siediti un po’.',
+  'view.hint': 'Muoviti o premi E per alzarti',
+  'zone.viewpoint': '🌅 Belvedere',
+  'view.we-edge': 'Il bordo del mondo',
+  'view.we-lake': 'Il lago Specchio',
+  'view.we-meadow': 'Il prato della Via Lattea',
+  'view.we-falls': 'L’ultima cascata',
+  'view.hb-quay': 'Il molo al tramonto',
+  'view.hl-lake': 'La panchina sul lago',
+  'view.lv-lanterns': 'Il belvedere delle lanterne',
 };
 export default it;

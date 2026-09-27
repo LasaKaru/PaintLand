@@ -934,5 +934,18 @@ const nl: Locale = {
   'drop.coming': 'Je auto komt eraan, uit de lucht!',
   'drop.noRoom': 'Hier is geen ruimte om te landen. Probeer een opener plek.',
   'drop.notNow': 'Niet tijdens een verfgevecht!',
+  'menu.worldsend': '🌌 Het Einde van de Wereld',
+  'we.kicker': 'De laatste bladzijde',
+  'we.name': 'Het Einde van de Wereld',
+  'we.poem': 'Waar het schetsboek ophoudt, beginnen de sterren. Ga even zitten.',
+  'view.hint': 'Beweeg of druk op E om op te staan',
+  'zone.viewpoint': '🌅 Uitkijkpunt',
+  'view.we-edge': 'De rand van de wereld',
+  'view.we-lake': 'Het Spiegelmeer',
+  'view.we-meadow': 'De Melkwegweide',
+  'view.we-falls': 'De laatste waterval',
+  'view.hb-quay': 'De kade bij zonsondergang',
+  'view.hl-lake': 'Het bankje aan het meer',
+  'view.lv-lanterns': 'Het lantaarnuitzicht',
 };
 export default nl;

@@ -934,5 +934,18 @@ const vi: Locale = {
   'drop.coming': 'Xe của bạn đang hạ xuống!',
   'drop.noRoom': 'Không đủ chỗ cho xe hạ cánh ở đây. Thử chỗ thoáng hơn nhé.',
   'drop.notNow': 'Không phải lúc đang chiến sơn!',
+  'menu.worldsend': '🌌 Tận Cùng Thế Giới',
+  'we.kicker': 'Trang cuối',
+  'we.name': 'Tận Cùng Thế Giới',
+  'we.poem': 'Nơi cuốn sổ phác thảo kết thúc, các vì sao bắt đầu. Ngồi lại một chút nhé.',
+  'view.hint': 'Di chuyển hoặc nhấn E để đứng dậy',
+  'zone.viewpoint': '🌅 Điểm ngắm cảnh',
+  'view.we-edge': 'Mép thế giới',
+  'view.we-lake': 'Hồ Gương',
+  'view.we-meadow': 'Đồng cỏ Ngân Hà',
+  'view.we-falls': 'Thác nước cuối cùng',
+  'view.hb-quay': 'Bến cảng lúc hoàng hôn',
+  'view.hl-lake': 'Ghế bên hồ',
+  'view.lv-lanterns': 'Điểm ngắm đèn lồng',
 };
 export default vi;

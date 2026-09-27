@@ -934,5 +934,18 @@ const zh: Locale = {
   'drop.coming': '你的车正在降落！',
   'drop.noRoom': '这里没有地方让车降落。换个空旷点的地方试试。',
   'drop.notNow': '颜料大战期间不行！',
+  'menu.worldsend': '🌌 世界尽头',
+  'we.kicker': '最后一页',
+  'we.name': '世界尽头',
+  'we.poem': '画册结束的地方，星星开始了。坐一会儿吧。',
+  'view.hint': '移动或按 E 站起来',
+  'zone.viewpoint': '🌅 观景点',
+  'view.we-edge': '世界的边缘',
+  'view.we-lake': '明镜湖',
+  'view.we-meadow': '银河草甸',
+  'view.we-falls': '最后的瀑布',
+  'view.hb-quay': '日落码头',
+  'view.hl-lake': '湖畔长椅',
+  'view.lv-lanterns': '灯笼观景台',
 };
 export default zh;
