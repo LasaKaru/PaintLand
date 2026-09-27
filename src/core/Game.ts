@@ -79,6 +79,8 @@ import type { RoverInput } from '../gameplay/RoverController';
 import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
 import { MailClient, postcardImage, type VisitedHome } from '../net/Mail';
+import { SkyBrush } from '../gameplay/SkyBrush';
+import { photoUrl, type ContestState } from '../ui/ContestScreen';
 import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
 import { Hub as HarbourHub } from '../world/Hub';
 import type { PocketKind } from '../world/Pockets';
@@ -148,6 +150,9 @@ export class Game {
   private readonly particles = new Particles();
   private readonly wildlife = new Wildlife();
   private readonly photo: PhotoMode;
+  /** Photo mode's weather brush. */
+  private readonly skyBrush = new SkyBrush();
+  private brushing = false;
   private readonly photoCam = { pos: new THREE.Vector3(), yaw: 0, pitch: 0, anchor: new THREE.Vector3() };
   private readonly ghostRec = new GhostRecorder();
   private ghost: GhostPlayer | null = null;
@@ -222,6 +227,9 @@ export class Game {
   /** A friend's home being visited (shown on your plot until you go back). */
   private visitingHome: VisitedHome | null = null;
   private homeSync = 0;
+  /** A photo waiting to be entered in the contest (JPEG data URL). */
+  private contestImg: string | null = null;
+  private winnerCheckedAt = -Infinity;
   private cloudPulled = false;
   /** Festival decorations built per area (removed when the festival or setting changes). */
   private festivalDecor = new Map<string, { festival: Festival; group: THREE.Group }>();
@@ -334,6 +342,8 @@ export class Game {
       pendingPostcard: () => this.postcardImg,
       clearPostcard: () => (this.postcardImg = null),
       chatMode: () => this.options.chat,
+      pendingEntry: () => this.contestImg,
+      clearEntry: () => (this.contestImg = null),
       together: (kind) => this.startTogether(kind),
       togetherState: () => ({ roam: !!this.roamChapter(), online: this.net.connected, convoy: this.convoy.leading ? 'leading' : this.convoy.leader ? 'following' : null, busy: !!this.contest || !!this.paintEvent }),
       stickerAreas: () => [...this.areas.values()].map((a) => ({ id: a.id, name: a.title().name, places: a.places, secrets: a.secrets })),
@@ -476,7 +486,32 @@ export class Game {
       exit: () => this.exitPhoto(),
       groupPhoto: () => this.startGroupPhoto(),
       postcard: () => this.makePostcard(),
+      contest: () => this.makeContestEntry(),
+      brush: (kind) => (this.skyBrush.kind = kind),
+      brushSize: (v) => (this.skyBrush.size = v),
+      brushClear: () => this.skyBrush.clear(),
     });
+    this.scene.add(this.skyBrush.particles.points);
+    // Painting weather into the photo: drag on the picture while a brush is chosen.
+    const canvas = this.renderer.domElement;
+    const paintAt = (e: PointerEvent): void => {
+      const r = canvas.getBoundingClientRect();
+      const n = this.skyBrush.paint(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1, this.rig.camera);
+      if (n && this.skyBrush.painted > 300) this.profile.markSeen('brush');
+    };
+    canvas.addEventListener('pointerdown', (e) => {
+      if (this.state !== 'photo' || !this.skyBrush.kind) return;
+      this.brushing = true;
+      canvas.setPointerCapture?.(e.pointerId);
+      paintAt(e);
+    });
+    canvas.addEventListener('pointermove', (e) => this.brushing && this.state === 'photo' && paintAt(e));
+    const stop = (): void => {
+      if (this.brushing) this.checkTrophies();
+      this.brushing = false;
+    };
+    canvas.addEventListener('pointerup', stop);
+    canvas.addEventListener('pointercancel', stop);
 
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('keydown', () => {
@@ -784,6 +819,43 @@ export class Game {
     this.menu.show('none');
     this.enterHub({ area: 'harbour', x: -68, z: 30, heading: Math.PI, foot: null }, 'harbour');
     return null;
+  }
+
+  /** Photo mode → Enter the contest: a 960 × 600 picture, then the entry form. */
+  private makeContestEntry(): void {
+    if (!this.lastFx) return;
+    this.pipeline.render(this.scene, this.rig.camera, 0, this.time, this.lastFx);
+    this.contestImg = postcardImage(this.renderer.domElement, 0.8, 960, 600, 225_000);
+    this.exitPhoto();
+    this.openMenu('contest');
+  }
+
+  /**
+   * Last week's winning photo on a billboard in Serendib City (and one in
+   * Harbour Town), with the photographer's name. Checked at most every 10 minutes.
+   */
+  private async refreshWinnerBoard(force = false): Promise<void> {
+    if (!force && performance.now() - this.winnerCheckedAt < 600_000) return;
+    this.winnerCheckedAt = performance.now();
+    const r = await api<ContestState & { ok: boolean }>('/api/photos');
+    const w = r.ok ? r.data?.winner : null;
+    const boards = ['city', 'harbour'].map((id) => this.areaBoards.get(id)).filter((b): b is BrandBoards => !!b);
+    if (!w) {
+      for (const b of boards) b.feature(0, null);
+      return;
+    }
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.src = photoUrl(w.id);
+    try {
+      await img.decode();
+    } catch {
+      return;
+    }
+    for (const b of boards) {
+      const [bw, bh] = b.boardSize(0) ?? [4, 2.5];
+      b.feature(0, winnerPicture(img, w.name, w.caption, bw / bh, t('pc.boardTitle')));
+    }
   }
 
   /** Photo mode → Postcard: render the frame small and open the send form. */
@@ -2726,6 +2798,7 @@ export class Game {
     area.group.add(boards.group);
     this.areaBoards.set(id, boards);
     void boards.refresh();
+    if (id === 'city' || id === 'harbour') queueMicrotask(() => void this.refreshWinnerBoard(true));
     area.show(false);
     // Areas without their own pickup models get painted pots and chests.
     for (const s of area.secrets) {
@@ -2766,6 +2839,7 @@ export class Game {
     if (this.area && this.area.id !== id) this.area.show(false);
     const area = this.areaFor(id);
     this.area = area;
+    void this.refreshWinnerBoard();
     this.menu.show('none');
     this.setShowcase(null);
     this.hud.letterbox(false);
@@ -3722,6 +3796,9 @@ export class Game {
   private exitPhoto(): void {
     if (this.state !== 'photo') return;
     this.photo.close();
+    this.skyBrush.clear();
+    this.skyBrush.kind = null;
+    this.brushing = false;
     this.state = this.inHub ? 'hub' : 'play';
     this.hud.setPlaying(true);
     this.vehicle.root.visible = true;
@@ -3733,6 +3810,9 @@ export class Game {
   private updatePhotoCamera(dt: number): void {
     const inp = this.input;
     const look = inp.takeLook(dt);
+    // While a weather brush is chosen, dragging paints instead of looking around.
+    if (this.skyBrush.kind) look.dx = look.dy = 0;
+    this.skyBrush.update(this.pipeline.size.height, this.rig.camera);
     const pc = this.photoCam;
     pc.yaw -= look.dx * 0.003;
     pc.pitch = clamp(pc.pitch - look.dy * 0.003, -1.5, 1.5);
@@ -3967,3 +4047,27 @@ const _y = new THREE.Vector3(0, 1, 0);
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
 }
+
+/** The photo of the week, cropped to a billboard's shape, with a caption strip. */
+function winnerPicture(img: HTMLImageElement, name: string, caption: string, aspect: number, title: string): HTMLCanvasElement {
+  const H = 512;
+  const W = Math.round(H * aspect);
+  const c = document.createElement('canvas');
+  c.width = W;
+  c.height = H;
+  const g = c.getContext('2d');
+  if (!g) return c;
+  const strip = Math.round(H * 0.2);
+  const scale = Math.max(W / img.width, (H - strip) / img.height);
+  g.drawImage(img, (W - img.width * scale) / 2, (H - strip - img.height * scale) / 2, img.width * scale, img.height * scale);
+  g.fillStyle = '#f6f0e4';
+  g.fillRect(0, H - strip, W, strip);
+  g.fillStyle = '#2b2622';
+  g.textBaseline = 'middle';
+  g.font = `600 ${Math.round(strip * 0.36)}px "Patrick Hand", "Noto Sans", sans-serif`;
+  g.fillText(`🏆 ${title} · ${name}`, 16, H - strip * 0.66, W - 32);
+  g.font = `${Math.round(strip * 0.28)}px "Noto Sans", sans-serif`;
+  if (caption) g.fillText(caption, 16, H - strip * 0.26, W - 32);
+  return c;
+}
+

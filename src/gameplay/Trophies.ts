@@ -134,6 +134,8 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'trail-1000', name: 'Paint the Road', text: 'Paint 1,000 dabs with the paint trail (L).', icon: '🖌', reward: 150, progress: stat('trailDots', 1000) },
   { id: 'postcard-1', name: 'Wish You Were Here', text: 'Send a postcard from photo mode.', icon: '💌', reward: 80, progress: stat('postcards', 1) },
   { id: 'visitor', name: 'Neighbourly', text: 'Visit a friend’s home in Harbour Town.', icon: '🏡', reward: 80, progress: seenCount('visit:', 1) },
+  { id: 'weather-brush', name: 'Weather Painter', text: 'Paint rain, petals, fireflies, snow or lanterns into a photo with the weather brush.', icon: '🌸', reward: 60, progress: seenCount('brush', 1) },
+  { id: 'photo-contest', name: 'On Show', text: 'Enter the weekly photo contest.', icon: '📸', reward: 100, progress: stat('contestEntries', 1) },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

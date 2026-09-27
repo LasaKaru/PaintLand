@@ -163,6 +163,34 @@ export class BrandBoards {
     this.blimp = { root, banner, radius, height, cx, cz, speed: 0.022 };
   }
 
+  private readonly featured = new Map<number, THREE.Texture>();
+
+  /** The size (w × h, metres) of board i, or null. */
+  boardSize(i: number): [number, number] | null {
+    return this.boards[i]?.size ?? null;
+  }
+
+  /** Show a picture on board i instead of a logo (the photo of the week), or give it back with null. */
+  feature(i: number, picture: HTMLCanvasElement | null): void {
+    const b = this.boards[i];
+    if (!b) return;
+    this.featured.get(i)?.dispose();
+    if (!picture) {
+      this.featured.delete(i);
+      void this.refresh();
+      return;
+    }
+    const tex = new THREE.CanvasTexture(picture);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.featured.set(i, tex);
+    b.logo = null;
+    const mat = new PaintMaterial({ map: tex, gloss: 0.05 });
+    for (const f of b.faces) {
+      f.material = mat;
+      f.visible = true;
+    }
+  }
+
   /** Pick logos for every board and paint them (call again when branding changes). */
   async refresh(): Promise<void> {
     const id = ++this.refreshId;
@@ -189,7 +217,11 @@ export class BrandBoards {
         }),
       );
     };
-    for (const b of this.boards) assign(b, b.style, pickLogo(pool, rand()));
+    this.boards.forEach((b, i) => {
+      const logo = pickLogo(pool, rand());
+      // A featured board (the photo of the week) keeps its picture.
+      if (!this.featured.has(i)) assign(b, b.style, logo);
+    });
     if (this.blimp) {
       // The blimp flies the company banner when there is one.
       const company = pool.find((l) => l.kind === 'company');

@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { paintShared } from './PaintMaterial';
 
-export type ParticleKind = 'smoke' | 'dust' | 'spark' | 'splash' | 'confetti' | 'firework' | 'flame' | 'firefly' | 'exhaust';
+export type ParticleKind = 'smoke' | 'dust' | 'spark' | 'splash' | 'confetti' | 'firework' | 'flame' | 'firefly' | 'exhaust' | 'rain' | 'petal' | 'snow' | 'lantern';
 
 interface KindDef {
   life: [number, number];
@@ -24,6 +24,11 @@ const KINDS: Record<ParticleKind, KindDef> = {
   flame: { life: [0.25, 0.5], size: [0.18, 0.3], grow: 1.8, drag: 2, gravity: -4, glow: 1, colours: ['#ffb347', '#ff7a2e', '#ffe08a'] },
   firefly: { life: [3, 6], size: [0.1, 0.16], grow: 1, drag: 0.5, gravity: 0, glow: 1, colours: ['#e8ff8a', '#fff6a0'] },
   exhaust: { life: [0.2, 0.4], size: [0.25, 0.4], grow: 0.3, drag: 3, gravity: -1, glow: 0.9, colours: ['#7fc8ff', '#ffb35c', '#ffe08a'] },
+  // The photo-mode weather brush.
+  rain: { life: [2, 3], size: [0.07, 0.1], grow: 1, drag: 0, gravity: 30, glow: 0.45, colours: ['#dbe9f2', '#c4d8e6', '#eef5fa'] },
+  petal: { life: [4, 7], size: [0.3, 0.45], grow: 1, drag: 1.5, gravity: 0.6, glow: 0.6, colours: ['#f7b8cf', '#f3a3c0', '#fbd3e1', '#ffffff'] },
+  snow: { life: [5, 8], size: [0.2, 0.32], grow: 1, drag: 2, gravity: 0.8, glow: 0.6, colours: ['#ffffff', '#f2f6fb'] },
+  lantern: { life: [8, 12], size: [0.5, 0.8], grow: 1, drag: 1, gravity: -0.5, glow: 1, colours: ['#ffb347', '#ff9f43', '#ffd27a'] },
 };
 
 const vertex = /* glsl */ `
@@ -93,6 +98,8 @@ export class Particles {
   readonly material: THREE.ShaderMaterial;
   /** Multiplier from the graphics tier (Low halves emission). */
   density = 1;
+  /** Hold every particle where it is, full size and opacity (the photo-mode weather brush). */
+  still = false;
 
   constructor(max = 900) {
     this.max = max;
@@ -168,6 +175,11 @@ export class Particles {
     for (let i = 0; i < this.max; i++) {
       if (this.life[i] <= 0) {
         this.size[i] = 0;
+        continue;
+      }
+      if (this.still) {
+        this.size[i] = this.base[i];
+        this.fade[i] = 1;
         continue;
       }
       this.life[i] -= dt;

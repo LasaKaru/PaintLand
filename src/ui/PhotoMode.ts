@@ -1,5 +1,6 @@
 import type { StudioSettings } from '../render/StudioSettings';
 import { t } from '../core/i18n';
+import { BRUSH_ICONS, BRUSH_KINDS, type BrushKind } from '../gameplay/SkyBrush';
 import { TIME_PRESETS, WEATHER_ORDER, WEATHERS, type WeatherId } from '../world/Environment';
 
 export interface PhotoHost {
@@ -13,6 +14,12 @@ export interface PhotoHost {
   groupPhoto?(): void;
   /** Send this view to a friend's mailbox as a postcard. */
   postcard?(): void;
+  /** Enter this view in the weekly photo contest. */
+  contest?(): void;
+  /** The weather brush: which weather a drag paints (null: dragging looks around), its size, wipe it. */
+  brush?(kind: BrushKind | null): void;
+  brushSize?(size: number): void;
+  brushClear?(): void;
 }
 
 /** Photo-mode camera and lens values (not saved). */
@@ -32,6 +39,8 @@ export interface PhotoState {
  */
 export class PhotoMode {
   readonly root: HTMLDivElement;
+  private brushKind: BrushKind | null = null;
+  private brushSize = 1;
   readonly state: PhotoState = { fov: 60, roll: 0, focus: 12, blur: 0.4, autoFocus: true, hidePlayer: false };
 
   constructor(parent: HTMLElement, private readonly host: PhotoHost) {
@@ -46,6 +55,7 @@ export class PhotoMode {
   }
 
   open(fov: number): void {
+    this.brushKind = null;
     this.state.fov = Math.round(fov);
     this.state.roll = 0;
     this.render();
@@ -93,14 +103,24 @@ export class PhotoMode {
       ${slider('vignette', 'Vignette', s.vignette, 0, 1, 0.01, '', true)}
       ${slider('border', 'Sketchbook border (painted look)', s.border, 0, 1, 0.01, '', true)}
       <label class="check"><input type="checkbox" data-p="hidePlayer" ${st.hidePlayer ? 'checked' : ''}> Hide my car and character</label>
+      ${this.host.brush ? `<h4>${t('brush.title')}</h4><p class="menu-hint">${t('brush.hint')}</p>
+      <div class="seg wrap"><button class="seg-btn ${this.brushKind ? '' : 'on'}" data-brush="" aria-pressed="${!this.brushKind}">${t('brush.off')}</button>${BRUSH_KINDS.map((k) => `<button class="seg-btn ${this.brushKind === k ? 'on' : ''}" data-brush="${k}" aria-pressed="${this.brushKind === k}">${BRUSH_ICONS[k]} ${t(`brush.${k}` as 'brush.rain')}</button>`).join('')}</div>
+      <div class="field"><label>${t('brush.size')}</label><input type="range" min="0.3" max="2" step="0.05" value="${this.brushSize}" data-brush-size="1"><output>${fmt(this.brushSize)}</output></div>
+      <div class="row"><button class="btn small" data-a="brush-clear">${t('brush.clear')}</button></div>` : ''}
       <h4>Save</h4>
       <div class="row wrap"><button class="btn primary" data-shot="1">📷 Save PNG</button><button class="btn" data-shot="2">2× size</button><button class="btn" data-shot="4">4K</button></div>
-      <div class="row wrap"><button class="btn" data-a="group">👥 ${t('group.button')}</button><button class="btn" data-a="postcard">💌 ${t('mail.button')}</button></div>`;
+      <div class="row wrap"><button class="btn" data-a="group">👥 ${t('group.button')}</button><button class="btn" data-a="postcard">💌 ${t('mail.button')}</button><button class="btn" data-a="contest">🏆 ${t('pc.enterButton')}</button></div>`;
   }
 
   private onInput(e: Event): void {
     const el = e.target as HTMLInputElement;
     const out = el.nextElementSibling;
+    if (el.dataset.brushSize) {
+      this.brushSize = Number(el.value);
+      this.host.brushSize?.(this.brushSize);
+      if (out) out.textContent = fmt(this.brushSize);
+      return;
+    }
     if (el.dataset.p) {
       const key = el.dataset.p as keyof PhotoState;
       const v = el.type === 'checkbox' ? el.checked : Number(el.value);
@@ -124,6 +144,13 @@ export class PhotoMode {
     if (d.a === 'exit') this.host.exit();
     if (d.a === 'group') this.host.groupPhoto?.();
     if (d.a === 'postcard') this.host.postcard?.();
+    if (d.a === 'contest') this.host.contest?.();
+    if (d.a === 'brush-clear') this.host.brushClear?.();
+    if (d.brush !== undefined) {
+      this.brushKind = (d.brush || null) as BrushKind | null;
+      this.host.brush?.(this.brushKind);
+      this.render();
+    }
     if (d.time) this.host.setTime(d.time);
     if (d.weather) this.host.setWeather(d.weather as WeatherId);
     if (d.shot) this.host.capture(Number(d.shot) as 1 | 2 | 4);

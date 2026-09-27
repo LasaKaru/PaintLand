@@ -21,19 +21,19 @@ export const POSTCARD_W = 640;
 export const POSTCARD_H = 400;
 
 /** Shrink a rendered frame to a postcard-sized JPEG data URL (cropped to fill). */
-export function postcardImage(source: HTMLCanvasElement, quality = 0.72): string {
+export function postcardImage(source: HTMLCanvasElement, quality = 0.72, W = POSTCARD_W, H = POSTCARD_H, maxChars = 115_000): string {
   const c = document.createElement('canvas');
-  c.width = POSTCARD_W;
-  c.height = POSTCARD_H;
+  c.width = W;
+  c.height = H;
   const g = c.getContext('2d');
   if (!g) return '';
-  const scale = Math.max(POSTCARD_W / source.width, POSTCARD_H / source.height);
+  const scale = Math.max(W / source.width, H / source.height);
   const w = source.width * scale;
   const h = source.height * scale;
-  g.drawImage(source, (POSTCARD_W - w) / 2, (POSTCARD_H - h) / 2, w, h);
+  g.drawImage(source, (W - w) / 2, (H - h) / 2, w, h);
   let url = c.toDataURL('image/jpeg', quality);
   // A very busy picture: squeeze a little harder.
-  if (url.length > 115_000) url = c.toDataURL('image/jpeg', 0.5);
+  if (url.length > maxChars) url = c.toDataURL('image/jpeg', 0.5);
   return url;
 }
 

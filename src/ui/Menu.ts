@@ -44,13 +44,14 @@ import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 import { TRAIL_COLOURS } from '../gameplay/PaintTrail';
 import { HomeScreen, type HomeHost } from './HomeScreen';
+import { ContestScreen, type ContestHost } from './ContestScreen';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'none';
 
 /** Everything the menu needs from the game. */
-export interface MenuHost extends AccountHost, HomeHost {
+export interface MenuHost extends AccountHost, HomeHost, ContestHost {
   profile: Profile;
   runBenchmark(done: (r: BenchmarkResult) => void): void;
   testRoad(road: CustomRoad): void;
@@ -137,6 +138,7 @@ export class Menu {
   private readonly galleryScreen: GalleryScreen;
   private readonly passScreen: PassScreen;
   private readonly homeScreen: HomeScreen;
+  private readonly contestScreen: ContestScreen;
   /** The same painter, for mural boards in the free-roam areas. */
   private readonly muralEditor = new LiveryEditor(
     (code) => {
@@ -185,6 +187,11 @@ export class Menu {
       () => (this.screen === 'mailbox' || this.screen === 'home' || this.screen === 'postcard') && this.render(),
       (m) => this.toast(m),
     );
+    this.contestScreen = new ContestScreen(
+      host,
+      () => this.screen === 'contest' && this.render(),
+      (m) => this.toast(m),
+    );
     this.root = document.createElement('div');
     this.root.className = 'menu';
     parent.appendChild(this.root);
@@ -229,6 +236,7 @@ export class Menu {
     if (screen === 'gallery' && this.screen !== 'gallery') this.galleryScreen.load();
     if (screen === 'pass') this.passScreen.load();
     if (screen === 'mailbox' || screen === 'home' || screen === 'postcard') this.homeScreen.load(screen);
+    if (screen === 'contest') this.contestScreen.load();
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
@@ -262,6 +270,7 @@ export class Menu {
       multiplayer: () => this.multiplayer(),
       gallery: () => `<div class="menu-panel wide">${this.header(`🖼 ${t('gal.title')}`)}<div class="panel-body">${this.galleryScreen.render()}</div></div>`,
       pass: () => `<div class="menu-panel wide">${this.header(`🎟 ${t('pass.title')}`)}<div class="panel-body">${this.passScreen.render()}</div></div>`,
+      contest: () => `<div class="menu-panel wide">${this.header(`📸 ${t('pc.title')}`)}<div class="panel-body">${this.contestScreen.render()}</div></div>`,
       mailbox: () => `<div class="menu-panel wide">${this.header(`📬 ${t('mail.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('mailbox')}</div></div>`,
       home: () => `<div class="menu-panel">${this.header(`🏡 ${t('home.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('home')}</div></div>`,
       postcard: () => `<div class="menu-panel">${this.header(`💌 ${t('mail.postcard')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('postcard')}</div></div>`,
@@ -385,6 +394,7 @@ export class Menu {
         <button class="menu-item" data-nav="chapters">${t('menu.chapters')}</button>
         <button class="menu-item" data-nav="roadstudio">🛣 ${t('rs.title')}</button>
         <button class="menu-item" data-nav="gallery">🖼 ${t('gal.title')}</button>
+        <button class="menu-item" data-nav="contest">📸 ${t('pc.title')}</button>
         <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
@@ -1023,7 +1033,7 @@ export class Menu {
 
   private onSubmit(e: SubmitEvent): void {
     const form = e.target as HTMLFormElement;
-    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form) || this.passScreen.onSubmit(form) || this.homeScreen.onSubmit(form)) {
+    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form) || this.passScreen.onSubmit(form) || this.homeScreen.onSubmit(form) || this.contestScreen.onSubmit(form)) {
       e.preventDefault();
       return;
     }
@@ -1053,6 +1063,7 @@ export class Menu {
     if (this.galleryScreen.onClick(el)) return;
     if (this.passScreen.onClick(el)) return;
     if (this.homeScreen.onClick(el)) return;
+    if (this.contestScreen.onClick(el)) return;
     if (d.featured) {
       const r = buyFeatured(p, d.featured);
       this.toast(r === 'ok' ? `✓ ${itemLabel(d.featured)}` : r === 'poor' ? t('shop.poor') : '');
