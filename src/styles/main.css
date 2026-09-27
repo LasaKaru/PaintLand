@@ -759,3 +759,39 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .story-text { font-size: 1.05em; line-height: 1.6; }
 .story-page p { margin: 4px 0 0; }
 .credits-music { padding-left: 18px; line-height: 1.5; }
+
+/* Checkpoint stamp: a paint splash slapped onto the page. */
+.cp-stamp { position: fixed; left: 76%; top: 40%; transform: translate(-50%, -50%); width: 340px; height: 200px; pointer-events: none; z-index: 60; display: grid; place-items: center; animation: cp-slap 0.45s cubic-bezier(0.2, 1.6, 0.4, 1) both; }
+.cp-stamp .splat { position: absolute; inset: 0; width: 100%; height: 100%; fill: var(--ink); opacity: 0.92; filter: drop-shadow(0 3px 0 rgba(43, 38, 34, 0.35)); }
+.cp-stamp .drip { position: absolute; top: 72%; width: 9px; height: 0; border-radius: 0 0 6px 6px; background: var(--ink); opacity: 0.85; animation: cp-drip 0.9s ease-in forwards; }
+.cp-stamp .cp-text { position: relative; text-align: center; color: #fffaf0; font-family: 'Permanent Marker', 'Caveat', cursive; transform: rotate(-4deg); text-shadow: 0 2px 0 rgba(43, 38, 34, 0.6), 0 0 6px rgba(43, 38, 34, 0.45); }
+.cp-stamp .cp-text b { display: block; font-size: 30px; letter-spacing: 0.5px; animation: cp-write 0.5s 0.15s ease-out both; }
+.cp-stamp .cp-text small { display: block; font-family: 'Caveat', cursive; font-size: 22px; margin-top: 2px; }
+.cp-stamp.out { transition: opacity 0.7s, transform 0.7s; opacity: 0; transform: translate(-50%, -60%) scale(0.96); }
+@keyframes cp-slap { 0% { transform: translate(-50%, -50%) scale(0.2) rotate(-18deg); opacity: 0; } 70% { transform: translate(-50%, -50%) scale(1.12) rotate(3deg); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1) rotate(-2deg); } }
+@keyframes cp-drip { to { height: 38px; } }
+@keyframes cp-write { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+@media (max-width: 700px) { .cp-stamp { left: 50%; top: 62%; width: 280px; height: 170px; } }
+@media (prefers-reduced-motion: reduce) { .cp-stamp, .cp-stamp .drip, .cp-stamp .cp-text b { animation: none; } .cp-stamp .drip { height: 20px; } }
+/* The ending: credits over the painted sky. */
+.the-end { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; background: radial-gradient(ellipse at 50% 40%, rgba(20, 14, 40, 0.55), rgba(8, 6, 20, 0.92)); color: #f6f0e4; text-align: center; animation: end-in 2s ease both; }
+.the-end .end-card { max-width: 560px; padding: 24px; }
+.the-end h1 { font-family: 'Permanent Marker', cursive; font-size: 54px; margin: 0 0 8px; }
+.the-end .roll { height: 220px; overflow: hidden; mask-image: linear-gradient(transparent, #000 20%, #000 80%, transparent); }
+.the-end .roll div { animation: end-roll 28s linear forwards; }
+.the-end .roll p { margin: 6px 0; font-family: 'Caveat', cursive; font-size: 22px; }
+.the-end .palette-row { display: flex; gap: 8px; justify-content: center; margin: 12px 0; }
+.the-end .palette-row i { width: 22px; height: 22px; border-radius: 50%; display: block; box-shadow: 0 2px 0 rgba(0, 0, 0, 0.3); }
+@keyframes end-in { from { opacity: 0; } to { opacity: 1; } }
+@keyframes end-roll { from { transform: translateY(220px); } to { transform: translateY(-100%); } }
+/* The campaign map in the story screen. */
+.campaign { display: flex; flex-direction: column; gap: 0; margin: 8px 0 14px; }
+.campaign .node { display: grid; grid-template-columns: 44px 1fr auto; gap: 10px; align-items: center; padding: 6px 8px; position: relative; }
+.campaign .node + .node::before { content: ''; position: absolute; left: 29px; top: -10px; height: 16px; border-left: 3px dashed #b8ad98; }
+.campaign .dot { width: 40px; height: 40px; border-radius: 50%; display: grid; place-items: center; font-family: 'Permanent Marker', cursive; color: #fffaf0; background: var(--c); box-shadow: 0 2px 0 rgba(43, 38, 34, 0.35); }
+.campaign .node.locked .dot { background: #cfc6b4; color: #7a7266; }
+.campaign .node.next { background: rgba(244, 210, 59, 0.18); border-radius: 12px; }
+.campaign .node h4 { margin: 0; }
+.campaign .node p { margin: 2px 0 0; font-size: 13px; opacity: 0.85; }
+.campaign .bar { height: 10px; border-radius: 6px; background: #e4dccb; overflow: hidden; margin: 4px 0 10px; }
+.campaign .bar i { display: block; height: 100%; background: linear-gradient(90deg, #f4d23b, #e8559a, #3e86c9, #5dbb3f); }

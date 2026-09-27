@@ -100,6 +100,8 @@ export interface StoryState {
   started: boolean;
   /** Chapters whose colour you have brought home. */
   found: string[];
+  /** The finale was played: the sky over the World's End was painted. */
+  finale?: boolean;
 }
 
 export function storyState(data: { story?: StoryState }): StoryState {

@@ -208,6 +208,8 @@ export interface ProfileData {
   lanterns?: import('../ui/FestivalGames').LanternDesign[];
   /** Best paper-plane ring course time (seconds) per free-roam area. */
   flightBest?: Record<string, number>;
+  /** Where Continue picks up (see Checkpoint.ts). */
+  checkpoint?: import('./Checkpoint').Checkpoint;
   /** Story mode, The Lost Palette. */
   story?: import('./Story').StoryState;
   /** Saved outfit sets. */

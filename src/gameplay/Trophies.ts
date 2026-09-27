@@ -153,6 +153,7 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'worlds-end', name: 'The Last Page', text: 'Find your way to the World’s End.', icon: '🌌', reward: 100, progress: seenCount('area:worldsend', 1) },
   { id: 'quiet-moment', name: 'A Quiet Moment', text: 'Sit on a bench with a view and take it all in.', icon: '🌅', reward: 50, progress: seenCount('view:', 1) },
   { id: 'all-views', name: 'Every View', text: 'Sit at all seven viewpoints.', icon: '🗺', reward: 300, progress: seenCount('view:', 7) },
+  { id: 'the-end', name: 'The Painter’s Friend', text: 'Finish the story: paint the sky over the World’s End.', icon: '🎆', reward: 500, progress: (p) => [p.data.story?.finale ? 1 : 0, 1] },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

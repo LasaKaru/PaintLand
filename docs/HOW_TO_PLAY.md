@@ -213,7 +213,11 @@ There are 8 stations of live-generated music plus **Inkroads Studio (109.5)**, w
 
 ## Things to do from the menu
 
-- **📖 Story: The Lost Palette:** the painter Varna lost her eight colours, one in each chapter. Begin the story, then finish a lap of each chapter to bring its colour home.
+- **📖 Story: The Lost Palette:** the main journey, from the first mission to the end. **Menu → Story** shows it as a map:
+  1. **Prologue · The Storm:** find **Varna** by the harbour in Harbour Town (the 🎨 ring near the trophy hall) and hear what happened.
+  2. **Missions 1 to 8:** one lost colour in each chapter. Finish a lap of the chapter to bring it home. You can play them in any order.
+  3. **Finale · The Last Page:** with all eight colours home, go to **World's End** and sit on the bench at **The Edge of the World**. The palette paints the sky, the story ends, and the credits roll. After that, the whole world stays open to play.
+- **▶ Continue:** the game saves **checkpoints** as you play: the start of every district in a chapter, and in the towns when you arrive, discover a place, or every half minute. **Continue** on the main menu takes you back to the last checkpoint, even after you close the game. While a game is running, **↺ Back to last checkpoint** does the same. A paint splash stamps **✓ Checkpoint!** on the screen when you reach one.
 - **📋 Missions** and **☀ daily brushstrokes** (keep a streak going).
 - **🏁 Time trials:** ranked laps with ghosts of your best run.
 - **🛣 Road Studio** (**F2** or **`**): build your own road, test drive it, and share the code.

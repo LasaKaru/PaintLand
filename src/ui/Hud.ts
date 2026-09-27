@@ -277,6 +277,24 @@ export class Hud {
     this.titleTimer = 3.2;
   }
 
+  /**
+   * The checkpoint stamp: a splash of paint slaps onto the page with a tick,
+   * the words brushed on top, a few drips, then it fades. `colour` tints the splash.
+   */
+  stamp(title: string, sub: string, colour = '#e8559a'): void {
+    document.querySelector('.cp-stamp')?.remove();
+    const el = document.createElement('div');
+    el.className = 'cp-stamp';
+    el.setAttribute('role', 'status');
+    el.style.setProperty('--ink', colour);
+    const drips = [18, 34, 61, 77].map((x, i) => `<span class="drip" style="left:${x}%;animation-delay:${0.35 + i * 0.12}s"></span>`).join('');
+    el.innerHTML = `<svg class="splat" viewBox="0 0 200 120" aria-hidden="true"><path d="M20 62c-8-18 10-34 28-30 6-18 34-26 48-12 14-14 44-10 50 8 22-2 38 16 30 34 14 10 6 34-14 32-4 16-30 22-44 10-14 14-44 12-52-4-18 10-40 0-38-18-14-2-16-18-8-20z"/></svg>${drips}<div class="cp-text"><b>✓ ${escapeText(title)}</b>${sub ? `<small>${escapeText(sub)}</small>` : ''}</div>`;
+    // On the page itself: the HUD redraws its own children, which would restart the animation.
+    document.body.appendChild(el);
+    setTimeout(() => el.classList.add('out'), 2600);
+    setTimeout(() => el.remove(), 3400);
+  }
+
   showSplit(name: string, time: number, delta: number | null): void {
     this.el.splitName.textContent = `✓ ${name}`;
     this.el.splitTime.textContent = fmt(time);

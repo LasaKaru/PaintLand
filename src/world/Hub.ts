@@ -354,6 +354,8 @@ export class Hub implements FreeRoamArea {
     this.zones.push({ kind: 'trophies', label: '🏆 Trophy hall', x: 0, z: 39, r: 3.5, colour: '#f4d23b' });
     this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -16, z: 14, r: 4, colour: '#f6f0e4' });
     this.zones.push({ kind: 'viewpoint', label: '🌅 The Quay at Sunset', x: 30, z: 62, r: 2.6, colour: '#c9b8f0', view: { id: 'hb-quay', yaw: Math.PI, pitch: 0.02, lut: 'golden', name: 'The Quay at Sunset' } });
+    // Varna, the old painter: the story begins (and ends) with her.
+    this.zones.push({ kind: 'story', label: '🎨 Varna', x: 16, z: 46, r: 3, colour: '#9a7ad8' });
     // The road to the World's End, past the lighthouse end of the quay.
     this.zones.push({ kind: 'area', label: "🌌 World's End", x: -30, z: 58, r: 6, area: 'worldsend', colour: '#9a7ad8' });
     // The coast road east to Serendib City.
@@ -474,7 +476,7 @@ export class Hub implements FreeRoamArea {
 
   zoneLabel(z: HubZone): string {
     if (z.kind === 'viewpoint' && z.view) return `🌅 ${t(`view.${z.view.id}` as StringKey)}`;
-    return z.kind === 'portal' || z.kind === 'area' ? z.label : t(`zone.${z.kind}` as StringKey);
+    return z.kind === 'portal' || z.kind === 'area' || z.kind === 'story' ? z.label : t(`zone.${z.kind}` as StringKey);
   }
 
   zoneAt(x: number, z: number): HubZone | null {

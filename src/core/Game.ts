@@ -83,7 +83,9 @@ import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
 import { MailClient, postcardImage, type VisitedHome } from '../net/Mail';
 import { SkyBrush } from '../gameplay/SkyBrush';
-import { STORY_END_INK, STORY_INK, findColour, storyState } from '../gameplay/Story';
+import { STORY_END_INK, STORY_ENDING, STORY_INK, STORY_INTRO, STORY_PAGES, findColour, nextPage, storyState } from '../gameplay/Story';
+import { CAMPAIGN, finaleReady } from '../gameplay/Campaign';
+import { checkCheckpoint, type Checkpoint } from '../gameplay/Checkpoint';
 import { cleanLantern, type LanternDesign } from '../ui/FestivalGames';
 import { photoUrl, type ContestState } from '../ui/ContestScreen';
 import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
@@ -313,6 +315,12 @@ export class Game {
   private readonly fireworks: { x: number; z: number; y: number; vy: number; delay: number; whistle: boolean }[] = [];
   private readonly torches: THREE.Vector3[] = [];
   private discoverTimer = 0;
+  /** Seconds to the next quiet free-roam checkpoint. */
+  private cpTimer = 30;
+  /** Varna, the painter (Harbour Town): her figure and easel. */
+  private varna: THREE.Group | null = null;
+  /** The ending is playing. */
+  private ending = false;
   private dailyTimer = 0;
   private peraheraTime = 0;
   private peraheraAnnounced = false;
@@ -499,6 +507,9 @@ export class Game {
       stats: () => `${this.fps.toFixed(0)} fps · ${Math.round(this.pipeline.renderScale * 100)}% render scale · ${this.renderer.info.render.calls} draw calls · ${(this.renderer.info.render.triangles / 1e6).toFixed(2)} M triangles`,
       resume: () => this.resumeFromMenu(),
       canResume: () => this.resumeSnapshot !== null,
+      checkpoint: () => checkCheckpoint(this.profile.data.checkpoint)?.label ?? null,
+      continueGame: () => this.continueGame(),
+      playCampaign: (i) => this.playCampaign(i),
       openAdmin: () => this.admin.show(),
     });
     this.admin = new AdminPanel(container);
@@ -1740,6 +1751,7 @@ export class Game {
     this.resetRun();
     this.showDistrict(0);
     this.unlockAudio();
+    this.saveChapterCheckpoint(0, false);
   }
 
   private resumeFromMenu(): void {
@@ -2085,11 +2097,13 @@ export class Game {
       if (bestT === null || t < bestT) this.profile.data.bestDistrict[key] = t;
       this.missions.onSplit(this.district, t);
     }
+    const forward = d > this.district;
     this.district = d;
     this.districtTime = 0;
     this.districtClean = this.mode === 'drive';
     this.missions.onEnterDistrict(d);
     this.showDistrict(d);
+    if (forward) this.saveChapterCheckpoint(d, true);
   }
 
   private showDistrict(d: number): void {
@@ -2127,6 +2141,8 @@ export class Game {
       this.profile.earn(got.done ? STORY_INK + STORY_END_INK : STORY_INK);
       this.hud.lootCard(`📖 ${t('story.foundKicker')}`, got.page.hex, got.page.colour, got.done ? t('story.allFound') : t('story.readJournal', { n: story.found.length, total: 8 }));
       this.audio.chime(72);
+      const n = CAMPAIGN.findIndex((c) => c.chapter === this.world.chapter.id);
+      setTimeout(() => this.hud.stamp(t('camp.missionDone', { n }), got.done ? t('camp.finaleOpen') : got.page.colour, got.page.hex), 1200);
       this.profile.save();
     }
     if (this.ghost && this.lapClean && lap < this.ghost.run.time) this.profile.addStat('ghostBeaten');
@@ -3203,6 +3219,9 @@ export class Game {
     this.stuntAir = null;
     this.remotes.clear();
     if (this.net.connected) this.net.sendHello(this.playerInfo());
+    this.placeVarna(area);
+    this.cpTimer = 30;
+    this.saveAreaCheckpoint(false);
   }
 
   /** Drive (or walk) through a road sign to another area. */
@@ -3350,6 +3369,13 @@ export class Game {
     }
     this.updatePerahera(area, p.x, p.z, dt);
     this.missionEvents(this.freeMissions.update(dt, p.x, p.z, this.mode === 'foot'));
+    this.cpTimer -= dt;
+    if (this.cpTimer <= 0) {
+      this.cpTimer = 30;
+      this.saveAreaCheckpoint(false);
+    }
+    // The finale: sitting at the Edge of the World with all eight colours.
+    if (this.viewing?.zone.view?.id === 'we-edge' && this.viewing.t > 3 && !this.ending && finaleReady(storyState(this.profile.data))) this.startEnding();
     this.trackStats(dt);
   }
 
@@ -3550,6 +3576,7 @@ export class Game {
     else if (zone.kind === 'home') this.openMenu('home');
     else if (zone.kind === 'launch') this.startFlight(zone);
     else if (zone.kind === 'viewpoint') this.enterViewpoint(zone);
+    else if (zone.kind === 'story') this.talkToVarna();
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
       this.openMenu('mural');
@@ -3780,6 +3807,188 @@ export class Game {
       this.battleAim.position.set(land.x, HUB_Y + 0.08, land.z);
       this.battleAim.scale.setScalar(0.8 + Math.sin(this.time * 6) * 0.1);
     }
+  }
+
+  // ————— checkpoints and the campaign —————
+
+  /** Remember where to continue from (and, when `announce`, stamp it on screen). */
+  private saveCheckpoint(cp: Checkpoint, announce: { title: string; sub: string; colour: string } | null): void {
+    this.profile.data.checkpoint = cp;
+    this.profile.save();
+    if (announce) {
+      this.hud.stamp(announce.title, announce.sub, announce.colour);
+      this.audio.checkpoint();
+      this.audio.chime(79);
+    }
+  }
+
+  /** The start of a district in a chapter (not during trials or races). */
+  private saveChapterCheckpoint(district: number, announce: boolean): void {
+    if (this.trial || this.race || this.state !== 'play') return;
+    const def = this.world.districts[district];
+    if (!def) return;
+    this.saveCheckpoint(
+      { kind: 'chapter', chapter: this.world.chapter.id, district, label: `${this.world.chapter.name} · ${def.name}`, at: Date.now() },
+      announce ? { title: t('cp.cleared'), sub: def.name, colour: def.walls[0] ?? '#e8559a' } : null,
+    );
+  }
+
+  /** Where you are in a town (a safe spot only: grounded, not flying, not in a battle). */
+  private saveAreaCheckpoint(announce: boolean, place = ''): void {
+    const area = this.area;
+    if (!area || !this.inHub || this.flight || this.battle) return;
+    const foot = this.mode === 'foot';
+    const p = foot ? this.hubWalker : this.hubCar;
+    if (!finite(p.x, p.z, p.heading) || (foot ? !this.hubWalker.grounded : !this.hubCar.grounded || this.hubCar.afloat)) return;
+    this.saveCheckpoint(
+      { kind: 'area', area: area.id, x: p.x, z: p.z, heading: p.heading, foot, label: place ? `${area.title().name} · ${place}` : area.title().name, at: Date.now() },
+      announce ? { title: t('cp.cleared'), sub: place || area.title().name, colour: '#3e86c9' } : null,
+    );
+  }
+
+  /** Menu → Continue: back to the last checkpoint (even after closing the game). */
+  private continueGame(): boolean {
+    const cp = checkCheckpoint(this.profile.data.checkpoint);
+    if (!cp) return false;
+    if (cp.kind === 'chapter') {
+      if (!CHAPTERS.some((c) => c.id === cp.chapter)) return false;
+      this.play(cp.chapter);
+      const span = this.world.path.spanOf(cp.district);
+      if (span && cp.district > 0) {
+        this.rover.reset(span.start + 4);
+        this.rover.v = this.rover.tuning.cruiseFloor;
+        this.rover.cruise = true;
+        this.district = cp.district;
+        this.districtClean = false;
+        this.lapClean = false;
+        this.showDistrict(cp.district);
+        this.rig.snap();
+      }
+    } else {
+      if (!['harbour', 'city', 'village', 'hills', 'worldsend'].includes(cp.area)) return false;
+      this.enterHub({ x: cp.foot ? cp.x + Math.cos(cp.heading) * 3 : cp.x, z: cp.foot ? cp.z - Math.sin(cp.heading) * 3 : cp.z, heading: cp.heading, foot: cp.foot ? { x: cp.x, z: cp.z } : null, area: cp.area }, cp.area);
+    }
+    this.hud.stamp(t('cp.back'), cp.label, '#5dbb3f');
+    return true;
+  }
+
+  /** Campaign map → play a step: meet Varna, a chapter's colour, or the finale. */
+  private playCampaign(i: number): void {
+    const step = CAMPAIGN[i];
+    if (!step) return;
+    if (step.kind === 'chapter' && step.chapter) {
+      const pr = this.profile;
+      if (!pr.data.story?.started) pr.data.story = { ...storyState(pr.data), started: true };
+      this.play(step.chapter);
+      this.hud.showDistrictTitle(t('camp.mission', { n: i }), step.title, step.brief);
+    } else if (step.kind === 'meet') this.enterHub({ x: 16, z: 34, heading: Math.PI, foot: { x: 16, z: 40 }, area: 'harbour' }, 'harbour');
+    else this.enterHub({ x: 6, z: 70, heading: Math.PI, foot: { x: 0, z: 78 }, area: 'worldsend' }, 'worldsend');
+  }
+
+  /** Varna with her easel by the harbour (Harbour Town only). */
+  private placeVarna(area: FreeRoamArea): void {
+    const zone = area.zones.find((z) => z.kind === 'story');
+    if (!zone) {
+      if (this.varna) this.varna.visible = false;
+      return;
+    }
+    if (!this.varna) {
+      const g = new THREE.Group();
+      const look: HumanLook = { ...DEFAULT_HUMAN_LOOK, skin: '#c89a78', hair: '#e8e2d8', hairStyle: 'bun', top: '#9a7ad8', topStyle: 'dress', bottom: '#6f5aa8', bottomStyle: 'maxi', scarf: '#f4d23b', hat: 'none', height: 0.95, pet: 'none' };
+      const model = new HumanModel(look);
+      model.animate(0, 'idle', 0, 0);
+      g.add(model.root);
+      const easel = new ModelKit()
+        .box(0.08, 1.8, 0.08, '#7a5a3a', { position: [-0.45, 0.9, 0.1], rotation: [0.15, 0, 0.1] })
+        .box(0.08, 1.8, 0.08, '#7a5a3a', { position: [0.45, 0.9, 0.1], rotation: [0.15, 0, -0.1] })
+        .box(1.1, 0.8, 0.04, '#f6f0e4', { position: [0, 1.3, 0.02], rotation: [0.15, 0, 0] })
+        .box(1.0, 0.7, 0.02, '#e8559a', { position: [0, 1.3, -0.01], rotation: [0.15, 0, 0], nightGlow: 0.2 })
+        .build(0.01);
+      const em = new THREE.Mesh(easel, this.pickupMaterial);
+      em.position.set(1.4, 0, 0.4);
+      em.rotation.y = -0.5;
+      g.add(em);
+      this.varna = g;
+      this.scene.add(g);
+    }
+    this.varna.visible = true;
+    this.varna.position.set(zone.x, HUB_Y, zone.z + 2.6);
+    this.varna.rotation.y = 0;
+  }
+
+  /** Talking to Varna: the prologue, a hint for the next colour, or the way to the finale. */
+  private talkToVarna(): void {
+    const pr = this.profile;
+    const s = storyState(pr.data);
+    this.audio.chime(64);
+    if (!s.started) {
+      this.hud.showDialog('Varna', STORY_INTRO, () => {
+        pr.data.story = { ...storyState(pr.data), started: true };
+        pr.save();
+        this.saveAreaCheckpoint(false);
+        this.hud.stamp(t('camp.prologueDone'), `${t('camp.mission', { n: 1 })}: ${CAMPAIGN[1].title}`, '#9a7ad8');
+        this.audio.fanfare();
+        this.checkTrophies();
+      });
+      return;
+    }
+    if (s.finale) {
+      this.hud.showDialog('Varna', t('camp.varnaThanks'), () => {});
+      return;
+    }
+    if (finaleReady(s)) {
+      this.hud.showDialog('Varna', t('camp.varnaFinale'), () => {});
+      return;
+    }
+    const next = nextPage(s);
+    this.hud.showDialog('Varna', next ? `${t('camp.varnaNext', { n: s.found.length, total: STORY_PAGES.length })} ${next.clue}` : t('camp.varnaFinale'), () => {});
+  }
+
+  /** The ending: the palette paints the sky over the World's End, then the credits. */
+  private startEnding(): void {
+    this.ending = true;
+    const pr = this.profile;
+    pr.data.story = { ...storyState(pr.data), finale: true };
+    pr.earn(500);
+    pr.save();
+    this.saveAreaCheckpoint(false);
+    this.checkTrophies();
+    this.audio.fanfare();
+    // Eight rockets, one for each colour, over the edge of the world.
+    for (let i = 0; i < 24; i++) this.launchFirework(-70 + (i % 8) * 20, 130 + Math.random() * 40, 1 + i * 0.6);
+    // The story's last lines in the cinematic bars (the viewpoint had hidden the HUD).
+    this.hud.root.classList.remove('hud-hidden');
+    const lines = STORY_ENDING.split(/(?<=[.!?”])\s+/).filter(Boolean);
+    lines.forEach((line, i) => setTimeout(() => this.ending && this.hud.letterbox(true, line), 1500 + i * 5000));
+    setTimeout(() => this.showTheEnd(), 1500 + lines.length * 5000 + 1500);
+  }
+
+  private showTheEnd(): void {
+    if (!this.ending) return;
+    this.hud.letterbox(false);
+    const el = document.createElement('div');
+    el.className = 'the-end';
+    el.setAttribute('role', 'dialog');
+    const credits = [
+      t('end.credits1'),
+      'Inkroads',
+      'HelaO2',
+      t('end.credits2'),
+      t('end.credits3'),
+      t('end.credits4'),
+      t('end.thanks'),
+    ];
+    el.innerHTML = `<div class="end-card"><h1>${escapeHtml(t('end.title'))}</h1>
+      <div class="palette-row">${STORY_PAGES.map((p) => `<i style="background:${p.hex}" title="${escapeHtml(p.colour)}"></i>`).join('')}</div>
+      <div class="roll"><div>${credits.map((c) => `<p>${escapeHtml(c)}</p>`).join('')}</div></div>
+      <button class="btn primary" data-end="keep">${escapeHtml(t('end.keep'))}</button></div>`;
+    el.querySelector('[data-end="keep"]')?.addEventListener('click', () => {
+      el.remove();
+      this.ending = false;
+      this.hud.stamp(t('end.keep'), t('end.keepSub'), '#9a7ad8');
+    });
+    document.body.appendChild(el);
+    (el.querySelector('[data-end="keep"]') as HTMLButtonElement | null)?.focus();
   }
 
   // ————— the World's End and viewpoints —————
@@ -4573,6 +4782,7 @@ export class Game {
       this.profile.addStat('discoveries');
       this.audio.chime(76);
       this.popAtPawn(`📍 ${t('map.discovered', { place: p.name })}`, 'good');
+      this.saveAreaCheckpoint(true, p.name);
     }
   }
 

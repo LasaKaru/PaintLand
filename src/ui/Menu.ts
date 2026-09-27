@@ -49,6 +49,7 @@ import { HomeScreen, type HomeHost } from './HomeScreen';
 import { ContestScreen, type ContestHost } from './ContestScreen';
 import { FestivalGames, type FestivalHost } from './FestivalGames';
 import { STORY_ENDING, STORY_INTRO, STORY_PAGES, nextPage, storyState } from '../gameplay/Story';
+import { CAMPAIGN, missionNumber, nextStep, progress, stepState } from '../gameplay/Campaign';
 import { WorkshopScreen } from './WorkshopScreen';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
@@ -120,6 +121,12 @@ export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHo
   stats(): string;
   resume(): void;
   canResume(): boolean;
+  /** The last checkpoint's place (for Continue), or null. */
+  checkpoint(): string | null;
+  /** Back to the last checkpoint; false if there isn't a usable one. */
+  continueGame(): boolean;
+  /** Play a campaign step (index into CAMPAIGN). */
+  playCampaign(i: number): void;
   /** The secret word was typed: open the admin login. */
   openAdmin(): void;
 }
@@ -434,12 +441,15 @@ export class Menu {
   private main(): string {
     const ch = this.host.currentChapter();
     const p = this.host.profile.data;
+    const cp = this.host.checkpoint();
     return `<div class="menu-main">
       <div class="menu-logo" data-action="logo-tap"><div class="logo-mark big"></div><div><div class="hand logo-name big">Inkroads</div><div class="logo-sub">ink &amp; wash roads</div></div></div>
       <div class="menu-now">${t('menu.now')} · <b>${ch.name}</b></div>
       <nav class="menu-list">
         ${this.host.canResume() ? `<button class="menu-item primary" data-nav="resume">${t('menu.resume')}</button>` : ''}
-        <button class="menu-item ${this.host.canResume() ? '' : 'primary'}" data-play="${ch.id}">${t('menu.play', { chapter: ch.name })}</button>
+        ${cp ? `<button class="menu-item ${this.host.canResume() ? '' : 'primary'} continue" data-nav="continue">${this.host.canResume() ? t('menu.lastCheckpoint') : t('menu.continue')}<small>${escapeHtml(cp)}</small></button>` : ''}
+        <button class="menu-item ${this.host.canResume() || cp ? '' : 'primary'}" data-play="${ch.id}">${t('menu.play', { chapter: ch.name })}</button>
+        <button class="menu-item" data-nav="story">📖 ${t('camp.menu')}</button>
         <button class="menu-item" data-nav="hub">${t('menu.hub')}</button>
         <button class="menu-item" data-nav="city">${t('menu.city')}</button>
         <button class="menu-item" data-nav="village">${t('menu.village')}</button>
@@ -451,7 +461,6 @@ export class Menu {
         <button class="menu-item" data-nav="gallery">🖼 ${t('gal.title')}</button>
         <button class="menu-item" data-nav="contest">📸 ${t('pc.title')}</button>
         <button class="menu-item" data-nav="festival">🏮 ${t('fg.title')}</button>
-        <button class="menu-item" data-nav="story">📖 ${t('story.title')}</button>
         ${WorkshopScreen.offered ? `<button class="menu-item" data-nav="workshop">🛠 ${t('ws.titleScreen')}</button>` : ''}
         <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
@@ -635,16 +644,26 @@ export class Menu {
       .map((pg) => `<div class="card story-page" style="border-left:6px solid ${pg.hex}"><h4>${escapeHtml(pg.title)} · <span style="color:${pg.hex}">${escapeHtml(pg.colour)}</span></h4><p>${escapeHtml(pg.found)}</p></div>`)
       .join('');
     const chName = (id: string): string => this.host.chapters.find((c) => c.id === id)?.name ?? id;
+    const cur = nextStep(s);
+    const map = `<div class="campaign" role="list">${CAMPAIGN.map((step, i) => {
+      const st = stepState(s, i);
+      const n = missionNumber(i);
+      const label = n === null ? (step.kind === 'meet' ? t('camp.prologue') : t('camp.finale')) : t('camp.mission', { n });
+      const icon = st === 'done' ? '✓' : st === 'locked' ? '🔒' : n ?? (step.kind === 'meet' ? '✦' : '★');
+      const btn = st === 'next' || st === 'open' || (st === 'done' && step.kind === 'chapter') ? `<button class="btn ${st === 'next' ? 'primary' : 'small'}" data-camp="${i}">${st === 'done' ? t('camp.replay') : '▶ ' + t('camp.play')}</button>` : '';
+      return `<div class="node ${st}" role="listitem" style="--c:${step.hex}"><span class="dot" aria-hidden="true">${icon}</span><div><h4>${label} · ${escapeHtml(step.title)}</h4><p>${escapeHtml(st === 'locked' ? t(step.kind === 'finale' ? 'camp.finaleLocked' : 'camp.locked') : step.brief)}</p></div>${btn}</div>`;
+    }).join('')}</div>`;
+    const bar = `<div class="campaign"><div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="${CAMPAIGN.length}" aria-valuenow="${Math.min(cur, CAMPAIGN.length)}"><i style="width:${(progress(s) * 100).toFixed(0)}%"></i></div></div>`;
     const body = !s.started
-      ? `<p class="story-text">${escapeHtml(STORY_INTRO)}</p><div class="row"><button class="btn primary" data-action="story-start">📖 ${t('story.begin')}</button></div>`
-      : `<div class="palette" aria-label="${t('story.progress', { n: s.found.length, total: STORY_PAGES.length })}">${wells}</div>
+      ? `${bar}${map}<p class="story-text">${escapeHtml(STORY_INTRO)}</p><div class="row"><button class="btn primary" data-action="story-start">📖 ${t('story.begin')}</button></div>`
+      : `${bar}${map}<div class="palette" aria-label="${t('story.progress', { n: s.found.length, total: STORY_PAGES.length })}">${wells}</div>
          <p class="menu-hint">${t('story.progress', { n: s.found.length, total: STORY_PAGES.length })}</p>
          ${next
            ? `<div class="card"><h4>${t('story.next', { chapter: escapeHtml(chName(next.chapter)) })}</h4><p class="story-text">${escapeHtml(next.clue)}</p><button class="btn primary" data-play="${next.chapter}">▶ ${t('story.go')}</button></div>`
            : `<div class="card story-page"><h4>🎨 ${t('story.theEnd')}</h4><p class="story-text">${escapeHtml(STORY_ENDING)}</p></div>`}
          <h4>${t('story.journal')}</h4>${pages || `<p class="menu-hint">${t('story.empty')}</p>`}
          <details><summary>${t('story.prologue')}</summary><p class="story-text">${escapeHtml(STORY_INTRO)}</p></details>`;
-    return `<div class="menu-panel wide">${this.header(`📖 ${t('story.title')}`)}<div class="panel-body">${body}</div></div>`;
+    return `<div class="menu-panel wide">${this.header(`📖 ${t('camp.menu')}`)}<div class="panel-body">${body}</div></div>`;
   }
 
   private stickersScreen(): string {
@@ -1194,6 +1213,9 @@ export class Menu {
       else if (d.nav === 'hills') this.host.enterHills();
       else if (d.nav === 'worldsend') this.host.enterWorldsEnd();
       else if (d.nav === 'resume') this.host.resume();
+      else if (d.nav === 'continue') {
+        if (!this.host.continueGame()) this.toast(t('cp.none'));
+      }
       else {
         if (d.nav === 'citymissions') this.boardArea = null;
         this.show(d.nav as MenuScreen);
@@ -1213,6 +1235,10 @@ export class Menu {
     }
     if (d.trial) {
       this.host.startTrial(d.trial);
+      return;
+    }
+    if (d.camp !== undefined) {
+      this.host.playCampaign(Number(d.camp));
       return;
     }
     if (d.play) {
