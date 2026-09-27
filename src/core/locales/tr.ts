@@ -930,5 +930,9 @@ const tr: Locale = {
   'safe.tryAgain': 'Yeniden dene',
   'safe.toMenu': 'Ana menü',
   'safe.reload': 'Yeniden yükle',
+  'ctl.callCar': 'Arabanı çağır (gökten iner)',
+  'drop.coming': 'Araban aşağı iniyor!',
+  'drop.noRoom': 'Burada arabanın ineceği yer yok. Daha açık bir yer dene.',
+  'drop.notNow': 'Boya savaşı sırasında olmaz!',
 };
 export default tr;

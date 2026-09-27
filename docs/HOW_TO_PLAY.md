@@ -59,6 +59,7 @@ Stop the car and press **F** (or **E**) to get out and walk. Press it again near
 | **Space** | Jump |
 | **F** / **E** | Get in or out · talk to people · use a glowing ring |
 | **G** | Emote wheel (wave, dance, cheer, sit…) |
+| **K** (or hold **E**) | **Call your car**: it drops out of the sky on a paper parachute, a few steps in front of you (phones: the 🚗 button) |
 | **Mouse** | Look around |
 
 ---

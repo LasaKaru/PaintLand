@@ -930,5 +930,9 @@ const th: Locale = {
   'safe.tryAgain': 'ลองใหม่',
   'safe.toMenu': 'เมนูหลัก',
   'safe.reload': 'โหลดใหม่',
+  'ctl.callCar': 'เรียกรถของคุณ (รถจะร่อนลงมาจากฟ้า)',
+  'drop.coming': 'รถของคุณกำลังร่อนลงมา!',
+  'drop.noRoom': 'ที่นี่ไม่มีที่ให้รถลงจอด ลองที่โล่งกว่านี้',
+  'drop.notNow': 'ไม่ได้ระหว่างศึกสาดสี!',
 };
 export default th;

@@ -928,6 +928,10 @@ const en = {
   'safe.tryAgain': 'Try again',
   'safe.toMenu': 'Main menu',
   'safe.reload': 'Reload',
+  'ctl.callCar': 'Call your car (it drops from the sky)',
+  'drop.coming': 'Your car is on its way down!',
+  'drop.noRoom': 'No room for the car to land here. Try a more open spot.',
+  'drop.notNow': 'Not during a paint battle!',
 } as const;
 
 export default en;

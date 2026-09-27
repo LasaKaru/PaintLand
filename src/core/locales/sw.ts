@@ -930,5 +930,9 @@ const sw: Locale = {
   'safe.tryAgain': 'Jaribu tena',
   'safe.toMenu': 'Menyu kuu',
   'safe.reload': 'Pakia upya',
+  'ctl.callCar': 'Ita gari lako (linashuka kutoka angani)',
+  'drop.coming': 'Gari lako linashuka!',
+  'drop.noRoom': 'Hakuna nafasi ya gari kutua hapa. Jaribu mahali wazi zaidi.',
+  'drop.notNow': 'Si wakati wa vita vya rangi!',
 };
 export default sw;

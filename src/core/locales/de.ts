@@ -930,5 +930,9 @@ const de: Locale = {
   'safe.tryAgain': 'Erneut versuchen',
   'safe.toMenu': 'Hauptmenü',
   'safe.reload': 'Neu laden',
+  'ctl.callCar': 'Dein Auto rufen (es fällt vom Himmel)',
+  'drop.coming': 'Dein Auto ist im Anflug!',
+  'drop.noRoom': 'Hier ist kein Platz zum Landen. Versuch es an einer freieren Stelle.',
+  'drop.notNow': 'Nicht während einer Farbschlacht!',
 };
 export default de;

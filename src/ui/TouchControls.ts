@@ -21,6 +21,8 @@ const BUTTONS: ButtonDef[] = [
   { id: 'emote', label: '🙏', tap: 'emote', cls: 'small emote' },
   // Throw a paint balloon: only shown in a paint battle.
   { id: 'fire', label: '🎈', hold: 'fire', cls: 'mid fire' },
+  // Call the car: only shown on foot in a town.
+  { id: 'call', label: '🚗', tap: 'callCar', cls: 'small call' },
   // Push-to-talk: only shown while voice chat is on.
   { id: 'talk', label: '🎙', hold: 'talk', cls: 'mid talk' },
 ];
@@ -88,6 +90,11 @@ export class TouchControls {
   /** Show the push-to-talk button (voice chat on). */
   setVoice(on: boolean): void {
     this.root.classList.toggle('voice', on);
+  }
+
+  /** Show the call-your-car button (on foot in a town). */
+  setFoot(on: boolean): void {
+    this.root.classList.toggle('foot', on);
   }
 
   /** Show the throw button (in a paint battle). */

@@ -90,7 +90,8 @@ import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
 import { Hub as HarbourHub } from '../world/Hub';
 import { Hills } from '../world/Hills';
 import { CourseRun, Glider, courseInk, makeCourse, type Airspace, type Course, type GliderEvent } from '../gameplay/Glider';
-import { PLANE_SEAT, buildFlightRing, buildPaperPlane, buildPlaneStand } from '../models/PaperPlane';
+import { PLANE_SEAT, buildFlightRing, buildPaperPlane, buildParachute, buildPlaneStand } from '../models/PaperPlane';
+import { CarDrop, aheadOf } from '../gameplay/CarDrop';
 import { BATTLE, PaintBattle, PaintGrid, TEAM_COLOURS, TEAM_TRAIL, botStep, landingPoint, makeBots, splitTeams, throwVelocity, type BattleSetup, type Bot, type Team } from '../gameplay/PaintBattle';
 import type { PocketKind } from '../world/Pockets';
 import { DOTS_PER_MESSAGE, TrailBrush, TrailLayer, TrailStore, nearestTrailColour, packDots, type TrailDot } from '../gameplay/PaintTrail';
@@ -274,6 +275,11 @@ export class Game {
   private readonly safePoint = new SafePoint();
   private readonly stuck = new StuckWatch();
   private crashCard: HTMLDivElement | null = null;
+  /** Calling the car: it drops from the sky on a paper parachute (gameplay/CarDrop.ts). */
+  private readonly carDrop = new CarDrop();
+  private chute: THREE.Mesh | null = null;
+  private chuteFold = 0;
+  private callHold = 0;
   /** The paper plane (flight mode): its physics, the ring course in progress, and the meshes. */
   private readonly glider = new Glider();
   private flight: { run: CourseRun; from: { x: number; z: number; heading: number } } | null = null;
@@ -2446,6 +2452,7 @@ export class Game {
     }
     this.input.clearUnconsumed(['hop', 'interact']);
     this.touchUi.setVisible(this.state === 'play' || this.state === 'hub');
+    this.touchUi.setFoot(this.inHub && this.state === 'hub' && this.mode === 'foot' && !this.flight);
     if (this.state === 'play' || this.state === 'hub') this.onboarding(dt);
     this.beatTimer -= dt;
     if (this.beatTimer <= 0) {
@@ -3291,14 +3298,15 @@ export class Game {
       // Slow motion on the way down from a stunt ramp.
       this.timeScale = this.stuntAir && !this.hubCar.grounded && this.hubCar.airTime > 0.25 && !this.settings.reducedMotion ? 0.45 : 1;
     } else {
-      // The parked car is solid while walking.
-      area.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: 1.4 });
+      // The parked car is solid while walking (once it has landed, if it was called).
+      area.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: this.carDrop.active ? 0 : 1.4 });
       const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0;
       const move = out ? { x: 0, y: 0 } : inp.moveAxes();
       this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, area.world);
       area.world.colliders.pop();
     }
     area.world.colliders.length -= bodies.length;
+    if (this.carDrop.update(dt, this.time)) this.carLanded();
     const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
     // Drive into a painted gate to enter its chapter, or a road sign to travel.
     const z = area.zoneAt(p.x, p.z);
@@ -3451,6 +3459,15 @@ export class Game {
       this.timeScale = 1;
       this.stuntAir = null;
     }
+    // Call the car: K, or hold E / Y for a moment on foot away from anything to use.
+    if (inp.consume('callCar')) this.callCar();
+    if (this.mode === 'foot' && inp.held('interact') && !this.hubZone && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) >= 4) {
+      this.callHold += dt;
+      if (this.callHold > 0.8) {
+        this.callHold = -1e9; // once per hold
+        this.callCar();
+      }
+    } else if (!inp.held('interact')) this.callHold = 0;
     if (inp.consume('interact')) {
       const zone = this.hubZone;
       if (zone) this.useZone(zone);
@@ -3469,7 +3486,7 @@ export class Game {
         }
       } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) >= 4 && this.nearBoard) {
         this.visitBrand(this.nearBoard);
-      } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4) {
+      } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4 && !this.carDrop.active) {
         this.mode = 'drive';
         this.input.releasePointerLock();
         this.seatHuman();
@@ -3729,6 +3746,66 @@ export class Game {
       this.battleAim.position.set(land.x, HUB_Y + 0.08, land.z);
       this.battleAim.scale.setScalar(0.8 + Math.sin(this.time * 6) * 0.1);
     }
+  }
+
+  // ————— calling the car —————
+
+  /** Drop the car out of the sky a few metres in front of you. */
+  private callCar(): void {
+    const area = this.area;
+    if (!area || !this.inHub || this.state !== 'hub' || this.mode !== 'foot' || this.flight) return;
+    if (this.battle?.live(this.time)) {
+      this.popAtPawn(t('drop.notNow'), 'info');
+      return;
+    }
+    if (!this.carDrop.ready(this.time)) return;
+    const w = this.hubWalker;
+    const b = area.world.bounds;
+    const sea = area.seaZ;
+    const want = aheadOf(w.x, w.z, this.hubCam.yaw);
+    const spot = freeSpot(want.x, want.z, (x, z) => area.world.resolve({ x, z }, 2.4) === null && x > b.minX + 3 && x < b.maxX - 3 && z > b.minZ + 3 && z < b.maxZ - 3 && (sea === undefined || z < sea - 3) && Math.hypot(x - w.x, z - w.z) > 3, 24);
+    if (!spot) {
+      this.popAtPawn(t('drop.noRoom'), 'info');
+      return;
+    }
+    // Facing the same way you look, so you can hop in and go.
+    this.hubCar.place(spot.x, spot.z, this.hubCam.yaw);
+    this.hubCar.v = 0;
+    this.carDrop.start(spot.x, spot.z, this.hubCam.yaw);
+    this.chuteFold = 0;
+    this.audio.whoosh();
+    this.popAtPawn(t('drop.coming'), 'good');
+    this.profile.addStat('carDrops');
+    this.checkTrophies();
+  }
+
+  private carLanded(): void {
+    this.audio.bump();
+    this.input.rumble(0.5, 120);
+    this.splash = Math.max(this.splash, 0.25);
+    const p = _v5.set(this.hubCar.x, HUB_Y + 0.3, this.hubCar.z);
+    for (let i = 0; i < 3; i++) this.particles.emit('dust', p, _v4.set((Math.random() - 0.5) * 4, 1.5, (Math.random() - 0.5) * 4), 30, 1.4);
+  }
+
+  /** The parachute over a falling car, folding away once it lands. */
+  private drawChute(dt: number, carPos: THREE.Vector3): void {
+    const falling = this.carDrop.active;
+    if (!falling && this.chuteFold >= 1) {
+      if (this.chute) this.chute.visible = false;
+      return;
+    }
+    if (!this.chute) {
+      this.chute = new THREE.Mesh(buildParachute(), this.pickupMaterial);
+      this.scene.add(this.chute);
+    }
+    if (!falling) this.chuteFold = Math.min(1, this.chuteFold + dt * 1.6);
+    const c = this.chute;
+    c.visible = this.inHub && this.chuteFold < 1;
+    c.position.copy(carPos).add(_v6.set(0, 1.4, 0));
+    c.rotation.set(0, this.hubCar.heading, this.carDrop.sway(this.time) * 0.6);
+    // Once down, the canopy sinks and crumples onto the car.
+    const s = 1 - this.chuteFold;
+    c.scale.set(1 + this.chuteFold * 0.3, Math.max(0.05, s), 1 + this.chuteFold * 0.3);
   }
 
   // ————— the paper plane —————
@@ -4018,8 +4095,10 @@ export class Game {
     const cam = this.rig.camera;
     const bob = this.hubCar.afloat ? Math.sin(this.time * 1.7) * 0.06 : 0;
     if (this.hubCar.afloat && this.profile.markSeen('sailed')) this.checkTrophies();
-    vm.root.position.set(car.x, HUB_Y + car.y + 0.02 + bob, car.z);
+    vm.root.position.set(car.x, HUB_Y + car.y + 0.02 + bob + this.carDrop.height, car.z);
     vm.root.quaternion.setFromAxisAngle(_y, car.heading);
+    if (this.carDrop.active) vm.root.rotateZ(this.carDrop.sway(this.time));
+    this.drawChute(dt, vm.root.position);
     const steer = this.mode === 'drive' ? this.input.steer() : 0;
     for (const p of vm.steerPivots) p.rotation.y = -steer * 0.45;
     vm.roll(this.hubCar.v * dt);
@@ -4120,7 +4199,7 @@ export class Game {
 
     // Zones and prompts.
     this.hubZone = this.flight ? null : area.zoneAt(player.x, player.z);
-    const nearCar = this.mode === 'foot' && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
+    const nearCar = this.mode === 'foot' && !this.carDrop.active && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
     const boards = this.areaBoards.get(area.id);
     const here = _v6.set(player.x, HUB_Y, player.z);
     boards?.update(dt, this.time, cam, here);

@@ -930,5 +930,9 @@ const pt: Locale = {
   'safe.tryAgain': 'Tentar de novo',
   'safe.toMenu': 'Menu principal',
   'safe.reload': 'Recarregar',
+  'ctl.callCar': 'Chame seu carro (ele desce do céu)',
+  'drop.coming': 'Seu carro está descendo!',
+  'drop.noRoom': 'Não há espaço para o carro pousar aqui. Tente um lugar mais aberto.',
+  'drop.notNow': 'Não durante uma batalha de tinta!',
 };
 export default pt;

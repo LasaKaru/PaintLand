@@ -930,5 +930,9 @@ const ur: Locale = {
   'safe.tryAgain': 'دوبارہ کوشش کریں',
   'safe.toMenu': 'مرکزی مینو',
   'safe.reload': 'دوبارہ لوڈ کریں',
+  'ctl.callCar': 'اپنی گاڑی بلائیں (وہ آسمان سے اترتی ہے)',
+  'drop.coming': 'آپ کی گاڑی نیچے آ رہی ہے!',
+  'drop.noRoom': 'یہاں گاڑی کے اترنے کی جگہ نہیں۔ کسی کھلی جگہ پر کوشش کریں۔',
+  'drop.notNow': 'رنگ کی لڑائی کے دوران نہیں!',
 };
 export default ur;

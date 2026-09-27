@@ -930,5 +930,9 @@ const ko: Locale = {
   'safe.tryAgain': '다시 시도',
   'safe.toMenu': '메인 메뉴',
   'safe.reload': '다시 불러오기',
+  'ctl.callCar': '차 부르기 (하늘에서 내려와요)',
+  'drop.coming': '차가 내려오고 있어요!',
+  'drop.noRoom': '여기는 차가 내려앉을 자리가 없어요. 더 트인 곳에서 해 보세요.',
+  'drop.notNow': '물감 대전 중에는 안 돼요!',
 };
 export default ko;

@@ -930,5 +930,9 @@ const it: Locale = {
   'safe.tryAgain': 'Riprova',
   'safe.toMenu': 'Menu principale',
   'safe.reload': 'Ricarica',
+  'ctl.callCar': 'Chiama la tua auto (scende dal cielo)',
+  'drop.coming': 'La tua auto sta scendendo!',
+  'drop.noRoom': 'Qui non c’è spazio per far atterrare l’auto. Prova in un punto più aperto.',
+  'drop.notNow': 'Non durante una battaglia di colori!',
 };
 export default it;

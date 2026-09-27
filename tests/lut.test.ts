@@ -8,7 +8,7 @@ describe('colour grading (LUTs)', () => {
       expect(data.length, look.id).toBe(LUT_SIZE ** 3 * 4);
     }
     const id = bakeLut(LUT_LOOKS.find((l) => l.id === 'none')!.grade);
-    for (const c of [[0, 0, 0], [1, 1, 1], [0.5, 0.25, 0.75], [1, 0, 0]] as const) {
+    for (const c of [[0, 0, 0], [1, 1, 1], [0.5, 0.25, 0.75], [1, 0, 0]] as [number, number, number][]) {
       const [r, g, b] = sampleLut(id, LUT_SIZE, ...c);
       expect(Math.abs(r - c[0]) + Math.abs(g - c[1]) + Math.abs(b - c[2])).toBeLessThan(0.1);
     }

@@ -930,5 +930,9 @@ const ja: Locale = {
   'safe.tryAgain': 'もう一度',
   'safe.toMenu': 'メインメニュー',
   'safe.reload': '再読み込み',
+  'ctl.callCar': '車を呼ぶ（空から降ってくる）',
+  'drop.coming': '車が降りてきます！',
+  'drop.noRoom': 'ここには車が降りる場所がありません。もっと開けた場所で試してください。',
+  'drop.notNow': 'ペンキバトル中はだめ！',
 };
 export default ja;

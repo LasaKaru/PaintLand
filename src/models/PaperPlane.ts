@@ -75,3 +75,25 @@ export function buildPlaneStand(): THREE.BufferGeometry {
   k.cylinder(0.35, 0.18, 1.4, 8, '#e0432f', { position: [2.6, 3.7, 0.7], rotation: [Math.PI / 2, 0, 0] });
   return k.build(0.02);
 }
+
+/** A paper parachute for a dropped car: striped canopy and four cords (cords end at y = 0). */
+export function buildParachute(): THREE.BufferGeometry {
+  const k = new ModelKit();
+  const colours = ['#f6f0e4', '#e8559a', '#f6f0e4', '#f4d23b', '#f6f0e4', '#3e86c9'];
+  for (let i = 0; i < 6; i++) {
+    const a = (i / 6) * Math.PI * 2;
+    k.blob(1.7, colours[i], { position: [Math.cos(a) * 1.9, 6.4, Math.sin(a) * 1.9], scale: [1.1, 0.45, 1.1], detail: 1 });
+  }
+  k.blob(2.2, '#f6f0e4', { position: [0, 6.9, 0], scale: [1.2, 0.5, 1.2], detail: 1 });
+  for (const [x, z] of [[-1, -1.6], [1, -1.6], [-1, 1.6], [1, 1.6]] as const) {
+    const top = new THREE.Vector3(x * 2.6, 6.1, z * 1.6);
+    const bottom = new THREE.Vector3(x * 0.9, 0, z * 1.4);
+    const mid = top.clone().add(bottom).multiplyScalar(0.5);
+    const len = top.distanceTo(bottom);
+    const dir = top.clone().sub(bottom).normalize();
+    const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
+    const e = new THREE.Euler().setFromQuaternion(q);
+    k.cylinder(0.03, 0.03, len, 4, '#2b2622', { position: [mid.x, mid.y, mid.z], rotation: [e.x, e.y, e.z] });
+  }
+  return k.build(0.01);
+}

@@ -15,7 +15,7 @@ export type ActionName =
   | 'respawn' | 'pause' | 'studio' | 'photo' | 'hud'
   | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather'
   | 'drink' | 'cycleTonic' | 'emote' | 'chat' | 'talk'
-  | 'shiftUp' | 'shiftDown' | 'map' | 'trail' | 'fire';
+  | 'shiftUp' | 'shiftDown' | 'map' | 'trail' | 'fire' | 'callCar';
 
 export type Bindings = Record<ActionName, string[]>;
 
@@ -63,6 +63,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   shiftDown: ['Comma'],
   trail: ['KeyL'],
   fire: ['KeyX', 'Mouse0'],
+  callCar: ['KeyK'],
 };
 
 /** Names and groups for the Controls screen. */
@@ -83,6 +84,7 @@ export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' 
   { action: 'interact', label: 'Get in / out · talk', group: 'On foot' },
   { action: 'emote', label: 'Emote wheel', group: 'On foot' },
   { action: 'fire', label: 'Throw a paint balloon (paint battle)', group: 'On foot' },
+  { action: 'callCar', label: 'Call your car (it drops from the sky)', group: 'On foot' },
   { action: 'talk', label: 'Push to talk (voice chat)', group: 'Game' },
   { action: 'camera', label: 'Change camera', group: 'Camera' },
   { action: 'fovDown', label: 'Narrower view', group: 'Camera' },

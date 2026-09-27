@@ -930,5 +930,9 @@ const zh: Locale = {
   'safe.tryAgain': '重试',
   'safe.toMenu': '主菜单',
   'safe.reload': '重新加载',
+  'ctl.callCar': '呼叫你的车（它会从天而降）',
+  'drop.coming': '你的车正在降落！',
+  'drop.noRoom': '这里没有地方让车降落。换个空旷点的地方试试。',
+  'drop.notNow': '颜料大战期间不行！',
 };
 export default zh;

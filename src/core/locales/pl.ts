@@ -930,5 +930,9 @@ const pl: Locale = {
   'safe.tryAgain': 'Spróbuj ponownie',
   'safe.toMenu': 'Menu główne',
   'safe.reload': 'Przeładuj',
+  'ctl.callCar': 'Wezwij auto (spada z nieba)',
+  'drop.coming': 'Twoje auto już leci w dół!',
+  'drop.noRoom': 'Tu nie ma miejsca na lądowanie auta. Spróbuj w bardziej otwartym miejscu.',
+  'drop.notNow': 'Nie w trakcie bitwy na farby!',
 };
 export default pl;

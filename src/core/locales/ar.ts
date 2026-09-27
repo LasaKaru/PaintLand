@@ -930,5 +930,9 @@ const ar: Locale = {
   'safe.tryAgain': 'حاول مجددًا',
   'safe.toMenu': 'القائمة الرئيسية',
   'safe.reload': 'إعادة التحميل',
+  'ctl.callCar': 'استدعِ سيارتك (تهبط من السماء)',
+  'drop.coming': 'سيارتك في طريقها إلى الأسفل!',
+  'drop.noRoom': 'لا مكان لهبوط السيارة هنا. جرّب مكانًا أكثر اتساعًا.',
+  'drop.notNow': 'ليس أثناء معركة الألوان!',
 };
 export default ar;

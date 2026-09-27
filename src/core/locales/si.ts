@@ -930,5 +930,9 @@ const si: Locale = {
   'safe.tryAgain': 'නැවත උත්සාහ කරන්න',
   'safe.toMenu': 'ප්‍රධාන මෙනුව',
   'safe.reload': 'නැවත පූරණය',
+  'ctl.callCar': 'ඔබේ කාරය කැඳවන්න (එය අහසින් වැටේ)',
+  'drop.coming': 'ඔබේ කාරය පහළට එනවා!',
+  'drop.noRoom': 'මෙතන කාරයට බසින්න ඉඩ නැහැ. වඩා විවෘත තැනක් බලන්න.',
+  'drop.notNow': 'තීන්ත සටනක් අතරතුර නොවේ!',
 };
 export default si;

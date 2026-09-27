@@ -930,5 +930,9 @@ const fr: Locale = {
   'safe.tryAgain': 'Réessayer',
   'safe.toMenu': 'Menu principal',
   'safe.reload': 'Recharger',
+  'ctl.callCar': 'Appeler ta voiture (elle tombe du ciel)',
+  'drop.coming': 'Ta voiture descend du ciel !',
+  'drop.noRoom': 'Pas de place pour que la voiture se pose ici. Essaie un endroit plus dégagé.',
+  'drop.notNow': 'Pas pendant une bataille de peinture !',
 };
 export default fr;

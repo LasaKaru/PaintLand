@@ -930,5 +930,9 @@ const fa: Locale = {
   'safe.tryAgain': 'دوباره امتحان کن',
   'safe.toMenu': 'منوی اصلی',
   'safe.reload': 'بارگذاری دوباره',
+  'ctl.callCar': 'ماشینت را صدا بزن (از آسمان پایین می‌آید)',
+  'drop.coming': 'ماشینت دارد پایین می‌آید!',
+  'drop.noRoom': 'اینجا جایی برای فرود ماشین نیست. جای بازتری را امتحان کن.',
+  'drop.notNow': 'نه وسط نبرد رنگ!',
 };
 export default fa;

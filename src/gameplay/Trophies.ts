@@ -149,6 +149,7 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'battle-win', name: 'Colour Captain', text: 'Win a paint battle.', icon: '🏳️‍🌈', reward: 120, progress: stat('battleWins', 1) },
   { id: 'battle-wins-10', name: 'Paint Champion', text: 'Win 10 paint battles.', icon: '🏆', reward: 400, progress: stat('battleWins', 10) },
   { id: 'battle-splats-50', name: 'Splat Master', text: 'Splat 50 players (or bots) with paint balloons.', icon: '💦', reward: 200, progress: stat('battleHits', 50) },
+  { id: 'car-drop', name: 'Special Delivery', text: 'Call your car and watch it parachute down.', icon: '🪂', reward: 50, progress: stat('carDrops', 1) },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

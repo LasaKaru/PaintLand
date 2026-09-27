@@ -930,5 +930,9 @@ const id: Locale = {
   'safe.tryAgain': 'Coba lagi',
   'safe.toMenu': 'Menu utama',
   'safe.reload': 'Muat ulang',
+  'ctl.callCar': 'Panggil mobilmu (turun dari langit)',
+  'drop.coming': 'Mobilmu sedang turun!',
+  'drop.noRoom': 'Tidak ada ruang untuk mobil mendarat di sini. Coba tempat yang lebih lapang.',
+  'drop.notNow': 'Jangan saat perang cat!',
 };
 export default id;

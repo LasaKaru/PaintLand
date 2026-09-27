@@ -930,5 +930,9 @@ const hi: Locale = {
   'safe.tryAgain': 'फिर से कोशिश करें',
   'safe.toMenu': 'मुख्य मेन्यू',
   'safe.reload': 'दोबारा लोड करें',
+  'ctl.callCar': 'अपनी कार बुलाओ (वह आसमान से उतरती है)',
+  'drop.coming': 'आपकी कार नीचे आ रही है!',
+  'drop.noRoom': 'यहाँ कार के उतरने की जगह नहीं है। किसी खुली जगह पर कोशिश करो।',
+  'drop.notNow': 'रंग युद्ध के दौरान नहीं!',
 };
 export default hi;

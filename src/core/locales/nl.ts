@@ -930,5 +930,9 @@ const nl: Locale = {
   'safe.tryAgain': 'Opnieuw proberen',
   'safe.toMenu': 'Hoofdmenu',
   'safe.reload': 'Herladen',
+  'ctl.callCar': 'Roep je auto (hij valt uit de lucht)',
+  'drop.coming': 'Je auto komt eraan, uit de lucht!',
+  'drop.noRoom': 'Hier is geen ruimte om te landen. Probeer een opener plek.',
+  'drop.notNow': 'Niet tijdens een verfgevecht!',
 };
 export default nl;

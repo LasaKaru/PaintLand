@@ -451,6 +451,8 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .touch.voice .tbtn.talk { display: block; }
 .tbtn.fire { display: none; right: 190px; bottom: 20px; font-size: 26px; }
 .touch.battle .tbtn.fire { display: block; }
+.tbtn.call { display: none; right: 250px; bottom: 170px; font-size: 20px; }
+.touch.foot .tbtn.call { display: block; }
 .tbtn.pause { position: fixed; top: 12px; left: 50%; margin-left: -24px; }
 .touch-ui .corner.top-left .pills, .touch-ui .status-chip { display: none; }
 

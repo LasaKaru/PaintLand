@@ -930,5 +930,9 @@ const vi: Locale = {
   'safe.tryAgain': 'Thử lại',
   'safe.toMenu': 'Menu chính',
   'safe.reload': 'Tải lại',
+  'ctl.callCar': 'Gọi xe của bạn (xe rơi từ trên trời xuống)',
+  'drop.coming': 'Xe của bạn đang hạ xuống!',
+  'drop.noRoom': 'Không đủ chỗ cho xe hạ cánh ở đây. Thử chỗ thoáng hơn nhé.',
+  'drop.notNow': 'Không phải lúc đang chiến sơn!',
 };
 export default vi;

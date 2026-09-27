@@ -930,5 +930,9 @@ const bn: Locale = {
   'safe.tryAgain': 'আবার চেষ্টা করো',
   'safe.toMenu': 'প্রধান মেনু',
   'safe.reload': 'আবার লোড করো',
+  'ctl.callCar': 'তোমার গাড়ি ডাকো (এটি আকাশ থেকে নামে)',
+  'drop.coming': 'তোমার গাড়ি নেমে আসছে!',
+  'drop.noRoom': 'এখানে গাড়ি নামার জায়গা নেই। আরও খোলা জায়গায় চেষ্টা করো।',
+  'drop.notNow': 'রঙের লড়াইয়ের সময় নয়!',
 };
 export default bn;
