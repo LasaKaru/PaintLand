@@ -859,6 +859,18 @@ const en = {
   'fg.potsDone': '{n} pots broken! +{ink} ink',
   'fg.hit': 'Crack! {n} swings left.',
   'fg.miss': 'Whoosh… missed. {n} swings left.',
+  'story.title': 'Story: The Lost Palette',
+  'story.foundKicker': 'A lost colour came home',
+  'story.allFound': 'All eight colours are home! Read the ending in Menu → Story.',
+  'story.readJournal': '{n}/{total} colours home · a new page in your journal (Menu → Story)',
+  'story.begin': 'Begin the story',
+  'story.progress': 'Colours home: {n}/{total}',
+  'story.next': 'Next: {chapter}',
+  'story.go': 'Go there',
+  'story.theEnd': 'The end',
+  'story.journal': 'Journal',
+  'story.empty': 'No pages yet: finish a lap of a chapter to find its colour.',
+  'story.prologue': 'Prologue',
 } as const;
 
 export default en;

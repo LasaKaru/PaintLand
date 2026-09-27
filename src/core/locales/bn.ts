@@ -861,5 +861,17 @@ const bn: Locale = {
   'fg.potsDone': '{n}টি হাঁড়ি ভেঙেছে! +{ink} কালি',
   'fg.hit': 'ঠাস! আর {n}টি আঘাত।',
   'fg.miss': 'শোঁ… ফসকে গেল। আর {n}টি আঘাত।',
+  'story.title': 'গল্প: হারানো প্যালেট',
+  'story.foundKicker': 'একটি হারানো রং ফিরে এল',
+  'story.allFound': 'আটটি রংই ফিরে এসেছে! শেষটা মেনু → গল্প-এ পড়ুন।',
+  'story.readJournal': '{n}/{total}টি রং ফিরেছে · আপনার ডায়েরিতে নতুন পাতা (মেনু → গল্প)',
+  'story.begin': 'গল্প শুরু করুন',
+  'story.progress': 'ফেরা রং: {n}/{total}',
+  'story.next': 'পরের গন্তব্য: {chapter}',
+  'story.go': 'সেখানে যান',
+  'story.theEnd': 'সমাপ্তি',
+  'story.journal': 'ডায়েরি',
+  'story.empty': 'এখনও কোনো পাতা নেই: কোনো অধ্যায়ের রং খুঁজতে তার একটি ল্যাপ শেষ করুন।',
+  'story.prologue': 'সূচনা',
 };
 export default bn;

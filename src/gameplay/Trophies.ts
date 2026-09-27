@@ -138,6 +138,8 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'photo-contest', name: 'On Show', text: 'Enter the weekly photo contest.', icon: '📸', reward: 100, progress: stat('contestEntries', 1) },
   { id: 'vesak-lantern', name: 'Lantern Maker', text: 'Make a Vesak lantern and hang it at your home.', icon: '🏮', reward: 80, progress: seenCount('lantern', 1) },
   { id: 'pots-10', name: 'Pot Breaker', text: 'Break 10 pots blindfolded in the New Year pot game.', icon: '🏺', reward: 150, progress: stat('pots', 10) },
+  { id: 'story-1', name: 'A Splash of Colour', text: 'Bring home the first lost colour in story mode.', icon: '🎨', reward: 100, progress: (p) => [Math.min(1, p.data.story?.found.length ?? 0), 1] },
+  { id: 'story-8', name: 'The Lost Palette', text: 'Bring all eight lost colours home to Varna.', icon: '📖', reward: 1000, progress: (p) => [Math.min(8, p.data.story?.found.length ?? 0), 8] },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

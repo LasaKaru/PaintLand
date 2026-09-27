@@ -206,6 +206,8 @@ export interface ProfileData {
   home?: import('./Home').HomeLayout;
   /** Vesak lanterns you made (they hang from your home). */
   lanterns?: import('../ui/FestivalGames').LanternDesign[];
+  /** Story mode, The Lost Palette. */
+  story?: import('./Story').StoryState;
   /** Saved outfit sets. */
   outfits?: OutfitSet[];
   tonics: Record<TonicId, number>;

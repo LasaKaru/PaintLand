@@ -861,5 +861,17 @@ const ja: Locale = {
   'fg.potsDone': '{n} 個割れた！ インク +{ink}',
   'fg.hit': 'パリン！ 残り {n} 回。',
   'fg.miss': 'ブン…外れ。残り {n} 回。',
+  'story.title': 'ストーリー：なくしたパレット',
+  'story.foundKicker': 'なくした色がひとつ戻った',
+  'story.allFound': '8色すべて戻った！ エンディングはメニュー → ストーリーで。',
+  'story.readJournal': '{n}/{total} 色が戻った · 日記に新しいページ（メニュー → ストーリー）',
+  'story.begin': '物語を始める',
+  'story.progress': '戻った色：{n}/{total}',
+  'story.next': '次は：{chapter}',
+  'story.go': '行ってみる',
+  'story.theEnd': 'おしまい',
+  'story.journal': '日記',
+  'story.empty': 'まだページはありません。チャプターを1周すると、その色が見つかります。',
+  'story.prologue': 'プロローグ',
 };
 export default ja;

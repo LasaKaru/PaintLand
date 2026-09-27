@@ -861,5 +861,17 @@ const de: Locale = {
   'fg.potsDone': '{n} Töpfe zerschlagen! +{ink} Tinte',
   'fg.hit': 'Krach! Noch {n} Schläge.',
   'fg.miss': 'Wusch… daneben. Noch {n} Schläge.',
+  'story.title': 'Geschichte: Die verlorene Palette',
+  'story.foundKicker': 'Eine verlorene Farbe ist zurück',
+  'story.allFound': 'Alle acht Farben sind zurück! Das Ende liest du unter Menü → Geschichte.',
+  'story.readJournal': '{n}/{total} Farben zurück · eine neue Seite in deinem Tagebuch (Menü → Geschichte)',
+  'story.begin': 'Geschichte beginnen',
+  'story.progress': 'Farben zurück: {n}/{total}',
+  'story.next': 'Als Nächstes: {chapter}',
+  'story.go': 'Hinfahren',
+  'story.theEnd': 'Ende',
+  'story.journal': 'Tagebuch',
+  'story.empty': 'Noch keine Seiten: Fahr eine Runde in einem Kapitel, um seine Farbe zu finden.',
+  'story.prologue': 'Prolog',
 };
 export default de;

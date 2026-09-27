@@ -861,5 +861,17 @@ const nl: Locale = {
   'fg.potsDone': '{n} potten kapot! +{ink} inkt',
   'fg.hit': 'Krak! Nog {n} slagen.',
   'fg.miss': 'Zoef… mis. Nog {n} slagen.',
+  'story.title': 'Verhaal: Het verloren palet',
+  'story.foundKicker': 'Een verloren kleur is terug',
+  'story.allFound': 'Alle acht kleuren zijn terug! Lees het einde in Menu → Verhaal.',
+  'story.readJournal': '{n}/{total} kleuren terug · een nieuwe pagina in je dagboek (Menu → Verhaal)',
+  'story.begin': 'Begin het verhaal',
+  'story.progress': 'Kleuren terug: {n}/{total}',
+  'story.next': 'Volgende: {chapter}',
+  'story.go': 'Ga erheen',
+  'story.theEnd': 'Einde',
+  'story.journal': 'Dagboek',
+  'story.empty': 'Nog geen pagina’s: rijd een ronde in een hoofdstuk om de kleur te vinden.',
+  'story.prologue': 'Proloog',
 };
 export default nl;

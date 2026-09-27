@@ -861,5 +861,17 @@ const ur: Locale = {
   'fg.potsDone': '{n} مٹکے ٹوٹے! +{ink} سیاہی',
   'fg.hit': 'چٹاخ! {n} وار باقی۔',
   'fg.miss': 'شوں… چوک گئے۔ {n} وار باقی۔',
+  'story.title': 'کہانی: کھویا ہوا پیلیٹ',
+  'story.foundKicker': 'ایک کھویا رنگ لوٹ آیا',
+  'story.allFound': 'آٹھوں رنگ لوٹ آئے! اختتام مینو ← کہانی میں پڑھیں۔',
+  'story.readJournal': '{n}/{total} رنگ لوٹے · آپ کی ڈائری میں نیا صفحہ (مینو ← کہانی)',
+  'story.begin': 'کہانی شروع کریں',
+  'story.progress': 'لوٹے رنگ: {n}/{total}',
+  'story.next': 'اگلا: {chapter}',
+  'story.go': 'وہاں جائیں',
+  'story.theEnd': 'اختتام',
+  'story.journal': 'ڈائری',
+  'story.empty': 'ابھی کوئی صفحہ نہیں: کسی باب کا رنگ ڈھونڈنے کے لیے اس کا ایک چکر مکمل کریں۔',
+  'story.prologue': 'پیش لفظ',
 };
 export default ur;

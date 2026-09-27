@@ -861,5 +861,17 @@ const vi: Locale = {
   'fg.potsDone': 'Vỡ {n} nồi! +{ink} mực',
   'fg.hit': 'Choang! Còn {n} lần.',
   'fg.miss': 'Vụt… trượt rồi. Còn {n} lần.',
+  'story.title': 'Câu chuyện: Bảng màu thất lạc',
+  'story.foundKicker': 'Một màu thất lạc đã trở về',
+  'story.allFound': 'Cả tám màu đã về nhà! Đọc đoạn kết ở Menu → Câu chuyện.',
+  'story.readJournal': 'Đã về {n}/{total} màu · một trang mới trong nhật ký (Menu → Câu chuyện)',
+  'story.begin': 'Bắt đầu câu chuyện',
+  'story.progress': 'Màu đã về: {n}/{total}',
+  'story.next': 'Tiếp theo: {chapter}',
+  'story.go': 'Đến đó',
+  'story.theEnd': 'Hết',
+  'story.journal': 'Nhật ký',
+  'story.empty': 'Chưa có trang nào: chạy hết một vòng của chương để tìm màu của nó.',
+  'story.prologue': 'Mở đầu',
 };
 export default vi;

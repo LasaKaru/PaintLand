@@ -861,5 +861,17 @@ const sw: Locale = {
   'fg.potsDone': 'Vyungu {n} vimevunjika! +{ink} wino',
   'fg.hit': 'Pa! Yamebaki mapigo {n}.',
   'fg.miss': 'Shuu… umekosa. Yamebaki mapigo {n}.',
+  'story.title': 'Hadithi: Paleti Iliyopotea',
+  'story.foundKicker': 'Rangi moja iliyopotea imerudi',
+  'story.allFound': 'Rangi zote nane zimerudi! Soma mwisho kwenye Menyu → Hadithi.',
+  'story.readJournal': 'Rangi {n}/{total} zimerudi · ukurasa mpya kwenye shajara yako (Menyu → Hadithi)',
+  'story.begin': 'Anza hadithi',
+  'story.progress': 'Rangi zilizorudi: {n}/{total}',
+  'story.next': 'Inayofuata: {chapter}',
+  'story.go': 'Nenda huko',
+  'story.theEnd': 'Mwisho',
+  'story.journal': 'Shajara',
+  'story.empty': 'Bado hakuna kurasa: maliza mzunguko wa sura kupata rangi yake.',
+  'story.prologue': 'Utangulizi',
 };
 export default sw;

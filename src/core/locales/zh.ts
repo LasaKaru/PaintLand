@@ -861,5 +861,17 @@ const zh: Locale = {
   'fg.potsDone': '打破了 {n} 个陶罐！+{ink} 墨水',
   'fg.hit': '啪！还剩 {n} 次。',
   'fg.miss': '呼……没打中。还剩 {n} 次。',
+  'story.title': '故事：遗失的调色盘',
+  'story.foundKicker': '一种遗失的颜色回来了',
+  'story.allFound': '八种颜色都回家了！在菜单 → 故事中阅读结局。',
+  'story.readJournal': '已找回 {n}/{total} 种颜色 · 日记新增一页（菜单 → 故事）',
+  'story.begin': '开始故事',
+  'story.progress': '已找回的颜色：{n}/{total}',
+  'story.next': '下一站：{chapter}',
+  'story.go': '出发',
+  'story.theEnd': '完',
+  'story.journal': '日记',
+  'story.empty': '还没有日记：跑完一个章节的一圈即可找到它的颜色。',
+  'story.prologue': '序章',
 };
 export default zh;

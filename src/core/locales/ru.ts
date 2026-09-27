@@ -861,5 +861,17 @@ const ru: Locale = {
   'fg.potsDone': 'Разбито горшков: {n}! +{ink} чернил',
   'fg.hit': 'Трах! Осталось ударов: {n}.',
   'fg.miss': 'Вжух… мимо. Осталось ударов: {n}.',
+  'story.title': 'Сюжет: Потерянная палитра',
+  'story.foundKicker': 'Потерянный цвет вернулся',
+  'story.allFound': 'Все восемь цветов дома! Финал — в Меню → Сюжет.',
+  'story.readJournal': 'Дома цветов: {n}/{total} · новая страница в дневнике (Меню → Сюжет)',
+  'story.begin': 'Начать историю',
+  'story.progress': 'Цветов дома: {n}/{total}',
+  'story.next': 'Дальше: {chapter}',
+  'story.go': 'Отправиться',
+  'story.theEnd': 'Конец',
+  'story.journal': 'Дневник',
+  'story.empty': 'Страниц пока нет: проедьте круг главы, чтобы найти её цвет.',
+  'story.prologue': 'Пролог',
 };
 export default ru;

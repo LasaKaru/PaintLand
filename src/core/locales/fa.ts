@@ -861,5 +861,17 @@ const fa: Locale = {
   'fg.potsDone': '{n} کوزه شکست! +{ink} جوهر',
   'fg.hit': 'ترق! {n} ضربه مانده.',
   'fg.miss': 'فِش… خطا رفت. {n} ضربه مانده.',
+  'story.title': 'داستان: پالت گمشده',
+  'story.foundKicker': 'یک رنگ گمشده برگشت',
+  'story.allFound': 'هر هشت رنگ برگشتند! پایان را در منو ← داستان بخوانید.',
+  'story.readJournal': '{n}/{total} رنگ برگشته · صفحه‌ای تازه در دفترچه‌تان (منو ← داستان)',
+  'story.begin': 'آغاز داستان',
+  'story.progress': 'رنگ‌های برگشته: {n}/{total}',
+  'story.next': 'بعدی: {chapter}',
+  'story.go': 'برو آنجا',
+  'story.theEnd': 'پایان',
+  'story.journal': 'دفترچه',
+  'story.empty': 'هنوز صفحه‌ای نیست: برای یافتن رنگ هر فصل یک دور آن را کامل کنید.',
+  'story.prologue': 'پیش‌درآمد',
 };
 export default fa;

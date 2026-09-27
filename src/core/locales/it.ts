@@ -861,5 +861,17 @@ const it: Locale = {
   'fg.potsDone': '{n} pentole rotte! +{ink} di inchiostro',
   'fg.hit': 'Crac! Restano {n} colpi.',
   'fg.miss': 'Fiuu… mancato. Restano {n} colpi.',
+  'story.title': 'Storia: La tavolozza perduta',
+  'story.foundKicker': 'Un colore perduto è tornato',
+  'story.allFound': 'Tutti gli otto colori sono tornati! Leggi il finale in Menu → Storia.',
+  'story.readJournal': '{n}/{total} colori a casa · una nuova pagina nel tuo diario (Menu → Storia)',
+  'story.begin': 'Inizia la storia',
+  'story.progress': 'Colori a casa: {n}/{total}',
+  'story.next': 'Prossima tappa: {chapter}',
+  'story.go': 'Vai lì',
+  'story.theEnd': 'Fine',
+  'story.journal': 'Diario',
+  'story.empty': 'Ancora nessuna pagina: fai un giro di un capitolo per trovarne il colore.',
+  'story.prologue': 'Prologo',
 };
 export default it;

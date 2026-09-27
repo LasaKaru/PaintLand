@@ -80,6 +80,7 @@ import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
 import { MailClient, postcardImage, type VisitedHome } from '../net/Mail';
 import { SkyBrush } from '../gameplay/SkyBrush';
+import { STORY_END_INK, STORY_INK, findColour, storyState } from '../gameplay/Story';
 import { cleanLantern, type LanternDesign } from '../ui/FestivalGames';
 import { photoUrl, type ContestState } from '../ui/ContestScreen';
 import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
@@ -2001,6 +2002,16 @@ export class Game {
     if (prevBest === null || lap < prevBest) this.profile.data.bestLap[cid] = lap;
     this.profile.addStat('laps');
     if (this.rover.handling === 'realistic') this.profile.addStat('realLaps');
+    // Story mode: a lap brings this chapter's lost colour home.
+    const story = storyState(this.profile.data);
+    const got = findColour(story, this.world.chapter.id);
+    if (got) {
+      this.profile.data.story = story;
+      this.profile.earn(got.done ? STORY_INK + STORY_END_INK : STORY_INK);
+      this.hud.lootCard(`📖 ${t('story.foundKicker')}`, got.page.hex, got.page.colour, got.done ? t('story.allFound') : t('story.readJournal', { n: story.found.length, total: 8 }));
+      this.audio.chime(72);
+      this.profile.save();
+    }
     if (this.ghost && this.lapClean && lap < this.ghost.run.time) this.profile.addStat('ghostBeaten');
     // Save the ghost when this clean lap beats the stored one.
     if (this.lapClean && this.ghostRec.length > 20 && (!this.ghost || lap < this.ghost.run.time)) {

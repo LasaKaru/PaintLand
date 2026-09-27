@@ -861,5 +861,17 @@ const ko: Locale = {
   'fg.potsDone': '항아리 {n}개 깼어요! 잉크 +{ink}',
   'fg.hit': '쨍그랑! {n}번 남음.',
   'fg.miss': '휙… 빗나갔어요. {n}번 남음.',
+  'story.title': '이야기: 잃어버린 팔레트',
+  'story.foundKicker': '잃어버린 색 하나가 돌아왔어요',
+  'story.allFound': '여덟 가지 색이 모두 돌아왔어요! 결말은 메뉴 → 이야기에서 읽어 보세요.',
+  'story.readJournal': '{n}/{total}가지 색이 돌아옴 · 일기에 새 페이지 (메뉴 → 이야기)',
+  'story.begin': '이야기 시작',
+  'story.progress': '돌아온 색: {n}/{total}',
+  'story.next': '다음: {chapter}',
+  'story.go': '가 보기',
+  'story.theEnd': '끝',
+  'story.journal': '일기',
+  'story.empty': '아직 페이지가 없어요. 챕터를 한 바퀴 돌면 그 색을 찾을 수 있어요.',
+  'story.prologue': '프롤로그',
 };
 export default ko;

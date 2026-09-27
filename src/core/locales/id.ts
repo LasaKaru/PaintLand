@@ -861,5 +861,17 @@ const id: Locale = {
   'fg.potsDone': '{n} kendi pecah! +{ink} tinta',
   'fg.hit': 'Prak! Sisa {n} ayunan.',
   'fg.miss': 'Wus… meleset. Sisa {n} ayunan.',
+  'story.title': 'Cerita: Palet yang Hilang',
+  'story.foundKicker': 'Satu warna yang hilang telah pulang',
+  'story.allFound': 'Kedelapan warna sudah pulang! Baca akhir ceritanya di Menu → Cerita.',
+  'story.readJournal': '{n}/{total} warna pulang · halaman baru di jurnalmu (Menu → Cerita)',
+  'story.begin': 'Mulai cerita',
+  'story.progress': 'Warna yang pulang: {n}/{total}',
+  'story.next': 'Berikutnya: {chapter}',
+  'story.go': 'Ke sana',
+  'story.theEnd': 'Tamat',
+  'story.journal': 'Jurnal',
+  'story.empty': 'Belum ada halaman: selesaikan satu putaran bab untuk menemukan warnanya.',
+  'story.prologue': 'Prolog',
 };
 export default id;

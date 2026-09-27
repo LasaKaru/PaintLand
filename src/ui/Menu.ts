@@ -46,10 +46,11 @@ import { TRAIL_COLOURS } from '../gameplay/PaintTrail';
 import { HomeScreen, type HomeHost } from './HomeScreen';
 import { ContestScreen, type ContestHost } from './ContestScreen';
 import { FestivalGames, type FestivalHost } from './FestivalGames';
+import { STORY_ENDING, STORY_INTRO, STORY_PAGES, nextPage, storyState } from '../gameplay/Story';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHost {
@@ -277,6 +278,7 @@ export class Menu {
       multiplayer: () => this.multiplayer(),
       gallery: () => `<div class="menu-panel wide">${this.header(`🖼 ${t('gal.title')}`)}<div class="panel-body">${this.galleryScreen.render()}</div></div>`,
       pass: () => `<div class="menu-panel wide">${this.header(`🎟 ${t('pass.title')}`)}<div class="panel-body">${this.passScreen.render()}</div></div>`,
+      story: () => this.storyScreen(),
       festival: () => `<div class="menu-panel wide">${this.header(`🏮 ${t('fg.title')}`)}<div class="panel-body" data-id="festival">${this.festivalGames.render()}</div></div>`,
       contest: () => `<div class="menu-panel wide">${this.header(`📸 ${t('pc.title')}`)}<div class="panel-body">${this.contestScreen.render()}</div></div>`,
       mailbox: () => `<div class="menu-panel wide">${this.header(`📬 ${t('mail.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('mailbox')}</div></div>`,
@@ -407,6 +409,7 @@ export class Menu {
         <button class="menu-item" data-nav="gallery">🖼 ${t('gal.title')}</button>
         <button class="menu-item" data-nav="contest">📸 ${t('pc.title')}</button>
         <button class="menu-item" data-nav="festival">🏮 ${t('fg.title')}</button>
+        <button class="menu-item" data-nav="story">📖 ${t('story.title')}</button>
         <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
@@ -570,6 +573,31 @@ export class Menu {
         <button class="btn" data-together="stunt" ${dis} ${busy}>🦘 ${t('tg.stunt')}</button>
         <button class="btn" data-together="paint" ${dis} ${busy}>🎨 ${t('tg.paint')}</button>
       </div>`;
+  }
+
+  /** Story mode: The Lost Palette — the palette, the journal, and where to look next. */
+  private storyScreen(): string {
+    const p = this.host.profile;
+    const s = storyState(p.data);
+    const next = nextPage(s);
+    const wells = STORY_PAGES.map((pg) => {
+      const got = s.found.includes(pg.chapter);
+      return `<span class="palette-well ${got ? 'got' : ''}" style="--c:${got ? pg.hex : 'transparent'}" title="${escapeHtml(got ? pg.colour : t('st.unknown'))}"></span>`;
+    }).join('');
+    const pages = STORY_PAGES.filter((pg) => s.found.includes(pg.chapter))
+      .map((pg) => `<div class="card story-page" style="border-left:6px solid ${pg.hex}"><h4>${escapeHtml(pg.title)} · <span style="color:${pg.hex}">${escapeHtml(pg.colour)}</span></h4><p>${escapeHtml(pg.found)}</p></div>`)
+      .join('');
+    const chName = (id: string): string => this.host.chapters.find((c) => c.id === id)?.name ?? id;
+    const body = !s.started
+      ? `<p class="story-text">${escapeHtml(STORY_INTRO)}</p><div class="row"><button class="btn primary" data-action="story-start">📖 ${t('story.begin')}</button></div>`
+      : `<div class="palette" aria-label="${t('story.progress', { n: s.found.length, total: STORY_PAGES.length })}">${wells}</div>
+         <p class="menu-hint">${t('story.progress', { n: s.found.length, total: STORY_PAGES.length })}</p>
+         ${next
+           ? `<div class="card"><h4>${t('story.next', { chapter: escapeHtml(chName(next.chapter)) })}</h4><p class="story-text">${escapeHtml(next.clue)}</p><button class="btn primary" data-play="${next.chapter}">▶ ${t('story.go')}</button></div>`
+           : `<div class="card story-page"><h4>🎨 ${t('story.theEnd')}</h4><p class="story-text">${escapeHtml(STORY_ENDING)}</p></div>`}
+         <h4>${t('story.journal')}</h4>${pages || `<p class="menu-hint">${t('story.empty')}</p>`}
+         <details><summary>${t('story.prologue')}</summary><p class="story-text">${escapeHtml(STORY_INTRO)}</p></details>`;
+    return `<div class="menu-panel wide">${this.header(`📖 ${t('story.title')}`)}<div class="panel-body">${body}</div></div>`;
   }
 
   private stickersScreen(): string {
@@ -1381,6 +1409,13 @@ export class Menu {
       case 'controls':
         this.host.openControls();
         break;
+      case 'story-start': {
+        const pr = this.host.profile;
+        pr.data.story = { ...storyState(pr.data), started: true };
+        pr.save();
+        this.render();
+        break;
+      }
       case 'trail-clear':
         this.toast(t('trail.cleared', { n: this.host.clearTrails() }));
         break;

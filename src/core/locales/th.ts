@@ -861,5 +861,17 @@ const th: Locale = {
   'fg.potsDone': 'ตีหม้อแตก {n} ใบ! +{ink} หมึก',
   'fg.hit': 'เพล้ง! เหลือ {n} ครั้ง',
   'fg.miss': 'วืด… พลาด เหลือ {n} ครั้ง',
+  'story.title': 'เรื่องราว: จานสีที่หายไป',
+  'story.foundKicker': 'สีที่หายไปกลับมาแล้วหนึ่งสี',
+  'story.allFound': 'สีทั้งแปดกลับบ้านแล้ว! อ่านตอนจบได้ที่เมนู → เรื่องราว',
+  'story.readJournal': 'กลับมาแล้ว {n}/{total} สี · หน้าใหม่ในบันทึกของคุณ (เมนู → เรื่องราว)',
+  'story.begin': 'เริ่มเรื่องราว',
+  'story.progress': 'สีที่กลับมา: {n}/{total}',
+  'story.next': 'ต่อไป: {chapter}',
+  'story.go': 'ไปที่นั่น',
+  'story.theEnd': 'จบ',
+  'story.journal': 'บันทึก',
+  'story.empty': 'ยังไม่มีหน้า: ขับครบหนึ่งรอบในบทเพื่อตามหาสีของบทนั้น',
+  'story.prologue': 'บทนำ',
 };
 export default th;

@@ -861,5 +861,17 @@ const ar: Locale = {
   'fg.potsDone': 'كُسرت {n} جرار! +{ink} حبر',
   'fg.hit': 'طاخ! بقيت {n} ضربات.',
   'fg.miss': 'فشش… أخطأت. بقيت {n} ضربات.',
+  'story.title': 'القصة: لوح الألوان الضائع',
+  'story.foundKicker': 'عاد لون ضائع',
+  'story.allFound': 'عادت الألوان الثمانية كلها! اقرأ النهاية في القائمة ← القصة.',
+  'story.readJournal': 'عاد {n}/{total} من الألوان · صفحة جديدة في دفترك (القائمة ← القصة)',
+  'story.begin': 'ابدأ القصة',
+  'story.progress': 'الألوان العائدة: {n}/{total}',
+  'story.next': 'التالي: {chapter}',
+  'story.go': 'اذهب إلى هناك',
+  'story.theEnd': 'النهاية',
+  'story.journal': 'الدفتر',
+  'story.empty': 'لا صفحات بعد: أكمل لفة في فصل لتجد لونه.',
+  'story.prologue': 'التمهيد',
 };
 export default ar;

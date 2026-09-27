@@ -861,5 +861,17 @@ const tr: Locale = {
   'fg.potsDone': '{n} çömlek kırıldı! +{ink} mürekkep',
   'fg.hit': 'Çat! {n} vuruş kaldı.',
   'fg.miss': 'Vınn… ıskaladın. {n} vuruş kaldı.',
+  'story.title': 'Hikâye: Kayıp Palet',
+  'story.foundKicker': 'Kayıp bir renk eve döndü',
+  'story.allFound': "Sekiz rengin hepsi evde! Sonu Menü → Hikâye'de oku.",
+  'story.readJournal': '{n}/{total} renk evde · günlüğünde yeni bir sayfa (Menü → Hikâye)',
+  'story.begin': 'Hikâyeyi başlat',
+  'story.progress': 'Eve dönen renkler: {n}/{total}',
+  'story.next': 'Sıradaki: {chapter}',
+  'story.go': 'Oraya git',
+  'story.theEnd': 'Son',
+  'story.journal': 'Günlük',
+  'story.empty': 'Henüz sayfa yok: bir bölümün rengini bulmak için bir tur tamamla.',
+  'story.prologue': 'Önsöz',
 };
 export default tr;

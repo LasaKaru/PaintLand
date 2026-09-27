@@ -861,5 +861,17 @@ const hi: Locale = {
   'fg.potsDone': '{n} मटकियाँ फूटीं! +{ink} स्याही',
   'fg.hit': 'चटाक! {n} वार बाक़ी।',
   'fg.miss': 'सूँ… चूक गए। {n} वार बाक़ी।',
+  'story.title': 'कहानी: खोया हुआ पैलेट',
+  'story.foundKicker': 'एक खोया रंग लौट आया',
+  'story.allFound': 'आठों रंग लौट आए! अंत मेनू → कहानी में पढ़ें।',
+  'story.readJournal': '{n}/{total} रंग लौटे · आपकी डायरी में नया पन्ना (मेनू → कहानी)',
+  'story.begin': 'कहानी शुरू करें',
+  'story.progress': 'लौटे रंग: {n}/{total}',
+  'story.next': 'अगला: {chapter}',
+  'story.go': 'वहाँ चलें',
+  'story.theEnd': 'समाप्त',
+  'story.journal': 'डायरी',
+  'story.empty': 'अभी कोई पन्ना नहीं: किसी अध्याय का रंग ढूँढने के लिए उसका एक चक्कर पूरा करें।',
+  'story.prologue': 'प्रस्तावना',
 };
 export default hi;

@@ -861,5 +861,17 @@ const si: Locale = {
   'fg.potsDone': 'මුට්ටි {n}ක් බිඳුණා! තීන්ත +{ink}',
   'fg.hit': 'ටොක්! තව පහර {n}යි.',
   'fg.miss': 'ෂූ… වැරදුණා. තව පහර {n}යි.',
+  'story.title': 'කතාව: නැති වූ වර්ණ පුවරුව',
+  'story.foundKicker': 'නැති වූ වර්ණයක් ආපසු ආවා',
+  'story.allFound': 'වර්ණ අටම ආපසු ආවා! අවසානය මෙනුව → කතාව තුළ කියවන්න.',
+  'story.readJournal': 'වර්ණ {n}/{total} ආපසු · ඔබේ දිනපොතේ අලුත් පිටුවක් (මෙනුව → කතාව)',
+  'story.begin': 'කතාව අරඹන්න',
+  'story.progress': 'ආපසු ආ වර්ණ: {n}/{total}',
+  'story.next': 'ඊළඟට: {chapter}',
+  'story.go': 'එතැනට යන්න',
+  'story.theEnd': 'අවසානය',
+  'story.journal': 'දිනපොත',
+  'story.empty': 'තවම පිටු නැත: එහි වර්ණය සොයාගැනීමට පරිච්ඡේදයක වටයක් නිම කරන්න.',
+  'story.prologue': 'පෙරවදන',
 };
 export default si;
