@@ -200,7 +200,8 @@ export function createPhotos({ dataDir, userForToken, isBanned, now = Date.now }
 
     if (path === '/api/photos/report') {
       if (!e.reports.includes(u.id) && e.uid !== u.id) e.reports.push(u.id);
-      if (e.reports.length >= PHOTO_LIMITS.hideAfterReports) e.hidden = true;
+      // Once the admin has looked at an entry and kept it, reports no longer hide it.
+      if (e.reports.length >= PHOTO_LIMITS.hideAfterReports && !e.reviewed) e.hidden = true;
       touch();
       return send(res, 200, { ok: true });
     }
@@ -219,5 +220,44 @@ export function createPhotos({ dataDir, userForToken, isBanned, now = Date.now }
     touch();
   }
 
-  return { handle, forget, stats: () => ({ entries: db.entries.length }), flush: () => persist() };
+  /** For the admin panel: this week's and last week's entries (hidden ones too), reported first. */
+  function recent() {
+    const t = now();
+    const weeks = [weekOf(t).key, weekOf(t - 7 * 86400000).key];
+    return db.entries
+      .filter((e) => weeks.includes(e.week))
+      .sort((a, b) => b.reports.length - a.reports.length || b.at - a.at)
+      .slice(0, 100)
+      .map((e) => ({ id: e.id, name: e.name, caption: e.caption, week: e.week, votes: e.votes.length, reports: e.reports.length, hidden: e.hidden, winner: Object.values(db.winners).some((w) => w.id === e.id) }));
+  }
+
+  /** Admin: hide, show again (and stop reports hiding it), or remove an entry and its picture. */
+  function moderate(id, action) {
+    const e = db.entries.find((x) => x.id === id);
+    if (!e) return false;
+    if (action === 'remove') {
+      dropImage(e.id);
+      db.entries = db.entries.filter((x) => x !== e);
+      for (const w of Object.values(db.winners)) if (w.id === id) Object.assign(w, { id: '', name: '', caption: '' });
+    } else if (action === 'hide') e.hidden = true;
+    else {
+      e.hidden = false;
+      e.reviewed = true;
+    }
+    touch();
+    return true;
+  }
+
+  /** Admin: an entry's picture as a data URL (hidden entries too), or null. */
+  function image(id) {
+    const e = db.entries.find((x) => x.id === id);
+    if (!e) return null;
+    try {
+      return `data:image/jpeg;base64,${readFileSync(imgPath(e.id)).toString('base64')}`;
+    } catch {
+      return null;
+    }
+  }
+
+  return { handle, forget, recent, moderate, image, stats: () => ({ entries: db.entries.length }), flush: () => persist() };
 }

@@ -11,6 +11,7 @@ let server: Server;
 let base = '';
 let dir = '';
 let clock = Date.UTC(2026, 8, 21, 12); // a Monday afternoon
+let svc: ReturnType<typeof createPhotos>;
 
 beforeAll(async () => {
   process.env.TRUST_PROXY = '1';
@@ -18,6 +19,7 @@ beforeAll(async () => {
   let photos: ReturnType<typeof createPhotos> | null = null;
   const accounts = createAccounts({ dataDir: dir, isBanned: () => false, now: () => clock, onDelete: (uid) => photos?.forget(uid) });
   photos = createPhotos({ dataDir: dir, userForToken: (t) => accounts.userForToken(t), isBanned: () => false, now: () => clock });
+  svc = photos;
   server = createServer((req, res) => {
     const url = new URL(req.url ?? '/', 'http://x');
     void accounts.handle(req, res, url).then((h) => h || photos!.handle(req, res, url)).then((h) => {
@@ -105,5 +107,27 @@ describe('weekly photo contest', () => {
     const f1 = (await call('POST', '/api/photos/enter', { image: jpeg() }, fa)).body.id;
     expect((await call('POST', '/api/account/delete', { password: 'lotus-pond-42' }, fa)).status).toBe(200);
     expect((await call('GET', `/api/photos/${f1}.jpg`)).status).toBe(404);
+  });
+});
+
+describe('photo contest moderation (admin)', () => {
+  it('lists entries, shows a reported one again for good, hides and removes', async () => {
+    const [ev, fo, ga, ha] = [await register('Evi'), await register('Foxy'), await register('Gala'), await register('Hari')];
+    const id = (await call('POST', '/api/photos/enter', { image: jpeg(), caption: 'Lotus at noon' }, ev)).body.id as string;
+    for (const t of [fo, ga, ha]) await call('POST', '/api/photos/report', { id }, t);
+    const row = svc.recent().find((e) => e.id === id)!;
+    expect(row).toMatchObject({ name: 'Evi', reports: 3, hidden: true });
+    expect(svc.image(id)).toMatch(/^data:image\/jpeg;base64,/);
+    // Shown again by the admin: more reports don't hide it.
+    expect(svc.moderate(id, 'show')).toBe(true);
+    const z = await register('Zara');
+    await call('POST', '/api/photos/report', { id }, z);
+    expect(svc.recent().find((e) => e.id === id)!.hidden).toBe(false);
+    expect(svc.moderate(id, 'hide')).toBe(true);
+    expect((await call('GET', `/api/photos/${id}.jpg`)).status).toBe(404);
+    expect(svc.moderate(id, 'remove')).toBe(true);
+    expect(svc.recent().some((e) => e.id === id)).toBe(false);
+    expect(svc.image(id)).toBeNull();
+    expect(svc.moderate('nope', 'remove')).toBe(false);
   });
 });

@@ -98,6 +98,9 @@ export class AdminPanel {
   private whoami: Whoami | null = null;
   private reports: PlayerReport[] = [];
   private roads: { id: string; title: string; author: string; reports: number; hidden: boolean }[] = [];
+  private photos: { id: string; name: string; caption: string; week: string; votes: number; reports: number; hidden: boolean; winner: boolean }[] = [];
+  /** The contest picture being looked at (a data URL). */
+  private photoView: { id: string; image: string } | null = null;
   private stats: Stats | null = null;
   private newCodes: string[] = [];
   private config: ServerConfig | null = null;
@@ -420,9 +423,10 @@ export class AdminPanel {
     const s = this.stats;
     const chat = this.chat;
     if (!chat) {
-      void Promise.all([this.call<NonNullable<AdminPanel['chat']>>('/api/admin/chat'), this.call<{ reports: PlayerReport[] }>('/api/admin/reports'), this.call<{ roads: AdminPanel['roads'] }>('/api/admin/gallery')]).then(([c, r, g]) => {
+      void Promise.all([this.call<NonNullable<AdminPanel['chat']>>('/api/admin/chat'), this.call<{ reports: PlayerReport[] }>('/api/admin/reports'), this.call<{ roads: AdminPanel['roads'] }>('/api/admin/gallery'), this.call<{ photos: AdminPanel['photos'] }>('/api/admin/photos')]).then(([c, r, g, ph]) => {
         this.reports = r?.reports ?? [];
         this.roads = g?.roads ?? [];
+        this.photos = ph?.photos ?? [];
         if (c) {
           this.chat = c;
           this.render();
@@ -448,6 +452,10 @@ export class AdminPanel {
         <div class="stat-tile"><div class="label">Room size limit</div><div class="stat-value">${this.config?.maxPlayersPerRoom ?? 32}</div></div>
       </div>
       ${reportsCard}
+      <section class="viz-card"><h3>Photo contest <small>this week and last · hidden after 3 reports until you show or remove them</small></h3>
+        ${this.photoView ? `<div class="admin-photo"><img src="${esc(this.photoView.image)}" alt="Contest entry" style="max-width:100%;max-height:320px;border-radius:8px"><button class="btn small" data-photo-close="1">Close</button></div>` : ''}
+        ${this.photos.length ? `<table class="admin-table"><thead><tr><th>Player</th><th>Caption</th><th>Week</th><th class="num">Votes</th><th class="num">Reports</th><th>Shown?</th><th></th></tr></thead><tbody>${this.photos.map((p) => `<tr><td>${esc(p.name)}${p.winner ? ' 🏆' : ''}</td><td>${esc(p.caption)}</td><td>${esc(p.week)}</td><td class="num">${p.votes}</td><td class="num">${p.reports}</td><td>${p.hidden ? 'Hidden' : 'Shown'}</td><td><button class="btn small" data-photo-view="${esc(p.id)}">View</button> ${p.hidden ? `<button class="btn small" data-photo-show="${esc(p.id)}">Show</button>` : `<button class="btn small" data-photo-hide="${esc(p.id)}">Hide</button>`} <button class="btn small" data-photo-remove="${esc(p.id)}">Remove</button></td></tr>`).join('')}</tbody></table>` : '<p class="menu-hint">No contest entries in the last two weeks.</p>'}
+      </section>
       <section class="viz-card"><h3>Reported gallery roads <small>hidden after 3 reports until you keep or remove them</small></h3>
         ${this.roads.length ? `<table class="admin-table"><thead><tr><th>Road</th><th>Maker</th><th>Reports</th><th>Shown?</th><th></th></tr></thead><tbody>${this.roads.map((r) => `<tr><td>${esc(r.title)}</td><td>${esc(r.author)}</td><td>${r.reports}</td><td>${r.hidden ? 'Hidden' : 'Shown'}</td><td><button class="btn small" data-road-keep="${esc(r.id)}">Keep</button> <button class="btn small" data-road-remove="${esc(r.id)}">Remove</button></td></tr>`).join('')}</tbody></table>` : '<p class="menu-hint">No reported roads.</p>'}
       </section>
@@ -494,7 +502,7 @@ export class AdminPanel {
   // ————— events —————
 
   private async onClick(e: MouseEvent): Promise<void> {
-    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban], [data-report-ban], [data-report-dismiss], [data-road-keep], [data-road-remove]');
+    const el = (e.target as HTMLElement).closest<HTMLElement>('[data-admin], [data-tab], [data-delete], [data-ban], [data-unban], [data-report-ban], [data-report-dismiss], [data-road-keep], [data-road-remove], [data-photo-view], [data-photo-show], [data-photo-hide], [data-photo-remove], [data-photo-close]');
     if (!el) return;
     const d = el.dataset;
     if (d.tab) {
@@ -531,6 +539,30 @@ export class AdminPanel {
       if (!confirm('Delete this sponsor and its logo?')) return;
       const saved = await this.call<ServerConfig>(`/api/admin/sponsor?id=${encodeURIComponent(d.delete)}`, 'DELETE');
       if (saved) this.saved(saved, 'Sponsor deleted.');
+      return;
+    }
+    if (d.photoClose) {
+      this.photoView = null;
+      this.render();
+      return;
+    }
+    if (d.photoView) {
+      const r = await this.call<{ image: string }>(`/api/admin/photo?id=${encodeURIComponent(d.photoView)}`);
+      if (r?.image?.startsWith('data:image/jpeg;base64,')) {
+        this.photoView = { id: d.photoView, image: r.image };
+        this.render();
+      }
+      return;
+    }
+    if (d.photoShow || d.photoHide || d.photoRemove) {
+      if (d.photoRemove && !confirm('Remove this photo for good?')) return;
+      const action = d.photoRemove ? 'remove' : d.photoHide ? 'hide' : 'show';
+      const ok = await this.call<{ ok: boolean }>('/api/admin/photos', 'POST', { id: d.photoShow ?? d.photoHide ?? d.photoRemove, action });
+      if (ok) {
+        if (this.photoView && this.photoView.id === (d.photoShow ?? d.photoHide ?? d.photoRemove)) this.photoView = null;
+        this.chat = null;
+        this.flash(action === 'remove' ? 'Photo removed.' : action === 'hide' ? 'Photo hidden.' : 'Photo shown again (reports won’t hide it now).');
+      }
       return;
     }
     if (d.roadKeep || d.roadRemove) {

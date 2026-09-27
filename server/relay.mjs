@@ -134,6 +134,7 @@ const admin = !SHARD.primary ? null : createAdmin({
   accounts: () => accounts.stats(),
   gallery: () => gallery,
   store: () => store,
+  photos: () => photos,
 });
 // Player accounts (cloud saves, friends, clubs) share the same data folder.
 const accounts = !SHARD.primary ? null : createAccounts({ dataDir: DATA_DIR, isBanned: (n) => admin.isBanned(n), onDelete: (uid) => {

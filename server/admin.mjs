@@ -17,6 +17,9 @@
 //   GET  /api/admin/codes                                  → Patron codes issued / redeemed per season
 //   POST /api/admin/codes         { count, season }        → new one-use Patron codes (shown once)
 //   POST /api/admin/patron        { name, season }         → give an account the Patron track
+//   GET  /api/admin/photos                                 → this and last week's photo-contest entries
+//   POST /api/admin/photos        { id, action }           → hide / show / remove an entry
+//   GET  /api/admin/photo?id=                              → an entry's picture (data URL)
 //
 // Sponsor challenges are part of the config (`challenges`): each belongs to a
 // sponsor, asks for something the game counts (distance, laps, stunts…) and
@@ -219,7 +222,7 @@ function emptyStats() {
 /**
  * @param {{ dataDir: string, distDir?: string, live: () => { rooms: number, online: number, roomSizes: Record<string, number> }, accounts?: () => { accounts: number, clubs: number, online: number } | null }} opts
  */
-export function createAdmin({ dataDir, distDir, live, accounts = () => null, gallery = () => null, store = () => null }) {
+export function createAdmin({ dataDir, distDir, live, accounts = () => null, gallery = () => null, store = () => null, photos = () => null }) {
   const file = (name) => join(dataDir, name);
   const logoDir = file('brand');
   const readJson = (name, fallback) => {
@@ -660,6 +663,17 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
           const b = await readBody(req, 2000).catch(() => ({}));
           const ok = gallery()?.moderate(String(b.id ?? ''), b.action === 'remove' ? 'remove' : 'keep') ?? false;
           return send(res, ok ? 200 : 404, { ok }), true;
+        }
+        if (route === 'photos' && method === 'GET') return send(res, 200, { photos: photos()?.recent() ?? [] }), true;
+        if (route === 'photos' && method === 'POST') {
+          const b = await readBody(req, 2000).catch(() => ({}));
+          const action = b.action === 'remove' ? 'remove' : b.action === 'hide' ? 'hide' : 'show';
+          const ok = photos()?.moderate(String(b.id ?? ''), action) ?? false;
+          return send(res, ok ? 200 : 404, { ok }), true;
+        }
+        if (route === 'photo' && method === 'GET') {
+          const image = photos()?.image(url.searchParams.get('id') ?? '') ?? null;
+          return send(res, image ? 200 : 404, image ? { ok: true, image } : { ok: false, reason: 'Not found.' }), true;
         }
         if (route === 'reports' && method === 'GET') return send(res, 200, { reports: reports.slice(-200).reverse(), banned: moderation.banned }), true;
         if (route === 'report' && method === 'POST') {
