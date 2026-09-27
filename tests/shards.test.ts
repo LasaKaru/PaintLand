@@ -45,9 +45,10 @@ describe('Two relays working together', () => {
       await new Promise<void>((resolve) => p.stdout!.on('data', (d) => String(d).includes('listening') && resolve()));
     }
   }, 20_000);
-  afterAll(() => {
-    for (const p of procs) p.kill();
-    for (const d of dirs) rmSync(d, { recursive: true, force: true });
+  afterAll(async () => {
+    // Let each relay finish its last save before its folder goes.
+    await Promise.all(procs.map((p) => (p.exitCode !== null ? Promise.resolve() : new Promise<void>((resolve) => { p.once('exit', () => resolve()); p.kill(); }))));
+    for (const d of dirs) rmSync(d, { recursive: true, force: true, maxRetries: 5, retryDelay: 100 });
   });
 
   const roomOn = (shard: number): string => {
