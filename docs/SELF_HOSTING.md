@@ -33,6 +33,9 @@ In the commands below, replace:
 
 ## Step 1 · Point your domain at the server
 
+> Step-by-step screens for Namecheap, GoDaddy, Cloudflare, Hostinger and `.lk`
+> domains are in [DOMAIN_SETUP.md](DOMAIN_SETUP.md).
+
 In your domain provider's DNS settings, add a record:
 
 | Type | Name | Value |
@@ -228,6 +231,9 @@ leaderboard limits count each player separately. The deploy kit already sets
 ---
 
 ## Step 11 · Point the Windows app (and the GitHub Pages copy) at your server
+
+> More detail (building on your own PC, testing without a rebuild, checking
+> the build log): Part 6 of [DOMAIN_SETUP.md](DOMAIN_SETUP.md).
 
 The Windows `.exe` doesn't run on your server, so it has to be told where the
 server is **when it's built**. Right now these settings are empty, so the

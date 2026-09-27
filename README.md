@@ -8,7 +8,7 @@
 
 **The story:** **[The Lost Palette](docs/STORY.md)**: the characters, the prologue, the eight colours and the ending.
 
-**Your own server:** **[Self-hosting guide](docs/SELF_HOSTING.md)**: host the whole game on a Linux server, step by step.
+**Your own server:** **[Domain setup](docs/DOMAIN_SETUP.md)** (point your domain at your server, and set `VITE_API_BASE` / `VITE_SERVER_WS` so the Windows app connects), then the **[self-hosting guide](docs/SELF_HOSTING.md)** for security, updates and backups.
 
 *Paint the road. Then drive up it.* Prefer it real? One slider turns the sketchbook into a realistically lit world with HDR light, reflections, fog and depth of field.
 
