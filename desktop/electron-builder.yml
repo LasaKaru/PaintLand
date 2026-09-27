@@ -37,3 +37,23 @@ nsis:
   artifactName: Inkroads-Setup-${version}.${ext}
 portable:
   artifactName: Inkroads-Portable-${version}.${ext}
+# Microsoft Store package (.appx), built with `npm run store` (Windows only).
+# The Store signs it when you publish, so no certificate is needed here.
+# identityName, publisher and publisherDisplayName MUST match Partner Center
+# → your app → Product management → Product identity. The values below are
+# placeholders: CI replaces them from the MS_STORE_* repository variables
+# (see docs/MICROSOFT_STORE.md).
+appx:
+  applicationId: Inkroads
+  identityName: HelaO2.Inkroads
+  publisher: CN=00000000-0000-0000-0000-000000000000
+  publisherDisplayName: HelaO2
+  displayName: Inkroads
+  backgroundColor: "#f6f0e4"
+  showNameOnTiles: false
+  # runFullTrust is required for Electron apps; the network for online play and
+  # the microphone for push-to-talk voice chat (Windows still asks the player).
+  capabilities: [runFullTrust, internetClient, microphone]
+  # Add more (e.g. si-LK, ta-IN) once the Store listing exists in those languages.
+  languages: [en-US]
+  artifactName: Inkroads-Store-${version}.${ext}

@@ -1,6 +1,9 @@
 # Windows desktop app on every push: a hardened Electron build (installer + portable .exe),
 # SHA-256 checksums and signed build provenance. Tags like v1.2.3 publish a GitHub Release.
 # Optional code signing: add the WIN_CSC_LINK (base64 .pfx) and WIN_CSC_KEY_PASSWORD secrets.
+# Also a Microsoft Store package (.appx), unsigned (the Store signs it): set the
+# MS_STORE_IDENTITY_NAME, MS_STORE_PUBLISHER and MS_STORE_PUBLISHER_DISPLAY_NAME repository
+# variables from Partner Center (docs/MICROSOFT_STORE.md).
 name: Desktop app (Windows)
 
 on:
@@ -87,6 +90,31 @@ jobs:
           path: |
             desktop/release/*.exe
             desktop/release/SHA256SUMS.txt
+          retention-days: 30
+      # After the .exe is safely uploaded: the same app as a Store package.
+      - name: Package for the Microsoft Store (.appx)
+        working-directory: desktop
+        shell: bash
+        env:
+          ID_NAME: ${{ vars.MS_STORE_IDENTITY_NAME }}
+          PUBLISHER: ${{ vars.MS_STORE_PUBLISHER }}
+          PUBLISHER_NAME: ${{ vars.MS_STORE_PUBLISHER_DISPLAY_NAME }}
+        run: |
+          npm run store-assets
+          args=()
+          [ -n "$ID_NAME" ] && args+=("-c.appx.identityName=$ID_NAME")
+          [ -n "$PUBLISHER" ] && args+=("-c.appx.publisher=$PUBLISHER")
+          [ -n "$PUBLISHER_NAME" ] && args+=("-c.appx.publisherDisplayName=$PUBLISHER_NAME")
+          if [ -z "$ID_NAME" ] || [ -z "$PUBLISHER" ]; then
+            echo "::warning title=Microsoft Store::Store identity variables not set: this .appx uses placeholder identity and Partner Center will not accept it. See docs/MICROSOFT_STORE.md."
+          fi
+          npx electron-builder --win appx --x64 --publish never "${args[@]}"
+          ls -la release/*.appx
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Inkroads-MicrosoftStore-${{ steps.version.outputs.version }}
+          path: desktop/release/*.appx
+          if-no-files-found: error
           retention-days: 30
 
   release:

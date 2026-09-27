@@ -10,3 +10,4 @@ desktop/node_modules/
 desktop/app/
 desktop/release/
 deploy/.env
+desktop/build/appx/

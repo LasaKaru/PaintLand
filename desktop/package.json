@@ -10,9 +10,11 @@
   "scripts": {
     "copy-web": "node scripts/copy-web.cjs",
     "icon": "node scripts/make-icon.cjs",
+    "store-assets": "node scripts/make-store-assets.cjs",
     "dist": "npm run copy-web && electron-builder --win --x64 --publish never",
+    "store": "npm run copy-web && npm run store-assets && electron-builder --win appx --x64 --publish never",
     "dir": "npm run copy-web && electron-builder --dir --publish never",
-    "test": "node --test test/security.test.cjs test/steam.test.cjs"
+    "test": "node --test test/security.test.cjs test/steam.test.cjs test/store.test.cjs"
   },
   "devDependencies": {
     "@electron/fuses": "^2.1.3",
