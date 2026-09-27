@@ -756,5 +756,13 @@ const zh: Locale = {
   'net.offline': '你已离线。连接恢复后在线功能也会恢复；其他一切照常可用。',
   'priv.link': '隐私政策',
   'priv.close': '关闭',
+  'ctl.trail': '开关颜料轨迹',
+  'trail.on': '颜料轨迹已开启：你的车会在路上留下颜料',
+  'trail.off': '颜料轨迹已关闭',
+  'trail.colour': '颜料轨迹颜色',
+  'trail.key': '驾驶时按 {key}',
+  'trail.car': '车身色',
+  'trail.clear': '清除我的颜料轨迹',
+  'trail.cleared': '已清除 {n} 处颜料',
 };
 export default zh;

@@ -756,5 +756,13 @@ const ko: Locale = {
   'net.offline': '오프라인 상태예요. 연결이 돌아오면 온라인 기능도 돌아와요. 나머지는 모두 작동해요.',
   'priv.link': '개인정보 처리방침',
   'priv.close': '닫기',
+  'ctl.trail': '페인트 자국 켜기/끄기',
+  'trail.on': '페인트 자국 켜짐: 차가 도로에 물감을 남깁니다',
+  'trail.off': '페인트 자국 꺼짐',
+  'trail.colour': '페인트 자국 색',
+  'trail.key': '운전 중 {key} 누르기',
+  'trail.car': '차 색',
+  'trail.clear': '내 페인트 자국 지우기',
+  'trail.cleared': '물감 자국 {n}개를 지웠습니다',
 };
 export default ko;

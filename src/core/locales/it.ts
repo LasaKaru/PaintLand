@@ -756,5 +756,13 @@ const it: Locale = {
   'net.offline': 'Sei offline. Le funzioni online torneranno con la connessione; tutto il resto funziona.',
   'priv.link': 'Informativa sulla privacy',
   'priv.close': 'Chiudi',
+  'ctl.trail': 'Scia di vernice sì/no',
+  'trail.on': 'Scia di vernice attiva: l’auto lascia vernice sulla strada',
+  'trail.off': 'Scia di vernice spenta',
+  'trail.colour': 'Colore della scia di vernice',
+  'trail.key': 'premi {key} mentre guidi',
+  'trail.car': 'Colore dell’auto',
+  'trail.clear': 'Cancella le mie scie di vernice',
+  'trail.cleared': '{n} macchie di vernice cancellate',
 };
 export default it;

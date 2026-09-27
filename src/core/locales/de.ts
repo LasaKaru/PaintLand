@@ -756,5 +756,13 @@ const de: Locale = {
   'net.offline': 'Du bist offline. Online-Funktionen kommen mit der Verbindung zurück; alles andere funktioniert.',
   'priv.link': 'Datenschutzerklärung',
   'priv.close': 'Schließen',
+  'ctl.trail': 'Farbspur an/aus',
+  'trail.on': 'Farbspur an: Dein Auto hinterlässt Farbe auf der Straße',
+  'trail.off': 'Farbspur aus',
+  'trail.colour': 'Farbe der Farbspur',
+  'trail.key': 'beim Fahren {key} drücken',
+  'trail.car': 'Autofarbe',
+  'trail.clear': 'Meine Farbspuren löschen',
+  'trail.cleared': '{n} Farbtupfer gelöscht',
 };
 export default de;

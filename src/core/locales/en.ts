@@ -754,6 +754,14 @@ const en = {
   'net.offline': 'You’re offline. Online features come back when the connection does; everything else works.',
   'priv.link': 'Privacy policy',
   'priv.close': 'Close',
+  'ctl.trail': 'Paint trail on/off',
+  'trail.on': 'Paint trail on: your car leaves paint on the road',
+  'trail.off': 'Paint trail off',
+  'trail.colour': 'Paint trail colour',
+  'trail.key': 'press {key} while driving',
+  'trail.car': 'Car',
+  'trail.clear': 'Clear my paint trails',
+  'trail.cleared': 'Cleared {n} dabs of paint',
 } as const;
 
 export default en;

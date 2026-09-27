@@ -48,6 +48,8 @@ export interface GameOptions {
   season: SeasonSetting;
   /** Festival decorations in the free-roam areas (auto = on the festival days). */
   festival: FestivalSetting;
+  /** Paint-trail colour: a TRAIL_COLOURS index (default pink, which shows on any road), or -1 to match the car. */
+  trailColour: number;
 }
 
 export const DEFAULT_OPTIONS: GameOptions = {
@@ -78,6 +80,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   analytics: true,
   season: 'auto',
   festival: 'auto',
+  trailColour: 9,
 };
 
 const KEY = 'paintland.settings.v1';

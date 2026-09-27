@@ -756,5 +756,13 @@ const pt: Locale = {
   'net.offline': 'Estás offline. As funções online voltam com a ligação; tudo o resto funciona.',
   'priv.link': 'Política de privacidade',
   'priv.close': 'Fechar',
+  'ctl.trail': 'Rasto de tinta ligar/desligar',
+  'trail.on': 'Rasto de tinta ligado: o teu carro deixa tinta na estrada',
+  'trail.off': 'Rasto de tinta desligado',
+  'trail.colour': 'Cor do rasto de tinta',
+  'trail.key': 'carrega em {key} enquanto conduzes',
+  'trail.car': 'Cor do carro',
+  'trail.clear': 'Apagar os meus rastos de tinta',
+  'trail.cleared': '{n} manchas de tinta apagadas',
 };
 export default pt;

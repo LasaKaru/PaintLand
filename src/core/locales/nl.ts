@@ -756,5 +756,13 @@ const nl: Locale = {
   'net.offline': 'Je bent offline. Online functies komen terug met de verbinding; al het andere werkt.',
   'priv.link': 'Privacybeleid',
   'priv.close': 'Sluiten',
+  'ctl.trail': 'Verfspoor aan/uit',
+  'trail.on': 'Verfspoor aan: je auto laat verf achter op de weg',
+  'trail.off': 'Verfspoor uit',
+  'trail.colour': 'Kleur van het verfspoor',
+  'trail.key': 'druk op {key} tijdens het rijden',
+  'trail.car': 'Autokleur',
+  'trail.clear': 'Mijn verfsporen wissen',
+  'trail.cleared': '{n} verfvlekken gewist',
 };
 export default nl;

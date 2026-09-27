@@ -756,5 +756,13 @@ const tr: Locale = {
   'net.offline': 'Çevrimdışısın. Bağlantı dönünce çevrimiçi özellikler de döner; geri kalan her şey çalışır.',
   'priv.link': 'Gizlilik politikası',
   'priv.close': 'Kapat',
+  'ctl.trail': 'Boya izi aç/kapat',
+  'trail.on': 'Boya izi açık: araban yola boya bırakıyor',
+  'trail.off': 'Boya izi kapalı',
+  'trail.colour': 'Boya izi rengi',
+  'trail.key': 'sürerken {key} tuşuna bas',
+  'trail.car': 'Araba rengi',
+  'trail.clear': 'Boya izlerimi sil',
+  'trail.cleared': '{n} boya lekesi silindi',
 };
 export default tr;

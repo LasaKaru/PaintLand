@@ -3,6 +3,7 @@ import { checkRtc, cleanText, validateState, type RtcMessage } from '../../serve
 import type { TrialRun } from '../gameplay/TrialSim';
 import type { HumanLook } from '../models/Human';
 import type { VehicleId, VehicleLook } from '../models/Vehicles';
+import { unpackDots, type TrailDot } from '../gameplay/PaintTrail';
 
 /** What each player shares about themselves (docs/09 §3). */
 export interface GroupPhotoInvite {
@@ -182,6 +183,8 @@ export class NetClient {
   onTogether: ((from: string, name: string, msg: TogetherMsg) => void) | null = null;
   /** Someone is taking a group photo at (x, z) in a free-roam area and invites others to join. */
   onGroupPhoto: ((from: string, name: string, at: GroupPhotoInvite) => void) | null = null;
+  /** Paint-trail dabs from another player (already checked). */
+  onTrail: ((from: string, name: string, place: string, dots: TrailDot[]) => void) | null = null;
   /** Our id as the other players see it (the relay's, or ours in tab rooms). */
   selfId = this.id;
 
@@ -227,6 +230,11 @@ export class NetClient {
   /** Convoys, contests and paint splashes (see gameplay/Together.ts). */
   together(msg: TogetherMsg): void {
     this.transport?.send({ t: 'emote', kind: 'together', msg });
+  }
+
+  /** Dabs of our paint trail for everyone in the same place (see gameplay/PaintTrail.ts). */
+  trail(place: string, packed: number[]): void {
+    this.transport?.send({ t: 'emote', kind: 'trail', place, d: packed });
   }
 
   groupPhoto(at: GroupPhotoInvite): void {
@@ -303,6 +311,11 @@ export class NetClient {
         if (e.kind === 'together') {
           const tm = checkTogether(e.msg);
           if (tm) this.onTogether?.(pid, peer.info?.name ?? 'Painter', tm);
+          break;
+        }
+        if (e.kind === 'trail') {
+          const tr = unpackDots(e.place, e.d);
+          if (tr) this.onTrail?.(pid, peer.info?.name ?? 'Painter', tr.place, tr.dots);
           break;
         }
         if (e.kind === 'photo' && typeof e.chapter === 'string' && e.chapter.length <= 24 && num(e.x) && num(e.z) && num(e.yaw))

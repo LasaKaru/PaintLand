@@ -756,5 +756,13 @@ const fr: Locale = {
   'net.offline': 'Vous êtes hors ligne. Les fonctions en ligne reviendront avec la connexion ; tout le reste fonctionne.',
   'priv.link': 'Politique de confidentialité',
   'priv.close': 'Fermer',
+  'ctl.trail': 'Trace de peinture oui/non',
+  'trail.on': 'Trace de peinture activée : ta voiture laisse de la peinture sur la route',
+  'trail.off': 'Trace de peinture désactivée',
+  'trail.colour': 'Couleur de la trace de peinture',
+  'trail.key': 'appuie sur {key} en conduisant',
+  'trail.car': 'Couleur de la voiture',
+  'trail.clear': 'Effacer mes traces de peinture',
+  'trail.cleared': '{n} taches de peinture effacées',
 };
 export default fr;

@@ -756,5 +756,13 @@ const es: Locale = {
   'net.offline': 'Estás sin conexión. Las funciones en línea volverán con la conexión; todo lo demás funciona.',
   'priv.link': 'Política de privacidad',
   'priv.close': 'Cerrar',
+  'ctl.trail': 'Rastro de pintura sí/no',
+  'trail.on': 'Rastro de pintura activado: tu coche deja pintura en la carretera',
+  'trail.off': 'Rastro de pintura desactivado',
+  'trail.colour': 'Color del rastro de pintura',
+  'trail.key': 'pulsa {key} mientras conduces',
+  'trail.car': 'Color del coche',
+  'trail.clear': 'Borrar mis rastros de pintura',
+  'trail.cleared': 'Se borraron {n} manchas de pintura',
 };
 export default es;

@@ -756,5 +756,13 @@ const ja: Locale = {
   'net.offline': 'オフラインです。接続が戻るとオンライン機能も戻ります。それ以外はすべて使えます。',
   'priv.link': 'プライバシーポリシー',
   'priv.close': '閉じる',
+  'ctl.trail': 'ペイントの跡 オン/オフ',
+  'trail.on': 'ペイントの跡オン：車が道に絵の具を残します',
+  'trail.off': 'ペイントの跡オフ',
+  'trail.colour': 'ペイントの跡の色',
+  'trail.key': '運転中に {key} を押す',
+  'trail.car': '車の色',
+  'trail.clear': '自分のペイントの跡を消す',
+  'trail.cleared': '{n} 個の絵の具の跡を消しました',
 };
 export default ja;

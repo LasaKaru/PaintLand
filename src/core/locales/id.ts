@@ -756,5 +756,13 @@ const id: Locale = {
   'net.offline': 'Kamu sedang offline. Fitur online kembali saat koneksi pulih; yang lain tetap berjalan.',
   'priv.link': 'Kebijakan privasi',
   'priv.close': 'Tutup',
+  'ctl.trail': 'Jejak cat nyala/mati',
+  'trail.on': 'Jejak cat menyala: mobilmu meninggalkan cat di jalan',
+  'trail.off': 'Jejak cat mati',
+  'trail.colour': 'Warna jejak cat',
+  'trail.key': 'tekan {key} saat menyetir',
+  'trail.car': 'Warna mobil',
+  'trail.clear': 'Hapus jejak catku',
+  'trail.cleared': '{n} noda cat dihapus',
 };
 export default id;

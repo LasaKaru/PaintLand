@@ -15,7 +15,7 @@ export type ActionName =
   | 'respawn' | 'pause' | 'studio' | 'photo' | 'hud'
   | 'time1' | 'time2' | 'time3' | 'time4' | 'time5' | 'time6' | 'time7' | 'time8' | 'weather'
   | 'drink' | 'cycleTonic' | 'emote' | 'chat' | 'talk'
-  | 'shiftUp' | 'shiftDown' | 'map';
+  | 'shiftUp' | 'shiftDown' | 'map' | 'trail';
 
 export type Bindings = Record<ActionName, string[]>;
 
@@ -61,6 +61,7 @@ export const DEFAULT_BINDINGS: Bindings = {
   talk: ['KeyV'],
   shiftUp: ['Period'],
   shiftDown: ['Comma'],
+  trail: ['KeyL'],
 };
 
 /** Names and groups for the Controls screen. */
@@ -90,6 +91,7 @@ export const ACTION_INFO: { action: ActionName; label: string; group: 'Driving' 
   { action: 'time8', label: 'Auto day cycle', group: 'World' },
   { action: 'radio', label: 'Radio on/off', group: 'World' },
   { action: 'nextSong', label: 'Next song', group: 'World' },
+  { action: 'trail', label: 'Paint trail on/off', group: 'World' },
   { action: 'band', label: 'Change station', group: 'World' },
   { action: 'drink', label: 'Drink tonic', group: 'Game' },
   { action: 'cycleTonic', label: 'Next tonic', group: 'Game' },

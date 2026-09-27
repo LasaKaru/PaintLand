@@ -756,5 +756,13 @@ const vi: Locale = {
   'net.offline': 'Bạn đang ngoại tuyến. Tính năng trực tuyến sẽ trở lại khi có kết nối; mọi thứ khác vẫn hoạt động.',
   'priv.link': 'Chính sách quyền riêng tư',
   'priv.close': 'Đóng',
+  'ctl.trail': 'Bật/tắt vệt sơn',
+  'trail.on': 'Đã bật vệt sơn: xe của bạn để lại sơn trên đường',
+  'trail.off': 'Đã tắt vệt sơn',
+  'trail.colour': 'Màu vệt sơn',
+  'trail.key': 'nhấn {key} khi lái',
+  'trail.car': 'Màu xe',
+  'trail.clear': 'Xóa vệt sơn của tôi',
+  'trail.cleared': 'Đã xóa {n} vết sơn',
 };
 export default vi;

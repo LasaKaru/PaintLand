@@ -756,5 +756,13 @@ const pl: Locale = {
   'net.offline': 'Jesteś offline. Funkcje online wrócą razem z połączeniem; wszystko inne działa.',
   'priv.link': 'Polityka prywatności',
   'priv.close': 'Zamknij',
+  'ctl.trail': 'Ślad farby wł./wył.',
+  'trail.on': 'Ślad farby włączony: auto zostawia farbę na drodze',
+  'trail.off': 'Ślad farby wyłączony',
+  'trail.colour': 'Kolor śladu farby',
+  'trail.key': 'naciśnij {key} podczas jazdy',
+  'trail.car': 'Kolor auta',
+  'trail.clear': 'Wyczyść moje ślady farby',
+  'trail.cleared': 'Usunięto plamy farby: {n}',
 };
 export default pl;

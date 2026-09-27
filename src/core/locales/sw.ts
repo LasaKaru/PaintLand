@@ -756,5 +756,13 @@ const sw: Locale = {
   'net.offline': 'Uko nje ya mtandao. Vipengele vya mtandaoni vitarudi muunganisho ukirudi; mengine yote yanafanya kazi.',
   'priv.link': 'Sera ya faragha',
   'priv.close': 'Funga',
+  'ctl.trail': 'Njia ya rangi washa/zima',
+  'trail.on': 'Njia ya rangi imewashwa: gari lako linaacha rangi barabarani',
+  'trail.off': 'Njia ya rangi imezimwa',
+  'trail.colour': 'Rangi ya njia ya rangi',
+  'trail.key': 'bonyeza {key} ukiendesha',
+  'trail.car': 'Rangi ya gari',
+  'trail.clear': 'Futa njia zangu za rangi',
+  'trail.cleared': 'Madoa {n} ya rangi yamefutwa',
 };
 export default sw;

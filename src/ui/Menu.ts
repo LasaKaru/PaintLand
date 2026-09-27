@@ -42,6 +42,7 @@ import { LANGS, lang, onLangChange, setLang, t, type Lang, type StringKey } from
 import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Input';
 import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
+import { TRAIL_COLOURS } from '../gameplay/PaintTrail';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
@@ -72,6 +73,8 @@ export interface MenuHost extends AccountHost {
   muralChanged(id: string): void;
   /** Play the fitted horn (garage preview). */
   previewHorn?(): void;
+  /** Wipe every paint trail saved on this device; returns how many dabs went. */
+  clearTrails(): number;
   showcase(target: 'character' | 'vehicle' | null): void;
   netStatus(): { status: string; room: string; players: string[] };
   netConnect(room: string, server: string | null): boolean;
@@ -714,6 +717,16 @@ export class Menu {
     return `<label class="check"><input type="checkbox" ${this.val(k) ? 'checked' : ''} data-opt="${k}"> ${label}</label>`;
   }
 
+  /** Paint-trail colour swatches ("car" matches the car) and a button to wipe your trails. */
+  private trailSetting(): string {
+    const v = Number(this.val('o.trailColour'));
+    const sw = (i: number, bg: string, text = ''): string =>
+      `<button class="swatch trail-swatch ${v === i ? 'on' : ''}" data-set="o.trailColour" data-value="${i}" data-num="1" style="background:${bg}" title="${text || bg}" aria-label="${text || bg}">${text}</button>`;
+    return `<div class="field"><label>${t('trail.colour')} <small>(${t('trail.key', { key: keyLabel(this.host.input().bindings.trail[0] ?? 'KeyL') })})</small></label>
+      <div class="row wrap">${sw(-1, '#fffaf0', t('trail.car'))}${TRAIL_COLOURS.map((c, i) => sw(i, c)).join('')}</div>
+      <div class="row wrap"><button class="btn small" data-action="trail-clear">${t('trail.clear')}</button></div></div>`;
+  }
+
   private choice(k: string, label: string, options: [string | number, string][]): string {
     const v = this.val(k);
     return `<div class="field"><label>${label}</label><div class="seg">${options.map(([ov, ol]) => `<button class="seg-btn ${String(v) === String(ov) ? 'on' : ''}" data-set="${k}" data-value="${ov}" data-num="${typeof ov === 'number' ? 1 : 0}">${ol}</button>`).join('')}</div></div>`;
@@ -857,6 +870,7 @@ export class Menu {
           ${this.slider('o.dayMinutes', 'Length of an auto day', 4, 40, 1, (v) => `${v} min`)}
           ${this.choice('o.season', t('set.season'), [['auto', t('set.auto')], ['off', t('set.off')], ['spring', t('season.spring')], ['summer', t('season.summer')], ['autumn', t('season.autumn')], ['winter', t('season.winter')]])}
           ${this.choice('o.festival', t('set.festival'), [['auto', t('set.auto')], ['off', t('set.off')], ['vesak', t('fest.vesak')], ['avurudu', t('fest.avurudu')], ['diwali', t('fest.diwali')]])}
+          ${this.trailSetting()}
           <div class="row wrap"><button class="btn" data-action="controls">Controls card</button></div>
         </div>
       </div>`;
@@ -1330,6 +1344,9 @@ export class Menu {
         break;
       case 'controls':
         this.host.openControls();
+        break;
+      case 'trail-clear':
+        this.toast(t('trail.cleared', { n: this.host.clearTrails() }));
         break;
       case 'reset-binds':
         this.host.input().resetBindings();

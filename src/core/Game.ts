@@ -78,6 +78,7 @@ import { t, type StringKey } from './i18n';
 import type { RoverInput } from '../gameplay/RoverController';
 import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
+import { DOTS_PER_MESSAGE, TrailBrush, TrailLayer, TrailStore, nearestTrailColour, packDots, type TrailDot } from '../gameplay/PaintTrail';
 
 type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused' | 'photo' | 'hub';
 type PawnMode = 'drive' | 'foot';
@@ -187,6 +188,16 @@ export class Game {
   private pendingInvite: { from: string; at: GroupPhotoInvite; until: number } | null = null;
   private photoCountdown!: HTMLDivElement;
   private groupShotTimer = 0;
+  // Paint the road: your trail (saved here), everyone's dabs in this place, and the batch to send.
+  private readonly trailStore = new TrailStore();
+  private readonly trailBrush = new TrailBrush();
+  private readonly trailLayer = new TrailLayer();
+  private readonly remoteTrails = new Map<string, TrailDot[]>();
+  private trailPlaceId: string | null = null;
+  private trailOut: TrailDot[] = [];
+  private trailSendTimer = 0;
+  private trailSaveTimer = 0;
+  private trailPeers = 0;
   /** Playing together: a contest, a paint splash and a convoy (gameplay/Together.ts). */
   private contest: Contest | null = null;
   private contestSent = 0;
@@ -304,6 +315,7 @@ export class Game {
       profile: this.profile,
       account: this.account,
       currentMural: () => this.muralId,
+      clearTrails: () => this.clearTrails(),
       together: (kind) => this.startTogether(kind),
       togetherState: () => ({ roam: !!this.roamChapter(), online: this.net.connected, convoy: this.convoy.leading ? 'leading' : this.convoy.leader ? 'following' : null, busy: !!this.contest || !!this.paintEvent }),
       stickerAreas: () => [...this.areas.values()].map((a) => ({ id: a.id, name: a.title().name, places: a.places, secrets: a.secrets })),
@@ -395,6 +407,11 @@ export class Game {
     this.mapView.onOpen = () => this.openMap();
     this.net.onRace = (msg, from) => this.onRaceMessage(msg, from);
     this.net.onGroupPhoto = (from, name, at) => this.onGroupPhotoInvite(from, name, at);
+    this.net.onTrail = (_from, name, place, dots) => this.onRemoteTrail(name, place, dots);
+    this.scene.add(this.trailLayer.group);
+    // Keep the trail when the tab or app closes between autosaves.
+    addEventListener('pagehide', () => this.trailStore.save());
+    document.addEventListener('visibilitychange', () => document.hidden && this.trailStore.save());
     this.net.onTogether = (from, name, msg) => this.onTogether(from, name, msg);
     this.togetherHud = document.createElement('div');
     this.togetherHud.className = 'together-hud hidden';
@@ -610,6 +627,82 @@ export class Game {
     if (!this.pet) return;
     this.pet.root.visible = false;
     this.pet.reset();
+  }
+
+  // ————— paint the road —————
+
+  /** Where a trail belongs: the chapter being driven or the free-roam area (null: nowhere, e.g. a Road Studio test). */
+  private trailPlace(): string | null {
+    if (this.inHub) return this.roamChapter();
+    const id = this.world.chapter.id;
+    return id === 'custom' ? null : id;
+  }
+
+  private toggleTrail(): void {
+    const on = !this.trailBrush.on;
+    if (on && !this.trailPlace()) return;
+    this.trailBrush.on = on;
+    this.menu.toast(on ? t('trail.on') : t('trail.off'));
+    if (on) this.profile.addStat('trails');
+    else this.trailStore.save();
+  }
+
+  /** Dabs paint as you drive; they are saved every few seconds and sent to the room once a second. */
+  private tickTrail(dt: number): void {
+    const place = this.trailPlace();
+    if (place !== this.trailPlaceId) {
+      this.trailStore.save();
+      this.trailPlaceId = place;
+      this.trailOut = [];
+      this.trailLayer.set(place ? [...(this.remoteTrails.get(place) ?? []), ...this.trailStore.dots(place)] : []);
+    }
+    if (!place) return;
+    const driving = (this.state === 'play' || this.state === 'hub') && this.mode === 'drive';
+    const grounded = this.inHub ? this.hubCar.grounded : this.rover.grounded;
+    const speed = Math.abs(this.inHub ? this.hubCar.v : this.rover.v);
+    const root = this.vehicle.root;
+    root.updateMatrixWorld();
+    const pos = _v4.setFromMatrixPosition(root.matrixWorld);
+    const up = _v3.setFromMatrixColumn(root.matrixWorld, 1).normalize();
+    const own = this.options.trailColour;
+    const colour = own >= 0 ? own : nearestTrailColour(this.profile.vehicleLook(this.profile.data.vehicle).body);
+    const dot = driving && speed > 1 ? this.trailBrush.update(pos, up, grounded, colour, speed) : this.trailBrush.update(pos, up, false, colour, 0);
+    if (dot) {
+      this.trailStore.add(place, dot);
+      this.trailLayer.add(dot);
+      this.profile.addStat('trailDots');
+      if (this.net.connected) this.trailOut.push(dot);
+    }
+    // Someone new in the room: show them the end of our trail here too.
+    const peers = this.net.connected ? this.net.peers.size : 0;
+    if (peers > this.trailPeers) this.trailOut = [...this.trailStore.dots(place).slice(-DOTS_PER_MESSAGE * 4), ...this.trailOut];
+    this.trailPeers = peers;
+    this.trailSendTimer -= dt;
+    if (this.trailOut.length && this.trailSendTimer <= 0 && this.net.connected) {
+      this.trailSendTimer = 0.25;
+      this.net.trail(place, packDots(this.trailOut.splice(0, DOTS_PER_MESSAGE)));
+    }
+    this.trailSaveTimer -= dt;
+    if (this.trailSaveTimer <= 0) {
+      this.trailSaveTimer = 5;
+      this.trailStore.save();
+    }
+  }
+
+  private onRemoteTrail(name: string, place: string, dots: TrailDot[]): void {
+    if (this.options.blocked.includes(name)) return;
+    const list = this.remoteTrails.get(place) ?? [];
+    list.push(...dots);
+    if (list.length > this.trailLayer.capacity / 2) list.splice(0, list.length - this.trailLayer.capacity / 2);
+    this.remoteTrails.set(place, list);
+    if (place === this.trailPlaceId) for (const d of dots) this.trailLayer.add(d);
+  }
+
+  private clearTrails(): number {
+    const n = this.trailStore.total;
+    this.trailStore.clear();
+    this.trailLayer.set(this.trailPlaceId ? this.remoteTrails.get(this.trailPlaceId) ?? [] : []);
+    return n;
   }
 
   /** The free-roam area id other players see (as in PlayerState.chapter). */
@@ -1986,6 +2079,8 @@ export class Game {
     if (inp.consume('radio')) this.audio.toggleRadio();
     if (inp.consume('nextSong')) this.audio.nextTrack();
     if (inp.consume('band')) this.audio.nextStation();
+    if (inp.consume('trail')) this.toggleTrail();
+    this.tickTrail(dt);
     if (inp.consume('fovDown')) this.settings.fov = Math.max(55, this.settings.fov - 5);
     if (inp.consume('fovUp')) this.settings.fov = Math.min(110, this.settings.fov + 5);
     this.rig.baseFov = this.settings.fov;
@@ -3696,6 +3791,12 @@ export class Game {
   /** Leave photo mode (films and tests). */
   debugPhotoExit(): void {
     if (this.state === 'photo') this.exitPhoto();
+  }
+
+  /** Paint trail state, for tests. */
+  debugTrail(): { on: boolean; place: string | null; saved: number; shown: number; remote: number } {
+    const place = this.trailPlaceId;
+    return { on: this.trailBrush.on, place, saved: place ? this.trailStore.dots(place).length : 0, shown: this.trailLayer.size, remote: place ? this.remoteTrails.get(place)?.length ?? 0 : 0 };
   }
 
   debugInfo(): Record<string, unknown> {
