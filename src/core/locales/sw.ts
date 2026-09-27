@@ -986,5 +986,18 @@ const sw: Locale = {
   'tonic.feather.down': 'Hakuna breki',
   'tonic.fizzy.buff': 'Wino wa povu +20%',
   'tonic.fizzy.down': 'Kuyumbayumba',
+  'mis.retry': '{title} — sek {time}, jaribu tena!',
+  'mis.complete': '{title} — imekamilika!',
+  'mis.failed': '{title} — imeshindwa. Ongea na {name} ili ujaribu tena.',
+  'mis.left': 'zimebaki sek {n}',
+  'mis.driveToStart': 'panda na uendeshe kuanza',
+  'mis.accepted': 'Kazi imekubaliwa!',
+  'race.go': 'TWENDE!',
+  'fx.sealed': 'IMEFUNGWA ✓',
+  'fx.airSealed': 'ANGANI sek {n} · IMEFUNGWA',
+  'prompt.enterOnly': 'E · Ingia {place}',
+  'trial.prevBest': ' · bora sek {time}',
+  'trial.stillBest': '✓ sek {time} · rekodi yako bora bado ipo',
+  'trial.rejected': 'Seva haikukubali mzunguko huu ({reason})',
 };
 export default sw;

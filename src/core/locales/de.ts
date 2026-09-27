@@ -986,5 +986,18 @@ const de: Locale = {
   'tonic.feather.down': 'Keine Bremsen',
   'tonic.fizzy.buff': 'Sprudeltinte +20 %',
   'tonic.fizzy.down': 'Wackelig',
+  'mis.retry': '{title} — {time} s, versuch’s noch mal!',
+  'mis.complete': '{title} — geschafft!',
+  'mis.failed': '{title} — gescheitert. Sprich mit {name}, um es erneut zu versuchen.',
+  'mis.left': 'noch {n} s',
+  'mis.driveToStart': 'einsteigen und losfahren',
+  'mis.accepted': 'Auftrag angenommen!',
+  'race.go': 'LOS!',
+  'fx.sealed': 'VERSIEGELT ✓',
+  'fx.airSealed': 'LUFT {n} s · VERSIEGELT',
+  'prompt.enterOnly': 'E · {place} betreten',
+  'trial.prevBest': ' · Bestzeit {time} s',
+  'trial.stillBest': '✓ {time} s · deine Bestzeit bleibt',
+  'trial.rejected': 'Der Server hat diese Runde nicht angenommen ({reason})',
 };
 export default de;

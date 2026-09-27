@@ -986,5 +986,18 @@ const id: Locale = {
   'tonic.feather.down': 'Tanpa rem',
   'tonic.fizzy.buff': 'Tinta soda +20%',
   'tonic.fizzy.down': 'Goyah',
+  'mis.retry': '{title} — {time} dtk, coba lagi!',
+  'mis.complete': '{title} — selesai!',
+  'mis.failed': '{title} — gagal. Bicaralah dengan {name} untuk mencoba lagi.',
+  'mis.left': 'sisa {n} dtk',
+  'mis.driveToStart': 'naik dan jalan untuk mulai',
+  'mis.accepted': 'Misi diterima!',
+  'race.go': 'MULAI!',
+  'fx.sealed': 'TERSEGEL ✓',
+  'fx.airSealed': 'MELAYANG {n} dtk · TERSEGEL',
+  'prompt.enterOnly': 'E · Masuk ke {place}',
+  'trial.prevBest': ' · terbaik {time} dtk',
+  'trial.stillBest': '✓ {time} dtk · rekor terbaikmu tetap bertahan',
+  'trial.rejected': 'Server tidak menerima putaran ini ({reason})',
 };
 export default id;

@@ -986,5 +986,18 @@ const si: Locale = {
   'tonic.feather.down': 'තිරිංග නැත',
   'tonic.fizzy.buff': 'පෙණ තීන්ත +20%',
   'tonic.fizzy.down': 'සෙලවෙයි',
+  'mis.retry': '{title} — තත්. {time}, නැවත උත්සාහ කරන්න!',
+  'mis.complete': '{title} — සම්පූර්ණයි!',
+  'mis.failed': '{title} — අසාර්ථකයි. නැවත උත්සාහ කිරීමට {name} සමඟ කතා කරන්න.',
+  'mis.left': 'තත්. {n}ක් ඉතිරියි',
+  'mis.driveToStart': 'වාහනයට නැගී ආරම්භ කිරීමට ධාවනය කරන්න',
+  'mis.accepted': 'මෙහෙයුම භාරගත්තා!',
+  'race.go': 'යමු!',
+  'fx.sealed': 'මුද්‍රා තැබුවා ✓',
+  'fx.airSealed': 'වාතයේ තත්. {n} · මුද්‍රා තැබුවා',
+  'prompt.enterOnly': 'E · {place} වෙත ඇතුළු වන්න',
+  'trial.prevBest': ' · හොඳම තත්. {time}',
+  'trial.stillBest': '✓ තත්. {time} · ඔබේ හොඳම කාලය තවමත් ඉහළින්',
+  'trial.rejected': 'සේවාදායකය මෙම ධාවනය පිළිගත්තේ නැත ({reason})',
 };
 export default si;

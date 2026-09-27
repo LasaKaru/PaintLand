@@ -5,6 +5,7 @@ import { Decorator } from '../src/world/Decorator';
 import { Collectibles } from '../src/gameplay/Collectibles';
 import { MISSIONS, missionsFor } from '../src/gameplay/Missions';
 import { CATALOGUE } from '../src/gameplay/Profile';
+import { ROVER_TUNING } from '../src/gameplay/RoverController';
 
 describe.each(CHAPTERS.map((c) => [c.name, c] as const))('%s world', (_name, chapter) => {
   const path = chapter.buildRoute();
@@ -45,6 +46,23 @@ describe.each(CHAPTERS.map((c) => [c.name, c] as const))('%s world', (_name, cha
   it('places notes and pickups', () => {
     const items = new Collectibles(path, chapter.districts);
     expect(items.notes.length).toBe(chapter.districts.reduce((n, d) => n + d.melody.length, 0));
+  });
+
+  it('notes never jump lanes faster than a car can follow', () => {
+    const items = new Collectibles(path, chapter.districts);
+    const n = items.notes;
+    for (let i = 1; i < n.length; i++) {
+      if (n[i].district !== n[i - 1].district) continue;
+      const gap = n[i].s - n[i - 1].s;
+      expect(Math.abs(n[i].x - n[i - 1].x), `note ${i} at s=${n[i].s.toFixed(0)}`).toBeLessThanOrEqual(Math.max(1.35, gap * 0.6) + 1e-6);
+    }
+  });
+
+  it('every air mission can be done: a flat hop is too short, so the chapter needs a ramp or a feather tonic', () => {
+    const items = new Collectibles(path, chapter.districts);
+    const flatHop = (2 * ROVER_TUNING.hopSpeed) / ROVER_TUNING.gravity; // up and down again
+    const lift = items.has('ramp') || items.has('feather');
+    for (const m of missionsFor(chapter.id)) if (m.kind === 'air' && (m.time ?? 1) > flatHop) expect(lift, `${m.id} needs ${m.time}s of air`).toBe(true);
   });
 
   it('has missions whose givers stand in real districts', () => {

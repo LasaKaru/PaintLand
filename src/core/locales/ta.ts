@@ -986,5 +986,18 @@ const ta: Locale = {
   'tonic.feather.down': 'பிரேக் இல்லை',
   'tonic.fizzy.buff': 'நுரை மை +20%',
   'tonic.fizzy.down': 'தள்ளாட்டம்',
+  'mis.retry': '{title} — {time} வி, மீண்டும் முயலுங்கள்!',
+  'mis.complete': '{title} — முடிந்தது!',
+  'mis.failed': '{title} — தோல்வி. மீண்டும் முயல {name} உடன் பேசுங்கள்.',
+  'mis.left': '{n} வி மீதம்',
+  'mis.driveToStart': 'ஏறி ஓட்டத் தொடங்குங்கள்',
+  'mis.accepted': 'பணி ஏற்கப்பட்டது!',
+  'race.go': 'புறப்படு!',
+  'fx.sealed': 'முத்திரை ✓',
+  'fx.airSealed': 'காற்றில் {n} வி · முத்திரை',
+  'prompt.enterOnly': 'E · {place} உள்ளே செல்',
+  'trial.prevBest': ' · சிறந்தது {time} வி',
+  'trial.stillBest': '✓ {time} வி · உங்கள் சிறந்த நேரம் நிலைக்கிறது',
+  'trial.rejected': 'சேவையகம் இந்த ஓட்டத்தை ஏற்கவில்லை ({reason})',
 };
 export default ta;

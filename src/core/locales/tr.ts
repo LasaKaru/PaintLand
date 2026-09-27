@@ -986,5 +986,18 @@ const tr: Locale = {
   'tonic.feather.down': 'Fren yok',
   'tonic.fizzy.buff': 'Köpüklü mürekkep +%20',
   'tonic.fizzy.down': 'Sallantılı',
+  'mis.retry': '{title} — {time} sn, tekrar dene!',
+  'mis.complete': '{title} — tamamlandı!',
+  'mis.failed': '{title} — başarısız. Yeniden denemek için {name} ile konuş.',
+  'mis.left': '{n} sn kaldı',
+  'mis.driveToStart': 'bin ve başlamak için sür',
+  'mis.accepted': 'Görev kabul edildi!',
+  'race.go': 'BAŞLA!',
+  'fx.sealed': 'MÜHÜRLENDİ ✓',
+  'fx.airSealed': 'HAVADA {n} sn · MÜHÜRLENDİ',
+  'prompt.enterOnly': 'E · {place} içine gir',
+  'trial.prevBest': ' · en iyi {time} sn',
+  'trial.stillBest': '✓ {time} sn · en iyi derecen hâlâ geçerli',
+  'trial.rejected': 'Sunucu bu turu kabul etmedi ({reason})',
 };
 export default tr;

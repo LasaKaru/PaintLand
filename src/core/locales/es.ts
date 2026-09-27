@@ -986,5 +986,18 @@ const es: Locale = {
   'tonic.feather.down': 'Sin frenos',
   'tonic.fizzy.buff': 'Tinta burbujeante +20 %',
   'tonic.fizzy.down': 'Tambaleante',
+  'mis.retry': '{title}: {time} s, ¡inténtalo otra vez!',
+  'mis.complete': '{title}: ¡completada!',
+  'mis.failed': '{title}: fallida. Habla con {name} para reintentarlo.',
+  'mis.left': 'quedan {n} s',
+  'mis.driveToStart': 'sube y conduce para empezar',
+  'mis.accepted': '¡Misión aceptada!',
+  'race.go': '¡YA!',
+  'fx.sealed': 'SELLADA ✓',
+  'fx.airSealed': 'AIRE {n} s · SELLADA',
+  'prompt.enterOnly': 'E · Entrar en {place}',
+  'trial.prevBest': ' · mejor {time} s',
+  'trial.stillBest': '✓ {time} s · tu mejor marca sigue en pie',
+  'trial.rejected': 'El servidor no aceptó esta vuelta ({reason})',
 };
 export default es;

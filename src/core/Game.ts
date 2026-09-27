@@ -1905,7 +1905,10 @@ export class Game {
 
   private nearbyGiver(): MissionDef | null {
     if (this.mode !== 'foot') return null;
+    const a = this.missions.active;
     for (const g of this.world.people.givers) {
+      // Their mission is already under way: E gets you back in the car instead of starting it over.
+      if (a && a.mission.id === g.mission.id && !a.done && !a.failed) continue;
       if (Math.abs(g.s - this.human.s) < 3.5 && Math.abs(g.x - this.human.x) < 3.2) return g.mission;
     }
     return null;
@@ -1923,11 +1926,18 @@ export class Game {
     this.world.people.removeRival();
     this.missionEndTimer = 0;
     if (m.kind === 'stamps') this.world.people.setMarkers('stamp', m.district ?? 0, m.count ?? 5);
+    // Sealing N phrases must stay possible after a long drive has sealed most of them: open them up again
+    // (the Songbook in the profile keeps what was ever sealed).
+    if (m.kind === 'seal') {
+      const phrases = this.world.items.phrases;
+      if (phrases.filter((p) => !p.sealed).length < (m.count ?? 1)) for (const p of phrases) p.sealed = false;
+    }
     if (m.kind === 'visit') {
       const lm = this.world.decor.landmarks.find((l) => l.district === m.district);
       this.world.people.setMarkers('visit', m.district ?? 0, 1, lm?.s);
     }
-    if (m.kind !== 'visit' && m.kind !== 'stamps' && m.kind !== 'seal' && m.kind !== 'air' && this.mode === 'foot') this.enterRover(true);
+    // Everything but a visit is done at the wheel: straight back into the car.
+    if (m.kind !== 'visit' && this.mode === 'foot') this.enterRover(true);
     if (m.kind === 'race') {
       this.rover.v = 0;
       this.rover.cruise = false;
@@ -1936,7 +1946,7 @@ export class Game {
       this.world.people.spawnRival(this.rover.s, rivalX, speed, m.id === 'sk-race' ? 'coupe' : m.id === 'sl-train' ? 'tuktuk' : 'buggy');
       this.raceCountdown = 3.2;
     }
-    this.hud.pop('Mission accepted!', window.innerWidth / 2, window.innerHeight * 0.35, 'big');
+    this.hud.pop(t('mis.accepted'), window.innerWidth / 2, window.innerHeight * 0.35, 'big');
     this.audio.chime(67);
   }
 
@@ -1972,7 +1982,7 @@ export class Game {
       const before = Math.ceil(this.raceCountdown);
       this.raceCountdown -= dt;
       const n = Math.ceil(this.raceCountdown);
-      if (n !== before) this.hud.pop(n > 0 ? String(n) : 'GO!', window.innerWidth / 2, window.innerHeight * 0.4, 'big');
+      if (n !== before) this.hud.pop(n > 0 ? String(n) : t('race.go'), window.innerWidth / 2, window.innerHeight * 0.4, 'big');
       if (this.raceCountdown <= 0) this.missions.started = true;
     }
     const frozen = this.raceCountdown > 0;
@@ -2231,7 +2241,7 @@ export class Game {
           this.profile.data.ink += 10;
           this.profile.markSealed(this.world.chapter.id, this.world.items.phrases.indexOf(e.phrase!));
           this.missions.onSeal();
-          this.popAt(e.position, air ? `AIR ${this.rover.airTime.toFixed(1)}s · SEALED` : 'SEALED ✓', 'big');
+          this.popAt(e.position, air ? t('fx.airSealed', { n: this.rover.airTime.toFixed(1) }) : t('fx.sealed'), 'big');
           this.particles.emit('confetti', e.position, _v.copy(this.frame.up).multiplyScalar(5), 30, 5, this.frame.up);
           break;
         }
@@ -2898,7 +2908,7 @@ export class Game {
       this.raceCountdown -= dt;
       const n = Math.ceil(this.raceCountdown);
       if (n !== before) {
-        this.hud.pop(n > 0 ? String(n) : 'GO!', window.innerWidth / 2, window.innerHeight * 0.4, 'big');
+        this.hud.pop(n > 0 ? String(n) : t('race.go'), window.innerWidth / 2, window.innerHeight * 0.4, 'big');
         this.audio.chime(n > 0 ? 60 : 72);
       }
       inp.consume('hop');
@@ -2952,13 +2962,13 @@ export class Game {
     this.checkTrophies();
     const run = { ...cfg, name: this.profile.data.name, time, inputs: encodeInputs(trial.inputs), version: TRIAL_VERSION };
     this.endTrial();
-    this.hud.showLapBanner(t('trial.checking', { time: time.toFixed(2), extra: best ? t('trial.pb') : prev !== null ? ` · best ${prev.toFixed(2)}s` : '' }));
+    this.hud.showLapBanner(t('trial.checking', { time: time.toFixed(2), extra: best ? t('trial.pb') : prev !== null ? t('trial.prevBest', { time: prev.toFixed(2) }) : '' }));
     this.audio.chime(76);
     this.particles.emit('confetti', this.vehicle.root.position.clone().addScaledVector(this.frame.up, 2), _v.copy(this.frame.up).multiplyScalar(7), 70, 7, this.frame.up);
     void submitRun(run).then((res) => {
       if (!res) this.hud.showLapBanner(t('trial.offline', { time: time.toFixed(2) }));
-      else if (res.ok) this.hud.showLapBanner(res.best === false ? `✓ ${time.toFixed(2)}s · your best still stands` : t('trial.verified', { rank: res.rank ?? '—' }));
-      else this.hud.showLapBanner(`Server did not accept the run: ${res.reason ?? 'unknown'}`);
+      else if (res.ok) this.hud.showLapBanner(res.best === false ? t('trial.stillBest', { time: time.toFixed(2) }) : t('trial.verified', { rank: res.rank ?? '—' }));
+      else this.hud.showLapBanner(t('trial.rejected', { reason: res.reason ?? '?' }));
     });
     // Roll on in free play.
     this.rover.reset(8);
@@ -3331,6 +3341,7 @@ export class Game {
     const area = this.area!;
     this.togetherTick(dt);
     if (this.flight) {
+      this.hubZone = null;
       this.flightStep(dt, area);
       return;
     }
@@ -3362,7 +3373,11 @@ export class Game {
     const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
     // Drive into a painted gate to enter its chapter, or a road sign to travel.
     const z = area.zoneAt(p.x, p.z);
-    if (this.mode === 'drive' && z && this.hubCar.v > 2) {
+    // Kept here as well as in the drawing code, so E works even on a frame that failed to draw.
+    this.hubZone = z;
+    // (Not during an open-world mission: rushing past a gate mustn't whisk you off to another place.
+    // E at the gate still goes.)
+    if (this.mode === 'drive' && z && this.hubCar.v > 2 && !this.freeMissions.mission) {
       if (z.kind === 'portal' && z.chapter) {
         this.play(z.chapter);
         return;
@@ -3387,6 +3402,7 @@ export class Game {
       this.saveAreaCheckpoint(false);
     }
     // The finale: sitting at the Edge of the World with all eight colours.
+    if (this.viewing) this.viewing.t += dt;
     if (this.viewing?.zone.view?.id === 'we-edge' && this.viewing.t > 3 && !this.ending && endingDue(storyState(this.profile.data))) this.startEnding();
     this.trackStats(dt);
   }
@@ -4091,10 +4107,9 @@ export class Game {
   }
 
   /** The slow camera at a viewpoint: behind the bench, drifting and easing out, looking along the view. */
-  private viewpointCamera(dt: number, desired: THREE.Vector3, look: THREE.Vector3): void {
+  private viewpointCamera(desired: THREE.Vector3, look: THREE.Vector3): void {
     const v = this.viewing!;
     const view = v.zone.view!;
-    v.t += dt;
     const calm = this.settings.reducedMotion ? 0.3 : 1;
     const yaw = view.yaw + Math.sin(v.t * 0.045) * 0.22 * calm + this.viewLook.yaw;
     const pitch = view.pitch + Math.sin(v.t * 0.031) * 0.04 * calm + this.viewLook.pitch;
@@ -4494,7 +4509,7 @@ export class Game {
       const dist = 5.2 * this.rig.zoom;
       look.copy(focus).add(_v4.set(0, 1.6, 0));
       desired.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist).add(look);
-      if (this.viewing) this.viewpointCamera(dt, desired, look);
+      if (this.viewing) this.viewpointCamera(desired, look);
     } else {
       this.humanModel.animate(dt, vm.def.seatPose, 0, this.time);
       // Pull back and up during a stunt so the landing is in view.
@@ -4567,7 +4582,7 @@ export class Game {
     const here = _v6.set(player.x, HUB_Y, player.z);
     boards?.update(dt, this.time, cam, here);
     this.nearBoard = this.mode === 'foot' && !nearCar && !this.hubZone ? boards?.nearest(here) ?? null : null;
-    const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t('prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
+    const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t(this.freeMissions.mission ? 'prompt.enterOnly' : 'prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
     const boardText = this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
     this.hud.setPrompt(this.state === 'photo' || this.flight ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
     this.drawBattle(dt);

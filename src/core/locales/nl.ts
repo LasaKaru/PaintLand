@@ -986,5 +986,18 @@ const nl: Locale = {
   'tonic.feather.down': 'Geen remmen',
   'tonic.fizzy.buff': 'Bruisinkt +20%',
   'tonic.fizzy.down': 'Wiebelig',
+  'mis.retry': '{title} — {time} s, probeer opnieuw!',
+  'mis.complete': '{title} — gelukt!',
+  'mis.failed': '{title} — mislukt. Praat met {name} om het opnieuw te proberen.',
+  'mis.left': 'nog {n} s',
+  'mis.driveToStart': 'stap in en rij om te beginnen',
+  'mis.accepted': 'Missie aangenomen!',
+  'race.go': 'START!',
+  'fx.sealed': 'VERZEGELD ✓',
+  'fx.airSealed': 'IN DE LUCHT {n} s · VERZEGELD',
+  'prompt.enterOnly': 'E · Ga naar {place}',
+  'trial.prevBest': ' · beste {time} s',
+  'trial.stillBest': '✓ {time} s · je beste tijd blijft staan',
+  'trial.rejected': 'De server heeft deze ronde niet aangenomen ({reason})',
 };
 export default nl;

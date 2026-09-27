@@ -986,5 +986,18 @@ const ko: Locale = {
   'tonic.feather.down': '브레이크 없음',
   'tonic.fizzy.buff': '톡톡 잉크 +20%',
   'tonic.fizzy.down': '휘청휘청',
+  'mis.retry': '{title} — {time}초, 다시 도전!',
+  'mis.complete': '{title} — 완료!',
+  'mis.failed': '{title} — 실패. 다시 하려면 {name}에게 말을 거세요.',
+  'mis.left': '{n}초 남음',
+  'mis.driveToStart': '차에 타고 출발하세요',
+  'mis.accepted': '미션 수락!',
+  'race.go': '출발!',
+  'fx.sealed': '봉인 ✓',
+  'fx.airSealed': '공중 {n}초 · 봉인',
+  'prompt.enterOnly': 'E · {place} 들어가기',
+  'trial.prevBest': ' · 최고 {time}초',
+  'trial.stillBest': '✓ {time}초 · 최고 기록은 그대로예요',
+  'trial.rejected': '서버가 이 주행을 받지 않았어요 ({reason})',
 };
 export default ko;

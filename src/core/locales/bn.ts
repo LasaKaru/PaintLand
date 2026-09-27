@@ -986,5 +986,18 @@ const bn: Locale = {
   'tonic.feather.down': 'ব্রেক নেই',
   'tonic.fizzy.buff': 'ঝাঁঝালো কালি +২০%',
   'tonic.fizzy.down': 'টলমলে',
+  'mis.retry': '{title} — {time} সে, আবার চেষ্টা করো!',
+  'mis.complete': '{title} — সম্পূর্ণ!',
+  'mis.failed': '{title} — ব্যর্থ। আবার চেষ্টা করতে {name}-এর সঙ্গে কথা বলো।',
+  'mis.left': '{n} সে বাকি',
+  'mis.driveToStart': 'গাড়িতে উঠে চালাও, শুরু হবে',
+  'mis.accepted': 'মিশন গ্রহণ করা হলো!',
+  'race.go': 'চলো!',
+  'fx.sealed': 'সিল হলো ✓',
+  'fx.airSealed': 'হাওয়ায় {n} সে · সিল হলো',
+  'prompt.enterOnly': 'E · {place}-এ প্রবেশ করুন',
+  'trial.prevBest': ' · সেরা {time} সে',
+  'trial.stillBest': '✓ {time} সে · তোমার সেরা সময় অটুট',
+  'trial.rejected': 'সার্ভার এই দৌড় গ্রহণ করেনি ({reason})',
 };
 export default bn;

@@ -986,5 +986,18 @@ const vi: Locale = {
   'tonic.feather.down': 'Không phanh',
   'tonic.fizzy.buff': 'Mực sủi bọt +20%',
   'tonic.fizzy.down': 'Chao đảo',
+  'mis.retry': '{title} — {time} giây, thử lại nhé!',
+  'mis.complete': '{title} — hoàn thành!',
+  'mis.failed': '{title} — thất bại. Nói chuyện với {name} để thử lại.',
+  'mis.left': 'còn {n} giây',
+  'mis.driveToStart': 'lên xe và chạy để bắt đầu',
+  'mis.accepted': 'Đã nhận nhiệm vụ!',
+  'race.go': 'ĐI!',
+  'fx.sealed': 'ĐÃ NIÊM ✓',
+  'fx.airSealed': 'TRÊN KHÔNG {n} giây · ĐÃ NIÊM',
+  'prompt.enterOnly': 'E · Vào {place}',
+  'trial.prevBest': ' · tốt nhất {time} giây',
+  'trial.stillBest': '✓ {time} giây · kỷ lục của bạn vẫn giữ nguyên',
+  'trial.rejected': 'Máy chủ không chấp nhận lượt chạy này ({reason})',
 };
 export default vi;

@@ -986,5 +986,18 @@ const ar: Locale = {
   'tonic.feather.down': 'بلا مكابح',
   'tonic.fizzy.buff': 'حبر فوّار ‎+20%‎',
   'tonic.fizzy.down': 'ترنّح',
+  'mis.retry': '{title} — {time} ث، حاول مجددًا!',
+  'mis.complete': '{title} — اكتملت!',
+  'mis.failed': '{title} — فشلت. تحدّث إلى {name} لإعادة المحاولة.',
+  'mis.left': 'بقي {n} ث',
+  'mis.driveToStart': 'اركب وانطلق للبدء',
+  'mis.accepted': 'قُبلت المهمة!',
+  'race.go': 'انطلق!',
+  'fx.sealed': 'خُتمت ✓',
+  'fx.airSealed': 'في الهواء {n} ث · خُتمت',
+  'prompt.enterOnly': 'E · ادخل {place}',
+  'trial.prevBest': ' · الأفضل {time} ث',
+  'trial.stillBest': '✓ {time} ث · أفضل زمن لك ما زال قائمًا',
+  'trial.rejected': 'لم يقبل الخادم هذه الجولة ({reason})',
 };
 export default ar;

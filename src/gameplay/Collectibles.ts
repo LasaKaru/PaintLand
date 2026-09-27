@@ -96,11 +96,16 @@ export class Collectibles {
       const end = span.end - 18;
       const count = def.melody.length;
       const spacing = (end - start) / count;
+      // Where notes come close together (a tower climb), a lane jump is capped so a whole phrase can be driven.
+      const maxJump = Math.max(1.35, spacing * 0.6);
+      let prevX: number | null = null;
       def.melody.forEach((degree, step) => {
         const s = start + step * spacing;
         const f = path.sample(s, this.frame);
         const limit = f.width / 2 - 1.6;
-        const x = Math.max(-limit, Math.min(limit, (degree - 3) * 1.35));
+        let x = Math.max(-limit, Math.min(limit, (degree - 3) * 1.35));
+        if (prevX !== null) x = Math.max(prevX - maxJump, Math.min(prevX + maxJump, x));
+        prevX = x;
         const double = step % 8 === 7;
         const note: Note = {
           s,
@@ -358,6 +363,11 @@ export class Collectibles {
   }
 
   /** Songbook totals for the HUD. */
+  /** Is there at least one pickup or piece of road furniture of this kind? */
+  has(kind: Item['kind']): boolean {
+    return this.items.some((i) => i.kind === kind);
+  }
+
   totals(): { notes: number; noteTotal: number; sealed: number; phraseTotal: number } {
     return {
       notes: this.notes.filter((n) => n.collected).length,
@@ -391,7 +401,7 @@ const PICKUPS: Partial<Record<DressStyle, Item['kind'][]>> = {
   petra: ['bolt', 'feather'],
 };
 /** Styles with flat stretches for ramps and crates. */
-const FURNITURE = new Set<DressStyle>(['town', 'bridge', 'gate', 'galleface', 'tea', 'beach', 'greatwall', 'petra']);
+const FURNITURE = new Set<DressStyle>(['town', 'bridge', 'gate', 'galleface', 'tea', 'beach', 'greatwall', 'petra', 'sanfrancisco']);
 
 const _spin = new THREE.Quaternion();
 const _yAxis = new THREE.Vector3(0, 1, 0);

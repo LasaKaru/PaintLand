@@ -3,6 +3,8 @@
  * do and the reward. The tracker listens to game events and reports progress.
  */
 
+import { t } from '../core/i18n';
+
 export type MissionKind = 'notes' | 'seal' | 'split' | 'air' | 'deliver' | 'visit' | 'race' | 'stamps' | 'boost';
 
 export interface MissionDef {
@@ -142,7 +144,7 @@ export class MissionTracker {
     const a = this.active;
     if (a?.mission.kind === 'split' && a.mission.district === district) {
       if (time <= (a.mission.time ?? 10)) this.bump();
-      else a.label = `${a.mission.title} — ${time.toFixed(1)}s, try again!`;
+      else a.label = t('mis.retry', { title: a.mission.title, time: time.toFixed(1) });
     }
   }
 
@@ -181,13 +183,13 @@ export class MissionTracker {
   statusText(): string {
     const a = this.active;
     if (!a) return '';
-    if (a.done) return `✓ ${a.mission.title} — complete!`;
-    if (a.failed) return `✗ ${a.mission.title} — failed. Talk to ${a.mission.giver.name} to retry.`;
+    if (a.done) return `✓ ${t('mis.complete', { title: a.mission.title })}`;
+    if (a.failed) return `✗ ${t('mis.failed', { title: a.mission.title, name: a.mission.giver.name })}`;
     const bits: string[] = [a.label];
     if (a.goal > 1 && a.mission.kind !== 'boost') bits.push(`${Math.floor(a.progress)}/${a.goal}`);
     if (a.mission.kind === 'boost') bits.push(`${a.progress.toFixed(1)}/${a.goal}s`);
-    if (a.timeLeft !== null) bits.push(`${a.timeLeft.toFixed(0)}s left`);
-    if (a.mission.kind === 'race' && !this.started) bits.push('get in and drive to start');
+    if (a.timeLeft !== null) bits.push(t('mis.left', { n: a.timeLeft.toFixed(0) }));
+    if (a.mission.kind === 'race' && !this.started) bits.push(t('mis.driveToStart'));
     return bits.join(' · ');
   }
 }

@@ -986,5 +986,18 @@ const ur: Locale = {
   'tonic.feather.down': 'بریک نہیں',
   'tonic.fizzy.buff': 'جھاگ دار سیاہی ‎+20%‎',
   'tonic.fizzy.down': 'ڈگمگاہٹ',
+  'mis.retry': '{title} — {time} سیکنڈ، دوبارہ کوشش کریں!',
+  'mis.complete': '{title} — مکمل!',
+  'mis.failed': '{title} — ناکام۔ دوبارہ کوشش کے لیے {name} سے بات کریں۔',
+  'mis.left': '{n} سیکنڈ باقی',
+  'mis.driveToStart': 'سوار ہو کر شروع کرنے کے لیے چلائیں',
+  'mis.accepted': 'مشن قبول!',
+  'race.go': 'چلو!',
+  'fx.sealed': 'مہر لگ گئی ✓',
+  'fx.airSealed': 'ہوا میں {n} سیکنڈ · مہر لگ گئی',
+  'prompt.enterOnly': 'E · {place} میں داخل ہوں',
+  'trial.prevBest': ' · بہترین {time} سیکنڈ',
+  'trial.stillBest': '✓ {time} سیکنڈ · آپ کا بہترین وقت برقرار ہے',
+  'trial.rejected': 'سرور نے یہ دوڑ قبول نہیں کی ({reason})',
 };
 export default ur;

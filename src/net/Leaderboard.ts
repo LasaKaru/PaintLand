@@ -52,10 +52,19 @@ export function fetchBoard(chapter: string, handling: string): Promise<{ enabled
   return withTimeout(async (signal) => (await fetch(url, { signal })).json() as Promise<{ enabled: boolean; entries: BoardEntry[] }>, 2500);
 }
 
-export function submitRun(run: TrialRun): Promise<{ ok: boolean; rank?: number | null; best?: boolean; reason?: string; time?: number } | null> {
-  return withTimeout(
+type SubmitResult = { ok: boolean; rank?: number | null; best?: boolean; reason?: string; time?: number };
+
+export async function submitRun(run: TrialRun, retries = 2): Promise<SubmitResult | null> {
+  const res = await withTimeout(
     async (signal) =>
-      (await fetch(`${serverHttpUrl()}/submit`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(run), signal })).json() as Promise<{ ok: boolean; rank?: number | null; reason?: string }>,
+      (await fetch(`${serverHttpUrl()}/submit`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(run), signal })).json() as Promise<SubmitResult>,
     15000,
   );
+  // The server takes one run every few seconds from an address (a family sharing a connection can hit
+  // that): wait a moment and send it again rather than lose the run.
+  if (res && !res.ok && res.reason === 'slow down' && retries > 0) {
+    await new Promise((r) => setTimeout(r, 3500));
+    return submitRun(run, retries - 1);
+  }
+  return res;
 }

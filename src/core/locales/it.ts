@@ -986,5 +986,18 @@ const it: Locale = {
   'tonic.feather.down': 'Niente freni',
   'tonic.fizzy.buff': 'Inchiostro frizzante +20%',
   'tonic.fizzy.down': 'Traballante',
+  'mis.retry': '{title}: {time} s, riprova!',
+  'mis.complete': '{title}: completata!',
+  'mis.failed': '{title}: fallita. Parla con {name} per riprovare.',
+  'mis.left': 'mancano {n} s',
+  'mis.driveToStart': 'sali e parti per iniziare',
+  'mis.accepted': 'Missione accettata!',
+  'race.go': 'VIA!',
+  'fx.sealed': 'SIGILLATA ✓',
+  'fx.airSealed': 'IN ARIA {n} s · SIGILLATA',
+  'prompt.enterOnly': 'E · Entra in {place}',
+  'trial.prevBest': ' · record {time} s',
+  'trial.stillBest': '✓ {time} s · il tuo record resiste',
+  'trial.rejected': 'Il server non ha accettato questo giro ({reason})',
 };
 export default it;

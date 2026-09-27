@@ -986,5 +986,18 @@ const hi: Locale = {
   'tonic.feather.down': 'ब्रेक नहीं',
   'tonic.fizzy.buff': 'झागदार स्याही +20%',
   'tonic.fizzy.down': 'डगमग',
+  'mis.retry': '{title} — {time} से, फिर कोशिश करो!',
+  'mis.complete': '{title} — पूरा हुआ!',
+  'mis.failed': '{title} — असफल। दोबारा कोशिश के लिए {name} से बात करो।',
+  'mis.left': '{n} से बाकी',
+  'mis.driveToStart': 'गाड़ी में बैठो और शुरू करने के लिए चलाओ',
+  'mis.accepted': 'मिशन स्वीकार!',
+  'race.go': 'चलो!',
+  'fx.sealed': 'मुहर लगी ✓',
+  'fx.airSealed': 'हवा में {n} से · मुहर लगी',
+  'prompt.enterOnly': 'E · {place} में जाएँ',
+  'trial.prevBest': ' · सर्वश्रेष्ठ {time} से',
+  'trial.stillBest': '✓ {time} से · तुम्हारा सर्वश्रेष्ठ समय कायम है',
+  'trial.rejected': 'सर्वर ने यह दौड़ स्वीकार नहीं की ({reason})',
 };
 export default hi;

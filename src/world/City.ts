@@ -26,6 +26,28 @@ import { Perahera } from './Perahera';
 export const CITY_X = [-620, -460, -340, -220, -100, 20, 140, 260, 380, 500, 620];
 export const CITY_Z = [-560, -460, -340, -220, -100, 20, 140, 260, 380, 480];
 const ROAD = 16;
+
+/** Stunt ramps: id, name, x, z, heading, launch power, metres to the landing. */
+const STUNT_RAMPS: [string, string, number, number, number, number, number][] = [
+  ['stunt-bus', 'Over the bus', -520, 420, 0, 9, 48],
+  ['stunt-gap', 'Big gap', -420, 200, Math.PI / 2, 11, 60],
+  ['stunt-lake', 'Lake leap', 420, -300, -Math.PI / 2, 20, 150],
+  ['stunt-plaza', 'Lotus loop', -100, -60, Math.PI, 8, 48],
+  ['stunt-pier', 'Beach kicker', 120, 470, Math.PI / 2, 9, 48],
+  ['stunt-hill', 'Hill hop', -300, -540, Math.PI / 2, 10, 48],
+];
+
+/** On a stunt's line: the run-up, the flight and the landing pad stay clear of lamps and posts. */
+function inStuntLane(x: number, z: number, pad = 0): boolean {
+  for (const [, , rx, rz, h, , reach] of STUNT_RAMPS) {
+    const fx = -Math.sin(h);
+    const fz = -Math.cos(h);
+    const along = (x - rx) * fx + (z - rz) * fz;
+    const across = Math.abs((x - rx) * -fz + (z - rz) * fx);
+    if (along > -70 - pad && along < reach + 12 + pad && across < 7 + pad) return true;
+  }
+  return false;
+}
 const WALLS = ['#f4e3c8', '#f2c6b4', '#e9b8c8', '#cfe3d6', '#f6f0e4', '#f7d9a8', '#d8d4ec', '#bfd9e8', '#f0c9a0'];
 
 type Region = 'downtown' | 'oldtown' | 'park' | 'stunt' | 'suburb' | 'hills' | 'beach';
@@ -187,7 +209,7 @@ export class City implements FreeRoamArea {
     // Quay/sea wall at the south edge, and the lake in the park.
     this.merge(new ModelKit().box(1292, AREA_Y + 3, 2, '#c9b58e', { position: [0, -(AREA_Y + 3) / 2 + 0.1, 0], pattern: Pattern.Stone }).build(0), 0, 550);
     this.merge(new ModelKit().cylinder(70, 72, 0.3, 40, '#2f8fb8', { position: [0, 0.05, 0], pattern: Pattern.Glass }).cylinder(74, 74, 0.2, 40, '#d9c7a4', { position: [0, 0.02, 0] }).build(0), 500, -300);
-    this.world.circle(500, -300, 70);
+    this.world.circle(500, -300, 70, 0.6); // low: the Lake leap flies over it
     this.places.push({ id: 'lake', name: 'the lake', x: 500, z: -210 });
   }
 
@@ -220,12 +242,12 @@ export class City implements FreeRoamArea {
     // Street lamps down every road, both sides.
     const rnd = this.rnd;
     for (const x of CITY_X) for (let z = zMin + 20; z < zMax; z += 36) for (const s of [-1, 1]) {
-      if (CITY_Z.some((cz) => Math.abs(cz - z) < 12)) continue;
+      if (CITY_Z.some((cz) => Math.abs(cz - z) < 12) || inStuntLane(x + s * (ROAD / 2 + 2.6), z)) continue;
       this.inst('lamp', () => buildLamp(new Random(3)), x + s * (ROAD / 2 + 2.6), z, s > 0 ? -Math.PI / 2 : Math.PI / 2);
       this.world.circle(x + s * (ROAD / 2 + 2.6), z, 0.3);
     }
     for (const z of CITY_Z) for (let x = xMin + 20; x < xMax; x += 36) {
-      if (CITY_X.some((cx) => Math.abs(cx - x) < 12)) continue;
+      if (CITY_X.some((cx) => Math.abs(cx - x) < 12) || inStuntLane(x, z - (ROAD / 2 + 2.6))) continue;
       this.inst('lamp', () => buildLamp(new Random(3)), x, z - (ROAD / 2 + 2.6), 0);
       this.world.circle(x, z - (ROAD / 2 + 2.6), 0.3);
       if (rnd.chance(0.25)) this.inst('bin', buildBin, x + 3, z - (ROAD / 2 + 2.8));
@@ -321,7 +343,10 @@ export class City implements FreeRoamArea {
         if (p + h.width > to) break;
         const c = p + h.width / 2;
         const inward = h.depth / 2;
-        if (along === 'x') {
+        const pad = Math.max(h.width, h.depth) / 2;
+        if (along === 'x' ? inStuntLane(c, fixed + (facing === 0 ? -inward : inward), pad) : inStuntLane(fixed + (facing === Math.PI / 2 ? -inward : inward), c, pad)) {
+          // A gap in the row where a stunt jump runs through.
+        } else if (along === 'x') {
           const z = fixed + (facing === 0 ? -inward : inward);
           this.inst(`house${hi}`, () => h.geometry, c, z, facing);
           this.world.box(c, z, h.width / 2, h.depth / 2);
@@ -343,6 +368,7 @@ export class City implements FreeRoamArea {
     for (let k = 0; k < 5; k++) {
       const x = cx + rnd.range(-18, 18);
       const z = cz + rnd.range(-18, 18);
+      if (inStuntLane(x, z, 1.2)) continue;
       this.inst(`ctree${k % 3}`, () => buildRoundTree(new Random(70 + (k % 3)), k % 2 ? '#f4d23b' : null), x, z, rnd.range(0, 6));
       this.world.circle(x, z, 1.2);
     }
@@ -447,13 +473,8 @@ export class City implements FreeRoamArea {
       this.merge(new ModelKit().cylinder(7, 7, 0.1, 24, '#f4d23b', { position: [0, 0.08, 0], nightGlow: 1 }).cylinder(5.5, 5.5, 0.12, 24, '#2b2622', { position: [0, 0.09, 0] }).build(0), landX, landZ);
       this.stunts.push({ id, name, ramp: r, land: { x: landX, z: landZ, r: 9 } });
     };
-    ramp('stunt-bus', 'Over the bus', -520, 420, 0, 9);
+    for (const [id, name, x, z, heading, power, reach] of STUNT_RAMPS) ramp(id, name, x, z, heading, power, reach);
     this.merge(buildBusStop(new Random(4)), -520, 396, Math.PI / 2, 0, 2.2);
-    ramp('stunt-gap', 'Big gap', -420, 200, Math.PI / 2, 11, 60);
-    ramp('stunt-lake', 'Lake leap', 420, -300, -Math.PI / 2, 20, 150);
-    ramp('stunt-plaza', 'Lotus loop', -100, -60, Math.PI, 8);
-    ramp('stunt-pier', 'Beach kicker', 120, 470, Math.PI / 2, 9);
-    ramp('stunt-hill', 'Hill hop', -300, -540, Math.PI / 2, 10);
     this.places.push({ id: 'stuntpark', name: 'the stunt park', x: -480, z: 300 });
   }
 
@@ -461,7 +482,7 @@ export class City implements FreeRoamArea {
   private buildContent(): void {
     const secrets: [number, number, number, string][] = [
       [-160, -128, 0, 'At the foot of the Lotus Tower'],
-      [300, 632, 0.4, 'Where the pier meets the lighthouse'],
+      [308.5, 625, 0.4, 'Beside the lighthouse at the end of the pier (only a boat gets there)'],
       [-630, -590, 0, 'The far north-west corner'],
       [630, 540, 0, 'The eastern end of the beach'],
       [440, -372, 0, 'Between the elephants'],
@@ -486,7 +507,7 @@ export class City implements FreeRoamArea {
     secrets.forEach(([x, z, y, hint], i) => this.secrets.push({ id: `city-secret-${i}`, x, z, y, hint }));
     const chestSpots: [number, number, 0 | 1 | 2 | 3][] = [
       [-40, 470, 0], [200, -300, 0], [-380, 260, 1], [560, -120, 1], [-250, -480, 0], [420, 300, 1], [-600, -300, 2], [600, 100, 2],
-      [100, -540, 1], [-160, -115, 3], [330, 480, 0], [-460, -40, 0], [250, 90, 1], [-10, -420, 2], [480, 460, 3], [-600, 420, 1], [-611, -150, 1], [-540, 12, 0],
+      [100, -540, 1], [-160, -115, 3], [330, 480, 0], [-460, -40, 0], [250, 90, 1], [0, -420, 2], [480, 460, 3], [-600, 420, 1], [-611, -150, 1], [-540, 12, 0],
     ];
     chestSpots.forEach(([x, z, tier], i) => this.chests.push({ id: `city-chest-${i}`, x, z, tier }));
     for (const s of this.secrets) {

@@ -10,7 +10,8 @@ import type { HumanPose } from '../models/Human';
  * heading turns left (counter-clockwise seen from above), like three.js yaw.
  */
 
-export type Collider = { type: 'circle'; x: number; z: number; r: number } | { type: 'box'; x: number; z: number; hx: number; hz: number };
+/** `top`: how tall a low obstacle is (a lake, a flower bed); anything in the air above it passes over. */
+export type Collider = ({ type: 'circle'; x: number; z: number; r: number } | { type: 'box'; x: number; z: number; hx: number; hz: number }) & { top?: number };
 
 /** A boost pad on the ground: drive over it for a burst of speed. */
 export interface Pad {
@@ -41,8 +42,8 @@ export class FreeWorld {
     readonly groundY = 0,
   ) {}
 
-  circle(x: number, z: number, r: number): void {
-    this.colliders.push({ type: 'circle', x, z, r });
+  circle(x: number, z: number, r: number, top?: number): void {
+    this.colliders.push(top === undefined ? { type: 'circle', x, z, r } : { type: 'circle', x, z, r, top });
   }
 
   box(x: number, z: number, hx: number, hz: number): void {
@@ -53,9 +54,10 @@ export class FreeWorld {
    * Push a circle (x, z, radius) out of every collider and the bounds.
    * Returns the push normal of the deepest hit, or null when nothing was touched.
    */
-  resolve(p: { x: number; z: number }, radius: number, maxZ = this.bounds.maxZ): { nx: number; nz: number } | null {
+  resolve(p: { x: number; z: number }, radius: number, maxZ = this.bounds.maxZ, y = 0): { nx: number; nz: number } | null {
     let hit: { nx: number; nz: number; depth: number } | null = null;
     for (const c of this.colliders) {
+      if (c.top !== undefined && y > c.top) continue;
       let nx = 0;
       let nz = 0;
       let depth = 0;
@@ -301,7 +303,7 @@ export class FreeCar {
       }
     }
 
-    const hit = world.resolve(this, this.radius, this.water ? this.water.maxZ : undefined);
+    const hit = world.resolve(this, this.radius, this.water ? this.water.maxZ : undefined, this.y);
     if (hit) {
       // Speed into the wall is lost; a hard hit bounces back a little.
       const into = -(fx * hit.nx + fz * hit.nz);

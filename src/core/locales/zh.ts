@@ -986,5 +986,18 @@ const zh: Locale = {
   'tonic.feather.down': '没有刹车',
   'tonic.fizzy.buff': '气泡墨水 +20%',
   'tonic.fizzy.down': '摇摇晃晃',
+  'mis.retry': '{title} — {time} 秒,再试一次!',
+  'mis.complete': '{title} — 完成!',
+  'mis.failed': '{title} — 失败。找{name}重试。',
+  'mis.left': '剩余 {n} 秒',
+  'mis.driveToStart': '上车出发即可开始',
+  'mis.accepted': '接受任务!',
+  'race.go': '出发!',
+  'fx.sealed': '封存 ✓',
+  'fx.airSealed': '腾空 {n} 秒 · 封存',
+  'prompt.enterOnly': 'E · 进入{place}',
+  'trial.prevBest': ' · 最佳 {time} 秒',
+  'trial.stillBest': '✓ {time} 秒 · 你的最佳成绩仍然保持',
+  'trial.rejected': '服务器未接受此次成绩({reason})',
 };
 export default zh;

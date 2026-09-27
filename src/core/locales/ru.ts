@@ -986,5 +986,18 @@ const ru: Locale = {
   'tonic.feather.down': 'Без тормозов',
   'tonic.fizzy.buff': 'Шипучие чернила +20%',
   'tonic.fizzy.down': 'Шатает',
+  'mis.retry': '{title} — {time} с, попробуйте ещё раз!',
+  'mis.complete': '{title} — выполнено!',
+  'mis.failed': '{title} — провал. Поговорите с {name}, чтобы повторить.',
+  'mis.left': 'осталось {n} с',
+  'mis.driveToStart': 'садитесь и езжайте, чтобы начать',
+  'mis.accepted': 'Задание принято!',
+  'race.go': 'ВПЕРЁД!',
+  'fx.sealed': 'ЗАПЕЧАТАНО ✓',
+  'fx.airSealed': 'В ВОЗДУХЕ {n} с · ЗАПЕЧАТАНО',
+  'prompt.enterOnly': 'E · Войти: {place}',
+  'trial.prevBest': ' · лучшее {time} с',
+  'trial.stillBest': '✓ {time} с · ваш рекорд остаётся',
+  'trial.rejected': 'Сервер не принял этот заезд ({reason})',
 };
 export default ru;

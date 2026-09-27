@@ -986,5 +986,18 @@ const ja: Locale = {
   'tonic.feather.down': 'ブレーキなし',
   'tonic.fizzy.buff': 'シュワシュワインク +20%',
   'tonic.fizzy.down': 'ふらふら',
+  'mis.retry': '{title} — {time}秒、もう一度!',
+  'mis.complete': '{title} — 達成!',
+  'mis.failed': '{title} — 失敗。{name}に話しかけて再挑戦。',
+  'mis.left': '残り{n}秒',
+  'mis.driveToStart': '乗り込んで走り出そう',
+  'mis.accepted': 'ミッション受注!',
+  'race.go': 'スタート!',
+  'fx.sealed': '封印 ✓',
+  'fx.airSealed': '空中{n}秒 · 封印',
+  'prompt.enterOnly': 'E · {place}へ入る',
+  'trial.prevBest': ' · ベスト {time}秒',
+  'trial.stillBest': '✓ {time}秒 · 自己ベストは更新ならず',
+  'trial.rejected': 'サーバーがこの走行を受け付けませんでした({reason})',
 };
 export default ja;

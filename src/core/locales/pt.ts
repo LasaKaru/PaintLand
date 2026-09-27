@@ -986,5 +986,18 @@ const pt: Locale = {
   'tonic.feather.down': 'Sem freios',
   'tonic.fizzy.buff': 'Tinta efervescente +20%',
   'tonic.fizzy.down': 'Cambaleante',
+  'mis.retry': '{title} — {time} s, tente de novo!',
+  'mis.complete': '{title} — concluída!',
+  'mis.failed': '{title} — falhou. Fale com {name} para tentar de novo.',
+  'mis.left': 'faltam {n} s',
+  'mis.driveToStart': 'entre e dirija para começar',
+  'mis.accepted': 'Missão aceita!',
+  'race.go': 'JÁ!',
+  'fx.sealed': 'SELADA ✓',
+  'fx.airSealed': 'NO AR {n} s · SELADA',
+  'prompt.enterOnly': 'E · Entrar em {place}',
+  'trial.prevBest': ' · melhor {time} s',
+  'trial.stillBest': '✓ {time} s · seu recorde continua de pé',
+  'trial.rejected': 'O servidor não aceitou esta volta ({reason})',
 };
 export default pt;

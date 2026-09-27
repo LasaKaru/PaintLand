@@ -984,6 +984,19 @@ const en = {
   'tonic.feather.down': 'No brakes',
   'tonic.fizzy.buff': 'Fizzy ink +20%',
   'tonic.fizzy.down': 'Wobbly',
+  'mis.retry': '{title} — {time}s, try again!',
+  'mis.complete': '{title} — complete!',
+  'mis.failed': '{title} — failed. Talk to {name} to retry.',
+  'mis.left': '{n}s left',
+  'mis.driveToStart': 'get in and drive to start',
+  'mis.accepted': 'Mission accepted!',
+  'race.go': 'GO!',
+  'fx.sealed': 'SEALED ✓',
+  'fx.airSealed': 'AIR {n}s · SEALED',
+  'prompt.enterOnly': 'E · Enter {place}',
+  'trial.prevBest': ' · best {time}s',
+  'trial.stillBest': '✓ {time}s · your best still stands',
+  'trial.rejected': 'The server did not accept this run ({reason})',
 } as const;
 
 export default en;

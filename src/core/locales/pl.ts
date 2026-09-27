@@ -986,5 +986,18 @@ const pl: Locale = {
   'tonic.feather.down': 'Bez hamulców',
   'tonic.fizzy.buff': 'Musujący tusz +20%',
   'tonic.fizzy.down': 'Chwiejnie',
+  'mis.retry': '{title} — {time} s, spróbuj jeszcze raz!',
+  'mis.complete': '{title} — ukończona!',
+  'mis.failed': '{title} — nieudana. Porozmawiaj z {name}, by spróbować znowu.',
+  'mis.left': 'zostało {n} s',
+  'mis.driveToStart': 'wsiadaj i ruszaj, by zacząć',
+  'mis.accepted': 'Misja przyjęta!',
+  'race.go': 'START!',
+  'fx.sealed': 'PIECZĘĆ ✓',
+  'fx.airSealed': 'W POWIETRZU {n} s · PIECZĘĆ',
+  'prompt.enterOnly': 'E · Wejdź: {place}',
+  'trial.prevBest': ' · rekord {time} s',
+  'trial.stillBest': '✓ {time} s · twój rekord wciąż stoi',
+  'trial.rejected': 'Serwer nie przyjął tego przejazdu ({reason})',
 };
 export default pl;

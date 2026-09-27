@@ -986,5 +986,18 @@ const th: Locale = {
   'tonic.feather.down': 'ไม่มีเบรก',
   'tonic.fizzy.buff': 'หมึกซ่า +20%',
   'tonic.fizzy.down': 'โคลงเคลง',
+  'mis.retry': '{title} — {time} วิ ลองอีกครั้ง!',
+  'mis.complete': '{title} — สำเร็จ!',
+  'mis.failed': '{title} — ล้มเหลว คุยกับ {name} เพื่อลองใหม่',
+  'mis.left': 'เหลือ {n} วิ',
+  'mis.driveToStart': 'ขึ้นรถแล้วขับเพื่อเริ่ม',
+  'mis.accepted': 'รับภารกิจแล้ว!',
+  'race.go': 'ไป!',
+  'fx.sealed': 'ผนึกแล้ว ✓',
+  'fx.airSealed': 'ลอยตัว {n} วิ · ผนึกแล้ว',
+  'prompt.enterOnly': 'E · เข้า {place}',
+  'trial.prevBest': ' · ดีที่สุด {time} วิ',
+  'trial.stillBest': '✓ {time} วิ · สถิติดีที่สุดของคุณยังอยู่',
+  'trial.rejected': 'เซิร์ฟเวอร์ไม่รับรอบนี้ ({reason})',
 };
 export default th;

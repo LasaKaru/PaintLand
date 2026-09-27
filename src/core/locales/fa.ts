@@ -986,5 +986,18 @@ const fa: Locale = {
   'tonic.feather.down': 'بدون ترمز',
   'tonic.fizzy.buff': 'جوهر گازدار ‎+20%‎',
   'tonic.fizzy.down': 'لرزان',
+  'mis.retry': '{title} — {time} ثانیه، دوباره تلاش کن!',
+  'mis.complete': '{title} — انجام شد!',
+  'mis.failed': '{title} — شکست خورد. برای تلاش دوباره با {name} صحبت کن.',
+  'mis.left': '{n} ثانیه مانده',
+  'mis.driveToStart': 'سوار شو و برای شروع برو',
+  'mis.accepted': 'مأموریت پذیرفته شد!',
+  'race.go': 'برو!',
+  'fx.sealed': 'مهر شد ✓',
+  'fx.airSealed': 'در هوا {n} ثانیه · مهر شد',
+  'prompt.enterOnly': 'E · ورود به {place}',
+  'trial.prevBest': ' · بهترین {time} ثانیه',
+  'trial.stillBest': '✓ {time} ثانیه · رکورد تو هنوز پابرجاست',
+  'trial.rejected': 'سرور این دور را نپذیرفت ({reason})',
 };
 export default fa;
