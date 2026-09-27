@@ -17,6 +17,7 @@ import { t, type StringKey } from '../core/i18n';
 
 import type { MapInfo } from '../ui/MapView';
 import { AREA_Y, type AreaZone, type Chest, type FreeRoamArea, type Place, type Secret, type StuntJump } from './FreeRoamArea';
+import { HomePlot, homeToWorld } from './HomePlot';
 
 /** Ground height of the hub above the sea. */
 export const HUB_Y = AREA_Y;
@@ -62,6 +63,8 @@ export class Hub implements FreeRoamArea {
   readonly pockets: PlacedPocket[] = [];
   readonly seaZ = 70;
   readonly zones: HubZone[] = [];
+  /** Your home by the harbour gardens (see HomePlot). */
+  readonly home = new HomePlot();
   readonly spawn = { x: 0, z: 30, heading: 0 };
   readonly folk: Townsfolk[] = [];
   private readonly labels: HTMLDivElement[] = [];
@@ -188,7 +191,8 @@ export class Hub implements FreeRoamArea {
           this.put(buildCafeTable(rnd), x + 4, 24, rnd.range(0, 6));
           this.world.circle(x + 4, 24, 1.1);
         }
-        this.put(buildFlowerBush(rnd), x - 3, 30 + rnd.range(0, 10));
+        // (No flowers where the home stands.)
+        if (x - 3 < -80 || x - 3 > -54) this.put(buildFlowerBush(rnd), x - 3, 30 + rnd.range(0, 10));
       }
     }
     // Lamps and trees on the pavements.
@@ -373,6 +377,15 @@ export class Hub implements FreeRoamArea {
       this.world.pads.push({ x: 0, z, r: 2.4 });
       this.put(new ModelKit().box(4, 0.08, 5, '#3e9fd8', { position: [0, 0.07, 0], nightGlow: 1 }).box(0.8, 0.1, 2.6, '#f6f0e4', { position: [0, 0.1, 0], rotation: [0, Math.PI / 4, 0] }).build(0), 0, z);
     }
+
+    // Your home, with its post box at the gate.
+    this.group.add(this.home.group);
+    for (const [x, z, hx, hz] of HomePlot.walls()) this.world.box(x, z, hx, hz);
+    const box = homeToWorld(-9.5, 7.5);
+    this.world.circle(box.x, box.z, 0.6);
+    this.zones.push({ kind: 'mailbox', label: '📬 Mailbox', x: box.x, z: box.z - 1.6, r: 2.6, colour: '#d8463a' });
+    const inside = homeToWorld(0, 0.5);
+    this.zones.push({ kind: 'home', label: '🏡 Home', x: inside.x, z: inside.z, r: 3.2, colour: '#e8559a' });
 
     this.murals.push(...addMuralBoards(this, 'harbour', this.spawn));
     this.pockets.push(...addPockets(this));

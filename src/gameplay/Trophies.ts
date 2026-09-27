@@ -132,6 +132,8 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'skylines-6', name: 'Skyline Collector', text: 'See all six skylines: New York, San Francisco, Rio, Tokyo, Singapore and Sydney.', icon: '🏙', reward: 200, progress: (p) => [['newyork', 'sanfrancisco', 'rio', 'tokyo', 'singapore', 'sydney'].filter((d) => p.data.seen.includes(`district:${d}`)).length, 6] },
   { id: 'lanka-trip', name: 'Coast to Hills to Coast', text: 'Drive the island road trip from Colombo to Galle.', icon: '🐆', reward: 200, progress: (p) => [['colombo', 'kandyday', 'nuwaraeliya', 'ellaroad', 'yala', 'galle'].filter((d) => p.data.seen.includes(`district:${d}`)).length, 6] },
   { id: 'trail-1000', name: 'Paint the Road', text: 'Paint 1,000 dabs with the paint trail (L).', icon: '🖌', reward: 150, progress: stat('trailDots', 1000) },
+  { id: 'postcard-1', name: 'Wish You Were Here', text: 'Send a postcard from photo mode.', icon: '💌', reward: 80, progress: stat('postcards', 1) },
+  { id: 'visitor', name: 'Neighbourly', text: 'Visit a friend’s home in Harbour Town.', icon: '🏡', reward: 80, progress: seenCount('visit:', 1) },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

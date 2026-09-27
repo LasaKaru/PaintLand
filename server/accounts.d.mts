@@ -16,11 +16,12 @@ export declare function cleanAccountName(name: unknown): string | null;
 export declare function nameKey(name: unknown): string;
 export declare function passwordProblem(password: unknown, name?: string): string | null;
 export interface AccountUser { id: string; name: string; friends: string[]; requests: string[]; club: string | null; saveAt: number }
-export declare function createAccounts(opts: { dataDir: string; isBanned: (name: string) => boolean; now?: () => number }): {
+export declare function createAccounts(opts: { dataDir: string; isBanned: (name: string) => boolean; now?: () => number; onDelete?: (uid: string) => void }): {
   handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean>;
   userForToken(token: unknown): AccountUser | null;
   isTaken(name: string): boolean;
   userByName(name: string): AccountUser | null;
+  userById(id: string): AccountUser | null;
   stats(): { accounts: number; clubs: number; online: number };
   flush(): void;
 };

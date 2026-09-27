@@ -24,8 +24,8 @@ Grouped by purpose, with a rough size: S = a few days, M = 1–2 weeks, L = a mo
 | # | Idea | Size |
 | --- | --- | --- |
 | B1 ★ ✅ | **Paint the road as you drive** (built: press L): hold a trigger to lay a coloured brush trail behind the car that stays in the world. Friends see each other's trails. Photo mode can save a "trail painting" | M |
-| B2 ★ | **Postcards to friends**: take a photo, write a line, and post it. It arrives in a friend's mailbox in Harbour Town as a painted card they can pin on their wall | M |
-| B3 ★ | **Your own home**: a small house in Harbour Town to decorate with furniture found in pockets, pinned postcards, trophies and murals. Friends can visit | L |
+| B2 ★ ✅ | **Postcards to friends**: take a photo, write a line, and post it. It arrives in a friend's mailbox in Harbour Town as a painted card they can pin on their wall | M |
+| B3 ★ ✅ | **Your own home**: a small house in Harbour Town to decorate with furniture found in pockets, pinned postcards, trophies and murals. Friends can visit | L |
 | B4 | **Rhythm roads**: roads where notes line up with the beat, and hitting them in time paints the sky. A "Songbook" of perfect runs | M |
 | B5 ★ | **Weather painter**: in photo mode, brush rain, snow, cherry petals or fireflies onto part of the sky | S–M |
 | B6 | **Story mode, "The Lost Palette"**: a gentle story across the chapters about a painter whose colours were scattered, with mission givers as characters and a hand-painted cutscene at each chapter's end | L |

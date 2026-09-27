@@ -78,6 +78,10 @@ import { t, type StringKey } from './i18n';
 import type { RoverInput } from '../gameplay/RoverController';
 import type { RaceMessage } from '../net/Net';
 import { RemotePlayers } from '../net/RemotePlayers';
+import { MailClient, postcardImage, type VisitedHome } from '../net/Mail';
+import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
+import { Hub as HarbourHub } from '../world/Hub';
+import type { PocketKind } from '../world/Pockets';
 import { DOTS_PER_MESSAGE, TrailBrush, TrailLayer, TrailStore, nearestTrailColour, packDots, type TrailDot } from '../gameplay/PaintTrail';
 
 type GameState = 'loading' | 'splash' | 'menu' | 'intro' | 'play' | 'paused' | 'photo' | 'hub';
@@ -212,6 +216,12 @@ export class Game {
   private inviteAction: (() => void) | null = null;
   /** Player account (cloud save, friends, clubs); optional. */
   readonly account = new AccountClient();
+  readonly mail = new MailClient(this.account);
+  /** A photo waiting to be sent as a postcard (JPEG data URL). */
+  private postcardImg: string | null = null;
+  /** A friend's home being visited (shown on your plot until you go back). */
+  private visitingHome: VisitedHome | null = null;
+  private homeSync = 0;
   private cloudPulled = false;
   /** Festival decorations built per area (removed when the festival or setting changes). */
   private festivalDecor = new Map<string, { festival: Festival; group: THREE.Group }>();
@@ -316,6 +326,14 @@ export class Game {
       account: this.account,
       currentMural: () => this.muralId,
       clearTrails: () => this.clearTrails(),
+      mail: this.mail,
+      homeChanged: () => this.refreshHome(true),
+      visitHome: (name) => this.visitHome(name),
+      visiting: () => this.visitingHome?.name ?? null,
+      wallChanged: () => this.refreshWall(),
+      pendingPostcard: () => this.postcardImg,
+      clearPostcard: () => (this.postcardImg = null),
+      chatMode: () => this.options.chat,
       together: (kind) => this.startTogether(kind),
       togetherState: () => ({ roam: !!this.roamChapter(), online: this.net.connected, convoy: this.convoy.leading ? 'leading' : this.convoy.leader ? 'following' : null, busy: !!this.contest || !!this.paintEvent }),
       stickerAreas: () => [...this.areas.values()].map((a) => ({ id: a.id, name: a.title().name, places: a.places, secrets: a.secrets })),
@@ -457,6 +475,7 @@ export class Game {
       capture: (m) => this.capturePhoto(m),
       exit: () => this.exitPhoto(),
       groupPhoto: () => this.startGroupPhoto(),
+      postcard: () => this.makePostcard(),
     });
 
     window.addEventListener('resize', () => this.resize());
@@ -703,6 +722,77 @@ export class Game {
     this.trailStore.clear();
     this.trailLayer.set(this.trailPlaceId ? this.remoteTrails.get(this.trailPlaceId) ?? [] : []);
     return n;
+  }
+
+  // ————— postcards and your home —————
+
+  private harbourHome(): HarbourHub | null {
+    const a = this.areas.get('harbour');
+    return a instanceof HarbourHub ? a : null;
+  }
+
+  /** Rebuild the home on its plot (yours, or the friend's you are visiting); push yours to the server. */
+  private refreshHome(changed: boolean): void {
+    const hub = this.harbourHome();
+    const p = this.profile;
+    const layout = p.data.home ?? DEFAULT_HOME;
+    const v = this.visitingHome;
+    hub?.home.set(
+      v
+        ? { walls: v.home.walls, roof: v.home.roof, keepsakes: v.home.keepsakes as PocketKind[], trophies: v.home.trophies, owner: t('home.of', { name: v.name }) }
+        : { walls: layout.walls, roof: layout.roof, keepsakes: shownKeepsakes(layout, p.data.seen), trophies: p.data.trophies.length, owner: t('home.of', { name: p.data.name }) },
+    );
+    this.refreshWall();
+    // Tell the server (friends visit what it has), at most every few seconds.
+    if (changed && this.account.signedIn && !v) {
+      clearTimeout(this.homeSync);
+      this.homeSync = window.setTimeout(() => void this.mail.saveHome(homeForServer(layout, p.data.seen, p.data.trophies.length)), 1500);
+    }
+  }
+
+  /** The postcards pinned on the wall of the home being shown. */
+  private refreshWall(): void {
+    const hub = this.harbourHome();
+    if (!hub) return;
+    const v = this.visitingHome;
+    const load = (ids: string[]) =>
+      Promise.all(ids.slice(0, 6).map((id) => this.mail.picture(id))).then((pics) => {
+        // Still showing the same home?
+        if (this.visitingHome === v) hub.home.setPictures(pics);
+      });
+    if (v) void load(v.cards.map((c) => c.id));
+    else if (this.account.signedIn)
+      void this.mail.inbox().then((r) => {
+        if (typeof r !== 'string') void load(r.filter((c) => c.pinned).map((c) => c.id));
+      });
+    else hub.home.setPictures([]);
+  }
+
+  private async visitHome(name: string | null): Promise<string | null> {
+    if (!name) {
+      this.visitingHome = null;
+      this.refreshHome(false);
+      return null;
+    }
+    const r = await this.mail.visit(name);
+    if (typeof r === 'string') return r;
+    this.visitingHome = r;
+    this.refreshHome(false);
+    this.profile.markSeen(`visit:${r.name.toLowerCase()}`);
+    this.checkTrophies();
+    // Walk them over: the home is in Harbour Town.
+    this.menu.show('none');
+    this.enterHub({ area: 'harbour', x: -68, z: 30, heading: Math.PI, foot: null }, 'harbour');
+    return null;
+  }
+
+  /** Photo mode → Postcard: render the frame small and open the send form. */
+  private makePostcard(): void {
+    if (!this.lastFx) return;
+    this.pipeline.render(this.scene, this.rig.camera, 0, this.time, this.lastFx);
+    this.postcardImg = postcardImage(this.renderer.domElement);
+    this.exitPhoto();
+    this.openMenu('postcard');
   }
 
   /** The free-roam area id other players see (as in PlayerState.chapter). */
@@ -2623,6 +2713,7 @@ export class Game {
     if (area) return area;
     area = id === 'city' ? new City(this.hud.labels) : id === 'village' ? new Village(this.hud.labels) : new Hub(this.hud.labels);
     this.scene.add(area.group);
+    if (area instanceof HarbourHub) queueMicrotask(() => this.refreshHome(false));
     // Company and sponsor boards, with solid posts.
     const spots = brandSpotsFor(id);
     const boards = new BrandBoards(id, spots, id === 'city' ? 7 : 3);
@@ -3013,6 +3104,8 @@ export class Game {
     else if (zone.kind === 'shop') this.openMenu('shop');
     else if (zone.kind === 'missions') this.openMenu(this.area?.id === 'city' ? 'citymissions' : 'missions');
     else if (zone.kind === 'trophies') this.openMenu('trophies');
+    else if (zone.kind === 'mailbox') this.openMenu('mailbox');
+    else if (zone.kind === 'home') this.openMenu('home');
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
       this.openMenu('mural');

@@ -46,7 +46,8 @@ export const POCKETS: PocketDef[] = [
   { id: 'c-bottle', area: 'city', name: 'Bottle on the sand', kind: 'bottle', x: 460, z: 535 },
 ];
 
-function buildPocket(kind: PocketKind): THREE.BufferGeometry {
+/** The little scene for a pocket (also a keepsake in your home). */
+export function buildPocket(kind: PocketKind): THREE.BufferGeometry {
   const k = new ModelKit();
   switch (kind) {
     case 'picnic':

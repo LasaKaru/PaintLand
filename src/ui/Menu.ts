@@ -43,13 +43,14 @@ import { ACTION_INFO, keyLabel, type ActionName, type Input } from '../core/Inpu
 import type { GameOptions } from '../core/Options';
 import { QUALITY_KEYS, VIBES, applyArtStyle, applyQuality, applyVibe, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
 import { TRAIL_COLOURS } from '../gameplay/PaintTrail';
+import { HomeScreen, type HomeHost } from './HomeScreen';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'none';
 
 /** Everything the menu needs from the game. */
-export interface MenuHost extends AccountHost {
+export interface MenuHost extends AccountHost, HomeHost {
   profile: Profile;
   runBenchmark(done: (r: BenchmarkResult) => void): void;
   testRoad(road: CustomRoad): void;
@@ -135,6 +136,7 @@ export class Menu {
   private readonly accountScreen: AccountScreen;
   private readonly galleryScreen: GalleryScreen;
   private readonly passScreen: PassScreen;
+  private readonly homeScreen: HomeScreen;
   /** The same painter, for mural boards in the free-roam areas. */
   private readonly muralEditor = new LiveryEditor(
     (code) => {
@@ -176,6 +178,11 @@ export class Menu {
     this.passScreen = new PassScreen(
       host,
       () => this.screen === 'pass' && this.render(),
+      (m) => this.toast(m),
+    );
+    this.homeScreen = new HomeScreen(
+      host,
+      () => (this.screen === 'mailbox' || this.screen === 'home' || this.screen === 'postcard') && this.render(),
       (m) => this.toast(m),
     );
     this.root = document.createElement('div');
@@ -221,6 +228,7 @@ export class Menu {
     if (screen === 'account' && this.screen !== 'account') this.accountScreen.load(true);
     if (screen === 'gallery' && this.screen !== 'gallery') this.galleryScreen.load();
     if (screen === 'pass') this.passScreen.load();
+    if (screen === 'mailbox' || screen === 'home' || screen === 'postcard') this.homeScreen.load(screen);
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
@@ -254,6 +262,9 @@ export class Menu {
       multiplayer: () => this.multiplayer(),
       gallery: () => `<div class="menu-panel wide">${this.header(`🖼 ${t('gal.title')}`)}<div class="panel-body">${this.galleryScreen.render()}</div></div>`,
       pass: () => `<div class="menu-panel wide">${this.header(`🎟 ${t('pass.title')}`)}<div class="panel-body">${this.passScreen.render()}</div></div>`,
+      mailbox: () => `<div class="menu-panel wide">${this.header(`📬 ${t('mail.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('mailbox')}</div></div>`,
+      home: () => `<div class="menu-panel">${this.header(`🏡 ${t('home.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('home')}</div></div>`,
+      postcard: () => `<div class="menu-panel">${this.header(`💌 ${t('mail.postcard')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('postcard')}</div></div>`,
       account: () => `<div class="menu-panel">${this.header(t('acct.title'))}<div class="panel-body">${this.accountScreen.render()}</div></div>`,
       settings: () => this.settingsScreen(),
       trophies: () => this.trophiesScreen(),
@@ -1012,7 +1023,7 @@ export class Menu {
 
   private onSubmit(e: SubmitEvent): void {
     const form = e.target as HTMLFormElement;
-    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form) || this.passScreen.onSubmit(form)) {
+    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form) || this.passScreen.onSubmit(form) || this.homeScreen.onSubmit(form)) {
       e.preventDefault();
       return;
     }
@@ -1041,6 +1052,7 @@ export class Menu {
     if (d.acct && this.accountScreen.onClick(el)) return;
     if (this.galleryScreen.onClick(el)) return;
     if (this.passScreen.onClick(el)) return;
+    if (this.homeScreen.onClick(el)) return;
     if (d.featured) {
       const r = buyFeatured(p, d.featured);
       this.toast(r === 'ok' ? `✓ ${itemLabel(d.featured)}` : r === 'poor' ? t('shop.poor') : '');

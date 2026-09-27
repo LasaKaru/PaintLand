@@ -67,9 +67,9 @@ export function passwordProblem(password, name = '') {
 }
 
 /**
- * @param {{ dataDir: string, isBanned: (name: string) => boolean, now?: () => number }} opts
+ * @param {{ dataDir: string, isBanned: (name: string) => boolean, now?: () => number, onDelete?: (uid: string) => void }} opts
  */
-export function createAccounts({ dataDir, isBanned, now = Date.now }) {
+export function createAccounts({ dataDir, isBanned, now = Date.now, onDelete }) {
   const file = join(dataDir, 'accounts.json');
   const saveDir = join(dataDir, 'saves');
   /** @type {{ users: Record<string, any>, sessions: Record<string, { uid: string, exp: number }>, clubs: Record<string, any> }} */
@@ -193,6 +193,7 @@ export function createAccounts({ dataDir, isBanned, now = Date.now }) {
     }
     byName.delete(nameKey(u.name));
     delete db.users[u.id];
+    onDelete?.(u.id);
     touch();
   }
 
@@ -444,6 +445,8 @@ export function createAccounts({ dataDir, isBanned, now = Date.now }) {
     isTaken: (name) => byName.has(nameKey(name)),
     /** The account registered to a name (for admin grants), or null. */
     userByName: (name) => findByName(name),
+    /** The account with this id (still registered), or null. */
+    userById: (id) => db.users[id] ?? null,
     stats: () => ({ accounts: Object.keys(db.users).length, clubs: Object.keys(db.clubs).length, online: Object.values(db.users).filter(online).length }),
     flush: () => persist(),
   };

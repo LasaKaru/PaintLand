@@ -11,6 +11,8 @@ export interface PhotoHost {
   exit(): void;
   /** Line up a group photo with a countdown (free-roam areas, on foot). */
   groupPhoto?(): void;
+  /** Send this view to a friend's mailbox as a postcard. */
+  postcard?(): void;
 }
 
 /** Photo-mode camera and lens values (not saved). */
@@ -93,7 +95,7 @@ export class PhotoMode {
       <label class="check"><input type="checkbox" data-p="hidePlayer" ${st.hidePlayer ? 'checked' : ''}> Hide my car and character</label>
       <h4>Save</h4>
       <div class="row wrap"><button class="btn primary" data-shot="1">📷 Save PNG</button><button class="btn" data-shot="2">2× size</button><button class="btn" data-shot="4">4K</button></div>
-      <div class="row wrap"><button class="btn" data-a="group">👥 ${t('group.button')}</button></div>`;
+      <div class="row wrap"><button class="btn" data-a="group">👥 ${t('group.button')}</button><button class="btn" data-a="postcard">💌 ${t('mail.button')}</button></div>`;
   }
 
   private onInput(e: Event): void {
@@ -121,6 +123,7 @@ export class PhotoMode {
     const d = el.dataset;
     if (d.a === 'exit') this.host.exit();
     if (d.a === 'group') this.host.groupPhoto?.();
+    if (d.a === 'postcard') this.host.postcard?.();
     if (d.time) this.host.setTime(d.time);
     if (d.weather) this.host.setWeather(d.weather as WeatherId);
     if (d.shot) this.host.capture(Number(d.shot) as 1 | 2 | 4);

@@ -202,6 +202,8 @@ export interface ProfileData {
   vehicleLooks: Partial<Record<VehicleId, VehicleLook>>;
   /** Mural board id → livery code (free-roam mural walls). */
   murals?: Record<string, string>;
+  /** Your home in Harbour Town (colours and keepsakes on show). */
+  home?: import('./Home').HomeLayout;
   /** Saved outfit sets. */
   outfits?: OutfitSet[];
   tonics: Record<TonicId, number>;
