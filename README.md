@@ -2,6 +2,8 @@
 
 **Inkroads** (earlier working title: PaintLand) is a browser 3D game built with Three.js that looks like a moving watercolour sketchbook. Roads peel off the ground and fold into the sky, up walls, across ceilings and through loops. Driving or walking through floating notes plays each street's melody. You can play alone or with friends, walk around as a customisable character in first or third person, and drive a little rover with a gramophone on its roof.
 
+**New to the game?** Read **[How to play](docs/HOW_TO_PLAY.md)**: every key, the gamepad, towns, photo mode, friends and more.
+
 *Paint the road. Then drive up it.* Prefer it real? One slider turns the sketchbook into a realistically lit world with HDR light, reflections, fog and depth of field.
 
 This repository holds the **design documentation** (in [`docs/`](docs/)) and the **game itself** (in [`src/`](src/)), built with TypeScript, Three.js and Vite.
