@@ -403,8 +403,10 @@ export class Hills implements FreeRoamArea {
     };
   }
 
-  ambienceAt(_x: number, z: number): { nature: number; coast: number; city: number } {
-    return { nature: z < -20 ? 0.9 : 0.55, coast: Math.min(1, Math.max(0.1, (z + 10) / 90)), city: 0.15 };
+  ambienceAt(x: number, z: number): { nature: number; coast: number; city: number; water: number; wind: number } {
+    // The waterfall off the western cliffs roars as you get near.
+    const falls = Math.max(0, 1 - Math.hypot(x + 92, z + 76) / 70);
+    return { nature: z < -20 ? 0.9 : 0.55, coast: Math.min(1, Math.max(0.1, (z + 10) / 90)), city: 0.15, water: falls, wind: z < -60 ? 0.35 : 0.1 };
   }
 
   dynamicBodies(): { x: number; z: number; r: number }[] {

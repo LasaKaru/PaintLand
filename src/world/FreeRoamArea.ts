@@ -90,7 +90,8 @@ export interface FreeRoamArea {
   update(dt: number, time: number, player: { x: number; z: number }, camera: THREE.PerspectiveCamera): void;
   zoneAt(x: number, z: number): AreaZone | null;
   zoneLabel(z: AreaZone): string;
-  ambienceAt(x: number, z: number): { nature: number; coast: number; city: number };
+  /** Sound beds for a spot: greenery, sea, town, and optionally rushing water and exposure to wind. */
+  ambienceAt(x: number, z: number): { nature: number; coast: number; city: number; water?: number; wind?: number };
   /** Moving things (traffic) the player's car collides with this frame. */
   dynamicBodies(): DynamicBody[];
   /** Districts that start as pencil sketches and are painted by play (Colour the City). */

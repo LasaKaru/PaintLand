@@ -4,6 +4,7 @@ import { Hub } from '../src/world/Hub';
 import { Hills } from '../src/world/Hills';
 import { Village } from '../src/world/Village';
 import { validateState } from '../server/validate.mjs';
+import { CALM_CHORDS } from '../src/audio/Ambience';
 import en from '../src/core/locales/en';
 import type { FreeRoamArea } from '../src/world/FreeRoamArea';
 
@@ -50,5 +51,20 @@ describe("World's End and the viewpoints", () => {
 
   it('the relay accepts players all over the island', () => {
     expect(validateState({ chapter: 'worldsend', mode: 'foot', s: 1090, x: -108, h: 0, yaw: 0, v: 1 }, null, 0)).toEqual({ ok: true });
+  });
+
+  it('sounds follow the place: water by the falls, wind at the edge, calm chords in range', () => {
+    const falls = we.ambienceAt(60, EDGE_Z - 4);
+    expect(falls.water).toBeGreaterThan(0.8);
+    expect(we.ambienceAt(-90, -90).water).toBeLessThan(0.1);
+    expect(we.ambienceAt(0, EDGE_Z - 2).wind).toBeGreaterThan(0.8);
+    expect(we.ambienceAt(-60, -60).wind).toBeLessThan(0.3);
+    const hills = areas[2];
+    expect(hills.ambienceAt(-90, -70).water ?? 0).toBeGreaterThan(0.8);
+    expect(hills.ambienceAt(90, 30).water ?? 0).toBe(0);
+    for (const chord of CALM_CHORDS) {
+      expect(chord).toHaveLength(5);
+      for (const n of chord) expect(n >= 36 && n <= 84).toBe(true);
+    }
   });
 });

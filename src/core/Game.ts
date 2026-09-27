@@ -2684,7 +2684,7 @@ export class Game {
       if (this.human.grounded && this.human.speed > 0.5) {
         this.footstepTimer -= dt * this.human.speed;
         if (this.footstepTimer <= 0) {
-          this.audio.footstep();
+          this.audio.footstep(this.human.speed > 4.5);
           this.footstepTimer = 1.1;
         }
       }
@@ -2753,7 +2753,12 @@ export class Game {
       nature: /tea|jungle|sigiriya|machu|beach|ella|park|garden|coil|petal/.test(dstyle) ? 0.9 : 0.45,
       coast: clamp(1 - Math.max(0, focus.y - 3) / 45, 0, 1) * (/beach|galleface|coil|lighthouse|spiral/.test(dstyle) ? 1 : 0.5),
       city: /street|town|galleface|lotus|colosseum/.test(dstyle) ? 0.6 : 0.1,
+      // Waterfall districts roar; high roads get windy.
+      water: /ella|fall|chute|inkfall|cascade/.test(dstyle) ? 0.6 : 0,
+      wind: clamp((focus.y - 30) / 90, 0, 0.8),
+      calm: 0,
     });
+    this.audio.calm = 0;
     this.audioFrame(this.mode === 'drive' && playing, this.rover.v, this.rover.boosting, this.mode === 'drive' && playing ? this.input.throttle() : 0, this.mode === 'drive' && (this.rover.sliding || this.rover.drifting) && this.rover.grounded ? 1 : 0);
     this.updateHud(dt, f.up);
 
@@ -3817,8 +3822,7 @@ export class Game {
     this.profile.save();
     if (announce) {
       this.hud.stamp(announce.title, announce.sub, announce.colour);
-      this.audio.checkpoint();
-      this.audio.chime(79);
+      this.audio.stamp();
     }
   }
 
@@ -4049,7 +4053,7 @@ export class Game {
     this.viewing = { zone, t: 0, hudWas: this.hudHidden };
     this.hudHidden = true;
     this.hud.root.classList.add('hud-hidden');
-    this.audio.chime(62);
+    this.audio.settle();
     this.menu.toast(`${this.area.zoneLabel(zone)} · ${t('view.hint')}`);
     if (this.profile.markSeen(`view:${zone.view.id}`)) this.checkTrophies();
   }
@@ -4458,7 +4462,8 @@ export class Game {
       if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
         this.footstepTimer -= dt * this.hubWalker.speed;
         if (this.footstepTimer <= 0) {
-          this.audio.footstep();
+          // Grass and earth in the green towns sound duller than city stone.
+          this.audio.footstep(this.hubWalker.speed > 4.5, area.id === 'village' || area.id === 'hills' || area.id === 'worldsend');
           this.footstepTimer = 1.1;
         }
       }
@@ -4580,7 +4585,12 @@ export class Game {
     const st = this.audio.station;
     this.hud.setRadio(st.freq, st.name, this.audio.trackLabel, this.audio.trackProgress, this.audio.radioOn);
     this.audio.update(this.flight ? this.glider.speed : this.mode === 'drive' ? Math.abs(this.hubCar.v) : this.hubWalker.speed, gusting, this.mode === 'drive' && !this.flight && this.state !== 'paused', this.env.rain, focus.y);
-    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...area.ambienceAt(player.x, player.z) });
+    // A quiet moment on a bench, calm at the World's End; wind when flying high.
+    const calm = this.viewing ? 1 : area.id === 'worldsend' ? 0.45 : 0;
+    const amb = area.ambienceAt(player.x, player.z);
+    const flyWind = this.flight ? clamp(this.glider.y / 50, 0.2, 1) : 0;
+    this.audio.calm = calm;
+    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...amb, wind: Math.max(amb.wind ?? 0, flyWind), calm });
     this.audioFrame(this.mode === 'drive' && !this.flight && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);

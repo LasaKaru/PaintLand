@@ -348,8 +348,12 @@ export class WorldsEnd implements FreeRoamArea {
     };
   }
 
-  ambienceAt(): { nature: number; coast: number; city: number } {
-    return { nature: 0.9, coast: 0.1, city: 0 };
+  ambienceAt(x: number, z: number): { nature: number; coast: number; city: number; water: number; wind: number } {
+    // The river and the falls over the edge; the wind picks up toward the edge of the world.
+    const falls = Math.max(0, 1 - Math.hypot(x - 60, z - EDGE_Z) / 60);
+    const river = z > 20 ? Math.max(0, 1 - Math.abs(x - 60) / 22) * 0.55 : 0;
+    const lake = Math.max(0, 1 - Math.hypot(x + 50, z + 24) / 40) * 0.2;
+    return { nature: 0.9, coast: 0, city: 0, water: Math.max(falls, river, lake), wind: 0.2 + Math.max(0, (z - 50) / (EDGE_Z - 50)) * 0.7 };
   }
 
   dynamicBodies(): { x: number; z: number; r: number }[] {

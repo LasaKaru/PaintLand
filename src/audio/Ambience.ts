@@ -15,9 +15,24 @@ export interface AmbienceParams {
   coast: number;
   /** 0..1 how urban (downtown streets). */
   city: number;
+  /** 0..1 how close a waterfall or river is (rushing water). */
+  water?: number;
+  /** 0..1 how exposed the spot is (gusty wind on edges, hilltops and in the air). */
+  wind?: number;
+  /** 0..1 a quiet moment (viewpoints, the World's End): a soft pad and wind chimes. */
+  calm?: number;
   /** Master volume for ambience (Settings → Audio). */
   volume: number;
 }
+
+/** The calm pad's chords (MIDI notes, five voices each), changing slowly. */
+export const CALM_CHORDS = [
+  [48, 55, 64, 71, 74], // Cmaj9
+  [45, 52, 60, 67, 71], // Am9
+  [41, 48, 57, 64, 67], // Fmaj9
+  [43, 50, 59, 62, 69], // G6/9
+];
+const hz = (m: number): number => 440 * Math.pow(2, (m - 69) / 12);
 
 export class Ambience {
   private readonly bus: GainNode;
@@ -26,6 +41,17 @@ export class Ambience {
   private readonly leafGain: GainNode;
   private readonly cricketGain: GainNode;
   private readonly cityGain: GainNode;
+  private readonly waterGain: GainNode;
+  private readonly waterFilter: BiquadFilterNode;
+  private readonly windGain: GainNode;
+  private readonly windFilter: BiquadFilterNode;
+  private readonly padGain: GainNode;
+  private readonly padVoices: OscillatorNode[] = [];
+  private chord = 0;
+  private nextChord = 0;
+  private nextChime = 0;
+  private nextOwl = 0;
+  private gust = 0;
   private p: AmbienceParams = { night: 0, rain: 0, nature: 0.5, coast: 0, city: 0, volume: 0.7 };
   private nextBird = 0;
   private nextGull = 0;
@@ -89,6 +115,48 @@ export class Ambience {
     this.cityGain = ctx.createGain();
     this.cityGain.gain.value = 0;
     city.connect(cityFilter).connect(this.cityGain).connect(this.bus);
+
+    // Waterfalls and rivers: broad rushing noise, a little brighter than the sea.
+    const water = this.loop(1.0);
+    const waterHp = ctx.createBiquadFilter();
+    waterHp.type = 'highpass';
+    waterHp.frequency.value = 250;
+    this.waterFilter = ctx.createBiquadFilter();
+    this.waterFilter.type = 'lowpass';
+    this.waterFilter.frequency.value = 2600;
+    this.waterGain = ctx.createGain();
+    this.waterGain.gain.value = 0;
+    water.connect(waterHp).connect(this.waterFilter).connect(this.waterGain).connect(this.bus);
+
+    // Wind on exposed places: low noise that gusts.
+    const wind = this.loop(0.45);
+    this.windFilter = ctx.createBiquadFilter();
+    this.windFilter.type = 'bandpass';
+    this.windFilter.frequency.value = 420;
+    this.windFilter.Q.value = 0.7;
+    this.windGain = ctx.createGain();
+    this.windGain.gain.value = 0;
+    wind.connect(this.windFilter).connect(this.windGain).connect(this.bus);
+
+    // The calm pad: five soft triangle voices through a gentle low-pass, mostly reverb.
+    this.padGain = ctx.createGain();
+    this.padGain.gain.value = 0;
+    const padFilter = ctx.createBiquadFilter();
+    padFilter.type = 'lowpass';
+    padFilter.frequency.value = 1100;
+    this.padGain.connect(padFilter).connect(this.bus);
+    const padWet = ctx.createGain();
+    padWet.gain.value = 0.8;
+    padFilter.connect(padWet).connect(reverb);
+    for (const m of CALM_CHORDS[0]) {
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = hz(m);
+      o.detune.value = (Math.random() - 0.5) * 12;
+      o.connect(this.padGain);
+      o.start();
+      this.padVoices.push(o);
+    }
   }
 
   private loop(rate: number): AudioBufferSourceNode {
@@ -120,6 +188,31 @@ export class Ambience {
     this.leafGain.gain.setTargetAtTime(p.nature * 0.025 * (0.6 + 0.4 * Math.sin(this.swell * 1.3)) * v, t, 0.3);
     this.cricketGain.gain.setTargetAtTime(Math.max(0, p.night - 0.4) * p.nature * 0.012 * dry * v, t, 0.8);
     this.cityGain.gain.setTargetAtTime(p.city * 0.12 * v, t, 0.6);
+    // Rushing water, with a slow flutter.
+    const water = p.water ?? 0;
+    this.waterGain.gain.setTargetAtTime(water * water * 0.16 * (0.9 + 0.1 * Math.sin(this.swell * 3.1)) * v, t, 0.3);
+    this.waterFilter.frequency.setTargetAtTime(1800 + water * 1600, t, 0.5);
+    // Gusts: a slow random walk.
+    this.gust = Math.max(0, Math.min(1, this.gust + (Math.random() - 0.5) * dt * 1.2));
+    const wind = p.wind ?? 0;
+    this.windGain.gain.setTargetAtTime(wind * (0.03 + 0.07 * this.gust) * v, t, 0.6);
+    this.windFilter.frequency.setTargetAtTime(300 + this.gust * 500, t, 0.8);
+    // The calm pad fades in and drifts through its chords.
+    const calm = p.calm ?? 0;
+    this.padGain.gain.setTargetAtTime(calm * 0.022 * v, t, 1.5);
+    if (calm > 0.05 && t > this.nextChord) {
+      this.nextChord = t + 10 + Math.random() * 4;
+      this.chord = (this.chord + 1) % CALM_CHORDS.length;
+      CALM_CHORDS[this.chord].forEach((m, i) => this.padVoices[i]?.frequency.setTargetAtTime(hz(m), t, 2.5));
+    }
+    if (calm > 0.25 && t > this.nextChime) {
+      this.nextChime = t + 2.5 + Math.random() * 6;
+      this.chime(t, calm * v);
+    }
+    if (t > this.nextOwl) {
+      this.nextOwl = t + 9 + Math.random() * 14;
+      if (p.night > 0.7 && p.nature > 0.5 && p.rain < 0.3) this.owl(t, p.nature * v);
+    }
 
     if (t > this.nextBird) {
       this.nextBird = t + 0.6 + Math.random() * (3.5 - p.nature * 2.2);
@@ -172,6 +265,44 @@ export class Ambience {
       o.stop(start + dur + 0.02);
       vib.stop(start + dur + 0.02);
     }
+  }
+
+  /** A wind chime: one note of a pentatonic scale, long and soft. */
+  private chime(t: number, level: number): void {
+    const ctx = this.ctx;
+    const notes = [72, 74, 76, 79, 81, 84, 86];
+    const f = hz(notes[Math.floor(Math.random() * notes.length)]);
+    for (const [mult, amp] of [[1, 1], [2.76, 0.25], [5.4, 0.08]] as const) {
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.value = f * mult;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, t);
+      g.gain.linearRampToValueAtTime(0.012 * level * amp, t + 0.01);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 3.5);
+      o.connect(g).connect(this.bus);
+      o.start(t);
+      o.stop(t + 3.6);
+    }
+  }
+
+  /** An owl at night: "hoo … hoo-hoo". */
+  private owl(t: number, level: number): void {
+    const ctx = this.ctx;
+    [0, 0.55, 0.8].forEach((d, i) => {
+      const start = t + d;
+      const o = ctx.createOscillator();
+      o.type = 'sine';
+      o.frequency.setValueAtTime(i === 0 ? 420 : 390, start);
+      o.frequency.linearRampToValueAtTime(i === 0 ? 380 : 360, start + 0.3);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, start);
+      g.gain.linearRampToValueAtTime(0.02 * level, start + 0.06);
+      g.gain.exponentialRampToValueAtTime(0.0001, start + (i === 0 ? 0.45 : 0.25));
+      o.connect(g).connect(this.bus);
+      o.start(start);
+      o.stop(start + 0.5);
+    });
   }
 
   /** Seagull: a falling, nasal "kee-ow". */

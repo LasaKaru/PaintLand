@@ -101,6 +101,9 @@ export class AudioEngine {
   private engineFilter!: BiquadFilterNode;
   private windGain!: GainNode;
   private windFilter!: BiquadFilterNode;
+  /** Tyres rolling on the road: a low rumble that rises with speed. */
+  private rollGain!: GainNode;
+  private rollFilter!: BiquadFilterNode;
   private rainGain!: GainNode;
   private musicFilter!: BiquadFilterNode;
   private engineSub!: OscillatorNode;
@@ -249,6 +252,18 @@ export class AudioEngine {
     this.windGain.gain.value = 0;
     wind.connect(this.windFilter).connect(this.windGain).connect(this.sfxBus);
     wind.start();
+
+    const roll = ctx.createBufferSource();
+    roll.buffer = this.noise;
+    roll.loop = true;
+    roll.playbackRate.value = 0.3;
+    this.rollFilter = ctx.createBiquadFilter();
+    this.rollFilter.type = 'lowpass';
+    this.rollFilter.frequency.value = 160;
+    this.rollGain = ctx.createGain();
+    this.rollGain.gain.value = 0;
+    roll.connect(this.rollFilter).connect(this.rollGain).connect(this.sfxBus);
+    roll.start();
 
     const rain = ctx.createBufferSource();
     rain.buffer = this.noise;
@@ -921,9 +936,35 @@ export class AudioEngine {
     }
   }
 
-  footstep(): void {
+  /**
+   * A footstep: walking is a soft scuff, running a heavier heel-and-toe pair.
+   * `soft` for grass and earth (duller), otherwise stone and boards.
+   */
+  footstep(run = false, soft = false): void {
     if (!this.ctx) return;
-    this.noiseHit(this.ctx.currentTime, 'bandpass', 1200 + Math.random() * 400, 0.05, 0.06, this.sfxBus);
+    const t = this.ctx.currentTime;
+    const f = (soft ? 650 : 1200) + Math.random() * 400;
+    const level = run ? 0.085 : 0.05;
+    this.noiseHit(t, 'bandpass', f, level, run ? 0.05 : 0.06, this.sfxBus);
+    this.noiseHit(t, 'lowpass', soft ? 180 : 260, level * (run ? 1.4 : 0.8), 0.07, this.sfxBus);
+    if (run) this.noiseHit(t + 0.045, 'bandpass', f * 1.3, level * 0.6, 0.035, this.sfxBus);
+  }
+
+  /** A quiet moment (0..1): the radio steps back and the calm pad comes in (see Ambience). */
+  calm = 0;
+
+  /** Reaching a checkpoint: a paper "slap" and a bright rising three-note arpeggio. */
+  stamp(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noiseHit(t, 'lowpass', 320, 0.16, 0.12, this.sfxBus);
+    this.noiseHit(t, 'bandpass', 2400, 0.05, 0.05, this.sfxBus);
+    [79, 83, 86, 91].forEach((n, i) => setTimeout(() => this.playNote(n, 0.75), 90 + i * 85));
+  }
+
+  /** Sitting down at a viewpoint: a soft open chord, like a deep breath. */
+  settle(): void {
+    [60, 67, 72, 76, 79].forEach((n, i) => setTimeout(() => this.playNote(n, 0.45), i * 140));
   }
 
   /** Continuous beds, called every frame. */
@@ -943,9 +984,11 @@ export class AudioEngine {
     this.engineFilter.frequency.setTargetAtTime((300 + speed * 12 + (boosting ? 500 : 0)) * ep.bright, t, 0.1);
     const windLevel = this.windVolume * (Math.min(1, speed / 60) * 0.12 + Math.min(1, height / 250) * 0.05);
     this.windGain.gain.setTargetAtTime(windLevel, t, 0.3);
+    this.rollGain.gain.setTargetAtTime(driving ? this.engineVolume * Math.min(1, speed / 35) * 0.07 : 0, t, 0.15);
+    this.rollFilter.frequency.setTargetAtTime(120 + Math.min(speed, 60) * 5, t, 0.2);
     this.windFilter.frequency.setTargetAtTime(300 + speed * 18, t, 0.3);
     this.rainGain.gain.setTargetAtTime(rain * 0.06, t, 0.5);
-    this.musicBus.gain.setTargetAtTime(1, t, 0.3);
+    this.musicBus.gain.setTargetAtTime(1 - this.calm * 0.65, t, 1.2);
     this.noteBus.gain.setTargetAtTime(1, t, 0.3);
     // Music opens up as the ride gets intense; muffled when musicOpen drops (menus, pause).
     this.musicFilter.frequency.setTargetAtTime((1200 + this.intensity * 9000) * this.musicOpen + 250, t, 0.4);

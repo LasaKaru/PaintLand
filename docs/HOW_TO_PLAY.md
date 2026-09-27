@@ -189,6 +189,15 @@ In the photo panel you can:
 
 There are 8 stations of live-generated music plus **Inkroads Studio (109.5)**, which plays recorded tracks.
 
+**The world's sounds** come from where you are:
+- birds by day, owls, frogs and crickets at night
+- the sea and gulls on the coast, traffic hum in town
+- the roar of waterfalls and rivers as you get close
+- wind that gusts on hilltops, at the edge of the world, and when you fly high
+- tyres rumbling as you speed up, and footsteps that are soft on grass, sharper on stone, and heavier when you run
+
+On a viewpoint bench, and at World's End, the radio steps back and a soft pad with wind chimes plays. Turn the ambience up or down in **Settings → Audio**.
+
 ---
 
 ## Playing with friends
