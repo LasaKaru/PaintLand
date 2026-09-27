@@ -541,6 +541,7 @@ export class City implements FreeRoamArea {
       this.merge(gate.build(0.02), gx, 425);
       for (const s of [-1, 1]) this.world.circle(gx + s * 8, 425, 0.9);
     }
+    this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -93, z: 487, r: 4, colour: '#f6f0e4' });
     this.murals.push(...addMuralBoards(this, 'city', this.spawn));
     this.pockets.push(...addPockets(this));
     for (const z of [...zones, ...this.zones.splice(0)]) {

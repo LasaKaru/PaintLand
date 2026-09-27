@@ -352,6 +352,7 @@ export class Hub implements FreeRoamArea {
     this.put(statue, 0, 44);
     this.world.box(0, 44, 1.6, 1.6);
     this.zones.push({ kind: 'trophies', label: '🏆 Trophy hall', x: 0, z: 39, r: 3.5, colour: '#f4d23b' });
+    this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -16, z: 14, r: 4, colour: '#f6f0e4' });
     // The coast road east to Serendib City.
     const sign = new ModelKit()
       .box(0.3, 4, 0.3, '#7a5a3a', { position: [0, 2, 0] })

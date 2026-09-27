@@ -893,5 +893,18 @@ const id: Locale = {
   'hills.kicker': 'Kota keempat',
   'hills.name': 'Bukit Teh',
   'hills.poem': 'Teh di setiap lereng, kereta biru kecil, dan air terjun di antara awan',
+  'zone.launch': '✈ Pesawat kertas',
+  'fly.title': '✈ Pesawat kertas',
+  'fly.intro': 'Terbang menembus cincin emas!',
+  'fly.controls': 'W menukik · S naik · A/D miring · Shift embusan',
+  'fly.hint': 'R kembali ke cincin · E lompat turun',
+  'fly.rings': 'Cincin {n} / {total}',
+  'fly.done': 'Lintasan selesai! Mendarat di tempat empuk.',
+  'fly.course': 'Lintasan cincin selesai!',
+  'fly.best': 'Terbaik',
+  'fly.landed': 'Pendaratan mulus!',
+  'fly.crashed': 'Kusut! Kembali ke cincin.',
+  'fly.splash': 'Byur! Pesawat basah kuyup… kembali ke cincin.',
+  'fly.stall': 'Terlalu pelan! Menukik untuk menambah kecepatan.',
 };
 export default id;

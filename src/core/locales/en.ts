@@ -891,6 +891,19 @@ const en = {
   'hills.kicker': 'Hub four',
   'hills.name': 'Tea Hills',
   'hills.poem': 'Tea on every slope, a little blue train, and a waterfall in the clouds',
+  'zone.launch': '✈ Paper plane',
+  'fly.title': '✈ Paper plane',
+  'fly.intro': 'Fly through the golden rings!',
+  'fly.controls': 'W dive · S climb · A/D bank · Shift gust',
+  'fly.hint': 'R back to the ring · E jump down',
+  'fly.rings': 'Rings {n} / {total}',
+  'fly.done': 'Course complete! Land somewhere soft.',
+  'fly.course': 'Ring course complete!',
+  'fly.best': 'Best',
+  'fly.landed': 'Soft landing!',
+  'fly.crashed': 'Crumpled! Back to the ring.',
+  'fly.splash': 'Splash! A soggy plane… back to the ring.',
+  'fly.stall': 'Too slow! Dive to pick up speed.',
 } as const;
 
 export default en;

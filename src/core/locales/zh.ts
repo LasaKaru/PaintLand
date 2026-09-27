@@ -893,5 +893,18 @@ const zh: Locale = {
   'hills.kicker': '第四座小镇',
   'hills.name': '茶山',
   'hills.poem': '满坡茶园，一列蓝色小火车，云中还有一道瀑布',
+  'zone.launch': '✈ 纸飞机',
+  'fly.title': '✈ 纸飞机',
+  'fly.intro': '穿过金色圆环飞行！',
+  'fly.controls': 'W 俯冲 · S 爬升 · A/D 倾斜 · Shift 阵风',
+  'fly.hint': 'R 回到圆环 · E 跳下',
+  'fly.rings': '圆环 {n} / {total}',
+  'fly.done': '航线完成！找个软的地方降落吧。',
+  'fly.course': '圆环航线完成！',
+  'fly.best': '最佳',
+  'fly.landed': '平稳降落！',
+  'fly.crashed': '揉皱了！回到圆环。',
+  'fly.splash': '扑通！湿透的纸飞机……回到圆环。',
+  'fly.stall': '太慢了！俯冲来加速。',
 };
 export default zh;

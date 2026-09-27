@@ -14,10 +14,10 @@ export const LIMITS = {
   chat: 120,
 };
 
-const MODES = new Set(['drive', 'foot']);
+const MODES = new Set(['drive', 'foot', 'fly']);
 
-/** Free-roam areas by chapter id → half-width in metres (Harbour Town, Serendib City, Lantern Village). */
-export const FREE_ROAM = { hub: 130, city: 660, village: 130 };
+/** Free-roam areas by chapter id → half-width in metres (Harbour Town, Serendib City, Lantern Village, Tea Hills). */
+export const FREE_ROAM = { hub: 130, city: 660, village: 130, hills: 130 };
 
 const finite = (v) => typeof v === 'number' && Number.isFinite(v);
 

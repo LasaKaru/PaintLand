@@ -87,6 +87,8 @@ import { photoUrl, type ContestState } from '../ui/ContestScreen';
 import { DEFAULT_HOME, homeForServer, shownKeepsakes } from '../gameplay/Home';
 import { Hub as HarbourHub } from '../world/Hub';
 import { Hills } from '../world/Hills';
+import { CourseRun, Glider, courseInk, makeCourse, type Airspace, type Course, type GliderEvent } from '../gameplay/Glider';
+import { PLANE_SEAT, buildFlightRing, buildPaperPlane, buildPlaneStand } from '../models/PaperPlane';
 import type { PocketKind } from '../world/Pockets';
 import { DOTS_PER_MESSAGE, TrailBrush, TrailLayer, TrailStore, nearestTrailColour, packDots, type TrailDot } from '../gameplay/PaintTrail';
 
@@ -254,6 +256,14 @@ export class Game {
   private readonly freeMissions = new FreeMissionTracker();
   private readonly beacons: THREE.Mesh[] = [];
   private readonly pickupMaterial = new PaintMaterial({ vertexColors: true, flat: true });
+  /** The paper plane (flight mode): its physics, the ring course in progress, and the meshes. */
+  private readonly glider = new Glider();
+  private flight: { run: CourseRun; from: { x: number; z: number; heading: number } } | null = null;
+  private readonly courses = new Map<string, Course>();
+  private planeMesh: THREE.Mesh | null = null;
+  private planeStand: THREE.Group | null = null;
+  private readonly ringMeshes: THREE.Mesh[] = [];
+  private gliderSpace: Airspace | null = null;
   /** Sim speed in free roam (slow motion during stunt jumps). */
   private timeScale = 1;
   private stuntAir: StuntJump | null = null;
@@ -2562,7 +2572,7 @@ export class Game {
   }
 
   private popAtPawn(text: string, kind: 'good' | 'info' | 'big'): void {
-    const target = this.mode === 'drive' ? this.vehicle.root.position : this.humanModel.root.position;
+    const target = this.flight && this.planeMesh ? this.planeMesh.position : this.mode === 'drive' ? this.vehicle.root.position : this.humanModel.root.position;
     this.popAt(target.clone().addScaledVector(this.frame.up, 3), text, kind);
   }
 
@@ -2880,6 +2890,7 @@ export class Game {
       this.districtEnv = null;
     }
     const id = areaId ?? at?.area ?? this.area?.id ?? 'harbour';
+    this.stopFlight();
     if (this.area && this.area.id !== id) this.area.show(false);
     const area = this.areaFor(id);
     this.area = area;
@@ -2898,6 +2909,7 @@ export class Game {
     if (this.ghostModel) this.ghostModel.root.visible = false;
     area.show(true);
     this.refreshPickups(area);
+    this.placePlaneStand(area);
     this.inHub = true;
     this.state = 'hub';
     this.hud.setPlaying(true);
@@ -2951,6 +2963,8 @@ export class Game {
   private leaveHub(): void {
     if (!this.inHub) return;
     this.inHub = false;
+    this.stopFlight();
+    if (this.planeStand) this.planeStand.visible = false;
     this.endTogether();
     this.area?.show(false);
     this.world.group.visible = true;
@@ -3019,6 +3033,10 @@ export class Game {
     const inp = this.input;
     const area = this.area!;
     this.togetherTick(dt);
+    if (this.flight) {
+      this.flightStep(dt, area);
+      return;
+    }
     // Traffic and people are solid.
     const bodies = area.dynamicBodies();
     for (const b of bodies) area.world.colliders.push({ type: 'circle', x: b.x, z: b.z, r: b.r });
@@ -3157,6 +3175,16 @@ export class Game {
 
   private hubInput(dt: number): void {
     const inp = this.input;
+    if (this.flight) {
+      if (inp.consume('photo')) return this.enterPhoto();
+      if (inp.consume('map')) return this.openMap();
+      // R: back to the launch ring. E: jump down (a paper plane lands anywhere soft).
+      if (inp.consume('respawn')) this.endFlight('reset');
+      else if (inp.consume('interact')) this.endFlight('landed');
+      inp.consume('hop');
+      inp.takeLook(dt);
+      return;
+    }
     if (inp.consume('honk')) this.audio.honk(60);
     if (inp.consume('emote')) this.toggleEmoteWheel();
     if (inp.consume('chat') && this.net.connected && this.options.chat !== 'off') {
@@ -3231,10 +3259,248 @@ export class Game {
     else if (zone.kind === 'trophies') this.openMenu('trophies');
     else if (zone.kind === 'mailbox') this.openMenu('mailbox');
     else if (zone.kind === 'home') this.openMenu('home');
+    else if (zone.kind === 'launch') this.startFlight(zone);
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
       this.openMenu('mural');
     }
+  }
+
+  // ————— the paper plane —————
+
+  /** The ring course over an area (the same every time). */
+  private courseFor(area: FreeRoamArea): Course {
+    let c = this.courses.get(area.id);
+    if (!c) {
+      const b = area.world.bounds;
+      const start = area.zones.find((z) => z.kind === 'launch') ?? area.spawn;
+      c = makeCourse(b, start, area.id.length, area.id === 'city' ? 50 : 22);
+      this.courses.set(area.id, c);
+    }
+    return c;
+  }
+
+  /** What the plane flies over: the area, and the open sea past a quay. */
+  private airspaceFor(area: FreeRoamArea): Airspace {
+    const b = area.world.bounds;
+    const sea = area.seaZ;
+    const maxZ = sea !== undefined ? Math.max(b.maxZ, sea + 80) : b.maxZ;
+    return {
+      bounds: { minX: b.minX, maxX: b.maxX, minZ: b.minZ, maxZ },
+      resolve: (p, r) => area.world.resolve(p, r, maxZ),
+      ground: (_x, z) => (sea !== undefined && z > sea ? { y: -HUB_Y - 0.6, water: true } : { y: 0, water: false }),
+      // Serendib City's towers are much taller than the town houses.
+      roof: area.id === 'city' ? 40 : undefined,
+    };
+  }
+
+  /** The plane waiting on its stand at this area's launch ring. */
+  private placePlaneStand(area: FreeRoamArea): void {
+    const zone = area.zones.find((z) => z.kind === 'launch');
+    if (!this.planeStand) {
+      this.planeStand = new THREE.Group();
+      this.planeStand.add(new THREE.Mesh(buildPlaneStand(), this.pickupMaterial));
+      const parked = new THREE.Mesh(buildPaperPlane(), this.pickupMaterial);
+      parked.position.set(0, 1.45, 0);
+      parked.rotation.x = 0.12;
+      this.planeStand.add(parked);
+      this.scene.add(this.planeStand);
+    }
+    this.planeStand.visible = !!zone;
+    if (!zone) return;
+    // Beside the ring, facing the first ring of the course.
+    const first = this.courseFor(area).rings[0];
+    const heading = Math.atan2(-(first.x - zone.x), -(first.z - zone.z));
+    this.planeStand.position.set(zone.x + Math.cos(heading) * (zone.r + 2), HUB_Y, zone.z - Math.sin(heading) * (zone.r + 2));
+    this.planeStand.rotation.y = heading;
+  }
+
+  /** Climb aboard at a launch ring: a gust throws the plane up toward the first ring. */
+  private startFlight(zone: HubZone): void {
+    const area = this.area;
+    if (!area || this.flight) return;
+    if (this.mode === 'drive' && Math.abs(this.hubCar.v) > 4) {
+      this.popAtPawn(t('prompt.slowDown'), 'info');
+      return;
+    }
+    this.hubCar.v = 0;
+    const course = this.courseFor(area);
+    const first = course.rings[0];
+    const heading = Math.atan2(-(first.x - zone.x), -(first.z - zone.z));
+    this.gliderSpace = this.airspaceFor(area);
+    this.glider.launch(zone.x, area.id === 'city' ? 55 : 28, zone.z, heading);
+    this.flight = { run: new CourseRun(course), from: { x: zone.x, z: zone.z, heading } };
+    if (!this.planeMesh) {
+      this.planeMesh = new THREE.Mesh(buildPaperPlane(), this.pickupMaterial);
+      this.scene.add(this.planeMesh);
+    }
+    this.planeMesh.visible = true;
+    const h = this.profile.data.look.height ?? 1;
+    this.humanModel.root.removeFromParent();
+    unseatRider(this.humanModel, h);
+    this.planeMesh.add(this.humanModel.root);
+    this.humanModel.root.position.copy(PLANE_SEAT);
+    this.hidePet();
+    this.showRings(course);
+    if (this.planeStand) this.planeStand.visible = false;
+    this.hubCam.snap = true;
+    this.splash = 0.8;
+    this.audio.whoosh();
+    this.freeMissions.cancel();
+    this.hud.lootCard(t('fly.title'), '#f6f0e4', t('fly.intro'), t('fly.controls'));
+    if (this.profile.markSeen('flown')) this.checkTrophies();
+  }
+
+  private showRings(course: Course | null): void {
+    const n = course?.rings.length ?? 0;
+    while (this.ringMeshes.length < n) {
+      const m = new THREE.Mesh(buildFlightRing('#f4d23b', 5.5), this.pickupMaterial);
+      this.scene.add(m);
+      this.ringMeshes.push(m);
+    }
+    this.ringMeshes.forEach((m, i) => {
+      const ring = course?.rings[i];
+      m.visible = !!ring;
+      if (!ring) return;
+      m.position.set(ring.x, HUB_Y + ring.y, ring.z);
+      m.rotation.set(0, ring.heading, 0);
+      m.scale.setScalar(ring.r / 5.5);
+    });
+  }
+
+  /** Stop flying without landing anywhere (leaving the area, a menu). */
+  private stopFlight(): void {
+    if (!this.flight) return;
+    this.flight = null;
+    this.glider.flying = false;
+    if (this.planeMesh) this.planeMesh.visible = false;
+    this.showRings(null);
+    this.hud.objective(null);
+    this.hud.compass(null);
+    this.humanModel.root.removeFromParent();
+    this.scene.add(this.humanModel.root);
+  }
+
+  /** Down again: on your feet where you landed, or back at the launch ring. */
+  private endFlight(how: GliderEvent | 'reset'): void {
+    const f = this.flight;
+    const area = this.area;
+    if (!f || !area) return;
+    const g = this.glider;
+    this.stopFlight();
+    this.mode = 'foot';
+    const spot = { x: g.x, z: g.z };
+    const safe = how === 'landed' && !area.world.resolve({ ...spot }, 0.6, area.world.bounds.maxZ) && this.gliderSpace?.ground(g.x, g.z).water !== true;
+    if (safe) this.hubWalker.place(spot.x, spot.z, g.heading);
+    else this.hubWalker.place(f.from.x, f.from.z, f.from.heading);
+    this.hubCam.yaw = safe ? g.heading : f.from.heading;
+    this.hubCam.snap = true;
+    this.seatHuman();
+    this.updateHeadVisibility();
+    this.placePlaneStand(area);
+    if (how === 'landed') {
+      this.audio.chime(67);
+      this.popAtPawn(t('fly.landed'), 'good');
+      if (g.airTime > 5) this.profile.addStat('landings');
+    } else if (how === 'crashed' || how === 'splash') {
+      this.audio.bump();
+      this.splash = 1;
+      this.popAtPawn(t(how === 'splash' ? 'fly.splash' : 'fly.crashed'), 'info');
+    }
+    this.checkTrophies();
+  }
+
+  private flightStep(dt: number, area: FreeRoamArea): void {
+    const f = this.flight!;
+    const g = this.glider;
+    const inp = this.input;
+    const move = inp.moveAxes();
+    const space = (this.gliderSpace ??= this.airspaceFor(area));
+    const events = g.step(dt, { pitch: move.y, roll: move.x, gust: inp.held('boost') || inp.held('sprint') }, space, f.run.course.thermals);
+    this.profile.addStat('flown', g.speed * dt);
+    for (const e of events) {
+      if (e === 'bump') {
+        this.audio.bump();
+        this.splash = Math.max(this.splash, 0.4);
+      } else if (e === 'stall') this.popAtPawn(t('fly.stall'), 'info');
+    }
+    for (const e of f.run.update(dt, g)) {
+      if (e.kind === 'ring') {
+        this.audio.chime(60 + e.index * 2);
+        this.splash = Math.max(this.splash, 0.3);
+        const m = this.ringMeshes[e.index];
+        if (m) m.visible = false;
+      } else this.finishCourse(area, e.time);
+    }
+    // Skim low over a golden pot to pick it up.
+    if (g.altitude(space) < 4) this.checkPickups(area, g.x, g.z);
+    this.discoverTimer -= dt;
+    if (this.discoverTimer <= 0) {
+      this.discoverTimer = 0.5;
+      this.discover(area, g.x, g.z);
+    }
+    this.trackStats(dt);
+    const down = events.find((e) => e === 'landed' || e === 'crashed' || e === 'splash');
+    if (down) this.endFlight(down);
+  }
+
+  private finishCourse(area: FreeRoamArea, time: number): void {
+    const bests = (this.profile.data.flightBest ??= {});
+    const prev = bests[area.id];
+    const first = prev === undefined;
+    const best = first || time < prev;
+    if (best) bests[area.id] = Math.round(time * 100) / 100;
+    const ink = courseInk(first, best && !first);
+    this.profile.earn(ink);
+    this.profile.addStat('courses');
+    this.profile.save();
+    this.audio.fanfare();
+    this.hud.lootCard(t('fly.course'), '#f4d23b', `${time.toFixed(1)} s${best && !first ? ` · ${t('fly.best')}` : ''}`, `+${ink} ink`);
+    this.checkTrophies();
+  }
+
+  /** The plane in the air and the chase camera behind it; returns the focus point. */
+  private renderPlane(dt: number, alpha: number, desired: THREE.Vector3, look: THREE.Vector3): THREE.Vector3 {
+    const p = this.glider.lerp(alpha);
+    const m = this.planeMesh!;
+    m.position.set(p.x, HUB_Y + p.y, p.z);
+    m.rotation.set(p.pitch, p.heading, -p.roll, 'YXZ');
+    this.humanModel.animate(dt, 'ride', 0, this.time);
+    const fwd = _v4.set(-Math.sin(p.heading), 0, -Math.cos(p.heading));
+    const back = 9 * this.rig.zoom;
+    desired.copy(m.position).addScaledVector(fwd, -back).add(_v5.set(0, 2.6 * this.rig.zoom - Math.sin(p.pitch) * back, 0));
+    look.copy(m.position).addScaledVector(fwd, 10).add(_v5.set(0, 1 + Math.sin(p.pitch) * 10, 0));
+    this.hubCam.yaw = p.heading;
+    // The ring you need next bobs gently.
+    const next = this.flight?.run.next ?? 0;
+    const ring = this.ringMeshes[next];
+    if (ring?.visible) ring.rotation.z = Math.sin(this.time * 2) * 0.15;
+    // Streaks of wind off the wingtips at speed.
+    if (this.glider.speed > 24 || this.glider.gusting) {
+      const side = _v6.set(Math.cos(p.heading), 0, -Math.sin(p.heading));
+      for (const s of [-1, 1]) this.particles.emit('spark', _v5.copy(m.position).addScaledVector(side, s * 2.6).addScaledVector(fwd, 2), STILL, 12 * dt, 0.3);
+    }
+    return m.position;
+  }
+
+  /** Rings to go, the clock, height, and the compass to the next ring. */
+  private updateFlightHud(cam: THREE.PerspectiveCamera): void {
+    const f = this.flight!;
+    const g = this.glider;
+    const rings = f.run.course.rings;
+    const alt = Math.max(0, Math.round(g.altitude(this.gliderSpace ?? this.airspaceFor(this.area!))));
+    const best = this.profile.data.flightBest?.[this.area!.id];
+    const extra = [f.run.running ? `⏱ ${f.run.time.toFixed(1)} s` : '', best !== undefined ? `${t('fly.best')} ${best.toFixed(1)} s` : '', `⬆ ${alt} m`, t('fly.hint')].filter(Boolean).join(' · ');
+    this.hud.objective(t('fly.title'), f.run.finished ? t('fly.done') : t('fly.rings', { n: f.run.next, total: rings.length }), extra);
+    for (const b of this.beacons) b.visible = false;
+    const ring = rings[f.run.next];
+    if (!ring) {
+      this.hud.compass(null);
+      return;
+    }
+    const dir = cam.getWorldDirection(_v);
+    const bearing = Math.atan2(ring.x - g.x, -(ring.z - g.z)) - Math.atan2(dir.x, -dir.z);
+    this.hud.compass((bearing * 180) / Math.PI, Math.hypot(ring.x - g.x, ring.y - g.y, ring.z - g.z));
   }
 
   /** Beacons over mission targets, the compass and the objective card. */
@@ -3299,7 +3565,9 @@ export class Game {
     const fwd = _v.set(-Math.sin(car.heading), 0, -Math.cos(car.heading));
     const desired = _v2;
     const look = _v3;
-    if (this.mode === 'foot') {
+    if (this.flight) {
+      focus = this.renderPlane(dt, alpha, desired, look);
+    } else if (this.mode === 'foot') {
       const w = this.hubWalker.lerp(alpha);
       const hm = this.humanModel;
       hm.root.position.set(w.x, HUB_Y + w.y, w.z);
@@ -3340,7 +3608,7 @@ export class Game {
       desired.x = lens.x;
       desired.z = lens.z;
       desired.y = Math.max(desired.y, HUB_Y + (sea ? this.hubCar.groundAt(lens.z) + 2.4 : 0) + 0.6);
-      const k = this.hubCam.snap ? 1 : 1 - Math.exp(-(this.mode === 'foot' ? 14 : 5) * dt);
+      const k = this.hubCam.snap ? 1 : 1 - Math.exp(-(this.flight ? 7 : this.mode === 'foot' ? 14 : 5) * dt);
       this.hubCam.pos.lerp(desired, k);
       this.hubCam.look.lerp(look, this.hubCam.snap ? 1 : 1 - Math.exp(-10 * dt));
       this.hubCam.snap = false;
@@ -3358,7 +3626,7 @@ export class Game {
     paintShared.uTime.value = this.time;
     skyUniforms.uTime.value = this.time;
     waterUniforms.uTime.value = this.time;
-    const player = this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : { x: this.hubCar.x, z: this.hubCar.z };
+    const player = this.flight ? { x: this.glider.x, z: this.glider.z } : this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : { x: this.hubCar.x, z: this.hubCar.z };
     area.update(dt * this.timeScale, this.time, player, cam);
     this.updateDistricts(area, player.x, player.z, dt);
     this.updateFireworks(dt);
@@ -3383,7 +3651,7 @@ export class Game {
     this.updateHeadlights(vm, cam);
 
     // Zones and prompts.
-    this.hubZone = area.zoneAt(player.x, player.z);
+    this.hubZone = this.flight ? null : area.zoneAt(player.x, player.z);
     const nearCar = this.mode === 'foot' && Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4;
     const boards = this.areaBoards.get(area.id);
     const here = _v6.set(player.x, HUB_Y, player.z);
@@ -3391,8 +3659,9 @@ export class Game {
     this.nearBoard = this.mode === 'foot' && !nearCar && !this.hubZone ? boards?.nearest(here) ?? null : null;
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t('prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
     const boardText = this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
-    this.hud.setPrompt(this.state === 'photo' ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
-    this.updateMissionHud(player.x, player.z, cam);
+    this.hud.setPrompt(this.state === 'photo' || this.flight ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
+    if (this.flight) this.updateFlightHud(cam);
+    else this.updateMissionHud(player.x, player.z, cam);
     this.mapView.setArea(area.mapInfo((id) => this.districtState(area).find((d) => d.district.id === id)?.paint ?? 1));
     this.mapView.showMini(this.options.minimap && this.state === 'hub' && !this.hudHidden);
     const ms = this.mapState(area);
@@ -3406,7 +3675,10 @@ export class Game {
     if (this.net.connected) {
       const foot = this.mode === 'foot';
       const chapter = area.id === 'harbour' ? 'hub' : area.id;
-      const st: PlayerState = foot
+      const g = this.glider;
+      const st: PlayerState = this.flight
+        ? { chapter, mode: 'fly', s: g.z + HUB_S_OFFSET, x: g.x, h: Math.min(78, g.y), yaw: g.heading, v: g.speed }
+        : foot
         ? { chapter, mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? this.emoteName : undefined }
         : { chapter, mode: 'drive', s: this.hubCar.z + HUB_S_OFFSET, x: this.hubCar.x, h: this.hubCar.y, yaw: this.hubCar.heading, v: this.hubCar.v };
       this.net.update(dt, st, this.playerInfo());
@@ -3416,14 +3688,15 @@ export class Game {
     this.hud.update(dt);
     this.hud.setClock(this.env.clockText(), this.env.bandLabel(), this.env.presetId, this.env.auto, this.env.weatherLabel);
     this.hud.setInk(this.profile.data.ink);
-    const kmh = this.mode === 'drive' ? this.hubCar.speedKmh : this.hubWalker.speed * 3.6;
+    const kmh = this.flight ? this.glider.speed * 3.6 : this.mode === 'drive' ? this.hubCar.speedKmh : this.hubWalker.speed * 3.6;
     const title = area.title();
-    this.hud.setSpeed(displaySpeed(kmh, this.options.units), this.hubCar.boostMeter, this.hubCar.boosting || this.hubCar.burst > 0, title.name, 0, 'down is down', this.mode === 'foot', this.options.units === 'mph' ? 'mph' : 'km/h');
+    const gusting = this.flight ? this.glider.gusting : this.hubCar.boosting || this.hubCar.burst > 0;
+    this.hud.setSpeed(displaySpeed(kmh, this.options.units), this.flight ? this.glider.gust : this.hubCar.boostMeter, gusting, title.name, 0, 'down is down', this.mode === 'foot' && !this.flight, this.options.units === 'mph' ? 'mph' : 'km/h');
     const st = this.audio.station;
     this.hud.setRadio(st.freq, st.name, this.audio.trackLabel, this.audio.trackProgress, this.audio.radioOn);
-    this.audio.update(this.mode === 'drive' ? Math.abs(this.hubCar.v) : this.hubWalker.speed, this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' && this.state !== 'paused', this.env.rain, focus.y);
+    this.audio.update(this.flight ? this.glider.speed : this.mode === 'drive' ? Math.abs(this.hubCar.v) : this.hubWalker.speed, gusting, this.mode === 'drive' && !this.flight && this.state !== 'paused', this.env.rain, focus.y);
     this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...area.ambienceAt(player.x, player.z) });
-    this.audioFrame(this.mode === 'drive' && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
+    this.audioFrame(this.mode === 'drive' && !this.flight && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);
     this.borderPulse = Math.max(0, this.borderPulse - dt * 0.8);
@@ -3683,11 +3956,13 @@ export class Game {
       const snap = peer.info && this.net.sample(peer);
       if (snap && snap.chapter === (area.id === 'harbour' ? 'hub' : area.id)) markers.push({ kind: 'peer', x: snap.x, z: snap.s - HUB_S_OFFSET, label: peer.info?.name });
     }
-    const p = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+    const ring = this.flight?.run.course.rings[this.flight.run.next];
+    if (ring) markers.push({ kind: 'mission', x: ring.x, z: ring.z });
+    const p = this.flight ? this.glider : this.mode === 'foot' ? this.hubWalker : this.hubCar;
     const found = area.secrets.filter((s) => seen.includes(`secret:${s.id}`)).length;
     const places = area.places.filter((q) => seen.includes(`place:${area.id}:${q.id}`)).length;
     return {
-      player: { x: p.x, z: p.z, heading: this.mode === 'foot' ? this.hubCam.yaw : this.hubCar.heading },
+      player: { x: p.x, z: p.z, heading: this.flight ? this.glider.heading : this.mode === 'foot' ? this.hubCam.yaw : this.hubCar.heading },
       markers,
       districts: this.districtState(area).map((d) => ({ name: d.district.name, colour: d.district.colour, paint: d.paint, done: d.done, need: d.need })),
       title: area.title().name,
@@ -4113,6 +4388,7 @@ const _v3 = new THREE.Vector3();
 const _v4 = new THREE.Vector3();
 const _v5 = new THREE.Vector3();
 const _v6 = new THREE.Vector3();
+const STILL = new THREE.Vector3();
 const _y = new THREE.Vector3(0, 1, 0);
 
 function escapeHtml(s: string): string {

@@ -893,5 +893,18 @@ const fr: Locale = {
   'hills.kicker': 'Quatrième village',
   'hills.name': 'Collines du Thé',
   'hills.poem': 'Du thé sur chaque pente, un petit train bleu et une cascade dans les nuages',
+  'zone.launch': '✈ Avion en papier',
+  'fly.title': '✈ Avion en papier',
+  'fly.intro': 'Vole à travers les anneaux dorés !',
+  'fly.controls': 'W piquer · S monter · A/D virer · Shift rafale',
+  'fly.hint': 'R retour à l’anneau · E sauter en bas',
+  'fly.rings': 'Anneaux {n} / {total}',
+  'fly.done': 'Parcours terminé ! Pose-toi en douceur.',
+  'fly.course': 'Parcours d’anneaux terminé !',
+  'fly.best': 'Record',
+  'fly.landed': 'Atterrissage en douceur !',
+  'fly.crashed': 'Froissé ! Retour à l’anneau.',
+  'fly.splash': 'Plouf ! Un avion trempé… retour à l’anneau.',
+  'fly.stall': 'Trop lent ! Pique pour prendre de la vitesse.',
 };
 export default fr;

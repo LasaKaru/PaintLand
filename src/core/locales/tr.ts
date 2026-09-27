@@ -893,5 +893,18 @@ const tr: Locale = {
   'hills.kicker': 'Dördüncü kasaba',
   'hills.name': 'Çay Tepeleri',
   'hills.poem': 'Her yamaçta çay, küçük mavi bir tren ve bulutların arasında bir şelale',
+  'zone.launch': '✈ Kâğıt uçak',
+  'fly.title': '✈ Kâğıt uçak',
+  'fly.intro': 'Altın halkaların içinden uç!',
+  'fly.controls': 'W dal · S tırman · A/D yatır · Shift esinti',
+  'fly.hint': 'R halkaya dön · E aşağı atla',
+  'fly.rings': 'Halkalar {n} / {total}',
+  'fly.done': 'Parkur bitti! Yumuşak bir yere in.',
+  'fly.course': 'Halka parkuru bitti!',
+  'fly.best': 'En iyi',
+  'fly.landed': 'Yumuşak iniş!',
+  'fly.crashed': 'Buruştu! Halkaya dönüş.',
+  'fly.splash': 'Şap! Islak bir uçak… halkaya dönüş.',
+  'fly.stall': 'Çok yavaş! Hız için dalışa geç.',
 };
 export default tr;

@@ -893,5 +893,18 @@ const bn: Locale = {
   'hills.kicker': 'চতুর্থ শহর',
   'hills.name': 'চা পাহাড়',
   'hills.poem': 'প্রতিটি ঢালে চা, ছোট্ট নীল ট্রেন, আর মেঘের মাঝে ঝরনা',
+  'zone.launch': '✈ কাগজের বিমান',
+  'fly.title': '✈ কাগজের বিমান',
+  'fly.intro': 'সোনালি আংটির ভেতর দিয়ে ওড়ো!',
+  'fly.controls': 'W নিচে · S উপরে · A/D ঘোরো · Shift দমকা',
+  'fly.hint': 'R আংটিতে ফেরো · E নিচে লাফাও',
+  'fly.rings': 'আংটি {n} / {total}',
+  'fly.done': 'পথ শেষ! নরম কোথাও নামো।',
+  'fly.course': 'আংটির পথ শেষ!',
+  'fly.best': 'সেরা',
+  'fly.landed': 'নরম অবতরণ!',
+  'fly.crashed': 'দুমড়ে গেল! আংটিতে ফেরো।',
+  'fly.splash': 'ছপাৎ! ভেজা বিমান… আংটিতে ফেরো।',
+  'fly.stall': 'খুব ধীর! গতি পেতে নিচে নামো।',
 };
 export default bn;

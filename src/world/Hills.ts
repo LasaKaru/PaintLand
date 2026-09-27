@@ -315,6 +315,7 @@ export class Hills implements FreeRoamArea {
     this.put(sign, -106, -9, Math.PI / 2);
     this.world.circle(-106, -9, 0.4);
     this.zones.push({ kind: 'area', label: '⚓ Harbour Town', x: -110, z: 0, r: 6, area: 'harbour', colour: '#2f8f86' });
+    this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -82, z: 4, r: 4, colour: '#f6f0e4' });
 
     this.murals.push(...addMuralBoards(this, 'hills', this.spawn));
     for (const z of this.zones) {

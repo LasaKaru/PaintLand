@@ -893,5 +893,18 @@ const es: Locale = {
   'hills.kicker': 'Cuarto pueblo',
   'hills.name': 'Colinas del Té',
   'hills.poem': 'Té en cada ladera, un trenecito azul y una cascada entre las nubes',
+  'zone.launch': '✈ Avión de papel',
+  'fly.title': '✈ Avión de papel',
+  'fly.intro': '¡Vuela a través de los aros dorados!',
+  'fly.controls': 'W bajar · S subir · A/D inclinar · Shift ráfaga',
+  'fly.hint': 'R volver al aro · E saltar abajo',
+  'fly.rings': 'Aros {n} / {total}',
+  'fly.done': '¡Recorrido completo! Aterriza en algún sitio blando.',
+  'fly.course': '¡Recorrido de aros completo!',
+  'fly.best': 'Mejor',
+  'fly.landed': '¡Aterrizaje suave!',
+  'fly.crashed': '¡Arrugado! De vuelta al aro.',
+  'fly.splash': '¡Chof! Un avión empapado… de vuelta al aro.',
+  'fly.stall': '¡Demasiado lento! Pica para ganar velocidad.',
 };
 export default es;

@@ -304,6 +304,7 @@ export class Village implements FreeRoamArea {
     this.put(sign, -104, -9, Math.PI / 2);
     this.world.circle(-104, -9, 0.4);
     this.zones.push({ kind: 'area', label: '⚓ Harbour Town', x: -108, z: 0, r: 6, area: 'harbour', colour: '#2f8f86' });
+    this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -60, z: 4, r: 4, colour: '#f6f0e4' });
 
     this.murals.push(...addMuralBoards(this, 'village', this.spawn));
     this.pockets.push(...addPockets(this));

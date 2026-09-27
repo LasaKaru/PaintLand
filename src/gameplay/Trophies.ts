@@ -140,6 +140,11 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'pots-10', name: 'Pot Breaker', text: 'Break 10 pots blindfolded in the New Year pot game.', icon: '🏺', reward: 150, progress: stat('pots', 10) },
   { id: 'story-1', name: 'A Splash of Colour', text: 'Bring home the first lost colour in story mode.', icon: '🎨', reward: 100, progress: (p) => [Math.min(1, p.data.story?.found.length ?? 0), 1] },
   { id: 'story-8', name: 'The Lost Palette', text: 'Bring all eight lost colours home to Varna.', icon: '📖', reward: 1000, progress: (p) => [Math.min(8, p.data.story?.found.length ?? 0), 8] },
+  { id: 'paper-plane', name: 'Paper Pilot', text: 'Fly a paper plane from a launch ring in any town.', icon: '✈', reward: 60, progress: seenCount('flown', 1) },
+  { id: 'ring-course', name: 'Through the Rings', text: 'Fly a whole ring course without landing.', icon: '⭕', reward: 150, progress: stat('courses', 1) },
+  { id: 'ring-courses-10', name: 'Sky Painter', text: 'Finish 10 ring courses.', icon: '🌤', reward: 300, progress: stat('courses', 10) },
+  { id: 'soft-landings', name: 'Feather Touch', text: 'Make 10 gentle landings with the paper plane.', icon: '🪶', reward: 120, progress: stat('landings', 10) },
+  { id: 'flown-10k', name: 'Long Glide', text: 'Fly 10 km in paper planes.', icon: '🛫', reward: 200, progress: stat('flown', 10000) },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

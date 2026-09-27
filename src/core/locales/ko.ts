@@ -893,5 +893,18 @@ const ko: Locale = {
   'hills.kicker': '네 번째 마을',
   'hills.name': '차 언덕',
   'hills.poem': '비탈마다 차밭, 작은 파란 기차, 구름 속 폭포',
+  'zone.launch': '✈ 종이비행기',
+  'fly.title': '✈ 종이비행기',
+  'fly.intro': '금빛 고리 사이로 날아 보세요!',
+  'fly.controls': 'W 하강 · S 상승 · A/D 기울기 · Shift 돌풍',
+  'fly.hint': 'R 고리로 돌아가기 · E 뛰어내리기',
+  'fly.rings': '고리 {n} / {total}',
+  'fly.done': '코스 완주! 푹신한 곳에 착륙하세요.',
+  'fly.course': '고리 코스 완주!',
+  'fly.best': '최고',
+  'fly.landed': '부드러운 착륙!',
+  'fly.crashed': '구겨졌어요! 고리로 돌아갑니다.',
+  'fly.splash': '첨벙! 흠뻑 젖은 비행기… 고리로 돌아갑니다.',
+  'fly.stall': '너무 느려요! 하강해서 속도를 올리세요.',
 };
 export default ko;

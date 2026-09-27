@@ -893,5 +893,18 @@ const nl: Locale = {
   'hills.kicker': 'Vierde stadje',
   'hills.name': 'Theeheuvels',
   'hills.poem': 'Thee op elke helling, een blauw treintje en een waterval in de wolken',
+  'zone.launch': '✈ Papieren vliegtuig',
+  'fly.title': '✈ Papieren vliegtuig',
+  'fly.intro': 'Vlieg door de gouden ringen!',
+  'fly.controls': 'W duiken · S klimmen · A/D kantelen · Shift windvlaag',
+  'fly.hint': 'R terug naar de ring · E naar beneden springen',
+  'fly.rings': 'Ringen {n} / {total}',
+  'fly.done': 'Parcours klaar! Land ergens zacht.',
+  'fly.course': 'Ringparcours klaar!',
+  'fly.best': 'Record',
+  'fly.landed': 'Zachte landing!',
+  'fly.crashed': 'Verfrommeld! Terug naar de ring.',
+  'fly.splash': 'Plons! Een doorweekt vliegtuig… terug naar de ring.',
+  'fly.stall': 'Te traag! Duik om vaart te maken.',
 };
 export default nl;

@@ -893,5 +893,18 @@ const de: Locale = {
   'hills.kicker': 'Viertes Städtchen',
   'hills.name': 'Teehügel',
   'hills.poem': 'Tee an jedem Hang, ein kleiner blauer Zug und ein Wasserfall in den Wolken',
+  'zone.launch': '✈ Papierflieger',
+  'fly.title': '✈ Papierflieger',
+  'fly.intro': 'Flieg durch die goldenen Ringe!',
+  'fly.controls': 'W sinken · S steigen · A/D neigen · Shift Böe',
+  'fly.hint': 'R zurück zum Ring · E abspringen',
+  'fly.rings': 'Ringe {n} / {total}',
+  'fly.done': 'Strecke geschafft! Lande irgendwo weich.',
+  'fly.course': 'Ringstrecke geschafft!',
+  'fly.best': 'Bestzeit',
+  'fly.landed': 'Sanfte Landung!',
+  'fly.crashed': 'Zerknittert! Zurück zum Ring.',
+  'fly.splash': 'Platsch! Ein nasser Flieger … zurück zum Ring.',
+  'fly.stall': 'Zu langsam! Tauch ab, um Tempo zu holen.',
 };
 export default de;

@@ -893,5 +893,18 @@ const pl: Locale = {
   'hills.kicker': 'Czwarte miasteczko',
   'hills.name': 'Herbaciane Wzgórza',
   'hills.poem': 'Herbata na każdym zboczu, mały niebieski pociąg i wodospad w chmurach',
+  'zone.launch': '✈ Papierowy samolot',
+  'fly.title': '✈ Papierowy samolot',
+  'fly.intro': 'Leć przez złote obręcze!',
+  'fly.controls': 'W nurkuj · S wznoś · A/D przechyl · Shift podmuch',
+  'fly.hint': 'R wróć do obręczy · E zeskocz',
+  'fly.rings': 'Obręcze {n} / {total}',
+  'fly.done': 'Trasa ukończona! Wyląduj gdzieś miękko.',
+  'fly.course': 'Trasa obręczy ukończona!',
+  'fly.best': 'Rekord',
+  'fly.landed': 'Miękkie lądowanie!',
+  'fly.crashed': 'Zgnieciony! Wracasz do obręczy.',
+  'fly.splash': 'Plusk! Przemoczony samolot… wracasz do obręczy.',
+  'fly.stall': 'Za wolno! Zanurkuj, by nabrać prędkości.',
 };
 export default pl;

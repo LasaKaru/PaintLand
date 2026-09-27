@@ -893,5 +893,18 @@ const vi: Locale = {
   'hills.kicker': 'Thị trấn thứ tư',
   'hills.name': 'Đồi Chè',
   'hills.poem': 'Chè phủ mọi sườn đồi, chuyến tàu xanh nhỏ và thác nước giữa mây',
+  'zone.launch': '✈ Máy bay giấy',
+  'fly.title': '✈ Máy bay giấy',
+  'fly.intro': 'Bay qua những vòng vàng!',
+  'fly.controls': 'W chúc xuống · S bay lên · A/D nghiêng · Shift gió',
+  'fly.hint': 'R về vòng · E nhảy xuống',
+  'fly.rings': 'Vòng {n} / {total}',
+  'fly.done': 'Xong đường bay! Hạ cánh chỗ nào êm nhé.',
+  'fly.course': 'Hoàn thành đường vòng!',
+  'fly.best': 'Tốt nhất',
+  'fly.landed': 'Hạ cánh êm!',
+  'fly.crashed': 'Nhàu mất rồi! Về lại vòng.',
+  'fly.splash': 'Tõm! Máy bay ướt sũng… về lại vòng.',
+  'fly.stall': 'Chậm quá! Chúc xuống để lấy tốc độ.',
 };
 export default vi;

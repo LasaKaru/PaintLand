@@ -105,7 +105,7 @@ describe('Multiplayer validation (server and client)', () => {
     expect(validateState(ok, null, 0).ok).toBe(true);
     expect(validateState({ ...ok, v: 500 }, null, 0).ok).toBe(false);
     expect(validateState({ ...ok, x: NaN }, null, 0).ok).toBe(false);
-    expect(validateState({ ...ok, mode: 'fly' }, null, 0).ok).toBe(false);
+    expect(validateState({ ...ok, mode: 'swim' }, null, 0).ok).toBe(false);
     expect(validateState({ ...ok, h: 1e6 }, null, 0).ok).toBe(false);
   });
 

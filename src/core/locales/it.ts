@@ -893,5 +893,18 @@ const it: Locale = {
   'hills.kicker': 'Quarto paese',
   'hills.name': 'Colline del Tè',
   'hills.poem': 'Tè su ogni pendio, un trenino blu e una cascata tra le nuvole',
+  'zone.launch': '✈ Aereo di carta',
+  'fly.title': '✈ Aereo di carta',
+  'fly.intro': 'Vola attraverso gli anelli d’oro!',
+  'fly.controls': 'W picchiata · S salita · A/D virata · Shift raffica',
+  'fly.hint': 'R torna all’anello · E salta giù',
+  'fly.rings': 'Anelli {n} / {total}',
+  'fly.done': 'Percorso finito! Atterra su qualcosa di morbido.',
+  'fly.course': 'Percorso degli anelli finito!',
+  'fly.best': 'Record',
+  'fly.landed': 'Atterraggio morbido!',
+  'fly.crashed': 'Accartocciato! Torna all’anello.',
+  'fly.splash': 'Splash! Un aereo fradicio… torna all’anello.',
+  'fly.stall': 'Troppo lento! Scendi in picchiata per prendere velocità.',
 };
 export default it;

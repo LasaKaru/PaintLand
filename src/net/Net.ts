@@ -25,7 +25,7 @@ export interface PlayerInfo {
 
 export interface PlayerState {
   chapter: string;
-  mode: 'drive' | 'foot';
+  mode: 'drive' | 'foot' | 'fly';
   s: number;
   x: number;
   h: number;

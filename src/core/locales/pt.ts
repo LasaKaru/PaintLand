@@ -893,5 +893,18 @@ const pt: Locale = {
   'hills.kicker': 'Quarta vila',
   'hills.name': 'Colinas do Chá',
   'hills.poem': 'Chá em cada encosta, um comboio azul pequenino e uma cascata nas nuvens',
+  'zone.launch': '✈ Avião de papel',
+  'fly.title': '✈ Avião de papel',
+  'fly.intro': 'Voe pelos anéis dourados!',
+  'fly.controls': 'W descer · S subir · A/D inclinar · Shift rajada',
+  'fly.hint': 'R voltar ao anel · E saltar',
+  'fly.rings': 'Anéis {n} / {total}',
+  'fly.done': 'Percurso completo! Pouse num lugar macio.',
+  'fly.course': 'Percurso de anéis completo!',
+  'fly.best': 'Melhor',
+  'fly.landed': 'Pouso suave!',
+  'fly.crashed': 'Amassado! De volta ao anel.',
+  'fly.splash': 'Tchibum! Um avião encharcado… de volta ao anel.',
+  'fly.stall': 'Devagar demais! Mergulhe para ganhar velocidade.',
 };
 export default pt;

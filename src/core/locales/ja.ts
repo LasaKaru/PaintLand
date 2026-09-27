@@ -893,5 +893,18 @@ const ja: Locale = {
   'hills.kicker': '4つめの町',
   'hills.name': 'ティーヒルズ',
   'hills.poem': 'どの斜面にも茶畑、青い小さな汽車、雲の中の滝',
+  'zone.launch': '✈ 紙飛行機',
+  'fly.title': '✈ 紙飛行機',
+  'fly.intro': '金色のリングをくぐって飛ぼう！',
+  'fly.controls': 'W 降下 · S 上昇 · A/D 旋回 · Shift 突風',
+  'fly.hint': 'R リングに戻る · E 飛び降りる',
+  'fly.rings': 'リング {n} / {total}',
+  'fly.done': 'コース完走！やわらかい所に着地しよう。',
+  'fly.course': 'リングコース完走！',
+  'fly.best': 'ベスト',
+  'fly.landed': 'ふんわり着地！',
+  'fly.crashed': 'くしゃくしゃ！リングに戻ります。',
+  'fly.splash': 'ばしゃん！びしょぬれの飛行機…リングに戻ります。',
+  'fly.stall': '遅すぎ！降下してスピードを上げよう。',
 };
 export default ja;

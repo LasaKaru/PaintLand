@@ -206,6 +206,8 @@ export interface ProfileData {
   home?: import('./Home').HomeLayout;
   /** Vesak lanterns you made (they hang from your home). */
   lanterns?: import('../ui/FestivalGames').LanternDesign[];
+  /** Best paper-plane ring course time (seconds) per free-roam area. */
+  flightBest?: Record<string, number>;
   /** Story mode, The Lost Palette. */
   story?: import('./Story').StoryState;
   /** Saved outfit sets. */

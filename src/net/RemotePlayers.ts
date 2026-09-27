@@ -5,6 +5,8 @@ import { createFrame } from '../road/RoadPath';
 import { HumanModel, isEmote } from '../models/Human';
 import { Pet, isPet } from '../models/Pets';
 import { VehicleModel, vehicleById } from '../models/Vehicles';
+import { PLANE_SEAT, buildPaperPlane } from '../models/PaperPlane';
+import { PaintMaterial } from '../render/PaintMaterial';
 import type { NetClient, RemotePeer } from './Net';
 
 /** Hub states: s = z + HUB_S_OFFSET (keeps s positive across Serendib City), x = x, h = height above the hub ground, yaw = heading. */
@@ -15,8 +17,10 @@ interface Avatar {
   vehicle: VehicleModel;
   human: HumanModel;
   pet: Pet | null;
+  /** Their paper plane (made the first time they fly). */
+  plane: THREE.Mesh | null;
   label: HTMLDivElement;
-  mode: 'drive' | 'foot' | '';
+  mode: 'drive' | 'foot' | 'fly' | '';
 }
 
 /**
@@ -47,7 +51,7 @@ export class RemotePlayers {
       seen.add(peer.id);
       const av = this.ensure(peer);
       if (av.mode !== snap.mode) this.seat(av, snap.mode);
-      const target = snap.mode === 'drive' ? av.vehicle.root : av.human.root;
+      const target = snap.mode === 'drive' ? av.vehicle.root : snap.mode === 'fly' && av.plane ? av.plane : av.human.root;
       const f = this.frame;
       if (hubY !== undefined) {
         f.up.set(0, 1, 0);
@@ -62,6 +66,8 @@ export class RemotePlayers {
       if (snap.mode === 'drive') {
         av.vehicle.roll(snap.v * dt);
         av.human.animate(dt, av.vehicle.def.seatPose, 0, time);
+      } else if (snap.mode === 'fly') {
+        av.human.animate(dt, 'ride', 0, time);
       } else {
         av.human.animate(dt, snap.v > 5 ? 'run' : snap.v > 0.4 ? 'walk' : isEmote(snap.pose) ? snap.pose : 'idle', snap.v, time);
       }
@@ -71,7 +77,7 @@ export class RemotePlayers {
         else av.pet.reset();
       }
       // Name tag above the head.
-      const head = target.position.clone().addScaledVector(f.up, snap.mode === 'drive' ? 3.4 : 2.3).project(camera);
+      const head = target.position.clone().addScaledVector(f.up, snap.mode === 'foot' ? 2.3 : 3.4).project(camera);
       const onScreen = head.z < 1 && Math.abs(head.x) < 1.1 && Math.abs(head.y) < 1.1;
       av.label.style.display = onScreen ? 'block' : 'none';
       if (onScreen) {
@@ -86,6 +92,7 @@ export class RemotePlayers {
       if (seen.has(id)) continue;
       av.vehicle.root.removeFromParent();
       av.human.root.removeFromParent();
+      av.plane?.removeFromParent();
       av.pet?.root.removeFromParent();
       av.label.remove();
       this.avatars.delete(id);
@@ -100,6 +107,7 @@ export class RemotePlayers {
     if (av) {
       av.vehicle.root.removeFromParent();
       av.human.root.removeFromParent();
+      av.plane?.removeFromParent();
       av.pet?.root.removeFromParent();
       av.label.remove();
     }
@@ -111,15 +119,27 @@ export class RemotePlayers {
     label.className = 'name-tag';
     this.labels.appendChild(label);
     this.scene.add(vehicle.root);
-    av = { key, vehicle, human, pet, label, mode: '' };
+    av = { key, vehicle, human, pet, plane: null, label, mode: '' };
     this.avatars.set(peer.id, av);
     return av;
   }
 
-  private seat(av: Avatar, mode: 'drive' | 'foot'): void {
+  private seat(av: Avatar, mode: 'drive' | 'foot' | 'fly'): void {
     av.human.root.removeFromParent();
+    if (av.plane) av.plane.visible = mode === 'fly';
     if (mode === 'drive') seatRider(av.vehicle, av.human, av.human.look.height ?? 1);
-    else {
+    else if (mode === 'fly') {
+      if (!av.plane) {
+        planeGeometry ??= buildPaperPlane();
+        planeMaterial ??= new PaintMaterial({ vertexColors: true, flat: true });
+        av.plane = new THREE.Mesh(planeGeometry, planeMaterial);
+        this.scene.add(av.plane);
+      }
+      av.plane.visible = true;
+      av.plane.add(av.human.root);
+      unseatRider(av.human, av.human.look.height ?? 1);
+      av.human.root.position.copy(PLANE_SEAT);
+    } else {
       this.scene.add(av.human.root);
       unseatRider(av.human, av.human.look.height ?? 1);
     }
@@ -130,6 +150,7 @@ export class RemotePlayers {
     for (const av of this.avatars.values()) {
       av.vehicle.root.removeFromParent();
       av.human.root.removeFromParent();
+      av.plane?.removeFromParent();
       av.pet?.root.removeFromParent();
       av.label.remove();
     }
@@ -142,6 +163,8 @@ export class RemotePlayers {
 }
 
 const _y = new THREE.Vector3(0, 1, 0);
+let planeGeometry: THREE.BufferGeometry | null = null;
+let planeMaterial: PaintMaterial | null = null;
 
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);

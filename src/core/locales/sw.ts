@@ -893,5 +893,18 @@ const sw: Locale = {
   'hills.kicker': 'Mji wa nne',
   'hills.name': 'Milima ya Chai',
   'hills.poem': 'Chai kila mteremko, treni ndogo ya bluu, na maporomoko mawinguni',
+  'zone.launch': '✈ Ndege ya karatasi',
+  'fly.title': '✈ Ndege ya karatasi',
+  'fly.intro': 'Ruka kupitia pete za dhahabu!',
+  'fly.controls': 'W shuka · S panda · A/D inama · Shift upepo',
+  'fly.hint': 'R rudi kwenye pete · E ruka chini',
+  'fly.rings': 'Pete {n} / {total}',
+  'fly.done': 'Njia imekamilika! Tua mahali laini.',
+  'fly.course': 'Njia ya pete imekamilika!',
+  'fly.best': 'Bora',
+  'fly.landed': 'Kutua kwa upole!',
+  'fly.crashed': 'Imekunjamana! Rudi kwenye pete.',
+  'fly.splash': 'Chubwi! Ndege iliyolowa… rudi kwenye pete.',
+  'fly.stall': 'Polepole mno! Shuka ili upate kasi.',
 };
 export default sw;

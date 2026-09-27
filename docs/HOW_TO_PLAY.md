@@ -75,6 +75,7 @@ There are four free-roam towns: **Harbour Town**, **Lantern Village**, **Serendi
 - 📬 **Mailbox:** postcards from friends (in Harbour Town, by your house)
 - 🏡 **My home:** your house in Harbour Town: colours, keepsakes, trophy shelf, pinned postcards
 - 🎨 **Paint a mural:** paint on the mural walls
+- ✈ **Paper plane:** climb aboard and fly (see below)
 - **→ Chapter name:** a painted gate that takes you into that chapter
 
 | Key | What it does |
@@ -82,6 +83,29 @@ There are four free-roam towns: **Harbour Town**, **Lantern Village**, **Serendi
 | **M** | Paper map. Click a place you've discovered to travel there |
 
 Grey districts in Serendib City are still **sketches**. Paint them back to colour by finding secrets, stunt jumps, chests and missions. Golden paint pots and **20 hidden pockets** (little scenes off the map) are tucked into corners.
+
+---
+
+## Paper-plane flight
+
+Every town has a ✈ **Paper plane** ring with a big paper plane on a wooden stand. Stand (or park) in the ring and press **E**: a gust throws you up into the sky.
+
+The plane has **no engine**. Dive to gain speed and pull up to trade speed for height. If you pull up too long it **stalls** and the nose drops.
+
+| Key | What it does |
+|---|---|
+| **W** / **↑** | Nose down (dive, gain speed) |
+| **S** / **↓** | Nose up (climb, lose speed) |
+| **A D** / **← →** | Bank left / right to turn |
+| **Shift** | Gust: a push forward while the gust meter lasts (it refills slowly) |
+| **E** | Jump down and land where you are |
+| **R** | Back to the launch ring |
+
+- **Golden rings:** fly through all 10 in order. The clock starts at the first ring, and each town keeps your best time. The compass and minimap point to the next ring.
+- **Thermals:** warm air rises over a few spots along the course and in the middle of town. Circle in one to climb.
+- **Landing:** come down slowly and gently to land on your feet. Hit the ground too fast and the plane crumples, and you go back to the ring. Landing in the sea is a soggy splash.
+- Fly low over a golden paint pot to pick it up.
+- On a **gamepad**, the left stick flies and **X** is the gust. On a **phone**, use the stick, and **BOOST** is the gust.
 
 ---
 
