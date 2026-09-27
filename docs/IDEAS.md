@@ -48,7 +48,7 @@ Grouped by purpose, with a rough size: S = a few days, M = 1–2 weeks, L = a mo
 
 | # | What | Size |
 | --- | --- | --- |
-| C1 ★ | **Steam Workshop** for roads, liveries and murals (upload and subscribe from Steam) | M |
+| C1 ★ ✅ | **Steam Workshop** for roads, liveries and murals (upload and subscribe from Steam) | M |
 | C2 | **Streamer mode**: hide names and chat, and let viewers vote on the weather | S |
 | C3 | **Creator codes and sponsored roads** from real Sri Lankan brands (tea, tourism), clearly labelled | S |
 | C4 | **Clubs 2**: club colours on cars, club convoys and a weekly club cup | M |

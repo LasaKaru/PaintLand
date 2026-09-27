@@ -871,6 +871,22 @@ const en = {
   'story.journal': 'Journal',
   'story.empty': 'No pages yet: finish a lap of a chapter to find its colour.',
   'story.prologue': 'Prologue',
+  'ws.titleScreen': 'Steam Workshop',
+  'ws.off': 'The Steam Workshop needs the Steam version of the game, with Steam running.',
+  'ws.hint': 'Subscribe to roads and liveries on the Steam Workshop and they appear here. You can publish your own share codes too.',
+  'ws.subscribed': 'Your subscribed items',
+  'ws.none': 'Nothing subscribed yet. Browse the Workshop in Steam and subscribe to a road or livery.',
+  'ws.drive': 'Test drive',
+  'ws.wear': 'Wear it',
+  'ws.publish': 'Publish a road or livery',
+  'ws.code': 'Share code (from the Road Studio or the livery painter)',
+  'ws.title': 'Title',
+  'ws.desc': 'Description',
+  'ws.publishButton': 'Publish to the Workshop',
+  'ws.bad': 'That isn’t a road or livery share code.',
+  'ws.worn': 'Livery on! See it in the garage.',
+  'ws.agreement': 'Published. Accept the Steam Workshop agreement in Steam so others can see it.',
+  'ws.published': 'Published to the Steam Workshop!',
 } as const;
 
 export default en;

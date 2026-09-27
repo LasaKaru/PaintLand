@@ -12,7 +12,7 @@
     "icon": "node scripts/make-icon.cjs",
     "dist": "npm run copy-web && electron-builder --win --x64 --publish never",
     "dir": "npm run copy-web && electron-builder --dir --publish never",
-    "test": "node --test test/security.test.cjs"
+    "test": "node --test test/security.test.cjs test/steam.test.cjs"
   },
   "devDependencies": {
     "@electron/fuses": "^2.1.3",

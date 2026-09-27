@@ -47,10 +47,11 @@ import { HomeScreen, type HomeHost } from './HomeScreen';
 import { ContestScreen, type ContestHost } from './ContestScreen';
 import { FestivalGames, type FestivalHost } from './FestivalGames';
 import { STORY_ENDING, STORY_INTRO, STORY_PAGES, nextPage, storyState } from '../gameplay/Story';
+import { WorkshopScreen } from './WorkshopScreen';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'workshop' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHost {
@@ -142,6 +143,7 @@ export class Menu {
   private readonly homeScreen: HomeScreen;
   private readonly contestScreen: ContestScreen;
   private readonly festivalGames: FestivalGames;
+  private readonly workshopScreen: WorkshopScreen;
   /** The same painter, for mural boards in the free-roam areas. */
   private readonly muralEditor = new LiveryEditor(
     (code) => {
@@ -188,6 +190,11 @@ export class Menu {
     this.homeScreen = new HomeScreen(
       host,
       () => (this.screen === 'mailbox' || this.screen === 'home' || this.screen === 'postcard') && this.render(),
+      (m) => this.toast(m),
+    );
+    this.workshopScreen = new WorkshopScreen(
+      host,
+      () => this.screen === 'workshop' && this.render(),
       (m) => this.toast(m),
     );
     this.festivalGames = new FestivalGames(
@@ -245,6 +252,7 @@ export class Menu {
     if (screen === 'pass') this.passScreen.load();
     if (screen === 'mailbox' || screen === 'home' || screen === 'postcard') this.homeScreen.load(screen);
     if (screen === 'contest') this.contestScreen.load();
+    if (screen === 'workshop') this.workshopScreen.load();
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
@@ -279,6 +287,7 @@ export class Menu {
       gallery: () => `<div class="menu-panel wide">${this.header(`🖼 ${t('gal.title')}`)}<div class="panel-body">${this.galleryScreen.render()}</div></div>`,
       pass: () => `<div class="menu-panel wide">${this.header(`🎟 ${t('pass.title')}`)}<div class="panel-body">${this.passScreen.render()}</div></div>`,
       story: () => this.storyScreen(),
+      workshop: () => `<div class="menu-panel">${this.header(`🛠 ${t('ws.titleScreen')}`)}<div class="panel-body">${this.workshopScreen.render()}</div></div>`,
       festival: () => `<div class="menu-panel wide">${this.header(`🏮 ${t('fg.title')}`)}<div class="panel-body" data-id="festival">${this.festivalGames.render()}</div></div>`,
       contest: () => `<div class="menu-panel wide">${this.header(`📸 ${t('pc.title')}`)}<div class="panel-body">${this.contestScreen.render()}</div></div>`,
       mailbox: () => `<div class="menu-panel wide">${this.header(`📬 ${t('mail.title')}`).replace('data-nav="main"', 'data-nav="resume"')}<div class="panel-body">${this.homeScreen.render('mailbox')}</div></div>`,
@@ -410,6 +419,7 @@ export class Menu {
         <button class="menu-item" data-nav="contest">📸 ${t('pc.title')}</button>
         <button class="menu-item" data-nav="festival">🏮 ${t('fg.title')}</button>
         <button class="menu-item" data-nav="story">📖 ${t('story.title')}</button>
+        ${WorkshopScreen.offered ? `<button class="menu-item" data-nav="workshop">🛠 ${t('ws.titleScreen')}</button>` : ''}
         <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
@@ -1073,7 +1083,7 @@ export class Menu {
 
   private onSubmit(e: SubmitEvent): void {
     const form = e.target as HTMLFormElement;
-    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form) || this.passScreen.onSubmit(form) || this.homeScreen.onSubmit(form) || this.contestScreen.onSubmit(form)) {
+    if (this.accountScreen.onSubmit(form) || this.galleryScreen.onSubmit(form) || this.passScreen.onSubmit(form) || this.homeScreen.onSubmit(form) || this.contestScreen.onSubmit(form) || this.workshopScreen.onSubmit(form)) {
       e.preventDefault();
       return;
     }
@@ -1105,6 +1115,7 @@ export class Menu {
     if (this.homeScreen.onClick(el)) return;
     if (this.contestScreen.onClick(el)) return;
     if (this.festivalGames.onClick(el)) return;
+    if (this.workshopScreen.onClick(el)) return;
     if (d.featured) {
       const r = buyFeatured(p, d.featured);
       this.toast(r === 'ok' ? `✓ ${itemLabel(d.featured)}` : r === 'poor' ? t('shop.poor') : '');

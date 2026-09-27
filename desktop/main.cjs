@@ -9,10 +9,11 @@
 //    --inspect, and enforce ASAR integrity in the packaged .exe.
 'use strict';
 
-const { app, BrowserWindow, Menu, protocol, session, shell, net } = require('electron');
+const { app, BrowserWindow, Menu, ipcMain, protocol, session, shell, net } = require('electron');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { resolveAppPath, isSafeExternal, CSP } = require('./security.cjs');
+const { createWorkshop } = require('./steam.cjs');
 
 const SCHEME = 'app';
 const HOST = 'paintland';
@@ -113,6 +114,19 @@ app.whenReady().then(() => {
   };
   ses.setPermissionRequestHandler((_wc, permission, cb, details) => cb(allowed.has(permission) || (permission === 'media' && audioOnly(details))));
   ses.setPermissionCheckHandler((_wc, permission, _origin, details) => allowed.has(permission) || (permission === 'media' && details?.mediaType === 'audio'));
+
+  // Steam Workshop (optional): two narrow calls, only from the game's own page.
+  const workshop = createWorkshop();
+  const fromGame = (e) => {
+    try {
+      return new URL(e.senderFrame?.url ?? '').origin === `${SCHEME}://${HOST}`;
+    } catch {
+      return false;
+    }
+  };
+  ipcMain.handle('workshop:status', (e) => fromGame(e) && workshop.available);
+  ipcMain.handle('workshop:list', (e) => (fromGame(e) ? workshop.list() : []));
+  ipcMain.handle('workshop:publish', (e, input) => (fromGame(e) ? workshop.publish(input) : { ok: false }));
 
   createWindow();
   app.on('activate', () => {

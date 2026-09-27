@@ -407,3 +407,16 @@ web version keeps working without Steam.
 - [ ] Build submitted → approved
 - [ ] Achievements (and Cloud) added, if ready
 - [ ] Release
+
+## Steam Workshop (roads and liveries)
+
+The desktop app already has the Workshop code (`desktop/steam.cjs`, wired in `desktop/main.cjs` and `desktop/preload.cjs`; the in-game screen is **Menu → Steam Workshop**, shown only in the desktop app). It lets players subscribe to roads and car liveries and publish their own share codes. It could not be tested against real Steam here (no Steam client or App ID in this environment); the logic is covered by `desktop/test/steam.test.cjs` with a mocked `steamworks.js`.
+
+To switch it on:
+
+1. In Steamworks: **Workshop → General** — enable the Workshop ("ready-to-use Workshop"), set visibility to public when you launch, and add the tags **Roads** and **Liveries**.
+2. In `desktop/`: `npm install steamworks.js` (the native Steam bridge). Add `"asarUnpack": ["node_modules/steamworks.js/**"]` to `electron-builder.yml` so its `.node` binaries load from outside the archive.
+3. Ship `steam_appid.txt` (your App ID) next to the app for local testing, or set `STEAM_APP_ID`. In the Steam build, Steam provides the App ID itself.
+4. Test with Steam running: publish a road code from Menu → Steam Workshop, subscribe to it from a second account, and check it appears under "Your subscribed items" and test-drives.
+
+Security notes: a Workshop item is only a small `item.json` holding a road (`R1.…`) or livery (`L1.…`) share code, a title and a kind. The main process checks the sender (only the game's own `app://paintland` page), and re-checks every item's size, kind and code format on both publishing and reading. Nothing executable is ever downloaded or run. The renderer stays sandboxed with no Node.js access; the preload adds just three calls (status, list, publish).
