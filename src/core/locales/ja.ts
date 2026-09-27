@@ -921,5 +921,14 @@ const ja: Locale = {
   'pb.pinkWins': 'ピンクチームの勝ち！',
   'pb.tealWins': 'ターコイズチームの勝ち！',
   'pb.draw': '引き分け！',
+  'safe.recovered': '問題が起きたので、安全な場所へ移動しました。進行状況は保存されています。',
+  'safe.back': 'おっと、マップの外に出てしまいました。しっかりした地面に戻りました。',
+  'safe.stuckHint': '動けない？ もう少し押し続けるか、R を押してください。',
+  'safe.unstuck': '脱出！ 開けた場所へ持ち上げました。',
+  'safe.crashTitle': 'ごめんなさい、絵の具がにじみました',
+  'safe.crashText': '問題が何度も起きています。進行状況は保存されています。もう一度試すか、メニューに戻るか、ゲームを再読み込みできます。',
+  'safe.tryAgain': 'もう一度',
+  'safe.toMenu': 'メインメニュー',
+  'safe.reload': '再読み込み',
 };
 export default ja;

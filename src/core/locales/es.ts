@@ -921,5 +921,14 @@ const es: Locale = {
   'pb.pinkWins': '¡Gana el equipo rosa!',
   'pb.tealWins': '¡Gana el equipo turquesa!',
   'pb.draw': '¡Empate!',
+  'safe.recovered': 'Algo salió mal, así que te llevamos a un lugar seguro. Tu progreso está guardado.',
+  'safe.back': '¡Uy! Eso se salió del mapa. De vuelta en tierra firme.',
+  'safe.stuckHint': '¿Atascado? Sigue empujando un momento o pulsa R.',
+  'safe.unstuck': '¡Liberado! Te subimos a terreno despejado.',
+  'safe.crashTitle': 'Lo sentimos, la pintura se corrió',
+  'safe.crashText': 'Algo sigue fallando. Tu progreso está guardado. Puedes intentarlo de nuevo, volver al menú o recargar el juego.',
+  'safe.tryAgain': 'Intentar de nuevo',
+  'safe.toMenu': 'Menú principal',
+  'safe.reload': 'Recargar',
 };
 export default es;

@@ -919,6 +919,15 @@ const en = {
   'pb.pinkWins': 'The pink team wins!',
   'pb.tealWins': 'The teal team wins!',
   'pb.draw': 'A draw!',
+  'safe.recovered': 'Something went wrong, so we put you somewhere safe. Your progress is saved.',
+  'safe.back': 'Oops, that went off the map. Back on solid ground.',
+  'safe.stuckHint': 'Stuck? Keep pushing for a moment, or press R.',
+  'safe.unstuck': 'Unstuck! You were lifted to open ground.',
+  'safe.crashTitle': 'Sorry, the paint smudged',
+  'safe.crashText': 'Something keeps going wrong. Your progress is saved. You can try again, go back to the menu, or reload the game.',
+  'safe.tryAgain': 'Try again',
+  'safe.toMenu': 'Main menu',
+  'safe.reload': 'Reload',
 } as const;
 
 export default en;

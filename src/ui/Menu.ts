@@ -1,4 +1,5 @@
 import { LiveryEditor } from './LiveryEditor';
+import { reportError } from '../net/CrashReporter';
 import { AccountScreen, type AccountHost } from './AccountScreen';
 import { GalleryScreen } from './GalleryScreen';
 import { PassScreen } from './PassScreen';
@@ -266,7 +267,24 @@ export class Menu {
     this.render();
   }
 
+  /** Draw the current screen; a screen that fails to draw falls back to the main menu instead of leaving a blank page. */
   private render(): void {
+    try {
+      this.renderScreen();
+    } catch (e) {
+      console.error(e);
+      reportError(e instanceof Error ? e.message : String(e), `menu:${this.screen}`, e instanceof Error ? e.stack ?? '' : '', false);
+      if (this.screen === 'main' || this.screen === 'none') return;
+      this.screen = 'main';
+      try {
+        this.renderScreen();
+      } catch {
+        /* nothing more to do here; the game keeps running */
+      }
+    }
+  }
+
+  private renderScreen(): void {
     const s = this.screen;
     if (s === 'none') {
       this.root.innerHTML = '';

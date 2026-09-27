@@ -68,6 +68,8 @@ import { brandSpotsFor, routeSpots } from '../brand/BrandSpots';
 import { loadBrand, onBrandChange, type BrandLogo } from '../brand/Brand';
 import { clearPainted } from '../brand/Watercolour';
 import { analytics } from '../net/Analytics';
+import { reportError } from '../net/CrashReporter';
+import { FrameGuard, SafePoint, StuckWatch, finite, freeSpot } from './Guard';
 import { AdminPanel } from '../ui/Admin';
 import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
 import { TouchControls } from '../ui/TouchControls';
@@ -267,6 +269,11 @@ export class Game {
   private readonly freeMissions = new FreeMissionTracker();
   private readonly beacons: THREE.Mesh[] = [];
   private readonly pickupMaterial = new PaintMaterial({ vertexColors: true, flat: true });
+  /** Staying alive: frame errors, bad positions and getting stuck (core/Guard.ts). */
+  private readonly frameGuard = new FrameGuard();
+  private readonly safePoint = new SafePoint();
+  private readonly stuck = new StuckWatch();
+  private crashCard: HTMLDivElement | null = null;
   /** The paper plane (flight mode): its physics, the ring course in progress, and the meshes. */
   private readonly glider = new Glider();
   private flight: { run: CourseRun; from: { x: number; z: number; heading: number } } | null = null;
@@ -2239,8 +2246,165 @@ export class Game {
     if (cap > 0 && now - this.lastFrame < 1000 / cap - 2) return;
     const rawDt = (now - this.lastFrame) / 1000;
     this.lastFrame = now;
-    this.tick(rawDt);
+    if (this.frameGuard.halted) return;
+    try {
+      this.tick(rawDt);
+    } catch (err) {
+      this.frameError(err);
+    }
   };
+
+  /**
+   * An error while running a frame. One is skipped; several in a row put the
+   * player back somewhere safe; if that doesn't help either, the game stops
+   * and offers to try again, go to the menu, or reload (progress is saved).
+   */
+  private frameError(err: unknown): void {
+    const e = err instanceof Error ? err : new Error(String(err));
+    console.error(e);
+    reportError(e.message, 'frame', e.stack ?? '', false);
+    const action = this.frameGuard.fail(performance.now() / 1000);
+    if (action === 'recover') this.safeRecover();
+    else if (action === 'halt') this.showCrashCard();
+  }
+
+  /** Undo whatever might be broken and put the player somewhere safe. Each step may fail on its own. */
+  private safeRecover(): void {
+    const attempt = (fn: () => void): void => {
+      try {
+        fn();
+      } catch (e) {
+        reportError(e instanceof Error ? e.message : String(e), 'recover', e instanceof Error ? e.stack ?? '' : '', false);
+      }
+    };
+    attempt(() => this.profile.save());
+    attempt(() => this.stopFlight());
+    attempt(() => this.endBattle());
+    attempt(() => {
+      if (this.state === 'photo') this.exitPhoto();
+    });
+    attempt(() => {
+      this.timeScale = 1;
+      this.accumulator = 0;
+      this.stuntAir = null;
+    });
+    attempt(() => {
+      if (this.inHub && this.area) {
+        const sp = this.area.spawn;
+        this.mode = 'drive';
+        this.hubCar.place(sp.x, sp.z, sp.heading);
+        this.hubCar.v = 0;
+        this.seatHuman();
+        this.hubCam.snap = true;
+      } else if (this.state === 'play') this.respawn();
+    });
+    this.safePoint.clear();
+    attempt(() => this.menu.toast(t('safe.recovered')));
+  }
+
+  /** The last resort: stop drawing and let the player choose. */
+  private showCrashCard(): void {
+    try {
+      this.profile.save();
+    } catch {
+      /* storage may be full */
+    }
+    this.crashCard?.remove();
+    const card = document.createElement('div');
+    card.className = 'card crash-card';
+    card.setAttribute('role', 'alertdialog');
+    card.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-width:440px;z-index:9999;text-align:center';
+    card.innerHTML = `<h2 class="hand">${escapeHtml(t('safe.crashTitle'))}</h2><p>${escapeHtml(t('safe.crashText'))}</p>
+      <div class="row wrap" style="justify-content:center;gap:8px"><button class="btn primary" data-crash="again">${escapeHtml(t('safe.tryAgain'))}</button><button class="btn" data-crash="menu">${escapeHtml(t('safe.toMenu'))}</button><button class="btn" data-crash="reload">${escapeHtml(t('safe.reload'))}</button></div>`;
+    card.addEventListener('click', (ev) => {
+      const what = (ev.target as HTMLElement).closest<HTMLElement>('[data-crash]')?.dataset.crash;
+      if (!what) return;
+      if (what === 'reload') {
+        window.location.reload();
+        return;
+      }
+      card.remove();
+      this.crashCard = null;
+      this.frameGuard.reset();
+      this.safeRecover();
+      if (what === 'menu') {
+        try {
+          this.leaveHub();
+          this.openMenu('main');
+        } catch (e) {
+          reportError(e instanceof Error ? e.message : String(e), 'crash-menu', '', true);
+          window.location.reload();
+        }
+      }
+    });
+    document.body.appendChild(card);
+    this.crashCard = card;
+    card.querySelector<HTMLButtonElement>('[data-crash="again"]')?.focus();
+  }
+
+  /**
+   * After each simulation step: positions must be real numbers inside the
+   * world. A bad one goes back to the last safe spot. Players pushing and
+   * going nowhere get a hint, then are lifted free.
+   */
+  private watchdog(dt: number): void {
+    if (this.inHub && this.area) {
+      const area = this.area;
+      if (this.flight) {
+        const g = this.glider;
+        if (!finite(g.x, g.y, g.z, g.speed, g.heading)) this.endFlight('reset');
+        return;
+      }
+      const foot = this.mode === 'foot';
+      const p = foot ? this.hubWalker : this.hubCar;
+      const b = area.world.bounds;
+      const farZ = area.seaZ !== undefined ? area.seaZ + 150 : b.maxZ + 60;
+      const bad = !finite(p.x, p.y, p.z, p.heading) || (!foot && !finite(this.hubCar.v)) || p.y < -30 || p.x < b.minX - 60 || p.x > b.maxX + 60 || p.z < b.minZ - 60 || p.z > farZ;
+      if (bad) {
+        const s = this.safePoint.last ?? { x: area.spawn.x, y: 0, z: area.spawn.z, heading: area.spawn.heading };
+        if (foot) this.hubWalker.place(s.x, s.z, s.heading);
+        else {
+          this.hubCar.place(s.x, s.z, s.heading);
+          this.hubCar.v = 0;
+        }
+        this.safePoint.clear();
+        this.stuck.reset(s.x, s.z);
+        this.hubCam.snap = true;
+        this.menu.toast(t('safe.back'));
+        return;
+      }
+      this.safePoint.update(dt, { x: p.x, y: p.y, z: p.z, heading: p.heading }, foot ? this.hubWalker.grounded : this.hubCar.grounded && !this.hubCar.afloat);
+      const inp = this.input;
+      const m = inp.moveAxes();
+      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0;
+      const wants = this.state === 'hub' && !out && (foot ? Math.hypot(m.x, m.y) > 0.3 : inp.throttle() > 0.3 || inp.brake() > 0.3);
+      const st = this.stuck.update(dt, p.x, p.z, wants);
+      if (st === 'hint') this.popAtPawn(t('safe.stuckHint'), 'info');
+      else if (st === 'free') {
+        // A clear spot a little behind the way you face.
+        const r = foot ? 0.6 : 1.8;
+        const bx = p.x + Math.sin(p.heading) * 3;
+        const bz = p.z + Math.cos(p.heading) * 3;
+        const spot = freeSpot(bx, bz, (x, z) => area.world.resolve({ x, z }, r + 0.4) === null && x > b.minX + 2 && x < b.maxX - 2 && z > b.minZ + 2 && z < b.maxZ - 2);
+        if (spot) {
+          if (foot) this.hubWalker.place(spot.x, spot.z, p.heading);
+          else {
+            this.hubCar.place(spot.x, spot.z, p.heading);
+            this.hubCar.v = 0;
+          }
+          this.hubCam.snap = true;
+          this.menu.toast(t('safe.unstuck'));
+        }
+      }
+    } else if (this.state === 'play') {
+      const r = this.rover;
+      const h = this.human;
+      if (!finite(r.s, r.x, r.h, r.v) || (this.mode === 'foot' && !finite(h.s, h.x, h.h))) {
+        this.respawn();
+        this.menu.toast(t('safe.back'));
+      }
+    }
+  }
 
   /** Capture mode on (fps) or off (null): the game then moves only when debugStep is called. */
   debugCapture(fps: number | null): void {
@@ -2270,6 +2434,7 @@ export class Game {
         if (this.state === 'play') this.simStep(SIM_DT);
         else if (this.state === 'hub') this.hubStep(SIM_DT);
         else this.demoStep(SIM_DT);
+        if (this.state === 'play' || this.state === 'hub') this.watchdog(SIM_DT);
         this.accumulator -= SIM_DT;
         steps++;
       }

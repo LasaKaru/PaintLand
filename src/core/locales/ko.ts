@@ -921,5 +921,14 @@ const ko: Locale = {
   'pb.pinkWins': '분홍 팀 승리!',
   'pb.tealWins': '청록 팀 승리!',
   'pb.draw': '무승부!',
+  'safe.recovered': '문제가 생겨서 안전한 곳으로 옮겨 드렸어요. 진행 상황은 저장되어 있어요.',
+  'safe.back': '앗, 지도 밖으로 나갔어요. 다시 단단한 땅 위로.',
+  'safe.stuckHint': '끼었나요? 조금만 더 밀어 보거나 R을 누르세요.',
+  'safe.unstuck': '빠져나왔어요! 트인 땅으로 옮겨졌어요.',
+  'safe.crashTitle': '죄송해요, 물감이 번졌어요',
+  'safe.crashText': '문제가 계속 생기고 있어요. 진행 상황은 저장되어 있어요. 다시 시도하거나, 메뉴로 가거나, 게임을 다시 불러올 수 있어요.',
+  'safe.tryAgain': '다시 시도',
+  'safe.toMenu': '메인 메뉴',
+  'safe.reload': '다시 불러오기',
 };
 export default ko;

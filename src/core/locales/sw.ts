@@ -921,5 +921,14 @@ const sw: Locale = {
   'pb.pinkWins': 'Timu ya waridi imeshinda!',
   'pb.tealWins': 'Timu ya samawati imeshinda!',
   'pb.draw': 'Sare!',
+  'safe.recovered': 'Kuna kitu kilienda vibaya, kwa hiyo tumekuweka mahali salama. Maendeleo yako yamehifadhiwa.',
+  'safe.back': 'Lo, hiyo ilitoka nje ya ramani. Umerudi kwenye ardhi imara.',
+  'safe.stuckHint': 'Umekwama? Endelea kusukuma kidogo, au bonyeza R.',
+  'safe.unstuck': 'Umekombolewa! Umeinuliwa hadi ardhi wazi.',
+  'safe.crashTitle': 'Samahani, rangi imechafuka',
+  'safe.crashText': 'Kuna kitu kinaendelea kwenda vibaya. Maendeleo yako yamehifadhiwa. Unaweza kujaribu tena, kurudi kwenye menyu, au kupakia upya mchezo.',
+  'safe.tryAgain': 'Jaribu tena',
+  'safe.toMenu': 'Menyu kuu',
+  'safe.reload': 'Pakia upya',
 };
 export default sw;

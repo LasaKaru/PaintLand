@@ -921,5 +921,14 @@ const id: Locale = {
   'pb.pinkWins': 'Tim merah muda menang!',
   'pb.tealWins': 'Tim toska menang!',
   'pb.draw': 'Seri!',
+  'safe.recovered': 'Ada yang salah, jadi kami pindahkan kamu ke tempat aman. Kemajuanmu tersimpan.',
+  'safe.back': 'Ups, itu keluar dari peta. Kembali ke tanah yang kokoh.',
+  'safe.stuckHint': 'Tersangkut? Terus dorong sebentar, atau tekan R.',
+  'safe.unstuck': 'Bebas! Kamu diangkat ke tanah lapang.',
+  'safe.crashTitle': 'Maaf, catnya luntur',
+  'safe.crashText': 'Ada yang terus bermasalah. Kemajuanmu tersimpan. Kamu bisa coba lagi, kembali ke menu, atau memuat ulang permainan.',
+  'safe.tryAgain': 'Coba lagi',
+  'safe.toMenu': 'Menu utama',
+  'safe.reload': 'Muat ulang',
 };
 export default id;

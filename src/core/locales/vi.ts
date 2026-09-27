@@ -921,5 +921,14 @@ const vi: Locale = {
   'pb.pinkWins': 'Đội hồng thắng!',
   'pb.tealWins': 'Đội xanh ngọc thắng!',
   'pb.draw': 'Hòa!',
+  'safe.recovered': 'Có lỗi xảy ra, nên chúng tôi đưa bạn đến nơi an toàn. Tiến trình của bạn đã được lưu.',
+  'safe.back': 'Ối, ra khỏi bản đồ rồi. Về lại đất liền vững chãi.',
+  'safe.stuckHint': 'Bị kẹt à? Cứ đẩy thêm chút nữa, hoặc nhấn R.',
+  'safe.unstuck': 'Thoát rồi! Bạn đã được nhấc ra chỗ trống.',
+  'safe.crashTitle': 'Xin lỗi, sơn bị lem',
+  'safe.crashText': 'Có lỗi cứ lặp lại. Tiến trình của bạn đã được lưu. Bạn có thể thử lại, về menu hoặc tải lại trò chơi.',
+  'safe.tryAgain': 'Thử lại',
+  'safe.toMenu': 'Menu chính',
+  'safe.reload': 'Tải lại',
 };
 export default vi;

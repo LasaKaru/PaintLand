@@ -921,5 +921,14 @@ const fr: Locale = {
   'pb.pinkWins': 'L’équipe rose gagne !',
   'pb.tealWins': 'L’équipe turquoise gagne !',
   'pb.draw': 'Égalité !',
+  'safe.recovered': 'Un souci est survenu, alors on t’a mis en lieu sûr. Ta progression est enregistrée.',
+  'safe.back': 'Oups, c’est sorti de la carte. Retour sur la terre ferme.',
+  'safe.stuckHint': 'Coincé ? Continue de pousser un instant, ou appuie sur R.',
+  'safe.unstuck': 'Libéré ! Tu as été posé sur un terrain dégagé.',
+  'safe.crashTitle': 'Désolé, la peinture a bavé',
+  'safe.crashText': 'Un problème revient sans cesse. Ta progression est enregistrée. Tu peux réessayer, revenir au menu ou recharger le jeu.',
+  'safe.tryAgain': 'Réessayer',
+  'safe.toMenu': 'Menu principal',
+  'safe.reload': 'Recharger',
 };
 export default fr;

@@ -921,5 +921,14 @@ const tr: Locale = {
   'pb.pinkWins': 'Pembe takım kazandı!',
   'pb.tealWins': 'Turkuaz takım kazandı!',
   'pb.draw': 'Berabere!',
+  'safe.recovered': 'Bir şeyler ters gitti, bu yüzden seni güvenli bir yere taşıdık. İlerlemen kaydedildi.',
+  'safe.back': 'Hay aksi, harita dışına çıktı. Yeniden sağlam zeminde.',
+  'safe.stuckHint': "Sıkıştın mı? Biraz daha it ya da R'ye bas.",
+  'safe.unstuck': 'Kurtuldun! Açık bir zemine taşındın.',
+  'safe.crashTitle': 'Üzgünüz, boya bulaştı',
+  'safe.crashText': 'Bir şeyler sürekli ters gidiyor. İlerlemen kaydedildi. Yeniden deneyebilir, menüye dönebilir ya da oyunu yeniden yükleyebilirsin.',
+  'safe.tryAgain': 'Yeniden dene',
+  'safe.toMenu': 'Ana menü',
+  'safe.reload': 'Yeniden yükle',
 };
 export default tr;

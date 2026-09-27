@@ -921,5 +921,14 @@ const nl: Locale = {
   'pb.pinkWins': 'Het roze team wint!',
   'pb.tealWins': 'Het turquoise team wint!',
   'pb.draw': 'Gelijkspel!',
+  'safe.recovered': 'Er ging iets mis, dus we hebben je op een veilige plek gezet. Je voortgang is opgeslagen.',
+  'safe.back': 'Oeps, dat ging van de kaart af. Weer op vaste grond.',
+  'safe.stuckHint': 'Vast? Blijf nog even duwen, of druk op R.',
+  'safe.unstuck': 'Los! Je bent naar open grond getild.',
+  'safe.crashTitle': 'Sorry, de verf is uitgelopen',
+  'safe.crashText': 'Er gaat steeds iets mis. Je voortgang is opgeslagen. Je kunt het opnieuw proberen, naar het menu gaan of het spel herladen.',
+  'safe.tryAgain': 'Opnieuw proberen',
+  'safe.toMenu': 'Hoofdmenu',
+  'safe.reload': 'Herladen',
 };
 export default nl;

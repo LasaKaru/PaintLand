@@ -921,5 +921,14 @@ const de: Locale = {
   'pb.pinkWins': 'Das pinke Team gewinnt!',
   'pb.tealWins': 'Das türkise Team gewinnt!',
   'pb.draw': 'Unentschieden!',
+  'safe.recovered': 'Etwas ist schiefgelaufen, deshalb haben wir dich an einen sicheren Ort gebracht. Dein Fortschritt ist gespeichert.',
+  'safe.back': 'Hoppla, das war außerhalb der Karte. Zurück auf festem Boden.',
+  'safe.stuckHint': 'Festgefahren? Drück noch kurz weiter oder drück R.',
+  'safe.unstuck': 'Befreit! Du wurdest auf freien Boden gehoben.',
+  'safe.crashTitle': 'Entschuldigung, die Farbe ist verlaufen',
+  'safe.crashText': 'Es geht immer wieder etwas schief. Dein Fortschritt ist gespeichert. Du kannst es erneut versuchen, zum Menü gehen oder das Spiel neu laden.',
+  'safe.tryAgain': 'Erneut versuchen',
+  'safe.toMenu': 'Hauptmenü',
+  'safe.reload': 'Neu laden',
 };
 export default de;

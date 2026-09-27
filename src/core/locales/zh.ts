@@ -921,5 +921,14 @@ const zh: Locale = {
   'pb.pinkWins': '粉色队获胜！',
   'pb.tealWins': '青色队获胜！',
   'pb.draw': '平局！',
+  'safe.recovered': '出了点问题，我们把你送到了安全的地方。你的进度已保存。',
+  'safe.back': '哎呀，跑出地图了。回到坚实的地面。',
+  'safe.stuckHint': '卡住了？再推一会儿，或按 R。',
+  'safe.unstuck': '脱困了！你被移到了空地上。',
+  'safe.crashTitle': '抱歉，颜料晕开了',
+  'safe.crashText': '问题反复出现。你的进度已保存。你可以重试、返回菜单或重新加载游戏。',
+  'safe.tryAgain': '重试',
+  'safe.toMenu': '主菜单',
+  'safe.reload': '重新加载',
 };
 export default zh;

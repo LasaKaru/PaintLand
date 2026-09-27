@@ -237,6 +237,8 @@ export interface ProfileData {
 }
 
 const KEY = 'paintland.profile.v2';
+/** A second copy, written every few saves, in case the main one is ever damaged. */
+const BACKUP_KEY = 'paintland.profile.v2.backup';
 
 function defaults(): ProfileData {
   return {
@@ -267,6 +269,21 @@ function defaults(): ProfileData {
  * progress and records. Stored locally; a cloud save can mirror the same
  * JSON later (docs/08 §7).
  */
+/** The saved profile, or the backup copy if the main one is damaged; null if neither can be read. */
+function readSave(): Partial<ProfileData> | null {
+  for (const key of [KEY, BACKUP_KEY]) {
+    try {
+      const raw = localStorage.getItem(key);
+      if (!raw) continue;
+      const v = JSON.parse(raw) as unknown;
+      if (v && typeof v === 'object' && !Array.isArray(v)) return v as Partial<ProfileData>;
+    } catch {
+      /* damaged: try the backup */
+    }
+  }
+  return null;
+}
+
 export class Profile {
   data: ProfileData;
   private listeners: (() => void)[] = [];
@@ -274,9 +291,9 @@ export class Profile {
   constructor() {
     this.data = defaults();
     try {
-      const raw = localStorage.getItem(KEY);
+      const raw = readSave();
       if (raw) {
-        this.hydrate(JSON.parse(raw) as Partial<ProfileData>);
+        this.hydrate(raw);
         // Milestone 7 saves were handed every loot-only item by mistake: take them back once.
         if (!this.data.seen.includes('mig:loot')) {
           const loot = new Set(CATALOGUE.filter((i) => i.loot).map((i) => i.id));
@@ -293,6 +310,12 @@ export class Profile {
   private hydrate(saved: Partial<ProfileData>): void {
     const base = defaults();
     this.data = { ...base, ...saved, look: { ...base.look, ...saved.look }, tonics: { ...base.tonics, ...saved.tonics } };
+    // Anything damaged goes back to its default rather than breaking the game later.
+    const d = this.data;
+    if (!Number.isFinite(d.ink) || d.ink < 0) d.ink = base.ink;
+    if (typeof d.name !== 'string' || !d.name.trim()) d.name = base.name;
+    for (const k of ['trophies', 'missionsDone'] as const) if (!Array.isArray(d[k])) d[k] = [];
+    for (const k of ['stats', 'sealed', 'bestLap', 'bestDistrict', 'trialBest', 'vehicleLooks'] as const) if (!d[k] || typeof d[k] !== 'object' || Array.isArray(d[k])) (d as unknown as Record<string, unknown>)[k] = {};
     if (!Array.isArray(this.data.owned)) this.data.owned = [];
     if (!Array.isArray(this.data.seen)) this.data.seen = ['mig:loot'];
     for (const id of base.owned) if (!this.data.owned.includes(id)) this.data.owned.push(id);
@@ -316,9 +339,13 @@ export class Profile {
     this.listeners.push(fn);
   }
 
+  private saves = 0;
+
   save(): void {
     try {
-      localStorage.setItem(KEY, JSON.stringify(this.data));
+      const json = JSON.stringify(this.data);
+      localStorage.setItem(KEY, json);
+      if (this.saves++ % 12 === 0) localStorage.setItem(BACKUP_KEY, json);
     } catch {
       /* ignore */
     }

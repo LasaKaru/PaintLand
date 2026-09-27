@@ -53,6 +53,17 @@ function createWindow() {
     },
   });
   win.once('ready-to-show', () => win.show());
+  // If the game's page crashes or is killed, reload it (at most 3 times a minute,
+  // so a page that crashes on start can't loop forever). Progress is saved as you play.
+  let reloads = [];
+  win.webContents.on('render-process-gone', (_e, details) => {
+    if (details.reason === 'clean-exit') return;
+    const now = Date.now();
+    reloads = reloads.filter((t) => now - t < 60_000);
+    if (reloads.length >= 3 || win.isDestroyed()) return;
+    reloads.push(now);
+    win.webContents.reload();
+  });
 
   // Never leave the game's own origin inside the app window.
   win.webContents.on('will-navigate', (e, url) => {
