@@ -1845,14 +1845,35 @@ export class Game {
 
   // ————— frame loop —————
 
+  /** Video capture (tools/trailer.mjs): frames advance only through debugStep, by exactly this much. */
+  private captureDt: number | null = null;
+
   private loop = (now: number): void => {
     requestAnimationFrame(this.loop);
     if (this.contextLost) return;
+    if (this.captureDt !== null) {
+      this.lastFrame = now;
+      return;
+    }
     const cap = this.settings.fpsCap;
     if (cap > 0 && now - this.lastFrame < 1000 / cap - 2) return;
     const rawDt = (now - this.lastFrame) / 1000;
-    const dt = Math.min(0.1, rawDt);
     this.lastFrame = now;
+    this.tick(rawDt);
+  };
+
+  /** Capture mode on (fps) or off (null): the game then moves only when debugStep is called. */
+  debugCapture(fps: number | null): void {
+    this.captureDt = fps ? 1 / fps : null;
+  }
+
+  /** Advance and draw exactly n frames at the capture rate. */
+  debugStep(n = 1): void {
+    for (let i = 0; i < n; i++) this.tick(this.captureDt ?? 1 / 30);
+  }
+
+  private tick(rawDt: number): void {
+    const dt = Math.min(0.1, rawDt);
     this.fps += (1 / Math.max(dt, 1e-4) - this.fps) * 0.05;
     this.time += dt;
     // The benchmark times real frames (dt is capped for the simulation).
@@ -1895,7 +1916,7 @@ export class Game {
       this.profile.save();
     }
     this.render(dt, this.accumulator / SIM_DT);
-  };
+  }
 
   /** Autopilot driving for the menu cinematic and the intro. */
   private demoStep(dt: number): void {

@@ -58,7 +58,7 @@ export const DEFAULT_CONFIG = {
 export const CHALLENGE_KINDS = ['distance', 'laps', 'stunts', 'photos', 'races', 'missions', 'pockets', 'secrets'];
 const ITEM_ID = /^[a-z]+:[a-z0-9#-]{1,30}$/;
 
-const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.map': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain' };
+const MIME = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.js': 'text/javascript', '.css': 'text/css', '.html': 'text/html; charset=utf-8', '.json': 'application/json', '.woff2': 'font/woff2', '.woff': 'font/woff', '.map': 'application/json', '.ico': 'image/x-icon', '.txt': 'text/plain', '.webm': 'video/webm', '.mp4': 'video/mp4' };
 const TOKEN_TTL = 12 * 3600 * 1000;
 const MAX_PLAYERS_TRACKED = 200_000;
 const day = (t = Date.now()) => new Date(t).toISOString().slice(0, 10);
@@ -678,7 +678,8 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
 
     // The built game itself, so one process serves everything.
     if (distDir && method === 'GET' && !path.startsWith('/api/')) {
-      const rel = decodeURIComponent(path === '/' ? '/index.html' : path);
+      // A folder ("/press/") serves its index.html.
+      const rel = decodeURIComponent(path.endsWith('/') ? `${path}index.html` : path);
       const full = normalize(join(distDir, rel));
       if (full.startsWith(distDir) && serveFile(res, full, rel.includes('/assets/') ? 'public, max-age=31536000, immutable' : 'no-cache')) return true;
     }
