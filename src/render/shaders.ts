@@ -291,6 +291,9 @@ uniform float flash;
 uniform mat4 projInv;
 uniform mat4 camWorld;
 uniform int cbMode;
+uniform highp sampler3D tLut;
+uniform float lutMix;
+uniform float lutSize;
 
 varying vec2 vUv;
 
@@ -479,6 +482,12 @@ void main() {
 
   // Lightning.
   col += vec3(0.8, 0.85, 1.0) * flash * 0.35;
+
+  // Colour grading with a 3D look-up table (render/Lut.ts).
+  if (lutMix > 0.001) {
+    vec3 lc = clamp(col, 0.0, 1.0) * ((lutSize - 1.0) / lutSize) + 0.5 / lutSize;
+    col = mix(col, texture(tLut, lc).rgb, lutMix);
+  }
 
   // Splash doodle when respawning (teal wash that clears).
   col = mix(col, vec3(0.62, 0.86, 0.88), splash * (0.6 + 0.4 * fbm(uv * 5.0 + time)));

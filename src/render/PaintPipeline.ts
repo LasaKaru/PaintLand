@@ -1,4 +1,5 @@
 import * as THREE from 'three';
+import { LutBank, bakeLut, lutTexture } from './Lut';
 import { AdaptiveGovernor } from './Adaptive';
 import { FullScreenQuad } from 'three/examples/jsm/postprocessing/Pass.js';
 import { aoBlurFragment, blurFragment, brightFragment, compositeFragment, finishFragment, fullscreenVertex, kuwaharaFragment, shaftsFragment, ssaoFragment } from './shaders';
@@ -22,6 +23,8 @@ export interface FrameFx {
   /** Depth of field: focus distance (m) and amount 0..1 (0 = off). */
   dofFocus: number;
   dofAmount: number;
+  /** A colour grade for this place (a LUT look id), over the player's own choice. */
+  lut?: string;
 }
 
 /**
@@ -57,6 +60,8 @@ export class PaintPipeline {
   private readonly bright: THREE.ShaderMaterial;
   private readonly blur: THREE.ShaderMaterial;
   private readonly composite: THREE.ShaderMaterial;
+  /** Colour grading tables (built-in looks and the player's own .cube). */
+  readonly luts = new LutBank();
   private width = 1;
   private height = 1;
   private scale = 1;
@@ -147,6 +152,9 @@ export class PaintPipeline {
       projInv: { value: new THREE.Matrix4() },
       camWorld: { value: new THREE.Matrix4() },
       cbMode: { value: 0 },
+      tLut: { value: lutTexture(bakeLut((r, g, b) => [r, g, b], 2), 2) },
+      lutMix: { value: 0 },
+      lutSize: { value: 2 },
     });
   }
 
@@ -391,6 +399,13 @@ export class PaintPipeline {
     u.projInv.value.copy(camera.projectionMatrixInverse);
     u.camWorld.value.copy(camera.matrixWorld);
     u.cbMode.value = this.colourBlind;
+    // A place's own grade (viewpoints) wins over the player's; 'none' in settings still allows it.
+    const lut = this.luts.get(fx.lut ?? s.lut);
+    u.lutMix.value = lut ? (fx.lut ? Math.max(0.6, s.lutStrength) : s.lutStrength) : 0;
+    if (lut) {
+      u.tLut.value = lut.tex;
+      u.lutSize.value = lut.size;
+    }
 
     const dof = fx.dofAmount > 0.01;
     const needFinish = s.fxaa || dof;

@@ -1,4 +1,5 @@
 import type { StudioSettings } from '../render/StudioSettings';
+import { LUT_LOOKS } from '../render/Lut';
 import { t } from '../core/i18n';
 import { BRUSH_ICONS, BRUSH_KINDS, type BrushKind } from '../gameplay/SkyBrush';
 import { TIME_PRESETS, WEATHER_ORDER, WEATHERS, type WeatherId } from '../world/Environment';
@@ -101,6 +102,8 @@ export class PhotoMode {
       ${slider('exposure', 'Exposure', s.exposure, 0.5, 2, 0.01, '', true)}
       ${slider('saturation', 'Saturation', s.saturation, 0, 1.5, 0.01, '', true)}
       ${slider('vignette', 'Vignette', s.vignette, 0, 1, 0.01, '', true)}
+      <div class="field"><label>Colour grade (LUT)</label><select data-lut>${LUT_LOOKS.map((l) => `<option value="${l.id}" ${s.lut === l.id ? 'selected' : ''}>${l.name}</option>`).join('')}${s.lut === 'custom' ? '<option value="custom" selected>★ My LUT</option>' : ''}</select></div>
+      ${slider('lutStrength', 'Grade strength', s.lutStrength, 0, 1, 0.01, '', true)}
       ${slider('border', 'Sketchbook border (painted look)', s.border, 0, 1, 0.01, '', true)}
       <label class="check"><input type="checkbox" data-p="hidePlayer" ${st.hidePlayer ? 'checked' : ''}> Hide my car and character</label>
       ${this.host.brush ? `<h4>${t('brush.title')}</h4><p class="menu-hint">${t('brush.hint')}</p>
@@ -115,6 +118,11 @@ export class PhotoMode {
   private onInput(e: Event): void {
     const el = e.target as HTMLInputElement;
     const out = el.nextElementSibling;
+    if (el.dataset.lut !== undefined) {
+      this.host.studio().lut = (el as unknown as HTMLSelectElement).value;
+      this.host.studioChanged();
+      return;
+    }
     if (el.dataset.brushSize) {
       this.brushSize = Number(el.value);
       this.host.brushSize?.(this.brushSize);

@@ -242,6 +242,7 @@ Steer with the on-screen **stick** and hold **GO** to drive. The other buttons (
 ## Settings worth knowing
 
 - **Graphics:** Low, Medium, High or Ultra, a watercolour ↔ realistic art style slider, and a benchmark that picks settings for you.
+- **Colour grade (LUT):** in **Settings → Look** (and in photo mode), choose a film look (Golden hour, Cinema, Calm pastel, Dreamy lavender, Moonlight, Vintage film, Vivid, Ink & paper) and how strong it is. You can also load your own `.cube` LUT made in DaVinci Resolve, Premiere or Photoshop.
 - **Driving:** arcade or realistic handling, automatic or manual gearbox, steering assist, km/h or mph.
 - **Accessibility:**
   - reduced motion, calm lighting, HUD size and colour-vision assist

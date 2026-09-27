@@ -475,6 +475,8 @@ export class Game {
       studio: () => this.settings,
       options: () => this.options,
       settingsChanged: () => this.settingsChanged(),
+      loadLut: (text) => this.pipeline.luts.loadCube(text),
+      lutCustom: () => this.pipeline.luts.custom?.title ?? null,
       input: () => this.input,
       stats: () => `${this.fps.toFixed(0)} fps · ${Math.round(this.pipeline.renderScale * 100)}% render scale · ${this.renderer.info.render.calls} draw calls · ${(this.renderer.info.render.triangles / 1e6).toFixed(2)} M triangles`,
       resume: () => this.resumeFromMenu(),

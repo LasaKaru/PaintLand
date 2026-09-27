@@ -1,4 +1,5 @@
 import { LiveryEditor } from './LiveryEditor';
+import { LUT_LOOKS } from '../render/Lut';
 import { reportError } from '../net/CrashReporter';
 import { AccountScreen, type AccountHost } from './AccountScreen';
 import { GalleryScreen } from './GalleryScreen';
@@ -110,6 +111,10 @@ export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHo
   /** Controls, driving, accessibility (mutable). */
   options(): GameOptions;
   settingsChanged(): void;
+  /** Use a .cube file as the player's own colour grade; its title, or null if unreadable. */
+  loadLut(text: string): string | null;
+  /** The title of the player's own LUT, if one is loaded. */
+  lutCustom(): string | null;
   input(): Input;
   stats(): string;
   resume(): void;
@@ -891,6 +896,9 @@ export class Menu {
           ${this.slider('s.cinematicDof', 'Cinematic depth of field', 0, 1, 0.01, f2)}
           ${this.slider('s.fov', 'Field of view', 55, 110, 1, (v) => `${v}°`)}
           <div class="field"><label>Watercolour vibe</label><select data-vibe>${Object.keys(VIBES).map((v) => `<option ${s.vibe === v ? 'selected' : ''}>${v}</option>`).join('')}</select></div>
+          <div class="field"><label>Colour grade (LUT)</label><select data-lut>${[...LUT_LOOKS.map((l) => [l.id, l.name] as const), ...(this.host.lutCustom() ? [['custom', `★ ${this.host.lutCustom()}`] as const] : [])].map(([id, name]) => `<option value="${id}" ${s.lut === id ? 'selected' : ''}>${escapeHtml(name)}</option>`).join('')}</select></div>
+          ${this.slider('s.lutStrength', 'Grade strength', 0, 1, 0.01, f2)}
+          <div class="field"><label>Your own LUT (.cube file)</label><input type="file" accept=".cube,text/plain" data-lutfile></div>
         </div>
       </div>
       <div class="row wrap"><button class="btn" data-action="studio">Open the Studio (every art slider)</button></div>`;
@@ -1501,6 +1509,31 @@ export class Menu {
     }
     if (el.dataset.langselect !== undefined && e.type === 'change') {
       void setLang((el as unknown as HTMLSelectElement).value as Lang);
+      return;
+    }
+    if (el.dataset.lut !== undefined && e.type === 'change') {
+      this.host.studio().lut = (el as unknown as HTMLSelectElement).value;
+      this.host.settingsChanged();
+      return;
+    }
+    if (el.dataset.lutfile !== undefined && e.type === 'change') {
+      const file = (el as unknown as HTMLInputElement).files?.[0];
+      if (!file) return;
+      if (file.size > 12_000_000) {
+        this.toast('That LUT file is too big.');
+        return;
+      }
+      void file.text().then((text) => {
+        const title = this.host.loadLut(text);
+        if (!title) {
+          this.toast('That file isn’t a 3D .cube LUT the game can read.');
+          return;
+        }
+        this.host.studio().lut = 'custom';
+        this.host.settingsChanged();
+        this.toast(`Colour grade loaded: ${title}`);
+        this.render();
+      });
       return;
     }
     if (el.dataset.vibe !== undefined && e.type === 'change') {

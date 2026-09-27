@@ -48,6 +48,10 @@ export interface StudioSettings {
   exposure: number;
   contrast: number;
   vignette: number;
+  /** Colour grade (a LUT look id from render/Lut.ts, 'custom' for your own .cube, 'none'). */
+  lut: string;
+  /** How strongly the grade applies, 0 … 1. */
+  lutStrength: number;
   aoStrength: number;
   sunShafts: number;
   /** Depth of field in cinematics and photo mode, 0..1. */
@@ -112,6 +116,8 @@ export const DEFAULT_STUDIO: StudioSettings = {
   exposure: 1,
   contrast: 1.05,
   vignette: 0.25,
+  lut: 'none',
+  lutStrength: 0.8,
   aoStrength: 0.8,
   sunShafts: 0.6,
   cinematicDof: 0.6,
