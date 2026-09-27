@@ -3670,6 +3670,13 @@ export class Game {
     this.rig.snap();
   }
 
+  /** Season and festival for films and screenshots (tools/trailer.mjs). */
+  debugCalendar(season?: string, festival?: string): void {
+    if (season) (this.options as { season: string }).season = season;
+    if (festival) (this.options as { festival: string }).festival = festival;
+    this.applyCalendar();
+  }
+
   /** Art style and graphics tier for screenshots (tools/screenshot.mjs STYLE=… QUALITY=…). */
   debugLook(style?: string, quality?: string): void {
     if (style) applyArtStyle(this.settings, style as ArtStyle);
@@ -3684,6 +3691,11 @@ export class Game {
 
   debugPhoto(): void {
     this.enterPhoto();
+  }
+
+  /** Leave photo mode (films and tests). */
+  debugPhotoExit(): void {
+    if (this.state === 'photo') this.exitPhoto();
   }
 
   debugInfo(): Record<string, unknown> {

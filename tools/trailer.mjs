@@ -36,23 +36,39 @@ mkdirSync(out, { recursive: true });
 const frames = `${out}trailer-frames.mjpeg`;
 writeFileSync(frames, '');
 
-/** The shot list: [seconds, title card or null, setup in the page]. */
+/** Orbit the parked car in photo mode (the world holds still, the camera moves). */
+const orbit = (radius, height, speed) => `(g, t) => {
+  const c = g.hubCar; const pc = g.photoCam;
+  // The car model's own height (hubs sit on raised plazas and quays).
+  const e = g.vehicle.root.matrixWorld.elements;
+  const a = c.heading + Math.PI + t * ${speed};
+  pc.pos.set(e[12] - Math.sin(a) * ${radius}, e[13] + ${height}, e[14] - Math.cos(a) * ${radius});
+  pc.yaw = a + Math.PI; pc.pitch = -0.2;
+}`;
+
+/** The shot list: a title card, or a setup in the page (plus an optional per-frame camera move). */
 const SHOTS = [
   { card: ['Inkroads', 'a watercolour road trip'], secs: 3 },
-  { secs: 4, setup: (g) => g.debugLandmark('serendib', 0, 'golden') },
+  { secs: 5, setup: (g) => g.debugLandmark('serendib', 0, 'golden') },
   { secs: 4, setup: (g) => g.debugJump(900, 'morning', 'clear', 'serendib') },
   { card: ['Drive through paintings', 'five chapters · 33 districts'], secs: 2.5 },
-  { secs: 4, setup: (g) => g.debugJump(600, 'golden', 'clear', 'lanterns') },
+  { secs: 4.5, setup: (g) => g.debugJump(600, 'golden', 'clear', 'lanterns') },
+  { secs: 4, setup: (g) => g.debugLandmark('lanterns', 3, 'dusk') },
   { secs: 4, setup: (g) => g.debugLandmark('wonders', 1, 'dusk') },
   { secs: 4, setup: (g) => g.debugJump(1400, 'night', 'clear', 'postcards') },
+  { secs: 4, setup: (g) => g.debugLandmark('postcards', 0, 'golden') },
   { card: ['Roam three towns', 'hidden pockets · murals · festivals'], secs: 2.5 },
-  { secs: 5, setup: (g) => { g.debugHub(0, 30, 0, 'harbour'); g.debugTime('golden'); } },
-  { secs: 4, setup: (g) => { g.debugHub(-60, 40, 1.2, 'city'); g.debugTime('deep night'); } },
-  { card: ['Play together', 'convoys · contests · group photos'], secs: 2.5 },
+  { secs: 5, setup: (g) => { g.debugCalendar(undefined, 'vesak'); g.debugHub(0, 30, 0, 'harbour'); g.debugTime('dusk'); }, photo: true, each: orbit(6.5, 1.9, 0.35) },
+  { secs: 4, setup: (g) => { g.debugCalendar(undefined, 'off'); g.debugLandmark('serendib', 1, 'dusk'); } },
+  { secs: 4, setup: (g) => g.debugLandmark('lanterns', 6, 'golden') },
+  { card: ['Make it yours', '10 vehicles · 99 parts · 131 outfits'], secs: 2.5 },
+  { secs: 4, setup: (g) => { g.profile.data.vehicle = 'coupe'; g.profile.setVehicleLook('coupe', { body: '#d8463a', trim: '#2b2622', accent: '#f4d23b', hubs: '#cfd6df', roofLoad: 'lanterns', wrap: 'waves', finish: 'glitter', spoiler: 'twin', wheelStyle: 'star', glow: '#9a5bd6' }); g.buildPawnModels(); g.debugHub(0, 30, 0, 'harbour'); g.debugTime('golden'); }, photo: true, each: orbit(6, 1.8, 0.5) },
+  { card: ['Play together', 'convoys · contests · races · group photos'], secs: 2.5 },
   { secs: 4, setup: (g) => g.debugJump(300, 'noon', 'rain', 'sketch') },
-  { card: ['Inkroads', 'free to play · looks-only shop'], secs: 3 },
+  { card: ['Inkroads', 'wishlist it on Steam'], secs: 3.5 },
 ];
-const shots = SHORT ? SHOTS.filter((_, i) => [0, 1, 2, 3, 8, 12].includes(i)).map((s) => ({ ...s, secs: Math.min(s.secs, 2.5) })) : SHOTS;
+const ONLY = arg('only', '') ? arg('only', '').split(',').map(Number) : null;
+const shots = ONLY ? SHOTS.filter((_, i) => ONLY.includes(i)) : SHORT ? SHOTS.filter((_, i) => [0, 1, 2, 3, 10, 17].includes(i)).map((s) => ({ ...s, secs: Math.min(s.secs, 2.5) })) : SHOTS;
 
 const browser = await playwright.chromium.launch({ args: ['--use-gl=angle', '--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'] });
 const page = await browser.newPage({ viewport: { width: W, height: H } });
@@ -66,7 +82,7 @@ await page.evaluate(([q, H]) => {
   g.profile.data.seenIntro = true;
   // No HUD, menus or hints in the film; a card layer for titles.
   const css = document.createElement('style');
-  css.textContent = `.hud,.menu,.touch-ui,.tip-card,.toast{display:none!important}
+  css.textContent = `.hud,.menu,.touch-ui,.tip-card,.toast,.minimap,.photo-panel{display:none!important}
     #trailer-card{position:fixed;inset:0;display:none;place-items:center;text-align:center;z-index:99999;
       background:radial-gradient(ellipse at 50% 45%,#fbf6ea 0%,#f3e7cf 60%,#e8d6b4 100%);color:#2b2622;font-family:Caveat,cursive}
     #trailer-card h1{font-size:${Math.round(H / 7)}px;margin:0;letter-spacing:.02em}
@@ -81,6 +97,8 @@ let total = 0;
 for (const shot of shots) {
   const n = Math.round(shot.secs * FPS);
   if (shot.card) {
+    // Hold the game still under the card, so the picture isn't slowed by rendering.
+    await page.evaluate((fps) => window.__paintland.debugCapture(fps), FPS);
     await page.evaluate(([t, s]) => {
       const c = document.getElementById('trailer-card');
       c.innerHTML = `<div><h1>${t}</h1><p>${s}</p></div>`;
@@ -91,25 +109,31 @@ for (const shot of shots) {
     for (let i = 0; i < n; i++) {
       const fade = Math.min(1, i / (FPS * 0.3), (n - 1 - i) / (FPS * 0.3));
       await page.evaluate((o) => (document.getElementById('trailer-card').style.opacity = String(o)), fade);
-      appendFileSync(frames, await page.screenshot({ type: 'jpeg', quality: 92 }));
+      appendFileSync(frames, await page.screenshot({ type: 'jpeg', quality: 92, timeout: 180000 }));
     }
     await page.evaluate(() => (document.getElementById('trailer-card').style.display = 'none'));
   } else {
     await page.evaluate((src) => {
       const g = window.__paintland;
       g.debugCapture(null);
+      g.debugPhotoExit();
       new Function('g', `(${src})(g)`)(g);
     }, shot.setup.toString());
     // Let the scene load and settle in real time, then film in fixed steps.
     await page.waitForTimeout(2500);
+    if (shot.photo) {
+      await page.evaluate(() => window.__paintland.debugPhoto());
+      await page.waitForTimeout(800);
+    }
     await page.evaluate((fps) => {
       const g = window.__paintland;
       g.debugCapture(fps);
       g.debugStep(Math.round(fps * 0.5));
     }, FPS);
     for (let i = 0; i < n; i++) {
+      if (shot.each) await page.evaluate(([src, t]) => new Function('g', 't', `(${src})(g, t)`)(window.__paintland, t), [shot.each, i / FPS]);
       await page.evaluate(() => window.__paintland.debugStep(1));
-      appendFileSync(frames, await page.screenshot({ type: 'jpeg', quality: 92 }));
+      appendFileSync(frames, await page.screenshot({ type: 'jpeg', quality: 92, timeout: 180000 }));
     }
   }
   total += n;

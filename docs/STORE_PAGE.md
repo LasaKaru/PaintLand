@@ -1,5 +1,9 @@
 # Store pages: copy and art, ready to paste
 
+For Steam step by step (every field, sizes and the upload), see
+[STEAM_PUBLISHING.md](STEAM_PUBLISHING.md). Inkroads is sold as a premium
+(one-time purchase) game.
+
 Everything below matches what is in the game today. Keep it true when you
 edit: store reviewers and players check.
 
@@ -14,7 +18,7 @@ edit: store reviewers and players check.
 - **Tagline:** A watercolour road trip
 - **One line (≤ 80 chars):** Drive through living watercolour paintings, alone or with friends.
 - **Short description (Steam, ≤ 300 chars):**
-  > Drive through living watercolour paintings: from Galle Face and Sigiriya to Kyoto's lantern streets and the Nile. Collect notes that play along with each district's music, roam three painted towns, build and share roads, and play together in convoys, contests and races. Free, with a looks-only shop.
+  > Drive through living watercolour paintings: from Galle Face and Sigiriya to Kyoto's lantern streets and the Nile. Collect notes that play along with each district's music, roam three painted towns, build and share roads, and play together in convoys, contests and races.
 
 ## Long description
 
@@ -44,8 +48,8 @@ edit: store reviewers and players check.
 > rolls in any district's style, share them in the gallery, and enter the
 > weekly contest.
 >
-> **Fair by design.** The game is free. The season pass has a free track, and
-> the optional Patron track and the shop sell looks only. Nothing you can buy
+> **Fair by design.** Buy once and everything that affects play is yours:
+> the in-game shop takes only ink you earn by driving. Nothing you can buy
 > helps you win.
 >
 > **For everyone.** 24 languages, keyboard and screen-reader friendly menus,
@@ -58,14 +62,14 @@ edit: store reviewers and players check.
 - 10 vehicles, 99 garage parts, 131 wardrobe items
 - Online play: convoys, contests, co-op events, verified races, voice (opt-in)
 - Road Studio with a shared gallery and weekly contest
-- 100 trophies, sticker books and a free season-pass track
+- 100 trophies, sticker books and seasonal goals
 - 24 languages; accessible menus
-- Free; the shop and Patron track sell looks only
+- Buy once; no pay-to-win
 
 ## Tags / genres
 
 Steam tags to pick: Driving, Casual, Relaxing, Exploration, Open World,
-Multiplayer, Level Editor, Colorful, Stylized, Cute, Family Friendly, Free to Play.
+Multiplayer, Level Editor, Colorful, Stylized, Cute, Family Friendly, Atmospheric.
 itch.io genre: Racing; tags: watercolor, driving, cozy, multiplayer, sri-lanka.
 
 ## Languages (24)

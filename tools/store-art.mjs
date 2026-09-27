@@ -6,8 +6,12 @@
 // Writes public/press/shots/*.jpg (1920×1080 press screenshots) and
 // public/press/capsules/*.png (Steam header 920×430, small 462×174, main
 // 1232×706, vertical 748×896, library hero 3840×1240 (JPEG) and library capsule
-// 600×900; itch.io cover 630×500; a 1200×630 social card). Capsules are
-// painted from the screenshots with the logo and the tagline on top.
+// 600×900; library header 920×430, library logo 1280×720 (transparent), page background
+// 1438×810, event cover 800×450, event header 1920×622; itch.io cover
+// 630×500; a 1200×630 social card). Capsules are
+// painted from the screenshots with the logo on top. Steam capsules carry only
+// artwork and the game's name (Valve's capsule rules); the tagline appears only on
+// the itch.io cover and the social card.
 // In a build container (software rendering) use --quality low: the pictures
 // then look plainer than on a real graphics card.
 import { createRequire } from 'node:module';
@@ -83,6 +87,11 @@ if (!process.argv.includes('--shots-only')) {
     ['steam-vertical', 748, 896, 2],
     ['steam-library-capsule', 600, 900, 1],
     ['steam-library-hero', 3840, 1240, 0, true],
+    ['steam-library-header', 920, 430, 3],
+    ['steam-library-logo', 1280, 720, 0, 'logo'],
+    ['steam-page-background', 1438, 810, 5, true],
+    ['steam-event-cover', 800, 450, 6],
+    ['steam-event-header', 1920, 622, 7],
     ['itch-cover', 630, 500, 4],
     ['social-card', 1200, 630, 1],
   ];
@@ -94,18 +103,20 @@ if (!process.argv.includes('--shots-only')) {
     await page.setViewportSize({ width: w, height: h });
     const small = Math.min(w, h * 1.6);
     await page.setContent(`<!doctype html><html><head><style>${fonts}
-      html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden;background:#f3e7cf}
+      html,body{margin:0;width:${w}px;height:${h}px;overflow:hidden;background:${noText === 'logo' ? 'transparent' : '#f3e7cf'}}
       .pic{position:absolute;inset:0;background:url(${pick(shot)}) center/cover}
       .wash{position:absolute;inset:0;background:linear-gradient(180deg,rgba(251,246,234,0) 35%,rgba(251,246,234,.82) 78%,rgba(251,246,234,.95))}
       .edge{position:absolute;inset:0;box-shadow:inset 0 0 ${Math.round(small / 14)}px ${Math.round(small / 40)}px rgba(243,231,207,.9)}
       .t{position:absolute;left:0;right:0;bottom:${Math.round(h * 0.07)}px;text-align:center;color:#2b2622}
       h1{font-family:Caveat,cursive;font-size:${Math.round(small / 5.2)}px;line-height:.9;margin:0}
       p{font-family:'Noto Sans',sans-serif;font-size:${Math.max(11, Math.round(small / 30))}px;margin:.35em 0 0;opacity:.8;letter-spacing:.04em}
-    </style></head><body><div class="pic"></div>${noText ? '' : `<div class="wash"></div><div class="edge"></div><div class="t"><h1>Inkroads</h1>${h > 200 ? '<p>A WATERCOLOUR ROAD TRIP</p>' : ''}</div>`}</body></html>`);
+          .logo{position:absolute;inset:0;display:grid;place-items:center;text-align:center;color:#2b2622}
+      .logo h1{font-size:${Math.round(h / 2.6)}px;text-shadow:0 0 18px #fbf6ea,0 0 6px #fbf6ea,0 0 2px #fbf6ea}
+    </style></head><body>${noText === 'logo' ? '<div class="logo"><h1>Inkroads</h1></div>' : '<div class="pic"></div>'}${noText ? '' : `<div class="wash"></div><div class="edge"></div><div class="t"><h1>Inkroads</h1>${h > 200 && !name.startsWith('steam-') ? '<p>A WATERCOLOUR ROAD TRIP</p>' : ''}</div>`}</body></html>`);
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(500);
     // The huge library hero as JPEG (a PNG would be ~5 MB); the rest as PNG.
-    await page.screenshot(w > 2000 ? { path: `${root}capsules/${name}.jpg`, type: 'jpeg', quality: 88 } : { path: `${root}capsules/${name}.png` });
+    await page.screenshot(w > 2000 ? { path: `${root}capsules/${name}.jpg`, type: 'jpeg', quality: 88 } : { path: `${root}capsules/${name}.png`, omitBackground: noText === 'logo' });
     console.log('capsule', name, `${w}×${h}`);
   }
 }
