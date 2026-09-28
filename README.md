@@ -8,6 +8,8 @@
 
 **The story:** **[The Lost Palette](docs/STORY.md)**: the characters, the prologue, the eight colours and the ending.
 
+**WebGPU renderer (beta):** **[WEBGPU.md](docs/WEBGPU.md)**: how to switch it on, the automatic fallback to WebGL, and how to judge its speed from the dashboard.
+
 **Music and sound:** **[SUNO.md](docs/SUNO.md)** has ready-to-paste prompts for every theme, song, radio track, story cue and sound effect.
 
 **Microsoft Store:** every push also builds a Store package; the **[Microsoft Store guide](docs/MICROSOFT_STORE.md)** covers the account, the three identity values and the first submission (the Store signs the app, so no certificate is needed).

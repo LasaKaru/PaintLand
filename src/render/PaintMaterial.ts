@@ -680,6 +680,13 @@ export class PaintMaterial extends THREE.ShaderMaterial {
     });
     // Set after construction: merging uniforms clones textures, and a clone would never upload.
     if (opts.map) this.uniforms.uPaintMap.value = opts.map;
+    // The WebGPU renderer finds this material's node twin by type (render/gpu/PaintNode.ts).
+    (this as { type: string }).type = 'PaintMaterial';
+  }
+
+  /** Variants share programs only with the same defines (WebGPU keys pipelines by this). */
+  override customProgramCacheKey(): string {
+    return `paint:${Object.keys(this.defines).sort().join(',')}`;
   }
 
   get color(): THREE.Color {

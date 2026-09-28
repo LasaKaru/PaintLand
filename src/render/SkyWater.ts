@@ -96,6 +96,8 @@ export function createSky(): THREE.Mesh {
       }
     `,
   });
+  // The WebGPU renderer draws this with its node twin (render/gpu/SkyNodes.ts).
+  (material as { type: string }).type = 'InkSky';
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(3000, 32, 16), material);
   mesh.frustumCulled = false;
   mesh.renderOrder = -1;
@@ -203,6 +205,8 @@ export function createWater(): THREE.Mesh {
       }
     `,
   });
+  // The WebGPU renderer draws this with its node twin (render/gpu/SkyNodes.ts).
+  (material as { type: string }).type = 'InkSea';
   const mesh = new THREE.Mesh(new THREE.PlaneGeometry(9000, 9000, 1, 1).rotateX(-Math.PI / 2), material);
   mesh.name = 'sea';
   mesh.frustumCulled = false;
@@ -305,6 +309,8 @@ export function createGalaxySky(): THREE.Mesh {
       }
     `,
   });
+  // The WebGPU renderer draws this with its node twin (render/gpu/SkyNodes.ts).
+  (material as { type: string }).type = 'InkGalaxy';
   const mesh = new THREE.Mesh(new THREE.SphereGeometry(2900, 48, 24), material);
   mesh.frustumCulled = false;
   mesh.renderOrder = -1;

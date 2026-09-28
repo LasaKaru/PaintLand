@@ -95,6 +95,7 @@ describe('crash and performance dashboard', () => {
     expect(perf.devices.find((r: { key: string }) => r.key === 'touch')).toMatchObject({ minutes: 1 });
     expect(versions[0]).toMatchObject({ ver: '0.1.10', minutes: 4, fps: 38.5 });
     expect(days.at(-1).fps).toBe(38.5);
+    expect(perf.renderers).toEqual([{ key: 'webgl', minutes: 4, fps: 38.5, slow: 50 }]);
   });
 
   it('resolve hides an error until a newer build sends it again; ignore and reopen', async () => {

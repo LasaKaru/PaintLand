@@ -5,7 +5,8 @@ import { Input } from './Input';
 import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Options';
 import { clamp } from './MathUtil';
 import { createFrame } from '../road/RoadPath';
-import { PaintPipeline } from '../render/PaintPipeline';
+import { PaintPipeline, type RenderPipeline } from '../render/PaintPipeline';
+import { markGpuFailed, restartWithWebGL, type GameRenderer, type GpuKit } from '../render/Backend';
 import { PaintMaterial, paintShared, setWash } from '../render/PaintMaterial';
 import { createGalaxySky, createSky, createWater, galaxyUniforms, waterUniforms, skyUniforms } from '../render/SkyWater';
 import { applyArtStyle, applyQuality, loadStudio, saveStudio, type ArtStyle, type QualityLevel, type StudioSettings } from '../render/StudioSettings';
@@ -137,11 +138,13 @@ export class Game {
   private readonly chatHistory: { name: string; text: string }[] = [];
   private customKey = 'custom';
   private bench: { spot: number; t: number; frames: number[]; snapshot: StudioSettings; done: (r: BenchmarkResult) => void } | null = null;
-  private readonly renderer: THREE.WebGLRenderer;
+  private readonly renderer: GameRenderer;
+  /** The WebGPU renderer, when the player chose the beta (render/Backend.ts). */
+  private readonly gpu: GpuKit | null;
   private readonly scene = new THREE.Scene();
   private readonly settings: StudioSettings = loadStudio();
   private readonly options: GameOptions = loadOptions();
-  private readonly pipeline: PaintPipeline;
+  private readonly pipeline: RenderPipeline;
   private readonly input: Input;
   private readonly audio = new AudioEngine();
   private readonly hud: Hud;
@@ -348,16 +351,32 @@ export class Game {
   private showcaseTarget: 'character' | 'vehicle' | null = null;
   private readonly events: PickupEvent[] = [];
 
-  constructor(container: HTMLElement) {
+  constructor(container: HTMLElement, gpu: GpuKit | null = null) {
     THREE.ColorManagement.enabled = false;
-    this.renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    this.gpu = gpu;
+    const webgl = gpu ? null : new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+    this.renderer = gpu ? gpu.renderer : webgl!;
     this.renderer.outputColorSpace = THREE.LinearSRGBColorSpace;
     this.renderer.shadowMap.enabled = true;
     this.renderer.shadowMap.type = THREE.PCFShadowMap;
     this.renderer.setPixelRatio(1);
     this.renderer.info.autoReset = false;
     container.appendChild(this.renderer.domElement);
-    this.pipeline = new PaintPipeline(this.renderer, this.settings);
+    this.pipeline = gpu ? gpu.pipeline(this.settings) : new PaintPipeline(webgl!, this.settings);
+    if (gpu) {
+      // WebGPU stopped working: back to WebGL from the next start (the game saves first).
+      let failed = false;
+      gpu.onFailure = (reason) => {
+        if (failed) return;
+        failed = true;
+        console.error(reason);
+        markGpuFailed(reason);
+        reportError(reason, 'webgpu', '', true);
+        this.profile.save();
+        this.hud?.notice('The WebGPU renderer (beta) stopped working — restarting with WebGL…');
+        window.setTimeout(() => restartWithWebGL(), 2500);
+      };
+    }
     this.pipeline.onAdapt = () => this.applySettings();
     this.input = new Input(this.renderer.domElement);
     // The browser can drop the GPU context (driver reset, tab in the background on phones).
@@ -643,6 +662,7 @@ export class Game {
       tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
       ver: APP_VERSION,
       platform: location.protocol === 'app:' ? 'desktop' : 'web',
+      renderer: this.gpu ? 'webgpu' : 'webgl',
     });
     onBrandChange(() => {
       clearPainted();
@@ -657,6 +677,7 @@ export class Game {
     this.galaxy = createGalaxySky();
     this.scene.add(this.sky, this.galaxy, this.water, this.particles.points, this.wildlife.group);
     this.env = new Environment(this.scene);
+    this.gpu?.setSun(this.env.sun);
     this.env.onThunder = (d) => {
       this.audio.thunder(d);
       this.rig?.addShake(0.12 / (0.5 + d));

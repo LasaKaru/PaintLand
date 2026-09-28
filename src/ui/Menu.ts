@@ -1,6 +1,7 @@
 import { LiveryEditor } from './LiveryEditor';
 import { LUT_LOOKS } from '../render/Lut';
 import { reportError } from '../net/CrashReporter';
+import { backend, gpuFailure, rendererChoice, setRendererChoice, webgpuAvailable, type RendererChoice } from '../render/Backend';
 import { AccountScreen, type AccountHost } from './AccountScreen';
 import { GalleryScreen } from './GalleryScreen';
 import { PassScreen } from './PassScreen';
@@ -879,6 +880,7 @@ export class Menu {
           ${this.choice('s.fpsCap', 'Frame rate limit', [[0, 'Off'], [30, '30'], [60, '60'], [120, '120']])}
           <h4>Distance</h4>
           ${this.slider('s.drawDistance', 'Draw distance', 1500, 6000, 100, (v) => `${(v / 1000).toFixed(1)} km`)}
+          ${this.rendererSetting()}
         </div>
         <div>
           <h4>Lighting</h4>
@@ -892,6 +894,26 @@ export class Menu {
         </div>
       </div>
       <div class="perf-line" data-id="stats">${this.host.stats()}</div>`;
+  }
+
+  /** Settings → Graphics → Renderer: WebGL, or the WebGPU beta (applies after a restart). */
+  private rendererSetting(): string {
+    const chosen = rendererChoice();
+    const now: RendererChoice = backend.gpu ? 'webgpu' : 'webgl';
+    const available = webgpuAvailable();
+    const failed = gpuFailure();
+    const opt = (id: RendererChoice, label: string, off = false): string =>
+      `<button class="seg-btn ${chosen === id ? 'on' : ''}" data-action="renderer" data-value="${id}" ${off ? 'disabled' : ''}>${label}</button>`;
+    const notes = [
+      `Drawing with ${now === 'webgpu' ? 'WebGPU (beta)' : 'WebGL'} now.`,
+      !available ? 'This browser has no WebGPU.' : '',
+      failed && !backend.gpu ? `WebGPU was switched off: ${failed}` : '',
+      'WebGPU can be faster on some graphics cards and slower on others. If it stops working, the game goes back to WebGL by itself.',
+    ].filter(Boolean);
+    return `<h4>Renderer</h4>
+      <div class="field"><label>Renderer <small>(applies after a restart)</small></label><div class="seg">${opt('webgl', 'WebGL')}${opt('webgpu', 'WebGPU (beta)', !available)}</div></div>
+      <p class="menu-hint">${notes.map(escapeHtml).join(' ')}</p>
+      ${chosen !== now ? '<button class="btn small primary" data-action="renderer-restart">↻ Restart now</button>' : ''}`;
   }
 
   private lookTab(): string {
@@ -1353,6 +1375,14 @@ export class Menu {
       return;
     }
     switch (d.action) {
+      case 'renderer':
+        setRendererChoice(d.value === 'webgpu' ? 'webgpu' : 'webgl');
+        this.render();
+        return;
+      case 'renderer-restart':
+        this.host.profile.save();
+        window.location.reload();
+        return;
       case 'benchmark':
         this.show('none');
         this.host.runBenchmark((r) => {

@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import { paintShared } from './PaintMaterial';
+import { backend } from './Backend';
 
 export type ParticleKind = 'smoke' | 'dust' | 'spark' | 'splash' | 'confetti' | 'firework' | 'flame' | 'firefly' | 'exhaust' | 'rain' | 'petal' | 'snow' | 'lantern';
 
@@ -79,7 +80,9 @@ void main() {
  * the same G-buffer as everything else, so they get ink lines and paint too.
  */
 export class Particles {
-  readonly points: THREE.Points;
+  /** Points with WebGL; with WebGPU (which draws points one pixel wide) an instanced quad per particle. */
+  readonly points: THREE.Points | THREE.Mesh;
+  private readonly dynamic: THREE.BufferAttribute[];
   private readonly max: number;
   private readonly pos: Float32Array;
   private readonly vel: Float32Array;
@@ -115,15 +118,30 @@ export class Particles {
     this.drag = new Float32Array(max);
     this.grow = new Float32Array(max);
     this.wander = new Uint8Array(max);
-    const g = new THREE.BufferGeometry();
-    g.setAttribute('position', new THREE.BufferAttribute(this.pos, 3).setUsage(THREE.DynamicDrawUsage));
-    g.setAttribute('pcolor', new THREE.BufferAttribute(this.col, 4).setUsage(THREE.DynamicDrawUsage));
-    g.setAttribute('size', new THREE.BufferAttribute(this.size, 1).setUsage(THREE.DynamicDrawUsage));
-    g.setAttribute('fade', new THREE.BufferAttribute(this.fade, 1).setUsage(THREE.DynamicDrawUsage));
+    const gpu = backend.gpu;
+    const attr = (array: Float32Array, size: number): THREE.BufferAttribute =>
+      (gpu ? new THREE.InstancedBufferAttribute(array, size) : new THREE.BufferAttribute(array, size)).setUsage(THREE.DynamicDrawUsage);
+    this.dynamic = [attr(this.pos, 3), attr(this.col, 4), attr(this.size, 1), attr(this.fade, 1)];
+    let g: THREE.BufferGeometry;
+    if (gpu) {
+      const q = new THREE.InstancedBufferGeometry();
+      q.setAttribute('position', new THREE.Float32BufferAttribute([-1, -1, 0, 1, -1, 0, 1, 1, 0, -1, 1, 0], 3));
+      q.setIndex([0, 1, 2, 0, 2, 3]);
+      q.instanceCount = max;
+      g = q;
+      g.setAttribute('ipos', this.dynamic[0]);
+    } else {
+      g = new THREE.BufferGeometry();
+      g.setAttribute('position', this.dynamic[0]);
+    }
+    g.setAttribute('pcolor', this.dynamic[1]);
+    g.setAttribute('size', this.dynamic[2]);
+    g.setAttribute('fade', this.dynamic[3]);
     this.material = new THREE.ShaderMaterial({
       glslVersion: THREE.GLSL3,
       vertexShader: vertex,
       fragmentShader: fragment,
+      side: gpu ? THREE.DoubleSide : THREE.FrontSide,
       uniforms: {
         uScale: { value: 800 },
         uSunDir: paintShared.uSunDir,
@@ -132,7 +150,9 @@ export class Particles {
         uRealism: paintShared.uRealism,
       },
     });
-    this.points = new THREE.Points(g, this.material);
+    // The WebGPU renderer draws this with its node twin (render/gpu/ParticleNode.ts).
+    (this.material as { type: string }).type = 'InkParticles';
+    this.points = gpu ? new THREE.Mesh(g, this.material) : new THREE.Points(g, this.material);
     this.points.frustumCulled = false;
     this.points.name = 'particles';
   }
@@ -200,11 +220,7 @@ export class Particles {
       this.size[i] = this.life[i] > 0 ? this.base[i] * (1 + (this.grow[i] - 1) * t) : 0;
       this.fade[i] = Math.min(1, (1 - t) * 1.6) * Math.min(1, t * 8 + 0.3);
     }
-    const g = this.points.geometry;
-    g.attributes.position.needsUpdate = true;
-    g.attributes.pcolor.needsUpdate = true;
-    g.attributes.size.needsUpdate = true;
-    g.attributes.fade.needsUpdate = true;
+    for (const a of this.dynamic) a.needsUpdate = true;
   }
 
   clear(): void {

@@ -27,6 +27,21 @@ export interface FrameFx {
   lut?: string;
 }
 
+/** What the game needs from a pipeline (this one for WebGL, render/gpu/PipelineGPU.ts for WebGPU). */
+export interface RenderPipeline {
+  readonly luts: LutBank;
+  readonly adaptive: AdaptiveGovernor;
+  dynamicScale: number;
+  onAdapt: (() => void) | null;
+  colourBlind: number;
+  readonly renderScale: number;
+  readonly size: { width: number; height: number };
+  setSize(width: number, height: number): void;
+  forceSize(px: { width: number; height: number } | null): void;
+  render(scene: THREE.Scene, camera: THREE.PerspectiveCamera, dt: number, time: number, fx: FrameFx): void;
+  dispose(): void;
+}
+
 /**
  * The renderer (docs/03 §2): one scene pass into a G-buffer (colour + normal/id
  * + depth), then screen passes. The watercolour look uses a half-resolution
@@ -35,7 +50,7 @@ export interface FrameFx {
  * adds HDR, ambient occlusion, sun shafts, height fog, filmic tone mapping,
  * FXAA and depth of field. Each pass is switched by the graphics quality tier.
  */
-export class PaintPipeline {
+export class PaintPipeline implements RenderPipeline {
   private gbuffer: THREE.WebGLRenderTarget;
   private paintRT: THREE.WebGLRenderTarget;
   private bloomA: THREE.WebGLRenderTarget;

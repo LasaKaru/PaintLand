@@ -21,6 +21,7 @@ import './styles/main.css';
 import { Game } from './core/Game';
 import { installCrashReporter, reportError } from './net/CrashReporter';
 import { lang, setLang } from './core/i18n';
+import { backend, markGpuFailed, rendererChoice, restartWithWebGL, webgpuAvailable, type GpuKit } from './render/Backend';
 
 void setLang(lang());
 
@@ -29,19 +30,54 @@ installCrashReporter();
 const app = document.getElementById('app');
 if (!app) throw new Error('#app missing');
 
-const game = new Game(app);
-game
-  .init()
-  .then(() => {
-    // Dev tools (tools/*.mjs) drive the game through this handle once it has finished loading.
-    if (import.meta.env.DEV) (window as unknown as { __paintland: Game }).__paintland = game;
-  })
-  .catch((err: unknown) => {
-    console.error(err);
-    reportError(`Start failed: ${err instanceof Error ? err.message : String(err)}`, 'init', err instanceof Error ? err.stack ?? '' : '');
-    const msg = document.createElement('div');
-    msg.className = 'card';
-    msg.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-width:460px;font-family:monospace';
-    msg.textContent = `Inkroads could not start: ${err instanceof Error ? err.message : String(err)}. It needs a browser with WebGL2.`;
-    document.body.appendChild(msg);
-  });
+/**
+ * The WebGPU renderer (a beta) when the player chose it and the browser has it;
+ * otherwise WebGL. Its code is a separate download, fetched only here.
+ */
+async function startRenderer(): Promise<GpuKit | null> {
+  if (rendererChoice() !== 'webgpu') return null;
+  if (!webgpuAvailable()) {
+    markGpuFailed('WebGPU is not available in this browser');
+    return null;
+  }
+  try {
+    const { startWebGPU } = await import('./render/gpu');
+    const kit = await startWebGPU();
+    backend.gpu = true;
+    return kit;
+  } catch (err) {
+    const reason = `WebGPU could not start: ${err instanceof Error ? err.message : String(err)}`;
+    console.warn(reason);
+    markGpuFailed(reason);
+    reportError(reason, 'webgpu', '', false);
+    return null;
+  }
+}
+
+void startRenderer().then((gpu) => {
+  const start = async (): Promise<Game> => {
+    const g = new Game(app, gpu);
+    await g.init();
+    return g;
+  };
+  start()
+    .then((game) => {
+      // Dev tools (tools/*.mjs) drive the game through this handle once it has finished loading.
+      if (import.meta.env.DEV) (window as unknown as { __paintland: Game }).__paintland = game;
+    })
+    .catch((err: unknown) => {
+      console.error(err);
+      if (gpu) {
+        // The WebGPU beta broke the start: go back to WebGL rather than show an error.
+        markGpuFailed(`Start failed with WebGPU: ${err instanceof Error ? err.message : String(err)}`);
+        restartWithWebGL();
+        return;
+      }
+      reportError(`Start failed: ${err instanceof Error ? err.message : String(err)}`, 'init', err instanceof Error ? err.stack ?? '' : '');
+      const msg = document.createElement('div');
+      msg.className = 'card';
+      msg.style.cssText = 'position:fixed;left:50%;top:50%;transform:translate(-50%,-50%);max-width:460px;font-family:monospace';
+      msg.textContent = `Inkroads could not start: ${err instanceof Error ? err.message : String(err)}. It needs a browser with WebGL2.`;
+      document.body.appendChild(msg);
+    });
+});

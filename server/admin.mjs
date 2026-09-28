@@ -406,6 +406,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
         p.quality = key(data.quality);
         p.ver = key(data.ver ?? 'unknown');
         p.platform = key(data.platform ?? 'web');
+        p.renderer = key(data.renderer ?? 'webgl');
         versionRec(p.ver, now).sessions++;
         count(`lang:${key(data.lang)}`);
         count(`device:${key(data.device)}`);
@@ -423,6 +424,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
           const fps = Math.min(240, Math.max(1, Number(data.fps) || 0));
           if (data.q) p.quality = key(data.q);
           const perf = (stats.perf ??= { places: {}, devices: {}, quality: {}, platforms: {}, days: {} });
+          addPerf((perf.renderers ??= {}), p.renderer ?? 'webgl', fps, 6);
           addPerf(perf.places, key(data.where ?? 'other'), fps, 150);
           addPerf(perf.devices, p.device ?? 'other', fps, 20);
           addPerf(perf.quality, p.quality ?? 'other', fps, 20);
@@ -467,7 +469,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
         g.last = now;
         bump(g.days, d, 40);
         bump(g.versions, ver, 20);
-        bump(g.devices, `${p.platform ?? 'web'}/${p.device ?? 'other'}`, 12);
+        bump(g.devices, `${p.platform ?? 'web'}/${p.device ?? 'other'}${p.renderer === 'webgpu' ? '/webgpu' : ''}`, 12);
         bump(g.places, key(data.place ?? data.where ?? 'other'), 20);
         // Marked fixed, but seen again in a build that came out after the fix → regressed.
         if (g.status === 'resolved' && (stats.versions?.[ver]?.first ?? 0) > (g.resolvedAt ?? now)) g.status = 'regressed';
@@ -610,6 +612,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
         devices: table(perf.devices, 12),
         quality: table(perf.quality, 12),
         platforms: table(perf.platforms, 6),
+        renderers: table(perf.renderers, 6),
       },
     };
   }

@@ -67,6 +67,9 @@ anonymous, and nothing is sent when a player turns statistics off.
 - **Frame rate:** a minute under **30 fps** counts as slow. The tables list the
   slowest places, quality settings and devices first, which shows where
   optimising pays off most.
+- **Renderer:** frame rates for WebGL (the default) and the WebGPU beta
+  (see [WEBGPU.md](WEBGPU.md)). Errors from WebGPU players show `/webgpu` in
+  their device list.
 
 ### Photo contest moderation
 

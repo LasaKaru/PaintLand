@@ -113,7 +113,7 @@ interface Health {
   days: { day: string; sessions: number; crashed: number; crashFree: number; fps: number; slow: number }[];
   versions: { ver: string; first: number; sessions: number; crashed: number; crashFree: number; fps: number; slow: number; minutes: number }[];
   groups: CrashGroup[];
-  perf: { minutes: number; fps: number; slow: number; slowFps: number; places: PerfRow[]; devices: PerfRow[]; quality: PerfRow[]; platforms: PerfRow[] };
+  perf: { minutes: number; fps: number; slow: number; slowFps: number; places: PerfRow[]; devices: PerfRow[]; quality: PerfRow[]; platforms: PerfRow[]; renderers?: PerfRow[] };
 }
 type CrashFilter = 'active' | 'resolved' | 'ignored' | 'all';
 
@@ -414,6 +414,7 @@ export class AdminPanel {
           ${perfTable('By graphics quality', h.perf.quality)}
           ${perfTable('By device', h.perf.devices)}
           ${perfTable('Web or desktop app', h.perf.platforms)}
+          ${perfTable('Renderer', h.perf.renderers ?? [], 'WebGPU is the beta in Settings → Graphics. Compare it with WebGL here before making it the default.')}
         </div>
       </div>
       <p class="menu-hint">Each playing minute sends its average frame rate. Errors come from the crash reporter (up to 8 per session). All anonymous, and nothing is sent when a player turns statistics off.</p>`;
