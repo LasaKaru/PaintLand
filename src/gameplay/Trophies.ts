@@ -1,4 +1,5 @@
 import { CATALOGUE, type Profile } from './Profile';
+import { SPECIES_TOTAL, speciesCaught } from './Fishing';
 
 const CLOTHES = new Set(['hair', 'hat', 'top', 'bottom', 'glasses', 'back']);
 
@@ -172,6 +173,22 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'quiet-moment', name: 'A Quiet Moment', text: 'Sit on a bench with a view and take it all in.', icon: '🌅', reward: 50, progress: seenCount('view:', 1) },
   { id: 'all-views', name: 'Every View', text: 'Sit at all seven viewpoints.', icon: '🗺', reward: 300, progress: seenCount('view:', 7) },
   { id: 'the-end', name: 'The Painter’s Friend', text: 'Finish the story: paint the sky over the World’s End.', icon: '🎆', reward: 500, progress: (p) => [p.data.story?.finale ? 1 : 0, 1] },
+  // ————— fishing, home and parties —————
+  { id: 'first-fish', name: 'Gone Fishing', text: 'Catch your first fish.', icon: '🎣', reward: 40, progress: stat('fish', 1) },
+  { id: 'fish-50', name: 'Old Salt', text: 'Catch 50 fish.', icon: '🐟', reward: 200, progress: stat('fish', 50) },
+  { id: 'fishbook-10', name: 'Keen Angler', text: 'Catch 10 different kinds of fish.', icon: '📘', reward: 200, progress: (p) => [Math.min(10, speciesCaught(p.data.fish ?? {})), 10] },
+  { id: 'fishbook-all', name: 'Master Angler', text: 'Fill every page of the fish book.', icon: '🏆', reward: 800, progress: (p) => [speciesCaught(p.data.fish ?? {}), SPECIES_TOTAL] },
+  { id: 'legend-fish', name: 'The One That Didn’t Get Away', text: 'Land a legendary fish.', icon: '🌟', reward: 300, progress: stat('legendaryFish', 1) },
+  { id: 'big-fish', name: 'This Big!', text: 'Land a fish longer than 1.5 metres.', icon: '📏', reward: 200, progress: (p) => [p.stat('bigFish') >= 150 ? 1 : 0, 1] },
+  { id: 'tidy-water', name: 'Tidy Waters', text: 'Fish 5 old boots and bottles out of the water.', icon: '🥾', reward: 60, progress: stat('junk', 5) },
+  { id: 'cosy', name: 'Home Sweet Home', text: 'Put your feet up on your sofa.', icon: '🛋', reward: 30, progress: stat('sofa', 1) },
+  { id: 'sleep', name: 'Sweet Dreams', text: 'Sleep in your own bed.', icon: '🛏', reward: 40, progress: stat('sleeps', 1) },
+  { id: 'tea-10', name: 'Tea Time', text: 'Make 10 cups of tea at home.', icon: '🫖', reward: 80, progress: stat('teas', 10) },
+  { id: 'green-thumb', name: 'Green Fingers', text: 'Water your plants until they bloom.', icon: '🌸', reward: 150, progress: (p) => [Math.min(3, p.data.rest?.plants.stage ?? 0), 3] },
+  { id: 'good-pet', name: 'Who’s a Good Friend?', text: 'Give your pet a fuss 10 times.', icon: '🐾', reward: 80, progress: stat('pets', 10) },
+  { id: 'dj-1', name: 'Drop the Beat', text: 'Step up to the DJ decks.', icon: '🎧', reward: 50, progress: seenCount('dj', 1) },
+  { id: 'dj-sets-5', name: 'Resident DJ', text: 'Play 5 sets at a DJ booth in town.', icon: '💿', reward: 250, progress: stat('djSets', 5) },
+  { id: 'dance-60', name: 'Dancing Queen', text: 'Dance at a party for a minute in total.', icon: '🪩', reward: 80, progress: (p) => [Math.min(60, Math.floor(p.stat('danced'))), 60] },
   { id: 'wealthy', name: 'Ink Well', text: 'Have 5,000 ink at once.', icon: '💧', reward: 200, progress: (p) => [Math.min(5000, p.data.ink), 5000] },
 ];
 

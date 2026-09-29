@@ -238,6 +238,10 @@ export interface ProfileData {
   pass?: { season: string; base: number; claimed: number[]; patronClaimed: number[] };
   /** Joined sponsor challenges: starting count and whether it's done. */
   sponsorCh?: Record<string, { base: number; done: boolean }>;
+  /** Fish caught: how many of each and the biggest (see Fishing.ts). */
+  fish?: import('./Fishing').FishBook;
+  /** Resting at home: well rested until when, and the plants (see Rest.ts). */
+  rest?: import('./Rest').RestState;
 }
 
 const KEY = 'paintland.profile.v2';
@@ -400,9 +404,15 @@ export class Profile {
     return this.data.owned.includes(id);
   }
 
-  earn(ink: number): void {
-    this.data.ink += ink;
+  /** Extra ink for rewards right now (being well rested; see Rest.ts). */
+  bonus: () => number = () => 1;
+
+  /** Add ink from a reward (with any bonus); returns what was added. */
+  earn(ink: number): number {
+    const add = ink > 0 ? Math.round(ink * this.bonus()) : ink;
+    this.data.ink += add;
     this.save();
+    return add;
   }
 
   /** Buy an item; tonics stack up to MAX_TONICS, everything else is owned once. */

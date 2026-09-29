@@ -103,6 +103,35 @@ Sitting at all seven viewpoints earns a trophy.
 
 ---
 
+## Fishing, home and parties
+
+**Fishing.** Stand in a blue 🎣 ring at the water's edge and press **E** to cast. Watch the float; when
+it dips, press **E** at once to strike. Then **hold E** to lift the green bar and keep the fish inside
+it: the yellow bar on the side fills while you do and drains while you don't. Moving away stops fishing.
+
+- Spots: the quays of Harbour Town and Lantern Village, the koi pond, the Tea Hills lake, Serendib
+  City's beach and park lake, and Mirror Lake at the World's End.
+- 23 things to catch (a few are not fish at all). Which ones bite depends on the water, the town, day
+  or night, and the season; rain brings up more of the rare ones.
+- Every catch goes in the **Fish book** (main menu), with how many you caught and the biggest. Fish
+  are worth ink; bigger ones are worth more. Turtles are put back.
+- **Weekly contest:** each week one fish is the contest fish. Signed in, your biggest catch of it goes
+  on the board in the Fish book.
+- *Settings → Accessibility → Easy fishing* gives a wider bar and calmer fish.
+
+**Your home** (Harbour Town, by the harbour gardens) has things to do inside: sit on the sofa, make
+tea, water the plants (once a day; they grow and bloom), give your pet a fuss, sleep (after dark you
+wake in the morning, in the day you nap till evening), and the record player (pick a station, or start
+a party). Resting makes you **well rested**: +10% ink from everything for up to 40 minutes. Nothing
+ever gets hungry or tired: resting is only ever a bonus.
+
+**DJ parties.** Step into the 🎧 ring behind a DJ booth (Harbour Town's green, or Galle Face beach in
+Serendib City), or start a party from your record player. Pick the station and track, sweep the
+filter, and use the pads: **1** drum fill, **2** air horn, **3** scratch, **4** echo, **5** lights.
+In a multiplayer room everyone in the same town hears your set (each game plays the same music; no
+audio is streamed) and dances on the glowing floor. With *Reduced motion* or *Calm lighting* on, the
+lights glow slowly instead of pulsing, and they never pulse faster than three times a second.
+
 ## Paper-plane flight
 
 Every town has a ✈ **Paper plane** ring with a big paper plane on a wooden stand. Stand (or park) in the ring and press **E**: a gust throws you up into the sky.

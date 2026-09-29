@@ -4,6 +4,7 @@ import type { TrialRun } from '../gameplay/TrialSim';
 import type { HumanLook } from '../models/Human';
 import type { VehicleId, VehicleLook } from '../models/Vehicles';
 import { unpackDots, type TrailDot } from '../gameplay/PaintTrail';
+import { checkParty, type PartyMsg } from '../gameplay/Party';
 
 /** What each player shares about themselves (docs/09 §3). */
 export interface GroupPhotoInvite {
@@ -183,6 +184,8 @@ export class NetClient {
   onTogether: ((from: string, name: string, msg: TogetherMsg) => void) | null = null;
   /** Someone is taking a group photo at (x, z) in a free-roam area and invites others to join. */
   onGroupPhoto: ((from: string, name: string, at: GroupPhotoInvite) => void) | null = null;
+  /** A DJ party from another player (already checked). */
+  onParty: ((from: string, name: string, msg: PartyMsg) => void) | null = null;
   /** Paint-trail dabs from another player (already checked). */
   onTrail: ((from: string, name: string, place: string, dots: TrailDot[]) => void) | null = null;
   /** Our id as the other players see it (the relay's, or ours in tab rooms). */
@@ -235,6 +238,11 @@ export class NetClient {
   /** Dabs of our paint trail for everyone in the same place (see gameplay/PaintTrail.ts). */
   trail(place: string, packed: number[]): void {
     this.transport?.send({ t: 'emote', kind: 'trail', place, d: packed });
+  }
+
+  /** Our DJ party's state (see gameplay/Party.ts). */
+  party(msg: PartyMsg): void {
+    this.transport?.send({ t: 'emote', kind: 'party', ...msg });
   }
 
   groupPhoto(at: GroupPhotoInvite): void {
@@ -311,6 +319,11 @@ export class NetClient {
         if (e.kind === 'together') {
           const tm = checkTogether(e.msg);
           if (tm) this.onTogether?.(pid, peer.info?.name ?? 'Painter', tm);
+          break;
+        }
+        if (e.kind === 'party') {
+          const pm = checkParty(e);
+          if (pm) this.onParty?.(pid, peer.info?.name ?? 'Painter', pm);
           break;
         }
         if (e.kind === 'trail') {

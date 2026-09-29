@@ -112,6 +112,14 @@ export class Environment {
     this.hour = p.preset.hour;
   }
 
+  /** Jump the clock to an hour (after sleeping), keeping Auto as it was. */
+  setHour(h: number): void {
+    this.hour = ((h % 24) + 24) % 24;
+    this.target = presetForHour(this.hour);
+    const near = TIME_PRESETS.reduce((a, b) => (Math.abs(b.preset.hour - this.hour) < Math.abs(a.preset.hour - this.hour) ? b : a));
+    this.presetId = near.id;
+  }
+
   setAuto(on: boolean): void {
     this.auto = on;
   }

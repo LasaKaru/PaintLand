@@ -25,6 +25,7 @@ import { CHAINS, CITY_MISSIONS, missionUnlocked } from '../gameplay/CityMissions
 import { CATALOGUE, MAX_OUTFITS, MAX_TONICS, PALETTE } from '../gameplay/Profile';
 import type { ChapterDef } from '../world/Chapters';
 import { parseMailto, showContactCard } from './ContactCard';
+import { FISH, SPECIES_TOTAL, speciesCaught } from '../gameplay/Fishing';
 import { canQuit, donationsShown, quitApp, requireTerms, showDoc, showHealthWarning, type LegalDoc } from './Legal';
 import { APP_VERSION } from '../net/CrashReporter';
 import type { MissionDef } from '../gameplay/Missions';
@@ -61,7 +62,7 @@ type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'acc
 /** Screens that use the online services: the first visit asks for the terms (when the owner has that on). */
 const ONLINE_SCREENS = new Set(['multiplayer', 'race', 'account', 'gallery', 'contest', 'workshop']);
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'legal' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'workshop' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'legal' | 'fishbook' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'workshop' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHost {
@@ -300,6 +301,7 @@ export class Menu {
     if (screen === 'mailbox' || screen === 'home' || screen === 'postcard') this.homeScreen.load(screen);
     if (screen === 'contest') this.contestScreen.load();
     if (screen === 'workshop') this.workshopScreen.load();
+    if (screen === 'fishbook') void this.loadFishing();
     this.screen = screen;
     this.root.classList.toggle('open', screen !== 'none');
     this.host.showcase(screen === 'wardrobe' ? 'character' : screen === 'garage' || screen === 'livery' ? 'vehicle' : null);
@@ -364,6 +366,7 @@ export class Menu {
       race: () => this.raceScreen(),
       credits: () => this.credits(),
       legal: () => this.legalScreen(),
+      fishbook: () => this.fishBook(),
     }[s]();
     // Keep a message that's still showing across re-renders (async actions re-render after toasting).
     const live = this.toastText && performance.now() < this.toastUntil;
@@ -491,6 +494,7 @@ export class Menu {
         ${WorkshopScreen.offered ? `<button class="menu-item" data-nav="workshop">🛠 ${t('ws.titleScreen')}</button>` : ''}
         <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
+        <button class="menu-item" data-nav="fishbook">🎣 ${t('book.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
         <button class="menu-item" data-nav="race">${t('menu.race')}</button>
         <button class="menu-item" data-nav="missions">${t('menu.missions')}</button>
@@ -1046,6 +1050,7 @@ export class Menu {
         <div>
           ${this.toggle('s.reducedMotion', 'Reduced motion (no line boil, speed lines or camera roll)')}
           ${this.toggle('o.calmLighting', 'Calm lighting (slow time-of-day blends)')}
+          ${this.toggle('o.easyFishing', t('opt.easyFishing'))}
           ${this.slider('o.hudScale', 'HUD size', 0.7, 1.4, 0.05, (v) => `${Math.round(v * 100)}%`)}
           ${this.choice('o.colourBlind', 'Colour-vision assist', [['none', 'Off'], ['protan', 'Protan'], ['deutan', 'Deutan'], ['tritan', 'Tritan']])}
         </div>
@@ -1176,6 +1181,49 @@ export class Menu {
       })()}
       <h4>${t('legal.builtWith')}</h4>
       <p>Three.js, Electron, Noto Sans, Caveat, Permanent Marker, Space Mono, lil-gui. <button class="btn small" data-doc="licenses">${t('legal.licenses')}</button></p>
+    </div>`;
+  }
+
+  /** This week's fishing contest (from the server; null until loaded or when offline). */
+  private fishing: { on: boolean; fish?: string; top?: { name: string; cm: number; mine: boolean }[]; mine?: number | null; last?: { fish: string; name: string; cm: number } | null } | null = null;
+
+  private async loadFishing(): Promise<void> {
+    const r = await this.host.account.call<NonNullable<Menu['fishing']>>('/api/fishing');
+    this.fishing = r.ok && r.data ? r.data : null;
+    if (this.screen === 'fishbook') this.render();
+  }
+
+  /** The fish book: every fish, how many you caught and the biggest; where and when to find the rest; the weekly contest. */
+  private fishBook(): string {
+    const book = this.host.profile.data.fish ?? {};
+    const fishName = (id: string): string => t(`fishName.${id}` as StringKey);
+    const cards = FISH.map((f) => {
+      const r = book[f.id];
+      const where = `${t(`book.water.${f.water[0]}` as StringKey)}${f.time !== 'any' ? ` · ${t(f.time === 'night' ? 'book.night' : 'book.day')}` : ''}${f.seasons ? ` · ${f.seasons.map((x) => t(`season.${x}` as StringKey)).join(', ')}` : ''}`;
+      return `<div class="fish-card rarity-${f.rarity}${r ? '' : ' unknown'}">
+        <div class="fish-icon">${r ? f.icon : '❔'}</div>
+        <div><b>${r ? escapeHtml(fishName(f.id)) : t('book.unknown')}</b>${f.junk ? '' : ` <small>${t(`fishRarity.${f.rarity}` as StringKey)}</small>`}
+        <div class="menu-hint">${r ? `${t('book.count', { n: r.n })}${f.junk ? '' : ` · ${t('book.best', { cm: r.best.toFixed(1) })}`}` : escapeHtml(where)}</div></div>
+      </div>`;
+    }).join('');
+    const f = this.fishing;
+    let contest = '';
+    if (f && f.on === false) contest = `<p class="menu-hint">${t('book.contestOff')}</p>`;
+    else if (f?.fish) {
+      const top = f.top ?? [];
+      contest = `<div class="card fish-contest">
+        <h4>🏆 ${t('book.contest', { fish: fishName(f.fish) })}</h4>
+        ${top.length ? `<ol>${top.slice(0, 10).map((e) => `<li class="${e.mine ? 'mine' : ''}">${escapeHtml(e.name)} · <b>${e.cm.toFixed(1)} cm</b></li>`).join('')}</ol>` : `<p class="menu-hint">${t('book.contestNone')}</p>`}
+        <p class="menu-hint">${this.host.account.signedIn ? (f.mine ? t('book.contestYou', { cm: f.mine.toFixed(1) }) : '') : t('book.contestSignIn')}</p>
+        ${f.last ? `<p class="menu-hint">${escapeHtml(t('book.lastWinner', { name: f.last.name, cm: f.last.cm.toFixed(1), fish: fishName(f.last.fish) }))}</p>` : ''}
+      </div>`;
+    }
+    const caught = speciesCaught(book);
+    return `<div class="menu-panel wide">${this.header(`🎣 ${t('book.title')}`)}
+      <p>${t('book.caught', { n: caught, total: SPECIES_TOTAL })}</p>
+      <p class="menu-hint">${t('book.where')}</p>
+      ${contest}
+      <div class="fish-grid">${cards}</div>
     </div>`;
   }
 

@@ -30,6 +30,7 @@ import { createAdmin } from './admin.mjs';
 import { createAccounts } from './accounts.mjs';
 import { createMail } from './mail.mjs';
 import { createPhotos } from './photos.mjs';
+import { createFishing } from './fishing.mjs';
 import { createGallery } from './gallery.mjs';
 import { createStore } from './store.mjs';
 import { createShardLink, secretOk, shardConfig, shardFor } from './shards.mjs';
@@ -140,11 +141,14 @@ const admin = !SHARD.primary ? null : createAdmin({
 const accounts = !SHARD.primary ? null : createAccounts({ dataDir: DATA_DIR, isBanned: (n) => admin.isBanned(n), onDelete: (uid) => {
   mail?.forget(uid);
   photos?.forget(uid);
+  fishing?.forget(uid);
 } });
 // Postcards between friends and players' homes in Harbour Town.
 const mail = !SHARD.primary ? null : createMail({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), userByName: (n) => accounts.userByName(n), userById: (id) => accounts.userById(id) });
 // The weekly photo contest (entries and votes need an account; the winner goes on a city billboard).
 const photos = !SHARD.primary ? null : createPhotos({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), isBanned: (n) => admin.isBanned(n) });
+// The weekly fishing contest (biggest catch of the week's fish; needs an account; the admin can switch it off).
+const fishing = !SHARD.primary ? null : createFishing({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), isBanned: (n) => admin.isBanned(n), enabled: () => admin.features().fishingContest });
 // The road gallery and weekly contest (publishing and rating need an account).
 const gallery = !SHARD.primary ? null : createGallery({ dataDir: DATA_DIR, userForToken: (t) => accounts.userForToken(t), isBanned: (n) => admin.isBanned(n) });
 // Patron entitlements for the season pass (codes and admin grants; the hook for payments later).
@@ -221,6 +225,7 @@ const http = createServer((req, res) => {
     .then((handled) => handled || accounts.handle(req, res, url))
     .then((handled) => handled || mail.handle(req, res, url))
     .then((handled) => handled || photos.handle(req, res, url))
+    .then((handled) => handled || fishing.handle(req, res, url))
     .then((handled) => handled || gallery.handle(req, res, url))
     .then((handled) => handled || store.handle(req, res, url))
     .then((handled) => handled || admin.handle(req, res, url))
@@ -426,6 +431,7 @@ for (const sig of ['SIGTERM', 'SIGINT']) {
       store?.flush();
       mail?.flush();
       photos?.flush();
+      fishing?.flush();
     } finally {
       process.exit(0);
     }

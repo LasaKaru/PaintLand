@@ -62,7 +62,12 @@ export const EMOTES = ['wave', 'ayubowan', 'cheer', 'dance', 'clap', 'bow', 'lau
 export type Emote = (typeof EMOTES)[number];
 export const isEmote = (v: unknown): v is Emote => typeof v === 'string' && (EMOTES as readonly string[]).includes(v);
 
-export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote;
+/** Quiet things to do in town: fishing, tea, tending plants, DJing, sleeping (see world/Leisure.ts). */
+export const LEISURE_POSES = ['fish', 'reel', 'sip', 'tend', 'dj', 'sleep'] as const;
+export type LeisurePose = (typeof LEISURE_POSES)[number];
+export const isLeisurePose = (v: unknown): v is LeisurePose => typeof v === 'string' && (LEISURE_POSES as readonly string[]).includes(v);
+
+export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote | LeisurePose;
 
 const INK = '#2b2622';
 const _clipQ = new THREE.Quaternion();
@@ -369,6 +374,18 @@ export class HumanModel {
     this.layers = this.layers.filter((l) => l.weight > 0 || l.target > 0);
   }
 
+  /** Hold something in the right hand (a fishing rod); null lets go. */
+  hold(obj: THREE.Object3D | null): void {
+    const hand = this.arms[1].elbow;
+    if (this.held) hand.remove(this.held);
+    this.held = obj;
+    if (obj) {
+      obj.position.set(0, -0.29, 0);
+      hand.add(obj);
+    }
+  }
+  private held: THREE.Object3D | null = null;
+
   /** Hide the head in first person so it never covers the lens. */
   setHeadVisible(visible: boolean): void {
     this.headShown = visible;
@@ -422,6 +439,21 @@ export class HumanModel {
     }
     for (const leg of this.legs) leg.hip.rotation.z = 0;
 
+    if (pose === 'sleep') {
+      // Lying on your back, arms by your sides, breathing slowly.
+      for (const leg of this.legs) {
+        leg.hip.rotation.set(0.05, 0, 0);
+        leg.knee.rotation.x = -0.1;
+      }
+      this.arms[0].shoulder.rotation.set(0.1, 0, 0.2);
+      this.arms[1].shoulder.rotation.set(0.1, 0, -0.2);
+      for (const arm of this.arms) arm.elbow.rotation.x = 0.3;
+      this.hips.rotation.x = -Math.PI / 2;
+      this.hips.position.y = 0.22;
+      this.chest.rotation.x = Math.sin(time * 0.9) * 0.02;
+      this.head.rotation.set(0.1, 0.25, 0);
+      return;
+    }
     if (pose === 'air') {
       this.legs[0].hip.rotation.x = 0.7;
       this.legs[0].knee.rotation.x = -1.1;
@@ -447,6 +479,55 @@ export class HumanModel {
     this.chest.rotation.set(-(pose === 'run' ? 0.22 : 0.06) * b, 0, 0);
     this.head.rotation.set(-this.chest.rotation.x * 0.6, 0, 0);
     if (isEmote(pose)) this.emote(pose, time);
+    else if (isLeisurePose(pose)) this.leisure(pose, time);
+  }
+
+  /** Standing poses for the quiet things to do (rotation.x > 0 swings a limb forward). */
+  private leisure(p: LeisurePose, time: number): void {
+    const [left, right] = this.arms;
+    switch (p) {
+      case 'fish':
+      case 'reel': {
+        // Both hands on the rod, held out in front; reeling winds the left hand round.
+        const wind = p === 'reel' ? Math.sin(time * 11) * 0.25 : Math.sin(time * 1.3) * 0.03;
+        right.shoulder.rotation.set(0.95, 0, -0.12);
+        right.elbow.rotation.x = 0.55;
+        left.shoulder.rotation.set(0.85 + wind, 0, 0.35);
+        left.elbow.rotation.x = 1.2 + wind;
+        this.chest.rotation.x = p === 'reel' ? 0.08 : -0.03;
+        this.head.rotation.x = -0.12;
+        break;
+      }
+      case 'sip': {
+        // Tea: the cup comes up to the lips every few seconds.
+        const up = Math.max(0, Math.sin(time * 0.9)) ** 2;
+        right.shoulder.rotation.set(0.5 + up * 0.5, 0, -0.2);
+        right.elbow.rotation.x = 1.3 + up * 0.8;
+        left.shoulder.rotation.set(0.5, 0, 0.25);
+        left.elbow.rotation.x = 1.4;
+        this.head.rotation.x = -0.1 + up * 0.15;
+        break;
+      }
+      case 'tend':
+        // Bending to water the plants (or stroke a pet).
+        this.chest.rotation.x = -0.55;
+        this.head.rotation.x = -0.2;
+        right.shoulder.rotation.set(1.1 + Math.sin(time * 2) * 0.12, 0, -0.1);
+        right.elbow.rotation.x = 0.2;
+        left.shoulder.rotation.set(0.4, 0, 0.2);
+        left.elbow.rotation.x = 0.6;
+        break;
+      case 'dj': {
+        // Hands on the decks, head nodding to the beat.
+        const nod = Math.sin(time * 6.5);
+        right.shoulder.rotation.set(0.9, 0, -0.25);
+        left.shoulder.rotation.set(0.9 + Math.max(0, Math.sin(time * 3.2)) * 0.25, 0, 0.25);
+        right.elbow.rotation.x = left.elbow.rotation.x = 0.9;
+        this.head.rotation.set(0.1 + nod * 0.12, 0, 0);
+        this.hips.position.y = 0.86 - Math.abs(nod) * 0.03;
+        break;
+      }
+    }
   }
 
   /** Emote poses (rotation.x > 0 swings a limb forward; chest.x < 0 leans forward). */

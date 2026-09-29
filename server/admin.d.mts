@@ -9,6 +9,7 @@ export interface AdminConfig {
   sponsors: { id: string; name: string; url: string; file: string; weight: number; enabled: boolean }[];
   challenges?: AdminChallenge[];
   legal: AdminLegal;
+  features: { fishingContest: boolean; party: boolean };
 }
 export interface AdminLegal { entity: string; country: string; minAge: number; updated: string; healthWarning: boolean; termsForOnline: boolean; hideDonationsInApp: boolean; credits: { name: string; role: string }[] }
 export interface AdminChallenge { id: string; sponsorId: string; title: string; text: string; kind: string; target: number; ink: number; item: string; start: number; end: number; enabled: boolean }
@@ -28,6 +29,7 @@ export declare function checkPassword(password: string, rec: { salt: string; has
 export declare function createAdmin(opts: { dataDir: string; distDir?: string; live: () => { rooms: number; online: number; roomSizes: Record<string, number> }; accounts?: () => { accounts: number; clubs: number; online: number } | null; gallery?: () => { reported(): unknown[]; moderate(id: string, action: 'remove' | 'keep'): boolean; stats(): { roads: number; hidden: number } } | null; store?: () => import('./store.mjs').Store | null; photos?: () => { recent(): unknown[]; moderate(id: string, action: 'hide' | 'show' | 'remove'): boolean; image(id: string): string | null } | null }): {
   handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean>;
   maxRoom(): number;
+  features(): { fishingContest: boolean; party: boolean };
   isBanned(name: string): boolean;
   bannedList(): string[];
   logChat(room: string, name: string, text: string): void;

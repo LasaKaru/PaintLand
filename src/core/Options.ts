@@ -50,6 +50,8 @@ export interface GameOptions {
   festival: FestivalSetting;
   /** Paint-trail colour: a TRAIL_COLOURS index (default pink, which shows on any road), or -1 to match the car. */
   trailColour: number;
+  /** Fishing with a wider catch bar and calmer fish. */
+  easyFishing: boolean;
 }
 
 export const DEFAULT_OPTIONS: GameOptions = {
@@ -81,6 +83,7 @@ export const DEFAULT_OPTIONS: GameOptions = {
   season: 'auto',
   festival: 'auto',
   trailColour: 9,
+  easyFishing: false,
 };
 
 const KEY = 'paintland.settings.v1';

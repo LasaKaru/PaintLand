@@ -1,3 +1,4 @@
+import { addLeisure, leisureLabel } from './Leisure';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { addMuralBoards, type MuralBoard } from './Murals';
@@ -727,6 +728,8 @@ export class City implements FreeRoamArea {
     this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -93, z: 506, r: 4, colour: '#f6f0e4' });
     this.murals.push(...addMuralBoards(this, 'city', this.spawn));
     this.pockets.push(...addPockets(this));
+    // Fishing spots, resting at home and DJ stages (see Leisure.ts).
+    addLeisure(this, 'city');
     for (const z of [...zones, ...this.zones.splice(0)]) {
       this.zones.push(z);
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.4, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
@@ -816,6 +819,8 @@ export class City implements FreeRoamArea {
   }
 
   zoneLabel(z: AreaZone): string {
+    const leisure = leisureLabel(z);
+    if (leisure) return leisure;
     if (z.kind === 'viewpoint' && z.view) return `🌅 ${t(`view.${z.view.id}` as StringKey)}`;
     return z.kind === 'portal' || z.kind === 'area' ? z.label : t(`zone.${z.kind}` as StringKey);
   }

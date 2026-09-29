@@ -57,6 +57,8 @@ export const DEFAULT_CONFIG = {
   maxPlayersPerRoom: 32,
   sponsors: [],
   challenges: [],
+  /** Things the owner can switch on or off (the game's src/brand/Brand.ts FeatureConfig). */
+  features: { fishingContest: true, party: true },
   /** Release and legal settings (the game's src/brand/Brand.ts LegalConfig). */
   legal: {
     entity: 'HelaO2',
@@ -136,6 +138,10 @@ export function sanitizeConfig(input, current) {
         .map((x) => ({ name: clean(x?.name, 60), role: clean(x?.role, 60) }))
         .filter((x) => x.name);
     }
+  }
+  if (i.features && typeof i.features === 'object') {
+    c.features = { ...structuredClone(DEFAULT_CONFIG.features), ...c.features };
+    for (const k of Object.keys(DEFAULT_CONFIG.features)) if (i.features[k] !== undefined) c.features[k] = !!i.features[k];
   }
   if (i.maxPlayersPerRoom !== undefined) c.maxPlayersPerRoom = Math.min(64, Math.max(2, Math.round(Number(i.maxPlayersPerRoom) || 32)));
   if (Array.isArray(i.sponsors)) {
@@ -397,6 +403,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
       sponsors: config.sponsors.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, url: s.url, weight: s.weight, image: `/api/brand/${s.file}` })),
       challenges: activeChallenges(config),
       legal: { ...DEFAULT_CONFIG.legal, ...config.legal },
+      features: { ...DEFAULT_CONFIG.features, ...config.features },
     };
   }
 
@@ -926,6 +933,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
   return {
     handle,
     maxRoom: () => config.maxPlayersPerRoom,
+    features: () => ({ ...DEFAULT_CONFIG.features, ...config.features }),
     isBanned: (name) => moderation.banned.some((b) => b.toLowerCase() === String(name ?? '').toLowerCase()),
     /** Banned names, for the other relays (server/shards.mjs). */
     bannedList: () => [...moderation.banned],

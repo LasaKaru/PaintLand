@@ -828,3 +828,40 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .legal-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(200px, 1fr)); gap: 8px; margin: 10px 0 16px; }
 .credits-team { columns: 2 220px; }
 .legal-dialog h3[autofocus]:focus, .contact-dialog h3[autofocus]:focus { outline: none; box-shadow: none; }
+
+/* ————— fishing, resting and DJ parties ————— */
+.leisure-hud { position: absolute; inset: 0; pointer-events: none; z-index: 6; }
+.leisure-hud .card, .leisure-hud button, .leisure-hud input { pointer-events: auto; }
+.leisure-tip { position: absolute; left: 50%; bottom: 13%; transform: translateX(-50%); padding: 8px 16px; border-radius: 999px; background: rgba(246, 240, 228, 0.92); color: var(--ink); border: 2px solid var(--ink); font-weight: 700; max-width: 90vw; text-align: center; }
+.fish-meter { position: absolute; left: 14%; top: 45%; transform: translateY(-50%); gap: 8px; align-items: stretch; height: 46vh; max-height: 360px; }
+.fm-track { position: relative; width: 46px; background: linear-gradient(#4a90c9, #2f6fa0); border: 3px solid var(--ink); border-radius: 12px; overflow: hidden; }
+.fm-bar { position: absolute; left: 3px; right: 3px; border-radius: 8px; background: rgba(140, 198, 63, 0.55); border: 2px solid #f6f0e4; }
+.fm-bar.on { background: rgba(140, 198, 63, 0.9); }
+.fm-fish { position: absolute; left: 0; right: 0; text-align: center; font-size: 22px; line-height: 24px; }
+.fm-progress { position: relative; width: 12px; background: #f6f0e4; border: 2px solid var(--ink); border-radius: 8px; overflow: hidden; }
+.fm-progress > div { position: absolute; left: 0; right: 0; bottom: 0; background: #f4d23b; }
+.rested-badge { position: absolute; left: 16px; bottom: 16px; padding: 4px 12px; border-radius: 999px; background: #fbf6ea; border: 2px solid var(--ink); font-size: 13px; font-weight: 700; }
+.sleep-fade { position: absolute; inset: 0; background: #14122a; opacity: 0; transition: opacity 1.2s ease; display: grid; place-items: center; color: #f6f0e4; font: 700 34px 'Permanent Marker', cursive; letter-spacing: 8px; }
+.sleep-fade.on { opacity: 0.94; }
+.dj-panel { position: absolute; right: 16px; top: 80px; width: min(330px, 92vw); padding: 12px 14px; display: flex; flex-direction: column; gap: 8px; }
+.dj-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+.dj-head b { white-space: nowrap; }
+.dj-head small { text-align: right; }
+.dj-row { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.dj-station { flex: 1; text-align: center; font-weight: 700; }
+.dj-filter input { flex: 1; }
+.dj-pads { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; }
+.dj-pads .btn.on { background: #9a5bd6; color: #fff; }
+.dj-pads kbd { font-size: 10px; opacity: 0.6; }
+.dj-swatch i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; margin-left: 2px; }
+.record-picker { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(460px, 92vw); padding: 16px 18px; }
+.record-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 6px; margin: 10px 0; }
+.fish-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(220px, 1fr)); gap: 8px; margin-top: 10px; }
+.fish-card { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #fbf6ea; }
+.fish-card.unknown { opacity: 0.7; border-style: dashed; }
+.fish-card .fish-icon { font-size: 28px; width: 36px; text-align: center; }
+.fish-card.rarity-1 { box-shadow: inset 4px 0 0 #4f9a5a; }
+.fish-card.rarity-2 { box-shadow: inset 4px 0 0 #4a90c9; }
+.fish-card.rarity-3 { box-shadow: inset 4px 0 0 #f4a52a; }
+.fish-contest ol { margin: 6px 0; padding-left: 22px; }
+.fish-contest li.mine { font-weight: 700; color: #b0452a; }

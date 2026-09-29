@@ -2,7 +2,7 @@ import * as THREE from 'three';
 import { seatRider, unseatRider } from '../models/Rider';
 import type { RoadPath } from '../road/RoadPath';
 import { createFrame } from '../road/RoadPath';
-import { HumanModel, isEmote } from '../models/Human';
+import { HumanModel, isEmote, isLeisurePose } from '../models/Human';
 import { Pet, isPet } from '../models/Pets';
 import { VehicleModel, vehicleById } from '../models/Vehicles';
 import { PLANE_SEAT, buildPaperPlane } from '../models/PaperPlane';
@@ -71,7 +71,8 @@ export class RemotePlayers {
       } else if (snap.mode === 'fly') {
         av.human.animate(dt, 'idle', 0, time);
       } else {
-        av.human.animate(dt, snap.v > 5 ? 'run' : snap.v > 0.4 ? 'walk' : isEmote(snap.pose) ? snap.pose : 'idle', snap.v, time);
+        // Emotes, and fishing, tea or DJing (lying down stays local: a remote bed isn't known).
+        av.human.animate(dt, snap.v > 5 ? 'run' : snap.v > 0.4 ? 'walk' : isEmote(snap.pose) || (isLeisurePose(snap.pose) && snap.pose !== 'sleep') ? snap.pose : 'idle', snap.v, time);
       }
       if (av.pet) {
         av.pet.root.visible = snap.mode === 'foot';

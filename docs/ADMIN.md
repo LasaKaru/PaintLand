@@ -35,7 +35,7 @@ If you forget the password:
 |---|---|
 | 📊 **Dashboard** | Players per day, sessions and hours played, chapters started, areas visited, hours by place, languages, devices and graphics settings, players online and rooms right now, open reports, sponsor board views and visits, errors from players' games, and a download of all analytics as JSON |
 | 🩺 **Crashes & speed** | Crash-free sessions (7 and 30 days, per day and per build), errors grouped by bug with the builds, devices and places they happen in, and frame rates by place, graphics quality, device and web or desktop app. See below. |
-| 🏷 **Branding** | Company name and logo on the loading screen and menu, and how often sponsor logos appear |
+| 🏷 **Branding** | Company name and logo on the loading screen and menu, how often sponsor logos appear, and two switches: the **weekly fishing contest** and **DJ party mode in multiplayer rooms** (fishing, and a party on your own, always work) |
 | 🔗 **Menu links** | The links at the bottom of the main menu: website, social pages, donations, "advertise with us" |
 | 🤝 **Sponsors** | Upload, replace or delete sponsor logos and their links (shown on billboards in the towns and chapters) |
 | 🎟 **Pass & challenges** | The season pass (make one-use Patron codes, give an account the Patron track), and sponsor challenges (goal, reward ink and cosmetic, dates) |

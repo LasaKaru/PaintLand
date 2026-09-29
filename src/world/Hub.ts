@@ -1,3 +1,4 @@
+import { addLeisure, leisureLabel } from './Leisure';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { addMuralBoards, type MuralBoard } from './Murals';
@@ -413,11 +414,14 @@ export class Hub implements FreeRoamArea {
     const box = homeToWorld(-9.5, 7.5);
     this.world.circle(box.x, box.z, 0.6);
     this.zones.push({ kind: 'mailbox', label: '📬 Mailbox', x: box.x, z: box.z - 1.6, r: 2.6, colour: '#d8463a' });
-    const inside = homeToWorld(0, 0.5);
-    this.zones.push({ kind: 'home', label: '🏡 Home', x: inside.x, z: inside.z, r: 3.2, colour: '#e8559a' });
+    // Decorate your home from the doorway (inside there are things to do: see Leisure.ts).
+    const inside = homeToWorld(0, 4.3);
+    this.zones.push({ kind: 'home', label: '🏡 Home', x: inside.x, z: inside.z, r: 1.6, colour: '#e8559a' });
 
     this.murals.push(...addMuralBoards(this, 'harbour', this.spawn));
     this.pockets.push(...addPockets(this));
+    // Fishing spots, resting at home and DJ stages (see Leisure.ts).
+    addLeisure(this, 'harbour');
     // Glowing rings on the ground and floating labels.
     for (const z of this.zones) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.35, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
@@ -489,6 +493,8 @@ export class Hub implements FreeRoamArea {
   }
 
   zoneLabel(z: HubZone): string {
+    const leisure = leisureLabel(z);
+    if (leisure) return leisure;
     if (z.kind === 'viewpoint' && z.view) return `🌅 ${t(`view.${z.view.id}` as StringKey)}`;
     if (z.kind === 'tour') return t('tour.terminal');
     return z.kind === 'portal' || z.kind === 'area' || z.kind === 'story' ? z.label : t(`zone.${z.kind}` as StringKey);

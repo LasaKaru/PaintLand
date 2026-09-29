@@ -69,7 +69,10 @@ import { MapView, type MapMarker, type MapState } from '../ui/MapView';
 import { filterChat } from '../net/ChatFilter';
 import { BrandBoards, resetBrandTextures } from '../brand/BrandBoards';
 import { brandSpotsFor, routeSpots } from '../brand/BrandSpots';
-import { loadBrand, onBrandChange, type BrandLogo } from '../brand/Brand';
+import { brand, loadBrand, onBrandChange, type BrandLogo } from '../brand/Brand';
+import { LeisureMode } from '../gameplay/LeisureMode';
+import { restBonus } from '../gameplay/Rest';
+import { LeisureHud, type DjAction } from '../ui/LeisureHud';
 import { clearPainted } from '../brand/Watercolour';
 import { analytics } from '../net/Analytics';
 import { APP_VERSION, reportError, setCrashPlace } from '../net/CrashReporter';
@@ -217,6 +220,9 @@ export class Game {
   private footstepTimer = 0;
   private fps = 60;
   private hudHidden = false;
+  /** Fishing, resting at home and DJ parties. */
+  private readonly leisureHud: LeisureHud;
+  private readonly leisure: LeisureMode;
   private waveTimer = 0;
   /** The emote playing while waveTimer runs (sitdown lasts until you move). */
   private emoteName: Emote = 'wave';
@@ -637,6 +643,46 @@ export class Game {
     canvas.addEventListener('pointerup', stop);
     canvas.addEventListener('pointercancel', stop);
 
+    // Fishing, resting at home and DJ parties (see gameplay/LeisureMode.ts).
+    this.leisureHud = new LeisureHud(container);
+    this.profile.bonus = () => restBonus(this.profile.data.rest, Date.now());
+    this.leisure = new LeisureMode({
+      scene: this.scene,
+      audio: this.audio,
+      profile: this.profile,
+      net: this.net,
+      hud: this.leisureHud,
+      human: () => this.humanModel,
+      walker: () => this.hubWalker,
+      areaId: () => (this.inHub ? this.area?.id ?? null : null),
+      hour: () => this.env.hour,
+      setHour: (h) => this.env.setHour(h),
+      rain: () => this.env.rain,
+      season: () => resolveSeason(this.options.season),
+      calm: () => this.settings.reducedMotion || this.options.calmLighting,
+      easyFishing: () => this.options.easyFishing,
+      partyOnline: () => brand().features.party,
+      contestOpen: () => brand().features.fishingContest && this.account.signedIn,
+      submitCatch: (fish, cm) =>
+        void this.account.call<{ best: number; better: boolean; rank: number }>('/api/fishing/catch', 'POST', { fish, cm }).then((r) => {
+          if (r.ok && r.data) this.menu.toast(t(r.data.better ? 'fish.contestSent' : 'fish.contestBetter', { cm: r.data.best, rank: r.data.rank }));
+        }),
+      toast: (text) => this.menu.toast(text),
+      loot: (a, b, c, d) => this.hud.lootCard(a, b, c, d),
+      checkTrophies: () => this.checkTrophies(),
+      refreshHome: () => this.refreshHome(false),
+      releasePointer: () => this.input.releasePointerLock(),
+      petName: () => {
+        const k = this.profile.data.look.pet;
+        const item = k && k !== 'none' ? CATALOGUE.find((i) => i.id === `pet:${k}`) : undefined;
+        return item ? itemLabel(item) : null;
+      },
+      hudHidden: (h) => {
+        this.hudHidden = h;
+        this.hud.root.classList.toggle('hud-hidden', h);
+      },
+    });
+
     window.addEventListener('resize', () => this.resize());
     window.addEventListener('keydown', () => {
       if (this.state === 'splash' && this.menu.screen === 'splash') {
@@ -907,7 +953,7 @@ export class Game {
     hub?.home.set(
       v
         ? { walls: v.home.walls, roof: v.home.roof, keepsakes: v.home.keepsakes as PocketKind[], trophies: v.home.trophies, owner: t('home.of', { name: v.name }) }
-        : { walls: layout.walls, roof: layout.roof, keepsakes: shownKeepsakes(layout, p.data.seen), trophies: p.data.trophies.length, owner: t('home.of', { name: p.data.name }), lanterns: (p.data.lanterns ?? []).map(cleanLantern).filter((l): l is LanternDesign => !!l) },
+        : { walls: layout.walls, roof: layout.roof, keepsakes: shownKeepsakes(layout, p.data.seen), trophies: p.data.trophies.length, owner: t('home.of', { name: p.data.name }), plants: p.data.rest?.plants.stage ?? 0, lanterns: (p.data.lanterns ?? []).map(cleanLantern).filter((l): l is LanternDesign => !!l) },
     );
     this.refreshWall();
     // Tell the server (friends visit what it has), at most every few seconds.
@@ -2636,6 +2682,11 @@ export class Game {
       this.hudHidden = !this.hudHidden;
       this.hud.root.classList.toggle('hud-hidden', this.hudHidden);
     }
+    // At the DJ decks, 1–5 are the pads (not the time of day).
+    if (this.leisure.active?.kind === 'dj') {
+      const pads: DjAction[] = ['fill', 'horn', 'scratch', 'echo', 'lights'];
+      pads.forEach((a, i) => inp.consume(`time${i + 1}` as 'time1') && this.leisure.djAction(a));
+    }
     for (let i = 0; i < TIME_PRESETS.length && i < 7; i++) if (inp.consume(`time${i + 1}` as 'time1')) this.env.setPreset(TIME_PRESETS[i].id);
     if (inp.consume('time8')) this.env.setAuto(!this.env.auto);
     if (inp.consume('weather')) this.env.toggleRain();
@@ -3248,6 +3299,7 @@ export class Game {
     this.stopFlight();
     if (this.area && this.area.id !== id) this.area.show(false);
     const area = this.areaFor(id);
+    this.leisure.stop();
     this.area = area;
     this.endViewing();
     this.applyWorldsEnd(id === 'worldsend');
@@ -3326,6 +3378,8 @@ export class Game {
     this.inHub = false;
     this.stopFlight();
     this.endViewing();
+    this.leisure.stop();
+    this.leisureHud.showRecords(null);
     this.cancelEnding();
     this.carDrop.active = false;
     this.applyWorldsEnd(false);
@@ -3422,7 +3476,7 @@ export class Game {
     } else {
       // The parked car is solid while walking (once it has landed, if it was called).
       area.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: this.carDrop.active ? 0 : 1.4 });
-      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0 || !!this.viewing;
+      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0 || !!this.viewing || !!this.leisure.active;
       const move = out ? { x: 0, y: 0 } : inp.moveAxes();
       this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, area.world);
       area.world.colliders.pop();
@@ -3447,6 +3501,7 @@ export class Game {
       }
     }
     this.checkPickups(area, p.x, p.z);
+    this.leisure.update(dt, this.time);
     if (this.mode === 'foot') this.profile.addStat('walked', this.hubWalker.speed * dt);
     this.discoverTimer -= dt;
     if (this.discoverTimer <= 0) {
@@ -3568,6 +3623,14 @@ export class Game {
       }
       return;
     }
+    if (this.leisure.active) {
+      if (inp.consume('photo')) return this.enterPhoto();
+      const m = inp.moveAxes();
+      const leave = inp.consume('hop') || inp.consume('respawn') || Math.hypot(m.x, m.y) > 0.5;
+      this.leisure.input(inp.consume('interact'), inp.held('interact'), leave);
+      inp.takeLook(dt);
+      return;
+    }
     if (this.flight) {
       if (inp.consume('photo')) return this.enterPhoto();
       if (inp.consume('map')) return this.openMap();
@@ -3667,6 +3730,7 @@ export class Game {
     else if (zone.kind === 'home') this.openMenu('home');
     else if (zone.kind === 'launch') this.startFlight(zone);
     else if (zone.kind === 'viewpoint') this.enterViewpoint(zone);
+    else if (zone.kind === 'fishing' || zone.kind === 'rest' || zone.kind === 'dj') this.startLeisure(zone);
     else if (zone.kind === 'story') this.talkToVarna();
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
@@ -4172,6 +4236,21 @@ export class Game {
     if (this.profile.markSeen(`view:${zone.view.id}`)) this.checkTrophies();
   }
 
+  /** Fishing, a moment at home, or the DJ decks: always on foot. */
+  private startLeisure(zone: HubZone): void {
+    if (this.mode === 'drive') {
+      if (Math.abs(this.hubCar.v) > 4) {
+        this.popAtPawn(t('prompt.slowDown'), 'info');
+        return;
+      }
+      this.hubCar.v = 0;
+      this.mode = 'foot';
+      this.seatHuman();
+      this.updateHeadVisibility();
+    }
+    this.leisure.start(zone);
+  }
+
   private endViewing(): void {
     const v = this.viewing;
     if (!v) return;
@@ -4567,10 +4646,10 @@ export class Game {
     } else if (this.mode === 'foot') {
       const w = this.hubWalker.lerp(alpha);
       const hm = this.humanModel;
-      hm.root.position.set(w.x, HUB_Y + w.y, w.z);
+      hm.root.position.set(w.x, HUB_Y + w.y + this.leisure.lift(), w.z);
       hm.root.quaternion.setFromAxisAngle(_y, w.heading);
       this.tickEmote(dt, this.hubWalker.speed);
-      hm.animate(dt, this.viewing ? 'sit' : this.waveTimer > 0 ? this.emoteName : this.hubWalker.pose, this.hubWalker.speed, this.time);
+      hm.animate(dt, this.viewing ? 'sit' : this.waveTimer > 0 ? this.emoteName : this.leisure.pose() ?? this.hubWalker.pose, this.hubWalker.speed, this.time);
       this.updatePet(dt, hm.root);
       if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
         this.footstepTimer -= dt * this.hubWalker.speed;
@@ -4587,6 +4666,7 @@ export class Game {
       look.copy(focus).add(_v4.set(0, 1.6, 0));
       desired.set(Math.sin(yaw) * Math.cos(pitch), Math.sin(pitch), Math.cos(yaw) * Math.cos(pitch)).multiplyScalar(dist).add(look);
       if (this.viewing) this.viewpointCamera(desired, look);
+      else this.leisure.camera(desired, look, HUB_Y + w.y);
     } else {
       this.humanModel.animate(dt, vm.def.seatPose, 0, this.time);
       // Pull back and up during a stunt so the landing is in view.
@@ -4662,7 +4742,7 @@ export class Game {
     this.nearBoard = this.mode === 'foot' && !nearCar && !this.hubZone ? boards?.nearest(here) ?? null : null;
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t(this.freeMissions.mission ? 'prompt.enterOnly' : 'prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
     const boardText = this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
-    this.hud.setPrompt(this.state === 'photo' || this.flight ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
+    this.hud.setPrompt(this.state === 'photo' || this.flight || this.leisure.active ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
     this.drawBattle(dt);
     if (this.flight) this.updateFlightHud(cam);
     else this.updateMissionHud(player.x, player.z, cam);
@@ -4683,7 +4763,7 @@ export class Game {
       const st: PlayerState = this.flight
         ? { chapter, mode: 'fly', s: g.z + HUB_S_OFFSET, x: g.x, h: Math.min(78, g.y), yaw: g.heading, v: g.speed }
         : foot
-        ? { chapter, mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? this.emoteName : undefined }
+        ? { chapter, mode: 'foot', s: this.hubWalker.z + HUB_S_OFFSET, x: this.hubWalker.x, h: this.hubWalker.y, yaw: this.hubWalker.heading, v: this.hubWalker.speed, pose: this.waveTimer > 0 ? this.emoteName : this.leisure.sharedPose() }
         : { chapter, mode: 'drive', s: this.hubCar.z + HUB_S_OFFSET, x: this.hubCar.x, h: this.hubCar.y, yaw: this.hubCar.heading, v: this.hubCar.v };
       this.net.update(dt, st, this.playerInfo());
       this.remotes.update(dt, this.time, this.net, this.world.path, chapter, cam, HUB_Y);
@@ -4749,6 +4829,32 @@ export class Game {
   debugHub(x?: number, z?: number, heading?: number, area?: string): void {
     if (this.state === 'splash') this.profile.data.seenIntro = true;
     this.enterHub(x !== undefined ? { x, z: z ?? 0, heading: heading ?? 0, foot: null, area } : undefined, area);
+  }
+
+  /** Start fishing, a home activity or the DJ decks at a spot in the current area (tests). */
+  debugLeisure(kind: 'fishing' | 'rest' | 'dj', spot: string): boolean {
+    const zone = this.area?.zones.find((z) => z.kind === kind && z.spot === spot);
+    if (!zone) return false;
+    this.mode = 'foot';
+    this.seatHuman();
+    this.hubWalker.place(zone.x, zone.z, 0);
+    this.startLeisure(zone);
+    return !!this.leisure.active;
+  }
+
+  debugLeisureState(): Record<string, unknown> {
+    const a = this.leisure.active;
+    return {
+      kind: a?.kind ?? null,
+      phase: a?.kind === 'fishing' ? a.game?.phase ?? 'ready' : null,
+      fish: a?.kind === 'fishing' ? a.game?.def.id ?? null : null,
+      party: this.leisure.party ? { ...this.leisure.party, host: this.leisure.partyHost } : null,
+      pose: this.leisure.pose(),
+      hour: this.env.hour,
+      rest: this.profile.data.rest ?? null,
+      book: this.profile.data.fish ?? {},
+      ink: this.profile.data.ink,
+    };
   }
 
   /** District paint for the current area, plus a way to mark strokes done (tests). */

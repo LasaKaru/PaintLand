@@ -1,3 +1,4 @@
+import { addLeisure, leisureLabel } from './Leisure';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import { addMuralBoards, type MuralBoard } from './Murals';
@@ -319,6 +320,8 @@ export class Hills implements FreeRoamArea {
     this.zones.push({ kind: 'viewpoint', label: '🌅 The Lakeside Bench', x: -20, z: 58, r: 2.6, colour: '#c9b8f0', view: { id: 'hl-lake', yaw: Math.PI, pitch: 0, lut: 'calm', name: 'The Lakeside Bench' } });
 
     this.murals.push(...addMuralBoards(this, 'hills', this.spawn));
+    // Fishing spots, resting at home and DJ stages (see Leisure.ts).
+    addLeisure(this, 'hills');
     for (const z of this.zones) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.35, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
       ring.position.set(z.x, 0.1, z.z);
@@ -416,6 +419,8 @@ export class Hills implements FreeRoamArea {
   }
 
   zoneLabel(z: AreaZone): string {
+    const leisure = leisureLabel(z);
+    if (leisure) return leisure;
     if (z.kind === 'viewpoint' && z.view) return `🌅 ${t(`view.${z.view.id}` as StringKey)}`;
     return z.kind === 'portal' || z.kind === 'area' ? z.label : t(`zone.${z.kind}` as StringKey);
   }

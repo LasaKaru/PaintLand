@@ -1,5 +1,5 @@
 import { api, apiBase, apiUrl, setApiBase } from '../net/Api';
-import { COMPANY_LOGO, DEFAULT_LEGAL, brand, setBrand, type BrandConfig } from '../brand/Brand';
+import { COMPANY_LOGO, DEFAULT_FEATURES, DEFAULT_LEGAL, brand, setBrand, type BrandConfig } from '../brand/Brand';
 import { paintedLogo } from '../brand/Watercolour';
 
 /** What /api/admin/stats returns (server/admin.mjs). */
@@ -248,6 +248,7 @@ export class AdminPanel {
       // Running challenges come in the public config on the next load; keep the current ones meanwhile.
       challenges: brand().challenges,
       legal: { ...DEFAULT_LEGAL, ...c.legal },
+      features: { ...DEFAULT_FEATURES, ...c.features },
     });
   }
 
@@ -437,6 +438,8 @@ export class AdminPanel {
         <div>
           <label>How often your logo appears on boards: <b data-out="freq">${Math.round(c.logoFrequency * 100)}%</b><input type="range" name="logoFrequency" min="0" max="1" step="0.05" value="${c.logoFrequency}"></label>
           <label class="check"><input type="checkbox" name="showSponsorCta" ${c.showSponsorCta ? 'checked' : ''}> Show “Your brand here · ${esc(c.company.contact)}” boards</label>
+          <label class="check"><input type="checkbox" name="fishingContest" ${c.features?.fishingContest !== false ? 'checked' : ''}> Weekly fishing contest (a new fish each week; signed-in players' biggest catch)</label>
+          <label class="check"><input type="checkbox" name="party" ${c.features?.party !== false ? 'checked' : ''}> DJ party mode in multiplayer rooms (one player plays DJ for everyone nearby)</label>
           <label>Players per multiplayer room (2–64)<input class="text-input" name="maxPlayersPerRoom" type="number" min="2" max="64" value="${c.maxPlayersPerRoom}"></label>
           <div class="field"><label>Company logo</label>
             <div class="logo-previews"><img src="${esc(c.company.logo ? apiUrl(c.company.logo) : COMPANY_LOGO)}" alt="original"><img data-paint="${esc(c.company.logo ? apiUrl(c.company.logo) : COMPANY_LOGO)}" alt="as painted in the game"></div>
@@ -828,6 +831,7 @@ export class AdminPanel {
         logoFrequency: Number(v('logoFrequency')),
         showSponsorCta: f.get('showSponsorCta') === 'on',
         maxPlayersPerRoom: Number(v('maxPlayersPerRoom')),
+        features: { fishingContest: f.get('fishingContest') === 'on', party: f.get('party') === 'on' },
       });
       if (saved) this.saved(saved, 'Branding saved. Players see it the next time they load the game.');
     } else if (kind === 'release') {

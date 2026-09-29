@@ -1,3 +1,4 @@
+import { addLeisure, leisureLabel } from './Leisure';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
 import type { MuralBoard } from './Murals';
@@ -272,6 +273,8 @@ export class WorldsEnd implements FreeRoamArea {
     view('we-lake', -50, 4, 0, 0.12, 'calm', 'Mirror Lake');
     view('we-meadow', 70, -18, -2.5, 0.6, 'moonlight', 'Milky Way Meadow');
     view('we-falls', 40, 86, Math.atan2(-20, -12), -0.08, 'calm', 'The Last Waterfall');
+    // Fishing spots, resting at home and DJ stages (see Leisure.ts).
+    addLeisure(this, 'worldsend');
     for (const z of this.zones) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.35, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
       ring.position.set(z.x, 0.1, z.z);
@@ -361,6 +364,8 @@ export class WorldsEnd implements FreeRoamArea {
   }
 
   zoneLabel(z: AreaZone): string {
+    const leisure = leisureLabel(z);
+    if (leisure) return leisure;
     if (z.kind === 'viewpoint' && z.view) return `🌌 ${t(`view.${z.view.id}` as StringKey)}`;
     return z.kind === 'portal' || z.kind === 'area' ? z.label : t(`zone.${z.kind}` as StringKey);
   }

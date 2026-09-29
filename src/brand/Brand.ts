@@ -11,7 +11,18 @@ export interface BrandConfig {
   challenges?: import('../gameplay/SeasonPass').SponsorChallenge[];
   /** Release and legal settings (admin panel → Release & legal). */
   legal: LegalConfig;
+  /** Things the owner can switch on or off (admin panel → Branding). */
+  features: FeatureConfig;
 }
+
+export interface FeatureConfig {
+  /** The weekly fishing contest (the board and sending catches). Fishing itself always works. */
+  fishingContest: boolean;
+  /** DJ party mode in multiplayer rooms (a party on your own always works). */
+  party: boolean;
+}
+
+export const DEFAULT_FEATURES: FeatureConfig = { fishingContest: true, party: true };
 
 /** What the store release needs from the owner: who is legally responsible, and which notices to show. */
 export interface LegalConfig {
@@ -53,6 +64,7 @@ export const DEFAULT_BRAND: BrandConfig = {
   showSponsorCta: true,
   sponsors: [],
   legal: DEFAULT_LEGAL,
+  features: DEFAULT_FEATURES,
 };
 
 /** One picture that can go on a board in the world. */
@@ -80,7 +92,7 @@ function readCache(): BrandConfig | null {
 
 /** Fill anything an older server or cache left out. */
 function withDefaults(b: Partial<BrandConfig>): BrandConfig {
-  return { ...DEFAULT_BRAND, ...b, company: { ...DEFAULT_BRAND.company, ...b.company }, links: { ...DEFAULT_BRAND.links, ...b.links }, legal: { ...DEFAULT_LEGAL, ...b.legal } };
+  return { ...DEFAULT_BRAND, ...b, company: { ...DEFAULT_BRAND.company, ...b.company }, links: { ...DEFAULT_BRAND.links, ...b.links }, legal: { ...DEFAULT_LEGAL, ...b.legal }, features: { ...DEFAULT_FEATURES, ...b.features } };
 }
 
 /** True inside the desktop (Steam) app. */

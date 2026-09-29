@@ -106,6 +106,13 @@ export class AudioEngine {
   private rollFilter!: BiquadFilterNode;
   private rainGain!: GainNode;
   private musicFilter!: BiquadFilterNode;
+  /** DJ effects on the music: a high-pass for sweeps, an echo send. */
+  private djHigh!: BiquadFilterNode;
+  private djEcho!: DelayNode;
+  private djEchoGain!: GainNode;
+  /** DJ controls: filter −1 (muffled) … 0 (open) … 1 (thin); echo 0..1. */
+  dj = { filter: 0, echo: 0 };
+  private fillSteps = 0;
   private engineSub!: OscillatorNode;
   private engineSubGain!: GainNode;
   private engineProfile: EngineProfile = ENGINE_PROFILES.classic;
@@ -181,7 +188,19 @@ export class AudioEngine {
     this.musicFilter = ctx.createBiquadFilter();
     this.musicFilter.type = 'lowpass';
     this.musicFilter.frequency.value = 9000;
-    this.musicBus.connect(this.musicFilter).connect(this.master);
+    this.djHigh = ctx.createBiquadFilter();
+    this.djHigh.type = 'highpass';
+    this.djHigh.frequency.value = 10;
+    this.musicBus.connect(this.djHigh).connect(this.musicFilter).connect(this.master);
+    // The DJ's echo: a dotted-eighth delay with feedback (silent until turned up).
+    this.djEcho = ctx.createDelay(2);
+    this.djEchoGain = ctx.createGain();
+    this.djEchoGain.gain.value = 0;
+    const feedback = ctx.createGain();
+    feedback.gain.value = 0.42;
+    this.musicFilter.connect(this.djEchoGain).connect(this.djEcho);
+    this.djEcho.connect(feedback).connect(this.djEcho);
+    this.djEcho.connect(this.master);
     this.musicBus.connect(this.reverb);
     this.noteBus = ctx.createGain();
     this.noteBus.connect(this.master);
@@ -461,6 +480,12 @@ export class AudioEngine {
     const s16 = step % 16;
     const chord = this.chordDegrees(bar);
     if (s16 % 4 === 0) this.lastBeatTime = t;
+    // A DJ's drum fill: a snare roll that builds over the last beat before the bar.
+    if (this.fillSteps > 0) {
+      this.fillSteps--;
+      this.snare(t);
+      if (this.fillSteps % 2 === 0) this.kick(t);
+    }
 
     // A recorded track is playing: the band and pad sit out (the picked-up notes still ring).
     if (this.studioActive && this.radioOn) return;
@@ -541,6 +566,107 @@ export class AudioEngine {
     }
     this.lastNoteSlot = slot;
     return Math.max(when, now);
+  }
+
+  // ————— DJ party mode —————
+
+  /** Tempo and where we are in the beat (0..1), for lights that pulse with the music. */
+  get beat(): { bpm: number; phase: number; bar: number } {
+    const ctx = this.ctx;
+    if (!ctx) return { bpm: this.bpm, phase: 0, bar: 0 };
+    const len = 60 / this.bpm;
+    const since = ctx.currentTime - this.lastBeatTime;
+    const phase = ((since / len) % 1 + 1) % 1;
+    return { bpm: this.bpm, phase, bar: Math.floor(this.step / 16) };
+  }
+
+  /** A drum fill over the next beat. */
+  djFill(): void {
+    this.fillSteps = 4;
+  }
+
+  /** The party air horn: three rising blasts. */
+  airHorn(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t0 = ctx.currentTime;
+    [0, 0.18, 0.36].forEach((d, i) => {
+      const t = t0 + d;
+      for (const mul of [1, 1.5, 2.01]) {
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(330 * mul * (i === 2 ? 1.12 : 1), t);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(0.05, t + 0.02);
+        g.gain.setValueAtTime(0.05, t + (i === 2 ? 0.4 : 0.12));
+        g.gain.linearRampToValueAtTime(0, t + (i === 2 ? 0.5 : 0.16));
+        o.connect(g).connect(this.sfxBus);
+        o.start(t);
+        o.stop(t + 0.6);
+      }
+    });
+  }
+
+  /** A record scratch: noise swept up and down. */
+  scratch(): void {
+    const ctx = this.ctx;
+    if (!ctx) return;
+    const t = ctx.currentTime;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.Q.value = 6;
+    f.frequency.setValueAtTime(600, t);
+    f.frequency.exponentialRampToValueAtTime(2600, t + 0.09);
+    f.frequency.exponentialRampToValueAtTime(500, t + 0.2);
+    f.frequency.exponentialRampToValueAtTime(2200, t + 0.28);
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, t);
+    g.gain.exponentialRampToValueAtTime(0.18, t + 0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.34);
+    src.connect(f).connect(g).connect(this.sfxBus);
+    src.start(t);
+    src.stop(t + 0.36);
+  }
+
+  /** Tune to a station and track (a record at home, or the DJ's choice). */
+  tune(station: number, track: number): void {
+    const count = STATIONS.length + (this.studio.length ? 1 : 0);
+    this.stationIndex = ((station % count) + count) % count;
+    this.trackIndex = Math.max(0, track) % Math.max(1, this.station.tracks);
+    this.radioOn = true;
+    this.syncStudio();
+  }
+
+  /** Stations the DJ can pick from (names, in order). */
+  get stationNames(): string[] {
+    return [...STATIONS.map((s) => s.name), ...(this.studio.length ? [STUDIO_STATION.name] : [])];
+  }
+
+  // ————— fishing —————
+
+  /** The float plops into the water. */
+  plop(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noiseHit(t, 'lowpass', 900, 0.12, 0.12, this.sfxBus);
+    this.blip(420, 0.08, 'sine', 0.05);
+  }
+
+  /** A fish on the line: a quick splash. */
+  splash(): void {
+    if (!this.ctx) return;
+    const t = this.ctx.currentTime;
+    this.noiseHit(t, 'bandpass', 1800, 0.18, 0.25, this.sfxBus);
+    this.noiseHit(t + 0.05, 'lowpass', 500, 0.14, 0.2, this.sfxBus);
+  }
+
+  /** The reel clicking while you wind in. */
+  reelClick(): void {
+    if (!this.ctx) return;
+    this.noiseHit(this.ctx.currentTime, 'highpass', 4200, 0.03, 0.015, this.sfxBus);
   }
 
   /** A collected note: music box, pitch in key, on the beat (docs/07 §3). */
@@ -991,7 +1117,12 @@ export class AudioEngine {
     this.musicBus.gain.setTargetAtTime(1 - this.calm * 0.65, t, 1.2);
     this.noteBus.gain.setTargetAtTime(1, t, 0.3);
     // Music opens up as the ride gets intense; muffled when musicOpen drops (menus, pause).
-    this.musicFilter.frequency.setTargetAtTime((1200 + this.intensity * 9000) * this.musicOpen + 250, t, 0.4);
+    // A DJ's low-pass sweep closes the music filter further; a high-pass sweep thins it out.
+    const lowDj = this.dj.filter < 0 ? Math.pow(1 + this.dj.filter, 2) * 0.97 + 0.03 : 1;
+    this.musicFilter.frequency.setTargetAtTime(((1200 + this.intensity * 9000) * this.musicOpen + 250) * lowDj, t, 0.12);
+    this.djHigh.frequency.setTargetAtTime(this.dj.filter > 0 ? 10 + Math.pow(this.dj.filter, 2) * 2600 : 10, t, 0.12);
+    this.djEchoGain.gain.setTargetAtTime(this.dj.echo * 0.55, t, 0.1);
+    this.djEcho.delayTime.setTargetAtTime(this.sixteenth * 3, t, 0.2);
     this.ambience?.update(1 / 60);
     this.festivalDrums(t);
     if (!driving) {
