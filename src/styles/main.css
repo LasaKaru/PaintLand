@@ -860,6 +860,11 @@ kbd { font-family: var(--mono); font-size: 0.75em; border: 1px solid currentColo
 .fish-card { display: flex; gap: 10px; align-items: center; padding: 8px 10px; border: 2px solid var(--ink); border-radius: 10px; background: #fbf6ea; }
 .fish-card.unknown { opacity: 0.7; border-style: dashed; }
 .fish-card .fish-icon { font-size: 28px; width: 36px; text-align: center; }
+.sketch-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: 10px; margin-top: 10px; }
+.sketch-card { display: flex; flex-direction: column; height: auto; margin: 0; padding: 6px; border: 2px solid var(--ink); border-radius: 8px; background: #fbf6ea; text-align: center; transform: rotate(-0.6deg); }
+.sketch-card:nth-child(2n) { transform: rotate(0.8deg); }
+.sketch-card canvas { width: 100%; height: auto; display: block; border-radius: 4px; }
+.sketch-card figcaption { font-size: 12px; margin-top: 4px; }
 .fish-card.rarity-1 { box-shadow: inset 4px 0 0 #4f9a5a; }
 .fish-card.rarity-2 { box-shadow: inset 4px 0 0 #4a90c9; }
 .fish-card.rarity-3 { box-shadow: inset 4px 0 0 #f4a52a; }

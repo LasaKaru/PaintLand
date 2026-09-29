@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { t, type StringKey } from '../core/i18n';
 import { FISHING_SPOTS } from '../gameplay/Fishing';
+import { FOOD_PRICE, FOOD_STALLS } from '../gameplay/Bazaar';
 import { ModelKit, Pattern } from '../models/ModelKit';
 import type { AreaZone } from './FreeRoamArea';
 import type { FreeWorld } from '../gameplay/FreeRoam';
@@ -64,6 +65,11 @@ export function leisureLabel(z: AreaZone): string | null {
   if (z.kind === 'fishing') return `🎣 ${t('zone.fishing')}`;
   if (z.kind === 'dj') return `🎧 ${t('zone.dj')}`;
   if (z.kind === 'cricket') return `🏏 ${t('zone.cricket')}`;
+  if (z.kind === 'food' && z.spot) {
+    const f = FOOD_STALLS.find((q) => q.id === z.spot);
+    return `${f?.icon ?? '🍽'} ${t(`food.${z.spot}` as StringKey)} · ${FOOD_PRICE}`;
+  }
+  if (z.kind === 'souvenir') return `🎁 ${t('zone.souvenir')}`;
   if (z.kind === 'rest' && z.spot) return `${REST_ICON[z.spot as RestKind] ?? ''} ${t(`rest.${z.spot}` as StringKey)}`;
   return null;
 }

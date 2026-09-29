@@ -93,6 +93,24 @@ export class HomePlot {
     this.setSign(look.owner);
   }
 
+  private shelf: THREE.Mesh | null = null;
+
+  /** Souvenirs from your travels on a shelf along the left wall (see Bazaar.ts). */
+  setSouvenirs(ids: readonly string[]): void {
+    if (this.shelf) {
+      this.group.remove(this.shelf);
+      this.shelf.geometry.dispose();
+      this.shelf = null;
+    }
+    if (!ids.length) return;
+    const k = new ModelKit();
+    const x = -W / 2 + 0.55;
+    for (const y of [1.25, 2.25]) k.box(0.5, 0.06, 5.2, '#7a4a2a', { position: [x, y, 0], pattern: Pattern.Planks });
+    ids.slice(0, 10).forEach((id, i) => souvenirModel(k, id, x, i < 5 ? 1.28 : 2.28, -2 + (i % 5)));
+    this.shelf = new THREE.Mesh(k.build(0.01), this.material);
+    this.group.add(this.shelf);
+  }
+
   /** Pictures for the frames (null = an empty frame). */
   setPictures(pictures: (HTMLImageElement | HTMLCanvasElement | null)[]): void {
     this.frames.forEach((f, i) => {
@@ -257,4 +275,52 @@ function mergeAll(parts: THREE.BufferGeometry[]): THREE.BufferGeometry {
     out.setAttribute(name, new THREE.BufferAttribute(arr, size));
   }
   return out;
+}
+
+/** A little model of a souvenir standing on a shelf at (x, y, z) in house coordinates. */
+export function souvenirModel(k: ModelKit, id: string, x: number, y: number, z: number): void {
+  switch (id) {
+    case 'mask':
+      // An Ambalangoda mask: a red face with bulging eyes and a crown of cobras.
+      k.box(0.06, 0.42, 0.34, '#d8463a', { position: [x, y + 0.24, z] });
+      for (const dz of [-0.08, 0.08]) k.blob(0.05, '#f4d23b', { position: [x + 0.04, y + 0.3, z + dz], detail: 0 });
+      for (let i = 0; i < 5; i++) k.cylinder(0.02, 0.03, 0.14, 4, '#2d8a5a', { position: [x, y + 0.5, z - 0.14 + i * 0.07] });
+      break;
+    case 'kokeshi':
+      k.cylinder(0.07, 0.09, 0.3, 10, '#e0432f', { position: [x, y + 0.15, z] });
+      k.blob(0.08, '#f6e0c8', { position: [x, y + 0.36, z], detail: 1 });
+      k.blob(0.082, '#2b2622', { position: [x - 0.01, y + 0.39, z], scale: [1, 0.6, 1], detail: 0 });
+      break;
+    case 'diya':
+      k.cylinder(0.12, 0.07, 0.07, 10, '#c9a040', { position: [x, y + 0.04, z] });
+      k.blob(0.04, '#f4a13b', { position: [x, y + 0.12, z], scale: [0.7, 1.4, 0.7], detail: 0, nightGlow: 1 });
+      break;
+    case 'lantern':
+      k.blob(0.14, '#d8263a', { position: [x, y + 0.22, z], scale: [1, 0.85, 1], detail: 1, nightGlow: 0.6 });
+      k.cylinder(0.07, 0.07, 0.04, 8, '#f4d23b', { position: [x, y + 0.36, z] });
+      k.cylinder(0.07, 0.07, 0.04, 8, '#f4d23b', { position: [x, y + 0.08, z] });
+      break;
+    case 'fan':
+      k.box(0.03, 0.26, 0.38, '#f7b8cf', { position: [x, y + 0.2, z], rotation: [0.2, 0, 0] });
+      k.box(0.035, 0.12, 0.03, '#7a4a2a', { position: [x, y + 0.05, z] });
+      break;
+    case 'cuckoo':
+      k.box(0.14, 0.34, 0.3, '#7a4a2a', { position: [x, y + 0.17, z], pattern: Pattern.Planks });
+      k.box(0.2, 0.05, 0.4, '#5a3a24', { position: [x, y + 0.36, z], rotation: [0.5, 0, 0] });
+      k.cylinder(0.08, 0.08, 0.02, 12, '#f6f0e4', { position: [x + 0.08, y + 0.2, z], rotation: [0, 0, Math.PI / 2] });
+      break;
+    case 'phonebox':
+      k.box(0.14, 0.4, 0.14, '#d8263a', { position: [x, y + 0.2, z] });
+      k.box(0.16, 0.04, 0.16, '#d8263a', { position: [x, y + 0.42, z] });
+      break;
+    case 'syrup':
+      k.cylinder(0.07, 0.08, 0.22, 10, '#b86b3a', { position: [x, y + 0.11, z] });
+      k.cylinder(0.03, 0.03, 0.06, 6, '#f6f0e4', { position: [x, y + 0.25, z] });
+      k.box(0.02, 0.08, 0.08, '#d8263a', { position: [x + 0.075, y + 0.11, z] });
+      break;
+    case 'boomerang':
+      k.box(0.04, 0.05, 0.3, '#c8843a', { position: [x, y + 0.03, z - 0.08], rotation: [0, 0.5, 0] });
+      k.box(0.04, 0.05, 0.3, '#c8843a', { position: [x, y + 0.03, z + 0.08], rotation: [0, -0.5, 0] });
+      break;
+  }
 }

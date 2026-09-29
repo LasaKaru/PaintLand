@@ -1,3 +1,4 @@
+import { paintPortrait, SKETCHBOOK_PAGES } from '../gameplay/Bazaar';
 import { LiveryEditor } from './LiveryEditor';
 import { LUT_LOOKS } from '../render/Lut';
 import { reportError } from '../net/CrashReporter';
@@ -62,7 +63,7 @@ type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'acc
 /** Screens that use the online services: the first visit asks for the terms (when the owner has that on). */
 const ONLINE_SCREENS = new Set(['multiplayer', 'race', 'account', 'gallery', 'contest', 'workshop']);
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'legal' | 'fishbook' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'workshop' | 'none';
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'legal' | 'fishbook' | 'sketchbook' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'workshop' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHost {
@@ -367,6 +368,7 @@ export class Menu {
       credits: () => this.credits(),
       legal: () => this.legalScreen(),
       fishbook: () => this.fishBook(),
+      sketchbook: () => this.sketchBook(),
     }[s]();
     // Keep a message that's still showing across re-renders (async actions re-render after toasting).
     const live = this.toastText && performance.now() < this.toastUntil;
@@ -385,6 +387,7 @@ export class Menu {
       this.root.querySelector<HTMLElement>('.menu-panel button, .menu-item, button')?.focus({ preventScroll: true });
     const rs = s === 'roadstudio' ? this.root.querySelector<HTMLElement>('[data-id="roadstudio"]') : null;
     if (rs) this.roadStudio.mount(rs);
+    if (s === 'sketchbook') this.paintSketches();
     accessible(this.root);
     this.paintBrandImages();
   }
@@ -495,6 +498,7 @@ export class Menu {
         <button class="menu-item" data-nav="pass">🎟 ${t('pass.title')}</button>
         <button class="menu-item" data-nav="stickers">📒 ${t('st.title')}</button>
         <button class="menu-item" data-nav="fishbook">🎣 ${t('book.title')}</button>
+        <button class="menu-item" data-nav="sketchbook">✏ ${t('sketch.title')}</button>
         <button class="menu-item" data-nav="trials">${t('menu.trials')}</button>
         <button class="menu-item" data-nav="race">${t('menu.race')}</button>
         <button class="menu-item" data-nav="missions">${t('menu.missions')}</button>
@@ -1225,6 +1229,30 @@ export class Menu {
       ${contest}
       <div class="fish-grid">${cards}</div>
     </div>`;
+  }
+
+  /** The "People I met" sketchbook: a watercolour portrait of everyone you sketched, where and when. */
+  private sketchBook(): string {
+    const book = this.host.profile.data.sketches ?? [];
+    const town = (id: string): string => t((({ harbour: 'hub.name', city: 'city.name', hills: 'hills.name', village: 'village.name' }) as Record<string, StringKey>)[id] ?? 'hub.name');
+    const cards = book
+      .map((sk, i) => `<figure class="sketch-card"><canvas width="120" height="150" data-sketch="${i}" aria-label="${escapeHtml(t('sketch.of', { town: town(sk.area) }))}"></canvas><figcaption>${escapeHtml(town(sk.area))} · ${new Date(sk.at).toLocaleDateString()}</figcaption></figure>`)
+      .join('');
+    return `<div class="menu-panel wide">${this.header(`✏ ${t('sketch.title')}`)}
+      <p>${t('sketch.count', { n: book.length, total: SKETCHBOOK_PAGES })}</p>
+      <p class="menu-hint">${t('sketch.how')}</p>
+      <div class="sketch-grid">${cards}</div>
+    </div>`;
+  }
+
+  /** Paint each portrait into its page. */
+  private paintSketches(): void {
+    const book = this.host.profile.data.sketches ?? [];
+    for (const c of this.root.querySelectorAll<HTMLCanvasElement>('canvas[data-sketch]')) {
+      const sk = book[Number(c.dataset.sketch)];
+      const g = c.getContext('2d');
+      if (sk && g) paintPortrait(g, sk.look, c.width, c.height, sk.at % 997);
+    }
   }
 
   /** Help & legal: version, the legal pages, the health notice, support, and what happens to your data. */

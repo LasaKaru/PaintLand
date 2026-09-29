@@ -25,6 +25,8 @@ export interface AmbienceParams {
   crowd?: number;
   /** 0..1 how many of them are talking, laughing or cheering (chatter and laughs). */
   chatter?: number;
+  /** 0..1 how close a kottu stall is (the clang of the blades on the griddle). */
+  kottu?: number;
   /** Master volume for ambience (Settings → Audio). */
   volume: number;
 }
@@ -53,6 +55,8 @@ export class Ambience {
   private readonly murmurGain: GainNode;
   private readonly murmurFilter: BiquadFilterNode;
   private nextSyllable = 0;
+  private kottuStep = 0;
+  private nextKottu = 0;
   private nextLaugh = 0;
   private readonly padVoices: OscillatorNode[] = [];
   private chord = 0;
@@ -214,6 +218,14 @@ export class Ambience {
     if (t > this.nextSyllable) {
       this.nextSyllable = t + 0.25 + Math.random() * (2.4 - chatter * 2);
       if (chatter > 0.05) this.babble(t, chatter * v);
+    }
+    // Kottu: two blades on a hot griddle, a fast rolling rhythm with accents.
+    const kottu = p.kottu ?? 0;
+    if (kottu > 0.02 && t > this.nextKottu) {
+      this.nextKottu = t + 0.13;
+      this.kottuStep = (this.kottuStep + 1) % 16;
+      const accent = this.kottuStep % 4 === 0 ? 1 : this.kottuStep % 2 ? 0.45 : 0.7;
+      if (this.kottuStep !== 7 && this.kottuStep !== 15) this.clang(t, kottu * kottu * accent * v, this.kottuStep % 2);
     }
     if (t > this.nextLaugh) {
       this.nextLaugh = t + 4 + Math.random() * 8;
@@ -468,6 +480,22 @@ export class Ambience {
       case 'trumpet':
         voice('sawtooth', t, 0.9, [340, 720, 640], 1100, 1.5, 0.05, 25);
         break;
+    }
+  }
+
+  /** One metal blade striking the griddle. */
+  private clang(t: number, level: number, which: number): void {
+    const ctx = this.ctx;
+    for (const [f, g0] of [[1850 + which * 230, 0.05], [2970 + which * 180, 0.03], [4410, 0.015]] as [number, number][]) {
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.value = f;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(g0 * level, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09);
+      o.connect(g).connect(this.bus);
+      o.start(t);
+      o.stop(t + 0.1);
     }
   }
 

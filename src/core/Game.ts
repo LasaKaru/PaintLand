@@ -1,3 +1,4 @@
+import { addSketch, eat, fedBonus, fedMinutes, FOOD_PRICE, FOOD_STALLS, nextSouvenir, SOUVENIRS, type SouvenirId } from '../gameplay/Bazaar';
 import { CricketMatch } from '../gameplay/Cricket';
 import { buildBat, type CricketPitch } from '../world/StreetFun';
 import { TownLife as TownLifeClass } from '../world/TownLife';
@@ -295,6 +296,10 @@ export class Game {
   private taxiLife: TownLife | null = null;
   private taxiStop = 0;
   private hailBeacon: THREE.Mesh | null = null;
+  /** Eating a snack (seconds left). */
+  private eatTimer = 0;
+  /** The last person talked to, and when (talk again to sketch them). */
+  private lastTalk: { p: TownPerson; at: number } | null = null;
   /** Batting at a street cricket pitch. */
   private cricketAt: CricketPitch | null = null;
   private batMesh: THREE.Mesh | null = null;
@@ -671,7 +676,7 @@ export class Game {
 
     // Fishing, resting at home and DJ parties (see gameplay/LeisureMode.ts).
     this.leisureHud = new LeisureHud(container);
-    this.profile.bonus = () => restBonus(this.profile.data.rest, Date.now());
+    this.profile.bonus = () => restBonus(this.profile.data.rest, Date.now()) * fedBonus(this.profile.data.fed, Date.now());
     this.leisure = new LeisureMode({
       scene: this.scene,
       audio: this.audio,
@@ -981,6 +986,7 @@ export class Game {
         ? { walls: v.home.walls, roof: v.home.roof, keepsakes: v.home.keepsakes as PocketKind[], trophies: v.home.trophies, owner: t('home.of', { name: v.name }) }
         : { walls: layout.walls, roof: layout.roof, keepsakes: shownKeepsakes(layout, p.data.seen), trophies: p.data.trophies.length, owner: t('home.of', { name: p.data.name }), plants: p.data.rest?.plants.stage ?? 0, lanterns: (p.data.lanterns ?? []).map(cleanLantern).filter((l): l is LanternDesign => !!l) },
     );
+    hub?.home.setSouvenirs(v ? [] : p.data.souvenirs ?? []);
     this.refreshWall();
     // Tell the server (friends visit what it has), at most every few seconds.
     if (changed && this.account.signedIn && !v) {
@@ -3533,6 +3539,7 @@ export class Game {
     }
     this.checkPickups(area, p.x, p.z);
     this.taxiStep(dt, area);
+    this.eatTimer = Math.max(0, this.eatTimer - dt);
     this.cricketStep();
     this.streetStep(dt, area);
     this.leisure.update(dt, this.time);
@@ -3596,6 +3603,49 @@ export class Game {
       this.hud.lootCard(t('taxi.title'), '#f4d23b', '★'.repeat(e.stars) + '☆'.repeat(5 - e.stars), `${t('taxi.paid', { pay: e.pay, tip: e.tip })} · +${got}`);
       this.checkTrophies();
     } else if (e?.kind === 'cancel') this.hud.tip(t('taxi.cancel'), 4, '🚕');
+  }
+
+  /** Buy a snack at a street food stall: well fed for a while (+5% ink). */
+  private buySnack(id: string): void {
+    if (this.mode !== 'foot') return;
+    if (this.profile.data.ink < FOOD_PRICE) {
+      this.hud.tip(t('food.poor'), 3, '🍽');
+      return;
+    }
+    this.profile.earn(-FOOD_PRICE);
+    this.profile.data.fed = eat(Date.now());
+    this.profile.addStat('snacks');
+    this.profile.save();
+    this.eatTimer = 2.5;
+    const f = FOOD_STALLS.find((q) => q.id === id);
+    this.hud.tip(t('food.ate', { food: t(`food.${id}` as StringKey), min: fedMinutes(this.profile.data.fed, Date.now()) }), 5, f?.icon ?? '🍽');
+    this.checkTrophies();
+  }
+
+  /** The souvenir stall: the next craft from a country you've visited. */
+  private offerSouvenir(): void {
+    const p = this.profile;
+    const owned = p.data.souvenirs ?? [];
+    const next = nextSouvenir(owned, p.data.seen);
+    if (!next) {
+      this.hud.tip(t(owned.length >= SOUVENIRS.length ? 'souv.all' : 'souv.none'), 5, '🎁');
+      return;
+    }
+    const name = t(`souv.${next.id}` as StringKey);
+    this.input.releasePointerLock();
+    this.hud.showDialog(t('zone.souvenir'), t('souv.offer', { item: `${next.icon} ${name}`, price: next.price }), () => {
+      if (p.data.ink < next.price) {
+        this.hud.tip(t('food.poor'), 3, '🎁');
+        return;
+      }
+      p.earn(-next.price);
+      (p.data.souvenirs ??= []).push(next.id as SouvenirId);
+      p.save();
+      this.refreshHome(false);
+      this.audio.secret();
+      this.hud.lootCard(t('zone.souvenir'), '#f4a13b', `${next.icon} ${name}`, t('souv.bought'));
+      this.checkTrophies();
+    });
   }
 
   /** Take the bat at a street cricket pitch (on foot). */
@@ -3706,6 +3756,23 @@ export class Game {
     const life = area.life!;
     const me = { x: this.hubWalker.x, z: this.hubWalker.z };
     const region = regionFor(area.id);
+    // Talk to someone again straight away to sketch their portrait for your sketchbook.
+    if (this.lastTalk?.p === p && this.time - this.lastTalk.at < 8 && p.act !== 'busk') {
+      this.lastTalk = null;
+      const book = (this.profile.data.sketches ??= []);
+      const added = addSketch(book, { look: { ...p.model.look }, region, area: area.id, at: Date.now() });
+      life.talkTo(p, me);
+      p.still = p.kind === 'child' ? 'cheer' : 'wave';
+      if (added) {
+        this.profile.addStat('sketches');
+        this.profile.save();
+        this.audio.secret();
+        this.hud.tip(t('sketch.done', { n: book.length }), 4, '✏');
+        this.checkTrophies();
+      } else this.hud.tip(t('sketch.again'), 3, '✏');
+      return;
+    }
+    this.lastTalk = { p, at: this.time };
     if (p.act === 'busk') {
       if (this.profile.data.ink < 5) {
         this.hud.tip(t('talk.noInk'), 3, '🎵');
@@ -3994,6 +4061,8 @@ export class Game {
     else if (zone.kind === 'viewpoint') this.enterViewpoint(zone);
     else if (zone.kind === 'fishing' || zone.kind === 'rest' || zone.kind === 'dj') this.startLeisure(zone);
     else if (zone.kind === 'cricket') this.startCricket(zone);
+    else if (zone.kind === 'food' && zone.spot) this.buySnack(zone.spot);
+    else if (zone.kind === 'souvenir') this.offerSouvenir();
     else if (zone.kind === 'story') this.talkToVarna();
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
@@ -4951,7 +5020,7 @@ export class Game {
         if (this.cricketAt.match?.phase === 'runup') this.swingT = 0;
         hm.swing = this.swingT;
       }
-      hm.animate(dt, this.viewing ? 'sit' : this.cricketAt ? 'bat' : this.waveTimer > 0 ? this.emoteName : this.leisure.pose() ?? this.hubWalker.pose, this.hubWalker.speed, this.time);
+      hm.animate(dt, this.viewing ? 'sit' : this.cricketAt ? 'bat' : this.eatTimer > 0 ? 'sip' : this.waveTimer > 0 ? this.emoteName : this.leisure.pose() ?? this.hubWalker.pose, this.hubWalker.speed, this.time);
       this.updatePet(dt, hm.root);
       if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
         this.footstepTimer -= dt * this.hubWalker.speed;
@@ -5062,7 +5131,8 @@ export class Game {
     }
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t(this.freeMissions.mission ? 'prompt.enterOnly' : 'prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
     const taxiText = this.mode === 'drive' && this.taxi.canPickUp(this.taxiCar()) ? t('taxi.pickPrompt') : null;
-    const personText = this.nearPerson ? t(this.nearPerson.act === 'busk' ? 'talk.tipPrompt' : 'talk.prompt') : null;
+    const sketchNext = this.nearPerson && this.lastTalk?.p === this.nearPerson && this.time - this.lastTalk.at < 8 && this.nearPerson.act !== 'busk';
+    const personText = this.nearPerson ? t(sketchNext ? 'sketch.prompt' : this.nearPerson.act === 'busk' ? 'talk.tipPrompt' : 'talk.prompt') : null;
     const boardText = taxiText ?? personText ?? (this.nearPet ? t(this.nearPet.species === 'dog' ? 'prompt.petDog' : 'prompt.petCat') : this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null);
     this.hud.setPrompt(this.state === 'photo' || this.flight || this.leisure.active || this.cricketAt ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
     this.drawBattle(dt);
@@ -5107,7 +5177,9 @@ export class Game {
     const flyWind = this.flight ? clamp(this.glider.y / 50, 0.2, 1) : 0;
     this.audio.calm = calm;
     const crowd = area.life && !this.flight ? area.life.crowdAt(player.x, player.z) : { people: 0, talk: 0 };
-    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...amb, wind: Math.max(amb.wind ?? 0, flyWind), calm, crowd: crowd.people * (1 - this.env.rain * 0.5), chatter: crowd.talk });
+    // The clang of kottu being chopped, near a kottu stall.
+    const kottu = (area.stalls ?? []).filter((st) => st.kind === 'kottu').reduce((a, st) => Math.max(a, 1 - Math.hypot(st.x - player.x, st.z - player.z) / 28), 0);
+    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...amb, wind: Math.max(amb.wind ?? 0, flyWind), calm, crowd: crowd.people * (1 - this.env.rain * 0.5), chatter: crowd.talk, kottu: Math.max(0, kottu) });
     this.audioFrame(this.mode === 'drive' && !this.flight && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);

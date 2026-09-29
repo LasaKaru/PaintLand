@@ -206,6 +206,24 @@ kept. Walk away to stop.
 seconds to touch them and their friends (sprint!). In **hide-and-seek** they run off to hide, and
 you have 90 seconds to find them. Listen for giggles, which get louder as you get closer.
 
+**Street food.** Snack stalls sell a treat for 10 ink:
+
+- **Serendib City:** kottu roti (listen for the clang of the blades) and isso vadai.
+- **Tea Hills:** egg hoppers.
+- **Lantern Village:** takoyaki.
+- **Harbour Town:** masala chai and ice cream.
+
+A snack leaves you **well fed** for 12 minutes, which gives +5% ink from everything, on top of being
+well rested.
+
+**Souvenirs.** Once you've visited a country on the Grand Tour, the souvenir stall in Harbour Town
+sells a local craft from there: an Ambalangoda mask, a kokeshi doll, a brass diya lamp and more.
+They go on a shelf in your home. They're cosmetic only.
+
+**Sketchbook.** Talk to someone in town, then press **E** again straight away to sketch their
+portrait. Every portrait goes into your *People I met* sketchbook (menu → ✏ Sketchbook), which
+holds up to 48 pages.
+
 Faith is part of everyday life in these places. Some locals wear a hijab, turban, kippah or prayer
 cap, and in Sri Lanka and the Himalayas you may pass monks in saffron or maroon robes. These
 clothes belong to the people who wear them. You can't buy them in the shop or wear them yourself.

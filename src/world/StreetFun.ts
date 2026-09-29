@@ -4,6 +4,7 @@ import { HumanModel } from '../models/Human';
 import { PaintMaterial } from '../render/PaintMaterial';
 import { Random } from '../core/Random';
 import { CricketMatch, PITCHES, PITCH_LENGTH, type Shot } from '../gameplay/Cricket';
+import { FOOD_STALLS, type FoodId } from '../gameplay/Bazaar';
 import { personOf, type RegionId } from './Peoples';
 import type { AreaZone } from './FreeRoamArea';
 import type { FreeWorld } from '../gameplay/FreeRoam';
@@ -243,3 +244,152 @@ export function addCricket(area: { zones: AreaZone[]; world: FreeWorld; group: T
   return out;
 }
 
+
+// ————— street food stalls and the souvenir stall —————
+
+/** The nearest spot to (x, z) with a clear w × d patch and no ring nearby. */
+export function roomAt(world: FreeWorld, zones: readonly AreaZone[], x: number, z: number, half = 2.6, keep: readonly { x: number; z: number }[] = []): { x: number; z: number } {
+  const clear = (px: number, pz: number): boolean => {
+    for (let dx = -half; dx <= half + 1e-6; dx += half / 4) for (let dz = -half; dz <= half + 1e-6; dz += half / 4) if (world.resolve({ x: px + dx, z: pz + dz }, 0.45)) return false;
+    return !zones.some((q) => Math.hypot(q.x - px, q.z - pz) < q.r + half + 2) && !keep.some((q) => Math.hypot(q.x - px, q.z - pz) < half + 2.5);
+  };
+  if (clear(x, z)) return { x, z };
+  for (let r = 2; r <= 60; r += 2)
+    for (let a = 0; a < 16; a++) {
+      const px = x + Math.cos((a / 16) * Math.PI * 2) * r;
+      const pz = z + Math.sin((a / 16) * Math.PI * 2) * r;
+      if (clear(px, pz)) return { x: px, z: pz };
+    }
+  return { x, z };
+}
+
+/** A street stall: a painted cart with a striped awning, and what it sells on the counter. Faces −Z (local). */
+export function buildStall(kind: FoodId | 'souvenir', colour: string): THREE.BufferGeometry {
+  const k = new ModelKit();
+  k.box(2.4, 1.0, 1.1, '#8a5a3a', { position: [0, 0.5, 0], pattern: Pattern.Planks });
+  k.box(2.5, 0.08, 1.2, '#f6f0e4', { position: [0, 1.04, 0] });
+  for (const x of [-1.1, 1.1]) for (const z of [-0.5, 0.5]) k.box(0.07, 2.4, 0.07, '#5a3a24', { position: [x, 1.2, z] });
+  // Striped awning.
+  for (let i = 0; i < 6; i++) k.box(0.45, 0.06, 1.6, i % 2 ? '#f6f0e4' : colour, { position: [-1.125 + i * 0.45, 2.45, -0.15], rotation: [0.18, 0, 0] });
+  // Wheels (a cart).
+  for (const x of [-0.9, 0.9]) k.cylinder(0.28, 0.28, 0.08, 12, '#2b2622', { position: [x, 0.28, 0.6], rotation: [Math.PI / 2, 0, 0] });
+  const top = 1.1;
+  switch (kind) {
+    case 'kottu':
+      // A big flat griddle with chopped roti, and two blades.
+      k.cylinder(0.55, 0.55, 0.05, 16, '#3a3530', { position: [0, top + 0.03, 0] });
+      for (let i = 0; i < 9; i++) k.box(0.1, 0.03, 0.06, i % 3 ? '#e8c98a' : '#d8463a', { position: [Math.cos(i) * 0.3, top + 0.07, Math.sin(i * 1.7) * 0.25] });
+      break;
+    case 'vadai':
+      // A basket of prawn fritters.
+      k.cylinder(0.35, 0.28, 0.18, 12, '#c9a860', { position: [0.4, top + 0.09, 0], pattern: Pattern.Thatch });
+      for (let i = 0; i < 7; i++) k.blob(0.07, '#d98a2a', { position: [0.4 + Math.cos(i) * 0.2, top + 0.2, Math.sin(i) * 0.15], scale: [1, 0.5, 1], detail: 0 });
+      k.box(0.5, 0.2, 0.4, '#f6f0e4', { position: [-0.5, top + 0.1, 0] });
+      break;
+    case 'hoppers':
+      // Hopper pans on the fire, bowl-shaped pancakes.
+      for (const x of [-0.5, 0.5]) {
+        k.cylinder(0.25, 0.12, 0.14, 12, '#3a3530', { position: [x, top + 0.07, 0] });
+        k.cylinder(0.22, 0.1, 0.1, 12, '#efd9a8', { position: [x, top + 0.12, 0] });
+        k.blob(0.05, '#f4d23b', { position: [x, top + 0.13, 0], detail: 0 });
+      }
+      break;
+    case 'takoyaki':
+      // A grill with rows of round dimples.
+      k.box(1.2, 0.1, 0.6, '#3a3530', { position: [0, top + 0.05, 0] });
+      for (let i = 0; i < 12; i++) k.blob(0.06, '#c8843a', { position: [-0.45 + (i % 6) * 0.18, top + 0.12, -0.12 + Math.floor(i / 6) * 0.24], detail: 0 });
+      k.box(0.3, 0.4, 0.05, '#f6f0e4', { position: [0.9, top + 0.9, -0.55] });
+      break;
+    case 'chai':
+      // A big kettle and little glasses.
+      k.cylinder(0.18, 0.22, 0.35, 10, '#b8b8c0', { position: [-0.4, top + 0.18, 0] });
+      k.cylinder(0.02, 0.02, 0.25, 4, '#b8b8c0', { position: [-0.18, top + 0.3, 0], rotation: [0, 0, -0.8] });
+      for (let i = 0; i < 5; i++) k.cylinder(0.04, 0.035, 0.1, 6, '#c8843a', { position: [0.15 + i * 0.14, top + 0.05, 0.1] });
+      break;
+    case 'icecream':
+      // A freezer box and cones.
+      k.box(1.4, 0.35, 0.8, '#bfd9e8', { position: [0, top + 0.18, 0] });
+      for (let i = 0; i < 4; i++) {
+        k.cylinder(0.05, 0.001, 0.2, 6, '#d9a860', { position: [-0.45 + i * 0.3, top + 0.46, -0.3], rotation: [Math.PI, 0, 0] });
+        k.blob(0.07, ['#f7b8cf', '#f6f0e4', '#8a5a3a', '#bfe0a8'][i], { position: [-0.45 + i * 0.3, top + 0.6, -0.3], detail: 0 });
+      }
+      break;
+    case 'souvenir':
+      // Shelves of little crafts.
+      k.box(2.2, 0.06, 0.5, '#5a3a24', { position: [0, top + 0.55, 0.25] });
+      const cs = ['#e0432f', '#f4d23b', '#3e6fa8', '#2d8a5a', '#e8559a', '#f4a13b'];
+      for (let i = 0; i < 6; i++) {
+        k.blob(0.1, cs[i], { position: [-0.9 + i * 0.36, top + 0.1, 0], detail: 0 });
+        k.box(0.14, 0.2, 0.1, cs[(i + 2) % 6], { position: [-0.9 + i * 0.36, top + 0.7, 0.25] });
+      }
+      break;
+  }
+  return k.build(0.015);
+}
+
+/** A stall in town: the cart, the stall-keeper and the ring in front. */
+export class Stall {
+  readonly group = new THREE.Group();
+  readonly zone: AreaZone;
+  readonly vendor: HumanModel;
+  constructor(
+    readonly kind: FoodId | 'souvenir',
+    readonly x: number,
+    readonly z: number,
+    readonly yaw: number,
+    colour: string,
+    region: RegionId,
+    seed: number,
+  ) {
+    const cart = new THREE.Mesh(buildStall(kind, colour), mat());
+    cart.castShadow = true;
+    cart.position.set(x, 0, z);
+    cart.rotation.y = yaw;
+    this.group.add(cart);
+    const rnd = new Random(seed);
+    const look = personOf(region, () => rnd.next(), { age: 'adult', aids: false }).look;
+    this.vendor = new HumanModel(look);
+    // Behind the counter, facing the customers.
+    this.vendor.root.position.set(x + Math.sin(yaw) * 0.9, 0, z + Math.cos(yaw) * 0.9);
+    this.vendor.root.rotation.y = yaw;
+    this.vendor.tempo = kind === 'kottu' ? 220 : 100;
+    this.group.add(this.vendor.root);
+    const front = { x: x - Math.sin(yaw) * 2.8, z: z - Math.cos(yaw) * 2.8 };
+    this.zone = { kind: kind === 'souvenir' ? 'souvenir' : 'food', label: '', x: front.x, z: front.z, r: 1.3, colour: kind === 'souvenir' ? '#f4a13b' : '#e0432f', spot: kind };
+  }
+
+  addColliders(world: FreeWorld): void {
+    world.circle(this.x, this.z, 1.35);
+  }
+
+  update(dt: number, time: number): void {
+    // The kottu maker chops on the griddle (clang-clang!); the others chat to customers.
+    const pose = this.kind === 'kottu' ? 'drum' : Math.sin(time * 0.4 + this.x) > 0.3 ? 'talk' : 'idle';
+    this.vendor.animate(dt, pose, 0, time);
+  }
+}
+
+/** Build an area's food stalls (and, in Harbour Town, the souvenir stall); add their rings. */
+export function addStalls(
+  area: { zones: AreaZone[]; world: FreeWorld; group: THREE.Group; secrets?: { x: number; z: number }[]; chests?: { x: number; z: number }[]; pockets?: { x: number; z: number }[]; spawn?: { x: number; z: number }; places?: { x: number; z: number }[] },
+  id: string,
+  region: RegionId,
+): Stall[] {
+  // Keep clear of golden pots, chests, pockets, the spawn point and named places.
+  const keep = [...(area.secrets ?? []), ...(area.chests ?? []), ...(area.pockets ?? []), ...(area.places ?? []), ...(area.spawn ? [area.spawn] : [])];
+  const out: Stall[] = [];
+  const defs: { kind: FoodId | 'souvenir'; near: [number, number]; colour: string }[] = FOOD_STALLS.filter((f) => f.area === id).map((f) => ({ kind: f.id, near: f.near, colour: f.colour }));
+  if (id === 'harbour') defs.push({ kind: 'souvenir', near: [-30, 52], colour: '#f4a13b' });
+  defs.forEach((d, i) => {
+    const p = roomAt(area.world, area.zones, d.near[0], d.near[1], 2.6, keep);
+    // Face toward the middle of town, or whichever way leaves the ring in front clear.
+    const base = Math.atan2(p.x, p.z);
+    const yaw = [0, Math.PI / 2, -Math.PI / 2, Math.PI].map((d) => base + d).find((y) => !area.world.resolve({ x: p.x - Math.sin(y) * 2.8, z: p.z - Math.cos(y) * 2.8 }, 1.3)) ?? base;
+    const s = new Stall(d.kind, p.x, p.z, yaw, d.colour, region, 400 + i + id.length * 13);
+    area.group.add(s.group);
+    area.zones.push(s.zone);
+    s.addColliders(area.world);
+    out.push(s);
+  });
+  return out;
+}

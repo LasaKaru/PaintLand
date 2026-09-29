@@ -7,12 +7,12 @@ import type { MapInfo } from '../ui/MapView';
 import type { Perahera } from './Perahera';
 import type { TownLife } from './TownLife';
 import type { AnimalLife } from './AnimalLife';
-import type { CricketPitch } from './StreetFun';
+import type { CricketPitch, Stall } from './StreetFun';
 
 /** Ground height of every free-roam area above the sea. */
 export const AREA_Y = 2;
 
-export type ZoneKind = 'portal' | 'area' | 'garage' | 'wardrobe' | 'shop' | 'missions' | 'trophies' | 'mural' | 'mailbox' | 'home' | 'launch' | 'viewpoint' | 'story' | 'tour' | 'fishing' | 'rest' | 'dj' | 'cricket';
+export type ZoneKind = 'portal' | 'area' | 'garage' | 'wardrobe' | 'shop' | 'missions' | 'trophies' | 'mural' | 'mailbox' | 'home' | 'launch' | 'viewpoint' | 'story' | 'tour' | 'fishing' | 'rest' | 'dj' | 'cricket' | 'food' | 'souvenir';
 
 /** A glowing ring: a service (garage…), a gate to a chapter, or a road to another area. */
 export interface AreaZone {
@@ -109,6 +109,8 @@ export interface FreeRoamArea {
   readonly animals?: AnimalLife;
   /** Street cricket pitches. */
   readonly cricket?: CricketPitch[];
+  /** Street food and souvenir stalls. */
+  readonly stalls?: Stall[];
   /** Data for the paper map; `paint` gives each district's paint 0..1. */
   /** Paintable mural boards in this area. */
   readonly murals: MuralBoard[];

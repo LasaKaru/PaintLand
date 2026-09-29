@@ -242,6 +242,12 @@ export interface ProfileData {
   fish?: import('./Fishing').FishBook;
   /** Resting at home: well rested until when, and the plants (see Rest.ts). */
   rest?: import('./Rest').RestState;
+  /** Well fed from a street snack until when (ms; see Bazaar.ts). */
+  fed?: number;
+  /** Souvenirs bought at the port market (see Bazaar.ts). */
+  souvenirs?: string[];
+  /** The "People I met" sketchbook, newest first. */
+  sketches?: import('./Bazaar').Sketch[];
 }
 
 const KEY = 'paintland.profile.v2';
