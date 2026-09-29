@@ -62,7 +62,7 @@ const dressAsakusa: Dresser = (d, span, rnd) => {
 };
 
 // Hakone and Mount Fuji: a lake, a torii at the water's edge, cedars and the mountain.
-const dressFuji: Dresser = (d, span, rnd) => {
+const dressHakone: Dresser = (d, span, rnd) => {
   landAlong(d, span.start, span.end, 170, '#6fa04a');
   waterBeside(d, span, 1, 16, 150, '#4f8fb0'); // Lake Ashi
   const fuji = beside(d, span, 0.55, 1, 900);
@@ -217,7 +217,7 @@ const dressOkinawa: Dresser = (d, span, rnd) => {
 
 export const JAPAN_DRESSERS = {
   asakusa: dressAsakusa,
-  fuji: dressFuji,
+  hakone: dressHakone,
   shirakawa: dressShirakawa,
   kinkakuji: dressKinkakuji,
   nara: dressNara,

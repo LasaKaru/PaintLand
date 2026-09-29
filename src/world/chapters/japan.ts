@@ -23,11 +23,11 @@ const DISTRICTS: DistrictDef[] = [
     preset: 'dusk',
   },
   {
-    id: 'fuji',
+    id: 'hakone',
     name: 'Mount Fuji',
     kicker: 'hakone · the lake and the mountain',
     poem: 'Fuji in the lake twice over: once in the sky, once in the water',
-    style: 'fuji',
+    style: 'hakone',
     root: 62,
     scale: 'major',
     bpm: 84,

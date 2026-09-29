@@ -23,7 +23,10 @@ export type DressStyle =
   | 'colombo' | 'kandyday' | 'nuwaraeliya' | 'ellaroad' | 'yala' | 'galle'
   // Grand Tour · Great Britain
   | 'edinburgh' | 'highlands' | 'lakes' | 'york' | 'cotswolds' | 'bath' | 'stonehenge' | 'cornwall' | 'wales' | 'brighton'
-  | 'asakusa' | 'fuji' | 'shirakawa' | 'kinkakuji' | 'nara' | 'osaka' | 'himeji' | 'miyajima' | 'beppu' | 'okinawa';
+  // Grand Tour · Japan
+  | 'asakusa' | 'hakone' | 'shirakawa' | 'kinkakuji' | 'nara' | 'osaka' | 'himeji' | 'miyajima' | 'beppu' | 'okinawa'
+  // Grand Tour · India
+  | 'delhi' | 'varanasi' | 'agra' | 'jaipur' | 'thar' | 'mumbai' | 'goa' | 'kerala' | 'madurai' | 'kanyakumari';
 /**
  * Seven-note scales only: the band builds chords by stacking thirds. Regional
  * colour comes from the mode plus melodies that lean on its pentatonic notes.

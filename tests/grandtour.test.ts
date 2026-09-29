@@ -5,7 +5,7 @@ import { MissionTracker, missionsFor } from '../src/gameplay/Missions';
 import { checkCheckpoint } from '../src/gameplay/Checkpoint';
 import { TOUR_STAMPS, passport, stampPassport } from '../src/gameplay/GrandTour';
 import type { ProfileData } from '../src/gameplay/Profile';
-import { DRESSERS } from '../src/world/dress';
+import { DRESSERS, DRESSER_GROUPS } from '../src/world/dress';
 import { SCALES } from '../src/world/Districts';
 
 describe('Book 2 · the Grand Tour', () => {
@@ -17,6 +17,18 @@ describe('Book 2 · the Grand Tour', () => {
       expect(c.flag, c.id).toBeTruthy();
       expect(TOUR_STAMPS.some((s) => s.chapter === c.id), c.id).toBe(true);
     }
+  });
+
+  it('never reuses a style name across chapters (a clash would silently swap dressers)', () => {
+    const seen = new Map<string, string>();
+    for (const [group, table] of Object.entries(DRESSER_GROUPS)) {
+      for (const style of Object.keys(table)) {
+        expect(seen.get(style), `${style} is in both ${seen.get(style)} and ${group}`).toBeUndefined();
+        seen.set(style, group);
+      }
+    }
+    const ids = CHAPTERS.flatMap((c) => c.districts.map((d) => d.id));
+    expect(new Set(ids).size).toBe(ids.length);
   });
 
   it.each(GRAND_TOUR().map((c) => [c.name, c] as const))('%s is a long trip: 10 districts, 8–12 km, long tunes', (_n, c) => {

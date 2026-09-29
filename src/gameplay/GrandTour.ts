@@ -30,6 +30,13 @@ export const TOUR_STAMPS: TourStamp[] = [
     hex: '#d8263a',
     note: 'Neon in Shibuya, Fuji over the lake, deer bowing in Nara, the White Heron in blossom, a gate standing in the sea, and a warm white beach in Okinawa.',
   },
+  {
+    chapter: 'india',
+    country: 'India',
+    flag: '🇮🇳',
+    hex: '#f08a2e',
+    note: 'Lamps on the Ganges at dusk, the Taj at dawn, camels on the dunes, a houseboat on the backwaters, and three seas meeting at the very end.',
+  },
 ];
 
 /** Ink for a first stamp. */

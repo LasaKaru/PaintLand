@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (68 districts)
+## 4 · Chapter themes (78 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -391,6 +391,20 @@ Each district tune is 48 steps long (six phrases), so these can be 2–3 minute 
 | Miyajima | gagaku court music colour, shō mouth organ, hichiriki, sea at dusk |
 | Beppu | slow and steamy, soft koto, water sounds, relaxing hot spring |
 | Okinawa | Ryūkyū scale, sanshin (snakeskin banjo), eisā drums, sunny island finale |
+
+### 4.11 Grand Tour · India (Book 2). Chapter style: *Indian road trip, sitar, bansuri, tabla, dholak, harmonium, tanpura drone, warm and bright, 100 bpm, instrumental*
+| District | Add |
+|---|---|
+| Delhi | brass wedding band, dhol, busy and proud, raga Khamaj colour |
+| Varanasi | dawn raga Bhairav, shehnai, temple bells, conch, slow alap into a gentle beat |
+| Agra | raga Yaman, santoor and strings, romantic and still, sunrise over marble |
+| Jaipur | Rajasthani folk, kamaicha, khartal clappers, swinging 6/8 |
+| The Thar Desert | desert song, algoza twin flutes, morchang jaw harp, harmonic minor, dunes at sunset |
+| Mumbai | Bollywood dance number, strings stabs, dhol, synth bass, 128 bpm |
+| Goa | Konkani mando, guitar and violin, Portuguese lilt, beach at sunset |
+| Kerala | vanchipattu boat song, chenda drums far off, rain on the backwaters |
+| Madurai | Carnatic nadaswaram and thavil, temple festival, bright and loud |
+| Kanyakumari | veena and flute, waves, sunset and moonrise, peaceful finale |
 
 ---
 

@@ -67,6 +67,8 @@ export const TROPHIES: TrophyDef[] = [
   // ————— the Grand Tour —————
   { id: 'tour-britain', name: 'Land’s End to John o’ Groats', text: 'Finish a lap of the Grand Tour of Great Britain and get your passport stamped.', icon: '🇬🇧', reward: 300, progress: (p) => [p.data.tour?.includes('britain') ? 1 : 0, 1] },
   { id: 'tour-japan', name: 'From Neon to Coral', text: 'Finish a lap of the Grand Tour of Japan and get your passport stamped.', icon: '🇯🇵', reward: 300, progress: (p) => [p.data.tour?.includes('japan') ? 1 : 0, 1] },
+  { id: 'tour-india', name: 'Namaste, India', text: 'Finish a lap of the Grand Tour of India and get your passport stamped.', icon: '🇮🇳', reward: 300, progress: (p) => [p.data.tour?.includes('india') ? 1 : 0, 1] },
+  { id: 'tour-dabba', name: 'Never Late', text: 'Deliver every tin on the Great Dabba Run from Delhi to Madurai.', icon: '🍛', reward: 250, progress: (p) => [p.data.missionsDone.includes('in-dabba') ? 1 : 0, 1] },
   { id: 'tour-ekiben', name: 'All Aboard', text: 'Deliver every lunch box on the Ekiben Run from Tokyo to Okinawa.', icon: '🍱', reward: 250, progress: (p) => [p.data.missionsDone.includes('jp-bento') ? 1 : 0, 1] },
   { id: 'tour-mail', name: 'First Class Post', text: 'Finish the Royal Mail Run from Edinburgh to Brighton.', icon: '📮', reward: 250, progress: (p) => [p.data.missionsDone.includes('gb-mail') ? 1 : 0, 1] },
   { id: 'laps-50', name: 'Road Regular', text: 'Finish 50 laps.', icon: '🛞', reward: 250, progress: stat('laps', 50) },
