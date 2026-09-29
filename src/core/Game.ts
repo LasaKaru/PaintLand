@@ -1,6 +1,7 @@
 import { settleChallenges } from '../ui/PassScreen';
 import { POCKETS, POCKET_INK, POCKET_REACH } from '../world/Pockets';
 import * as THREE from 'three';
+import { parseMailto, showContactCard } from '../ui/ContactCard';
 import { Input } from './Input';
 import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Options';
 import { clamp } from './MathUtil';
@@ -5058,7 +5059,10 @@ export class Game {
     if (!logo.url) return;
     analytics.track('sponsor_click', { id: logo.id });
     this.input.releasePointerLock();
-    window.open(logo.url, '_blank', 'noopener');
+    // An e-mail contact (the "advertise here" boards) is shown in the game, not handed to a mail program.
+    const mail = parseMailto(logo.url);
+    if (mail) showContactCard(mail.email, mail.subject);
+    else window.open(logo.url, '_blank', 'noopener');
   }
 
   /** Chat line from another player, after the block list and chat setting. */

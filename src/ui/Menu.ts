@@ -24,6 +24,7 @@ import { PHOTO_SUBJECTS } from '../gameplay/PhotoHunt';
 import { CHAINS, CITY_MISSIONS, missionUnlocked } from '../gameplay/CityMissions';
 import { CATALOGUE, MAX_OUTFITS, MAX_TONICS, PALETTE } from '../gameplay/Profile';
 import type { ChapterDef } from '../world/Chapters';
+import { parseMailto, showContactCard } from './ContactCard';
 import type { MissionDef } from '../gameplay/Missions';
 import { VEHICLES, type VehicleId } from '../models/Vehicles';
 import { defaultEngine, defaultHorn } from '../audio/VehicleSounds';
@@ -246,7 +247,14 @@ export class Menu {
     });
     this.root.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]');
-      if (a) analytics.track(a.dataset.link === 'sponsor-logo' ? 'sponsor_click' : 'link', { id: a.dataset.id ?? a.dataset.link });
+      if (!a) return;
+      analytics.track(a.dataset.link === 'sponsor-logo' ? 'sponsor_click' : 'link', { id: a.dataset.id ?? a.dataset.link });
+      // E-mail links (sponsor, advertise, support) show the address in the game instead of opening a mail program.
+      const mail = parseMailto(a.getAttribute('href') ?? '');
+      if (mail) {
+        e.preventDefault();
+        showContactCard(mail.email, mail.subject);
+      }
     });
     // The secret word on any menu screen (not while typing in a field) opens the admin login.
     window.addEventListener('keydown', (e) => {
