@@ -490,22 +490,30 @@ export class Menu {
 
   private chaptersScreen(): string {
     const p = this.host.profile.data;
-    const cards = this.host.chapters
-      .map((c, i) => {
-        const sealed = p.sealed[c.id]?.length ?? 0;
-        const total = c.districts.reduce((n, d) => n + d.melody.length / 8, 0);
-        const best = p.bestLap[c.id];
-        return `<div class="card chapter-card chapter-${c.id}">
-          <div class="kicker">${c.kicker} · ${i + 1}</div>
+    const card = (c: ChapterDef, n: number): string => {
+      const sealed = p.sealed[c.id]?.length ?? 0;
+      const total = c.districts.reduce((sum, d) => sum + d.melody.length / 8, 0);
+      const best = p.bestLap[c.id];
+      const stamped = c.book === 2 && p.tour?.includes(c.id);
+      return `<div class="card chapter-card chapter-${c.id}${c.book === 2 ? ' tour-card' : ''}">
+          <div class="kicker">${c.flag ? `${c.flag} ` : ''}${c.kicker} · ${n}${stamped ? ' · 🛂' : ''}</div>
           <div class="hand chapter-name">${c.name}</div>
           <p>${c.blurb}</p>
           <div class="chapter-districts">${c.districts.map((d) => `<span>${d.name}</span>`).join('')}</div>
           <div class="chapter-stats">♪ ${sealed}/${total} phrases · best lap ${best ? fmt(best) : '—'}</div>
           <button class="btn primary" data-play="${c.id}">Play ↗</button>
         </div>`;
-      })
-      .join('');
-    return `<div class="menu-panel wide">${this.header('Chapters')}<div class="chapter-grid">${cards}</div></div>`;
+    };
+    const book1 = this.host.chapters.filter((c) => (c.book ?? 1) === 1);
+    const book2 = this.host.chapters.filter((c) => c.book === 2);
+    const stamps = book2.filter((c) => p.tour?.includes(c.id)).length;
+    return `<div class="menu-panel wide">${this.header('Chapters')}
+      <h3 class="hand book-title">${t('tour.book1')}</h3>
+      <div class="chapter-grid">${book1.map((c, i) => card(c, i + 1)).join('')}</div>
+      ${book2.length ? `<h3 class="hand book-title">${t('tour.book2')} <small>🛂 ${stamps}/${book2.length}</small></h3>
+      <p class="menu-hint">${t('tour.blurb')}</p>
+      <div class="chapter-grid">${book2.map((c, i) => card(c, i + 1)).join('')}</div>` : ''}
+    </div>`;
   }
 
   private dailyScreen(): string {

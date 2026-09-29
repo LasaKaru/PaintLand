@@ -6,6 +6,7 @@ import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Opti
 import { clamp } from './MathUtil';
 import { createFrame } from '../road/RoadPath';
 import { PaintPipeline, type RenderPipeline } from '../render/PaintPipeline';
+import { STAMP_INK, passport, stampPassport } from '../gameplay/GrandTour';
 import { markGpuFailed, restartWithWebGL, type GameRenderer, type GpuKit } from '../render/Backend';
 import { PaintMaterial, paintShared, setWash } from '../render/PaintMaterial';
 import { createGalaxySky, createSky, createWater, galaxyUniforms, waterUniforms, skyUniforms } from '../render/SkyWater';
@@ -318,6 +319,8 @@ export class Game {
   private readonly fireworks: { x: number; z: number; y: number; vy: number; delay: number; whistle: boolean }[] = [];
   private readonly torches: THREE.Vector3[] = [];
   private discoverTimer = 0;
+  /** Road distance of the last chapter checkpoint (mid-district saves come every 800 m after it). */
+  private checkpointS = 0;
   /** Seconds to the next quiet free-roam checkpoint. */
   private cpTimer = 30;
   /** Varna, the painter (Harbour Town): her figure and easel. */
@@ -678,6 +681,7 @@ export class Game {
     this.scene.add(this.sky, this.galaxy, this.water, this.particles.points, this.wildlife.group);
     this.env = new Environment(this.scene);
     this.gpu?.setSun(this.env.sun);
+    this.missions.stopName = (d) => this.world?.districts[d]?.name ?? '';
     this.env.onThunder = (d) => {
       this.audio.thunder(d);
       this.rig?.addShake(0.12 / (0.5 + d));
@@ -2059,6 +2063,12 @@ export class Game {
     const s = this.mode === 'drive' ? this.rover.s : this.human.s;
     const d = this.world.path.districtAt(s);
     if (d !== this.district) this.changeDistrict(d);
+    // Journeys: how far to the next stop.
+    const stop = this.missions.nextStop();
+    const stopSpan = stop === null ? null : this.world.path.spanOf(stop);
+    this.missions.stopDistance = stopSpan ? Math.max(0, stopSpan.start - s) : null;
+    // Long districts (the Grand Tour's run to a kilometre or more) save a quiet checkpoint every 800 m.
+    if (this.mode === 'drive' && s - this.checkpointS > 800) this.saveChapterCheckpoint(d, false, s);
   }
 
   /** Player steering with sensitivity, smoothing and the optional centring assist. */
@@ -2180,6 +2190,15 @@ export class Game {
       this.audio.chime(72);
       const n = CAMPAIGN.findIndex((c) => c.chapter === this.world.chapter.id);
       setTimeout(() => this.hud.stamp(t('camp.missionDone', { n }), got.done ? t('camp.finaleOpen') : got.page.colour, got.page.hex), 1200);
+      this.profile.save();
+    }
+    // Grand Tour: a lap stamps this country in the passport.
+    const stamp = this.world.chapter.book === 2 ? stampPassport(this.profile.data, this.world.chapter.id) : null;
+    if (stamp) {
+      this.profile.earn(STAMP_INK);
+      const pp = passport(this.profile.data);
+      this.hud.lootCard(`🛂 ${t('tour.passport')}`, stamp.hex, `${stamp.flag} ${stamp.country}`, t('tour.stamped', { n: pp.got.length, total: pp.total }));
+      this.audio.stamp();
       this.profile.save();
     }
     if (this.ghost && this.lapClean && lap < this.ghost.run.time) this.profile.addStat('ghostBeaten');
@@ -2759,8 +2778,9 @@ export class Game {
       }
     }
 
-    // World.
+    // World. The sea follows the camera (its ripples are in world space), so long routes never run off its edge.
     this.sky.position.copy(cam.position);
+    this.water.position.set(cam.position.x, this.water.position.y, cam.position.z);
     this.env.update(dt, focus, cam, this.settings.reducedMotion || this.options.calmLighting);
     paintShared.uTime.value = this.time;
     skyUniforms.uTime.value = this.time;
@@ -3631,6 +3651,10 @@ export class Game {
       this.openMenu(CHAINS.some((c) => c.area === here) ? 'citymissions' : 'missions');
     }
     else if (zone.kind === 'trophies') this.openMenu('trophies');
+    else if (zone.kind === 'tour') {
+      this.openMenu('chapters');
+      document.querySelectorAll('.book-title')[1]?.scrollIntoView({ block: 'start' });
+    }
     else if (zone.kind === 'mailbox') this.openMenu('mailbox');
     else if (zone.kind === 'home') this.openMenu('home');
     else if (zone.kind === 'launch') this.startFlight(zone);
@@ -3880,13 +3904,20 @@ export class Game {
     }
   }
 
-  /** The start of a district in a chapter (not during trials or races). */
-  private saveChapterCheckpoint(district: number, announce: boolean): void {
+  /**
+   * A chapter checkpoint: the start of a district, or (`at`) a point inside a
+   * long one. Not during trials or races. A journey in progress is saved too.
+   */
+  private saveChapterCheckpoint(district: number, announce: boolean, at?: number): void {
     if (this.trial || this.race || this.state !== 'play') return;
     const def = this.world.districts[district];
     if (!def) return;
+    const span = this.world.path.spanOf(district);
+    this.checkpointS = at ?? span?.start ?? 0;
+    const a = this.missions.active;
+    const journey = a?.mission.kind === 'journey' && !a.done && !a.failed ? { id: a.mission.id, progress: Math.floor(a.progress) } : undefined;
     this.saveCheckpoint(
-      { kind: 'chapter', chapter: this.world.chapter.id, district, label: `${this.world.chapter.name} · ${def.name}`, at: Date.now() },
+      { kind: 'chapter', chapter: this.world.chapter.id, district, label: `${this.world.chapter.name} · ${def.name}`, at: Date.now(), ...(at !== undefined ? { s: at } : {}), ...(journey ? { mission: journey } : {}) },
       announce ? { title: t('cp.cleared'), sub: def.name, colour: def.walls[0] ?? '#e8559a' } : null,
     );
   }
@@ -3912,8 +3943,10 @@ export class Game {
       if (!CHAPTERS.some((c) => c.id === cp.chapter)) return false;
       this.play(cp.chapter);
       const span = this.world.path.spanOf(cp.district);
-      if (span && cp.district > 0) {
-        this.rover.reset(span.start + 4);
+      if (span && (cp.district > 0 || (cp.s ?? 0) > 0)) {
+        const at = cp.s !== undefined ? Math.min(Math.max(cp.s, span.start + 4), span.end - 4) : span.start + 4;
+        this.rover.reset(at);
+        this.checkpointS = at;
         this.rover.v = this.rover.tuning.cruiseFloor;
         this.rover.cruise = true;
         this.district = cp.district;
@@ -3921,6 +3954,11 @@ export class Game {
         this.lapClean = false;
         this.showDistrict(cp.district);
         this.rig.snap();
+      }
+      const jm = cp.mission ? this.world.missions.find((m) => m.id === cp.mission!.id && m.kind === 'journey') : undefined;
+      if (jm) {
+        this.missions.resume(jm, cp.mission!.progress);
+        this.hud.pop(t('mis.resumed', { title: jm.title }), window.innerWidth / 2, window.innerHeight * 0.35, 'big');
       }
     } else {
       if (!['harbour', 'city', 'village', 'hills', 'worldsend'].includes(cp.area)) return false;
@@ -4576,6 +4614,7 @@ export class Game {
     }
 
     this.sky.position.copy(cam.position);
+    this.water.position.set(cam.position.x, this.water.position.y, cam.position.z);
     this.galaxy.position.copy(cam.position);
     galaxyUniforms.uTime.value = this.time;
     this.env.update(dt, focus, cam, this.settings.reducedMotion || this.options.calmLighting);

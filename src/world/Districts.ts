@@ -20,8 +20,14 @@ export type DressStyle =
   // Chapter 7 · Skylines
   | 'newyork' | 'sanfrancisco' | 'rio' | 'tokyo' | 'singapore' | 'sydney'
   // Chapter 8 · Island Road Trip
-  | 'colombo' | 'kandyday' | 'nuwaraeliya' | 'ellaroad' | 'yala' | 'galle';
-export type ScaleName = 'major' | 'minor';
+  | 'colombo' | 'kandyday' | 'nuwaraeliya' | 'ellaroad' | 'yala' | 'galle'
+  // Grand Tour · Great Britain
+  | 'edinburgh' | 'highlands' | 'lakes' | 'york' | 'cotswolds' | 'bath' | 'stonehenge' | 'cornwall' | 'wales' | 'brighton';
+/**
+ * Seven-note scales only: the band builds chords by stacking thirds. Regional
+ * colour comes from the mode plus melodies that lean on its pentatonic notes.
+ */
+export type ScaleName = 'major' | 'minor' | 'dorian' | 'mixolydian' | 'phrygian' | 'lydian' | 'harmonicMinor' | 'bhairav';
 
 export interface DistrictDef {
   id: string;
@@ -47,6 +53,17 @@ export interface DistrictDef {
 export const SCALES: Record<ScaleName, number[]> = {
   major: [0, 2, 4, 5, 7, 9, 11],
   minor: [0, 2, 3, 5, 7, 8, 10],
+  /** Celtic reels and Irish/Scottish airs. */
+  dorian: [0, 2, 3, 5, 7, 9, 10],
+  /** Bagpipes, sea shanties. */
+  mixolydian: [0, 2, 4, 5, 7, 9, 10],
+  /** Japanese "in" colour (with the 1st, 4th and 5th leaned on), flamenco. */
+  phrygian: [0, 1, 3, 5, 7, 8, 10],
+  /** Bright, floating: open skies, mountains. */
+  lydian: [0, 2, 4, 6, 7, 9, 11],
+  harmonicMinor: [0, 2, 3, 5, 7, 8, 11],
+  /** Raga Bhairav (morning raga, Indian classical). */
+  bhairav: [0, 1, 4, 5, 7, 8, 11],
 };
 
 /** MIDI note for a scale degree (can exceed one octave). */

@@ -999,5 +999,14 @@ const fa: Locale = {
   'trial.prevBest': ' · بهترین {time} ثانیه',
   'trial.stillBest': '✓ {time} ثانیه · رکورد تو هنوز پابرجاست',
   'trial.rejected': 'سرور این دور را نپذیرفت ({reason})',
+  'mis.nextStop': "ایستگاه بعدی: {place}",
+  'mis.resumed': "سفر از سر گرفته شد: {title}",
+  'tour.passport': "گذرنامه",
+  'tour.stamped': "مهر خورد! {n}/{total} کشور",
+  'tour.book1': "کتاب ۱ · پالت گمشده",
+  'tour.book2': "کتاب ۲ · سفر بزرگ",
+  'tour.blurb': "سفرهای جاده‌ای طولانی دور دنیا: هر کدام حدود ده محله و ده کیلومتر، با سفری که از کل نقشه می‌گذرد.",
+  'tour.terminal': "✈ سفر بزرگ",
+  'mis.journey': "سفر",
 };
 export default fa;

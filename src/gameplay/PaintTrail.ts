@@ -33,9 +33,17 @@ export const MAX_DOTS_PER_PLACE = 1500;
 export const DOTS_PER_MESSAGE = 24;
 /** Metres driven between dabs. */
 export const DOT_SPACING = 0.9;
-/** Stored positions are in 1/8 m steps, so they must stay within ±4 km. */
-const POS_SCALE = 8;
-const POS_LIMIT = 32767 / POS_SCALE;
+/**
+ * Stored positions are 16-bit. Format 2 (prefixed "2:") keeps height in 1/8 m
+ * steps (dabs sit on the road) but x and z in 1/3 m steps, so dabs reach ±10.9 km
+ * (a Grand Tour route runs over 8 km from its start). The older format with no
+ * prefix used 1/8 m for everything (±4 km) and is still read.
+ */
+const XZ_SCALE = 3;
+const Y_SCALE = 8;
+const FORMAT = '2:';
+const POS_LIMIT = 32767 / XZ_SCALE;
+const Y_LIMIT = 32767 / Y_SCALE;
 
 // ————— compact storage: 10 bytes a dab, base64 —————
 
@@ -43,9 +51,9 @@ export function encodeDots(dots: readonly TrailDot[]): string {
   const buf = new DataView(new ArrayBuffer(dots.length * 10));
   dots.forEach((d, i) => {
     const o = i * 10;
-    buf.setInt16(o, Math.round(clampPos(d.x) * POS_SCALE), true);
-    buf.setInt16(o + 2, Math.round(clampPos(d.y) * POS_SCALE), true);
-    buf.setInt16(o + 4, Math.round(clampPos(d.z) * POS_SCALE), true);
+    buf.setInt16(o, Math.round(clampPos(d.x) * XZ_SCALE), true);
+    buf.setInt16(o + 2, Math.round(Math.max(-Y_LIMIT, Math.min(Y_LIMIT, d.y)) * Y_SCALE), true);
+    buf.setInt16(o + 4, Math.round(clampPos(d.z) * XZ_SCALE), true);
     buf.setInt8(o + 6, Math.round(d.nx * 127));
     buf.setInt8(o + 7, Math.round(d.ny * 127));
     buf.setInt8(o + 8, Math.round(d.nz * 127));
@@ -55,13 +63,15 @@ export function encodeDots(dots: readonly TrailDot[]): string {
   let bin = '';
   const bytes = new Uint8Array(buf.buffer);
   for (let i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
-  return btoa(bin);
+  return FORMAT + btoa(bin);
 }
 
 export function decodeDots(text: string): TrailDot[] {
+  const v2 = text.startsWith(FORMAT);
+  const scale = v2 ? XZ_SCALE : Y_SCALE;
   let bin: string;
   try {
-    bin = atob(text);
+    bin = atob(v2 ? text.slice(FORMAT.length) : text);
   } catch {
     return [];
   }
@@ -74,9 +84,9 @@ export function decodeDots(text: string): TrailDot[] {
     const o = i * 10;
     const v = buf.getUint8(o + 9);
     out.push({
-      x: buf.getInt16(o, true) / POS_SCALE,
-      y: buf.getInt16(o + 2, true) / POS_SCALE,
-      z: buf.getInt16(o + 4, true) / POS_SCALE,
+      x: buf.getInt16(o, true) / scale,
+      y: buf.getInt16(o + 2, true) / Y_SCALE,
+      z: buf.getInt16(o + 4, true) / scale,
       nx: buf.getInt8(o + 6) / 127,
       ny: buf.getInt8(o + 7) / 127,
       nz: buf.getInt8(o + 8) / 127,

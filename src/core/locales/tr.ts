@@ -999,5 +999,14 @@ const tr: Locale = {
   'trial.prevBest': ' · en iyi {time} sn',
   'trial.stillBest': '✓ {time} sn · en iyi derecen hâlâ geçerli',
   'trial.rejected': 'Sunucu bu turu kabul etmedi ({reason})',
+  'mis.nextStop': "Sonraki durak: {place}",
+  'mis.resumed': "Yolculuk sürdürüldü: {title}",
+  'tour.passport': "Pasaport",
+  'tour.stamped': "Damgalandı! {n}/{total} ülke",
+  'tour.book1': "Kitap 1 · Kayıp Palet",
+  'tour.book2': "Kitap 2 · Büyük Tur",
+  'tour.blurb': "Dünyanın dört bir yanında uzun yol gezileri: her biri yaklaşık on semt ve on kilometre, tüm haritayı geçen bir yolculukla.",
+  'tour.terminal': "✈ Büyük Tur",
+  'mis.journey': "Yolculuk",
 };
 export default tr;

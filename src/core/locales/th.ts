@@ -999,5 +999,14 @@ const th: Locale = {
   'trial.prevBest': ' · ดีที่สุด {time} วิ',
   'trial.stillBest': '✓ {time} วิ · สถิติดีที่สุดของคุณยังอยู่',
   'trial.rejected': 'เซิร์ฟเวอร์ไม่รับรอบนี้ ({reason})',
+  'mis.nextStop': "จุดแวะถัดไป: {place}",
+  'mis.resumed': "ออกเดินทางต่อ: {title}",
+  'tour.passport': "พาสปอร์ต",
+  'tour.stamped': "ประทับตราแล้ว! {n}/{total} ประเทศ",
+  'tour.book1': "เล่ม 1 · จานสีที่หายไป",
+  'tour.book2': "เล่ม 2 · แกรนด์ทัวร์",
+  'tour.blurb': "ทริปขับรถไกลรอบโลก: แต่ละทริปราวสิบย่านและสิบกิโลเมตร พร้อมการเดินทางที่ข้ามทั้งแผนที่",
+  'tour.terminal': "✈ แกรนด์ทัวร์",
+  'mis.journey': "การเดินทาง",
 };
 export default th;

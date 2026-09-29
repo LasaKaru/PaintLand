@@ -5,7 +5,7 @@
 
 import { t } from '../core/i18n';
 
-export type MissionKind = 'notes' | 'seal' | 'split' | 'air' | 'deliver' | 'visit' | 'race' | 'stamps' | 'boost';
+export type MissionKind = 'notes' | 'seal' | 'split' | 'air' | 'deliver' | 'visit' | 'race' | 'stamps' | 'boost' | 'journey';
 
 export interface MissionDef {
   id: string;
@@ -18,6 +18,8 @@ export interface MissionDef {
   district?: number;
   count?: number;
   time?: number;
+  /** Journey: the districts to call at, in order (a long, multi-stop run across the chapter). */
+  stops?: number[];
   reward: { ink: number; item?: string };
 }
 
@@ -79,6 +81,15 @@ export const MISSIONS: MissionDef[] = [
   { id: 'it-hairpins', chapter: 'islandtrip', title: 'Hairpin Heaven', giver: g('Rally Dilini', 2, 90, -1, { top: '#f4d23b', hat: 'cap' }), text: 'Drive the hairpins of Nuwara Eliya in under 40 seconds.', kind: 'split', district: 2, time: 40, reward: { ink: 220 } },
   { id: 'it-leopard', chapter: 'islandtrip', title: 'Leopard Spotting', giver: g('Ranger Kasun', 4, 40, 1, { top: '#6b7a3f', bottomStyle: 'shorts', hat: 'sunhat' }), text: 'Seal 4 phrases on the safari track through Yala. Quietly now!', kind: 'seal', count: 4, reward: { ink: 190, item: 'hat:straw' } },
   { id: 'it-surf', chapter: 'islandtrip', title: 'Sunset at the Fort', giver: g('Surfer Tharushi', 5, 30, -1, { top: '#3e86c9', bottomStyle: 'shorts', acc: 'flower' }), text: 'Boost for 5 seconds in total on the coast road round Galle Fort before sunset.', kind: 'boost', district: 5, time: 5, reward: { ink: 230, item: 'hat:flowers' } },
+  // ——— Grand Tour · Great Britain ———
+  { id: 'gb-mail', chapter: 'britain', title: 'Royal Mail Run', giver: g('Postie Morag', 0, 60, 1, { top: '#d8263a', back: 'satchel', hat: 'cap', hair: '#b5652e' }), text: 'The last post of the day goes the length of the country! Call at York, Bath, Cornwall and Brighton, in that order. Take your time: it is a long road.', kind: 'journey', stops: [3, 5, 7, 9], reward: { ink: 600, item: 'wheels:whitewall' } },
+  { id: 'gb-haggis', chapter: 'britain', title: 'Haggis Express', giver: g('Chef Hamish', 0, 140, -1, { top: '#f6f0e4', topStyle: 'shirt', hat: 'beanie', hair: '#b5652e' }), text: 'A hot haggis for the ceilidh up in the glen! Get it to the Highlands in 70 seconds.', kind: 'deliver', district: 1, time: 70, reward: { ink: 200, item: 'hat:beanie' } },
+  { id: 'gb-pipes', chapter: 'britain', title: 'Bagpipe Tune', giver: g('Piper Iona', 1, 50, 1, { top: '#2d6a4f', topStyle: 'dress', bottom: '#8a2a2a', hat: 'beret' }), text: 'The glen has a long tune in it. Collect 30 of the Highlands’ notes in one lap.', kind: 'notes', district: 1, count: 30, reward: { ink: 220, item: 'horn:trumpet' } },
+  { id: 'gb-pass', chapter: 'britain', title: 'Hardknott Pass', giver: g('Fell-runner Wyn', 2, 40, -1, { top: '#f4d23b', bottomStyle: 'shorts', back: 'backpack' }), text: 'Drive the whole Lake District road, round both lake bends, in under 45 seconds.', kind: 'split', district: 2, time: 45, reward: { ink: 240 } },
+  { id: 'gb-fete', chapter: 'britain', title: 'Village Fête', giver: g('Vicar Pru', 4, 40, 1, { top: '#6a4a8a', topStyle: 'dress', hat: 'sunhat', glasses: 'round' }), text: 'The bunting blew off the fête stalls! Collect 6 bunting stamps along the Cotswold lanes.', kind: 'stamps', district: 4, count: 6, reward: { ink: 210, item: 'roof:flowers' } },
+  { id: 'gb-stones', chapter: 'britain', title: 'Midsummer Stones', giver: g('Druid Bryn', 6, 40, -1, { top: '#f6f0e4', topStyle: 'dress', bottom: '#f6f0e4', hat: 'none', hair: '#dcdcdc' }), text: 'Park the car and walk out to the stones on foot. Stand in the ring at sunset.', kind: 'visit', district: 6, reward: { ink: 200 } },
+  { id: 'gb-coast', chapter: 'britain', title: 'Cornish Coast Race', giver: g('Surfer Kerensa', 7, 30, 1, { top: '#3e86c9', bottomStyle: 'shorts', glasses: 'sun' }), text: 'Race my buggy along the coast road, over the headland, to the harbour!', kind: 'race', district: 7, reward: { ink: 280, item: 'roof:surfboard' } },
+  { id: 'gb-pier', chapter: 'britain', title: 'Pier Pressure', giver: g('Busker Dev', 9, 40, -1, { top: '#e8559a', topStyle: 'shirt', back: 'guitar', hat: 'straw' }), text: 'Brighton loves a show! Boost for 6 seconds in total along the seafront.', kind: 'boost', district: 9, time: 6, reward: { ink: 260, item: 'glasses:sun' } },
 ];
 
 export function missionsFor(chapter: string): MissionDef[] {
@@ -105,7 +116,7 @@ export class MissionTracker {
   started = false;
 
   start(m: MissionDef): void {
-    const goal = m.kind === 'visit' || m.kind === 'deliver' || m.kind === 'race' || m.kind === 'split' || m.kind === 'air' ? 1 : m.kind === 'boost' ? m.time ?? 3 : m.count ?? 1;
+    const goal = m.kind === 'journey' ? m.stops?.length ?? 1 : m.kind === 'visit' || m.kind === 'deliver' || m.kind === 'race' || m.kind === 'split' || m.kind === 'air' ? 1 : m.kind === 'boost' ? m.time ?? 3 : m.count ?? 1;
     this.active = { mission: m, label: m.title, progress: 0, goal, timeLeft: m.kind === 'deliver' ? m.time ?? 60 : null, failed: false, done: false };
     this.started = m.kind !== 'race';
   }
@@ -151,7 +162,27 @@ export class MissionTracker {
   onEnterDistrict(district: number): void {
     const a = this.active;
     if (a?.mission.kind === 'deliver' && district === a.mission.district) this.bump();
+    // Journeys call at their stops in order.
+    if (a?.mission.kind === 'journey' && !a.done && a.mission.stops?.[Math.floor(a.progress)] === district) this.bump();
   }
+
+  /** Journey: the next district to call at (null when there is none). */
+  nextStop(): number | null {
+    const a = this.active;
+    if (a?.mission.kind !== 'journey' || a.done || a.failed) return null;
+    return a.mission.stops?.[Math.floor(a.progress)] ?? null;
+  }
+
+  /** Put a saved journey back where it was (Continue after closing the game). */
+  resume(m: MissionDef, progress: number): void {
+    this.start(m);
+    if (this.active) this.active.progress = Math.max(0, Math.min(this.active.goal - 1, Math.floor(progress)));
+  }
+
+  /** Names for the journey's stops (set by the game from the chapter's districts). */
+  stopName: ((district: number) => string) | null = null;
+  /** Road distance to the next stop in metres (kept up to date by the game), or null. */
+  stopDistance: number | null = null;
 
   onBoost(district: number, dt: number): void {
     const a = this.active;
@@ -190,6 +221,11 @@ export class MissionTracker {
     if (a.mission.kind === 'boost') bits.push(`${a.progress.toFixed(1)}/${a.goal}s`);
     if (a.timeLeft !== null) bits.push(t('mis.left', { n: a.timeLeft.toFixed(0) }));
     if (a.mission.kind === 'race' && !this.started) bits.push(t('mis.driveToStart'));
+    const next = this.nextStop();
+    if (next !== null && this.stopName) {
+      const d = this.stopDistance;
+      bits.push(t('mis.nextStop', { place: this.stopName(next) }) + (d !== null && d > 0 ? ` ${d >= 1000 ? `${(d / 1000).toFixed(1)} km` : `${Math.round(d / 10) * 10} m`}` : ''));
+    }
     return bits.join(' · ');
   }
 }

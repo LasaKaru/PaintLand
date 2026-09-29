@@ -999,5 +999,14 @@ const pt: Locale = {
   'trial.prevBest': ' · melhor {time} s',
   'trial.stillBest': '✓ {time} s · seu recorde continua de pé',
   'trial.rejected': 'O servidor não aceitou esta volta ({reason})',
+  'mis.nextStop': "Próxima parada: {place}",
+  'mis.resumed': "Viagem retomada: {title}",
+  'tour.passport': "Passaporte",
+  'tour.stamped': "Carimbado! {n}/{total} países",
+  'tour.book1': "Livro 1 · A paleta perdida",
+  'tour.book2': "Livro 2 · A grande viagem",
+  'tour.blurb': "Longas viagens de estrada pelo mundo: cerca de dez bairros e dez quilômetros cada, com uma jornada que atravessa o mapa inteiro.",
+  'tour.terminal': "✈ Grande viagem",
+  'mis.journey': "Jornada",
 };
 export default pt;

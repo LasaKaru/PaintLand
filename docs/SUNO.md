@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (48 districts)
+## 4 · Chapter themes (58 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -362,6 +362,21 @@ field. Make each a **90–150 s loop**, instrumental. File name:
 | Ella | train and valleys, flute solo, adventurous |
 | Yala | safari, deep drums, wild, elephants and leopards |
 | Galle | old fort at sunset, baila guitar, ocean, homecoming |
+
+### 4.9 Grand Tour · Great Britain (Book 2). Chapter style: *British folk road trip, fiddle, tin whistle, acoustic guitar, bodhrán, brass band touches, bright and adventurous, 100 bpm, instrumental*
+Each district tune is 48 steps long (six phrases), so these can be 2–3 minute loops.
+| District | Add |
+|---|---|
+| Edinburgh | Highland bagpipes and snare, pipe march, D mixolydian, drone, proud |
+| The Highlands | misty glen, Celtic harp, low whistle, slow air, D dorian, lonely and wide |
+| The Lake District | pastoral English folk, fingerpicked guitar, recorder, gentle, lakeside morning |
+| York | church bells change-ringing, cathedral organ, medieval shawm, cobbled streets |
+| The Cotswolds | morris dance jig, melodeon, fiddle, bells on ankles, village fête, sunny |
+| Bath | Georgian minuet, harpsichord, string quartet, elegant, Jane Austen ballroom |
+| Stonehenge | ancient and mysterious, frame drum, bone flute, drone, A phrygian, sunset over stones |
+| Cornwall | sea shanty, accordion, stomping, fishermen's chorus humming, harbour, salt air |
+| Wales | male voice choir humming a hymn, harp, broad and warm, D minor, valleys |
+| Brighton | seaside music hall, brass band, honky-tonk piano, fairground organ, joyful finale |
 
 ---
 

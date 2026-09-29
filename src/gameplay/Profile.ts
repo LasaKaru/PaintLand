@@ -212,6 +212,8 @@ export interface ProfileData {
   checkpoint?: import('./Checkpoint').Checkpoint;
   /** Story mode, The Lost Palette. */
   story?: import('./Story').StoryState;
+  /** Book 2, the Grand Tour: countries stamped in the passport (chapter ids). */
+  tour?: string[];
   /** Saved outfit sets. */
   outfits?: OutfitSet[];
   tonics: Record<TonicId, number>;

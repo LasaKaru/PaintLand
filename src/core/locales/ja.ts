@@ -999,5 +999,14 @@ const ja: Locale = {
   'trial.prevBest': ' · ベスト {time}秒',
   'trial.stillBest': '✓ {time}秒 · 自己ベストは更新ならず',
   'trial.rejected': 'サーバーがこの走行を受け付けませんでした({reason})',
+  'mis.nextStop': "次の目的地：{place}",
+  'mis.resumed': "旅を再開：{title}",
+  'tour.passport': "パスポート",
+  'tour.stamped': "スタンプ獲得！{n}/{total} か国",
+  'tour.book1': "第1巻 · 失われたパレット",
+  'tour.book2': "第2巻 · グランドツアー",
+  'tour.blurb': "世界をめぐる長いドライブ旅：それぞれ約10の地区と10キロ、地図全体を横断する旅つき。",
+  'tour.terminal': "✈ グランドツアー",
+  'mis.journey': "旅",
 };
 export default ja;

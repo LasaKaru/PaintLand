@@ -307,7 +307,7 @@ export class NetClient {
       }
       case 'emote': {
         const e = m as unknown as Record<string, unknown>;
-        const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 5000;
+        const num = (v: unknown): v is number => typeof v === 'number' && Number.isFinite(v) && Math.abs(v) < 12000; // Grand Tour roads run ~10 km
         if (e.kind === 'together') {
           const tm = checkTogether(e.msg);
           if (tm) this.onTogether?.(pid, peer.info?.name ?? 'Painter', tm);

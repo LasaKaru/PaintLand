@@ -999,5 +999,14 @@ const ko: Locale = {
   'trial.prevBest': ' · 최고 {time}초',
   'trial.stillBest': '✓ {time}초 · 최고 기록은 그대로예요',
   'trial.rejected': '서버가 이 주행을 받지 않았어요 ({reason})',
+  'mis.nextStop': "다음 정류장: {place}",
+  'mis.resumed': "여정 재개: {title}",
+  'tour.passport': "여권",
+  'tour.stamped': "도장 찍음! {n}/{total}개국",
+  'tour.book1': "1권 · 잃어버린 팔레트",
+  'tour.book2': "2권 · 그랜드 투어",
+  'tour.blurb': "세계를 도는 긴 자동차 여행: 각각 약 10개 구역, 10킬로미터, 지도 전체를 가로지르는 여정과 함께.",
+  'tour.terminal': "✈ 그랜드 투어",
+  'mis.journey': "여정",
 };
 export default ko;

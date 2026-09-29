@@ -24,8 +24,25 @@ describe('paint trail', () => {
       expect(b.r).toBeCloseTo(a.r, 1);
     }
     // 10 bytes a dab.
-    expect(atob(encodeDots(dots)).length).toBe(30);
+    expect(atob(encodeDots(dots).slice(2)).length).toBe(30);
     expect(decodeDots('not base64!!')).toEqual([]);
+  });
+
+  it('reaches the far end of a 10 km Grand Tour road, and still reads old saves', () => {
+    const far = [dot(-1500, 1), { ...dot(200), z: -8200 }];
+    const back = decodeDots(encodeDots(far));
+    expect(back[0].x).toBeCloseTo(-1500, 0);
+    expect(back[1].z).toBeCloseTo(-8200, 0);
+    // The first format (no prefix) stored 1/8 m steps.
+    const v1 = new DataView(new ArrayBuffer(10));
+    v1.setInt16(0, 100 * 8, true);
+    v1.setInt16(4, -3000 * 8, true);
+    v1.setInt8(7, 127);
+    const old = decodeDots(btoa(String.fromCharCode(...new Uint8Array(v1.buffer))));
+    expect(old[0].x).toBe(100);
+    expect(old[0].z).toBe(-3000);
+    // …and the network accepts dabs that far out.
+    expect(unpackDots('britain', packDots(far))?.dots).toHaveLength(2);
   });
 
   it('keeps a trail per place, capped, across reloads', () => {

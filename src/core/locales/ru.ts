@@ -999,5 +999,14 @@ const ru: Locale = {
   'trial.prevBest': ' · лучшее {time} с',
   'trial.stillBest': '✓ {time} с · ваш рекорд остаётся',
   'trial.rejected': 'Сервер не принял этот заезд ({reason})',
+  'mis.nextStop': "Следующая остановка: {place}",
+  'mis.resumed': "Путешествие продолжено: {title}",
+  'tour.passport': "Паспорт",
+  'tour.stamped': "Штамп! Стран: {n}/{total}",
+  'tour.book1': "Книга 1 · Потерянная палитра",
+  'tour.book2': "Книга 2 · Большое путешествие",
+  'tour.blurb': "Долгие автопутешествия по миру: около десяти районов и десяти километров в каждом, с поездкой через всю карту.",
+  'tour.terminal': "✈ Большое путешествие",
+  'mis.journey': "Путешествие",
 };
 export default ru;

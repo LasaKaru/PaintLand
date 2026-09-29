@@ -999,5 +999,14 @@ const id: Locale = {
   'trial.prevBest': ' · terbaik {time} dtk',
   'trial.stillBest': '✓ {time} dtk · rekor terbaikmu tetap bertahan',
   'trial.rejected': 'Server tidak menerima putaran ini ({reason})',
+  'mis.nextStop': "Perhentian berikutnya: {place}",
+  'mis.resumed': "Perjalanan dilanjutkan: {title}",
+  'tour.passport': "Paspor",
+  'tour.stamped': "Dicap! {n}/{total} negara",
+  'tour.book1': "Buku 1 · Palet yang Hilang",
+  'tour.book2': "Buku 2 · Tur Akbar",
+  'tour.blurb': "Perjalanan darat panjang keliling dunia: masing-masing sekitar sepuluh distrik dan sepuluh kilometer, dengan perjalanan yang melintasi seluruh peta.",
+  'tour.terminal': "✈ Tur Akbar",
+  'mis.journey': "Perjalanan",
 };
 export default id;

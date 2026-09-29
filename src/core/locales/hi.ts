@@ -999,5 +999,14 @@ const hi: Locale = {
   'trial.prevBest': ' · सर्वश्रेष्ठ {time} से',
   'trial.stillBest': '✓ {time} से · तुम्हारा सर्वश्रेष्ठ समय कायम है',
   'trial.rejected': 'सर्वर ने यह दौड़ स्वीकार नहीं की ({reason})',
+  'mis.nextStop': "अगला पड़ाव: {place}",
+  'mis.resumed': "यात्रा फिर से शुरू: {title}",
+  'tour.passport': "पासपोर्ट",
+  'tour.stamped': "मुहर लगी! {n}/{total} देश",
+  'tour.book1': "किताब 1 · खोया हुआ रंगपट्ट",
+  'tour.book2': "किताब 2 · महायात्रा",
+  'tour.blurb': "दुनिया भर की लंबी सड़क यात्राएँ: हर एक में लगभग दस इलाके और दस किलोमीटर, और पूरे नक्शे को पार करने वाली एक यात्रा।",
+  'tour.terminal': "✈ महायात्रा",
+  'mis.journey': "यात्रा",
 };
 export default hi;

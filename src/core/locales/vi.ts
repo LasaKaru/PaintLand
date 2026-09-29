@@ -999,5 +999,14 @@ const vi: Locale = {
   'trial.prevBest': ' · tốt nhất {time} giây',
   'trial.stillBest': '✓ {time} giây · kỷ lục của bạn vẫn giữ nguyên',
   'trial.rejected': 'Máy chủ không chấp nhận lượt chạy này ({reason})',
+  'mis.nextStop': "Điểm dừng tiếp: {place}",
+  'mis.resumed': "Tiếp tục hành trình: {title}",
+  'tour.passport': "Hộ chiếu",
+  'tour.stamped': "Đã đóng dấu! {n}/{total} quốc gia",
+  'tour.book1': "Tập 1 · Bảng màu thất lạc",
+  'tour.book2': "Tập 2 · Chuyến du hành lớn",
+  'tour.blurb': "Những chuyến đi đường dài vòng quanh thế giới: mỗi chuyến khoảng mười khu và mười cây số, cùng một hành trình băng qua cả bản đồ.",
+  'tour.terminal': "✈ Du hành lớn",
+  'mis.journey': "Hành trình",
 };
 export default vi;

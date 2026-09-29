@@ -6,7 +6,17 @@
  */
 
 export type Checkpoint =
-  | { kind: 'chapter'; chapter: string; district: number; label: string; at: number }
+  | {
+      kind: 'chapter';
+      chapter: string;
+      district: number;
+      label: string;
+      at: number;
+      /** Road distance to resume at, inside the district (long districts save every ~800 m). */
+      s?: number;
+      /** A journey mission in progress: its id and how many stops were reached. */
+      mission?: { id: string; progress: number };
+    }
   | { kind: 'area'; area: string; x: number; z: number; heading: number; foot: boolean; label: string; at: number };
 
 const idOk = (v: unknown): v is string => typeof v === 'string' && /^[a-z0-9-]{1,24}$/.test(v);
@@ -19,7 +29,11 @@ export function checkCheckpoint(v: unknown): Checkpoint | null {
   const label = typeof c.label === 'string' ? c.label.slice(0, 80) : '';
   const at = num(c.at, 1e15) ? c.at : 0;
   if (c.kind === 'chapter' && idOk(c.chapter) && Number.isInteger(c.district) && (c.district as number) >= 0 && (c.district as number) < 64) {
-    return { kind: 'chapter', chapter: c.chapter, district: c.district as number, label, at };
+    const cp: Checkpoint = { kind: 'chapter', chapter: c.chapter, district: c.district as number, label, at };
+    if (num(c.s, 50_000) && c.s >= 0) cp.s = c.s;
+    const m = c.mission as Record<string, unknown> | undefined;
+    if (m && typeof m === 'object' && typeof m.id === 'string' && /^[a-z0-9-]{1,32}$/.test(m.id) && Number.isInteger(m.progress) && (m.progress as number) >= 0 && (m.progress as number) < 32) cp.mission = { id: m.id, progress: m.progress as number };
+    return cp;
   }
   if (c.kind === 'area' && idOk(c.area) && num(c.x, 5000) && num(c.z, 5000) && num(c.heading, 100)) {
     return { kind: 'area', area: c.area, x: c.x, z: c.z, heading: c.heading, foot: c.foot === true, label, at };

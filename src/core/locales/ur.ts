@@ -999,5 +999,14 @@ const ur: Locale = {
   'trial.prevBest': ' · بہترین {time} سیکنڈ',
   'trial.stillBest': '✓ {time} سیکنڈ · آپ کا بہترین وقت برقرار ہے',
   'trial.rejected': 'سرور نے یہ دوڑ قبول نہیں کی ({reason})',
+  'mis.nextStop': "اگلا پڑاؤ: {place}",
+  'mis.resumed': "سفر دوبارہ شروع: {title}",
+  'tour.passport': "پاسپورٹ",
+  'tour.stamped': "مہر لگ گئی! {n}/{total} ممالک",
+  'tour.book1': "کتاب 1 · کھویا ہوا رنگ دان",
+  'tour.book2': "کتاب 2 · عظیم سفر",
+  'tour.blurb': "دنیا بھر کے لمبے سڑک سفر: ہر ایک میں تقریباً دس علاقے اور دس کلومیٹر، اور پورے نقشے کو پار کرنے والا ایک سفر۔",
+  'tour.terminal': "✈ عظیم سفر",
+  'mis.journey': "سفر",
 };
 export default ur;

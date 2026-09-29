@@ -1,10 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import { STORY_PAGES, findColour, nextPage, storyState } from '../src/gameplay/Story';
-import { CHAPTERS } from '../src/world/Chapters';
+import { BOOK1 } from '../src/world/Chapters';
 
 describe('story mode: The Lost Palette', () => {
   it('hides one colour in every chapter', () => {
-    expect(STORY_PAGES.map((p) => p.chapter).sort()).toEqual(CHAPTERS.map((c) => c.id).sort());
+    expect(STORY_PAGES.map((p) => p.chapter).sort()).toEqual(BOOK1().map((c) => c.id).sort());
     expect(new Set(STORY_PAGES.map((p) => p.hex)).size).toBe(8);
   });
 

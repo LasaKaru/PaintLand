@@ -58,9 +58,10 @@ describe.each(CHAPTERS.map((c) => [c.name, c] as const))('%s route', (_name, cha
     expect(minY).toBeGreaterThan(3);
   });
 
-  it('is a proper chapter length (2–5 km)', () => {
-    expect(path.length).toBeGreaterThan(2000);
-    expect(path.length).toBeLessThan(5000);
+  it('is a proper chapter length (2–5 km; Grand Tour 8–12 km)', () => {
+    const [min, max] = chapter.book === 2 ? [8000, 12000] : [2000, 5000];
+    expect(path.length).toBeGreaterThan(min);
+    expect(path.length).toBeLessThan(max);
   });
 
   it('every district melody has whole phrases', () => {

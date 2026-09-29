@@ -999,5 +999,14 @@ const fr: Locale = {
   'trial.prevBest': ' · record {time} s',
   'trial.stillBest': '✓ {time} s · ton record tient toujours',
   'trial.rejected': 'Le serveur n’a pas accepté ce tour ({reason})',
+  'mis.nextStop': "Prochain arrêt : {place}",
+  'mis.resumed': "Voyage repris : {title}",
+  'tour.passport': "Passeport",
+  'tour.stamped': "Tamponné ! {n}/{total} pays",
+  'tour.book1': "Livre 1 · La palette perdue",
+  'tour.book2': "Livre 2 · Le grand tour",
+  'tour.blurb': "De longs road trips autour du monde : une dizaine de quartiers et une dizaine de kilomètres chacun, avec un voyage qui traverse toute la carte.",
+  'tour.terminal': "✈ Grand tour",
+  'mis.journey': "Voyage",
 };
 export default fr;

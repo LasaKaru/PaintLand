@@ -27,10 +27,10 @@ import { commonSky, landAlong } from './sketch';
 
 // ————— helpers —————
 
-type Span = { start: number; end: number; district: number };
+export type Span = { start: number; end: number; district: number };
 
 /** A point `dist` metres to one side of the road at fraction `t` of the span, on the ground. */
-function beside(d: Decorator, span: Span, t: number, side: number, dist: number, y = 0): { p: THREE.Vector3; s: number; face: number; frame: ReturnType<Decorator['sample']> } {
+export function beside(d: Decorator, span: Span, t: number, side: number, dist: number, y = 0): { p: THREE.Vector3; s: number; face: number; frame: ReturnType<Decorator['sample']> } {
   const s = span.start + (span.end - span.start) * t;
   const f = d.sample(s);
   const right = f.right.clone().setY(0).normalize();
@@ -41,7 +41,7 @@ function beside(d: Decorator, span: Span, t: number, side: number, dist: number,
 }
 
 /** Place a big landmark beside the road (if there is room), block it and name it. */
-function landmarkBeside(d: Decorator, span: Span, t: number, side: number, dist: number, geo: THREE.BufferGeometry, name: string, focusY: number, radius: number, scale = 1): boolean {
+export function landmarkBeside(d: Decorator, span: Span, t: number, side: number, dist: number, geo: THREE.BufferGeometry, name: string, focusY: number, radius: number, scale = 1): boolean {
   const { p, s, face } = beside(d, span, t, side, dist);
   if (d.nearRoad(p, radius * 0.7)) return false;
   d.place(geo, d.worldMatrix(p, face, scale));
@@ -51,7 +51,7 @@ function landmarkBeside(d: Decorator, span: Span, t: number, side: number, dist:
 }
 
 /** Rows of buildings along both sides of the road. */
-function rows(d: Decorator, span: Span, rnd: Random, pick: () => { geometry: THREE.BufferGeometry; width: number; depth: number; height: number }, sides: number[] = [-1, 1], gap = 1, setback = 2): void {
+export function rows(d: Decorator, span: Span, rnd: Random, pick: () => { geometry: THREE.BufferGeometry; width: number; depth: number; height: number }, sides: number[] = [-1, 1], gap = 1, setback = 2): void {
   for (const side of sides) {
     let s = span.start + 8;
     while (s < span.end - 10) {
@@ -71,12 +71,12 @@ function rows(d: Decorator, span: Span, rnd: Random, pick: () => { geometry: THR
 }
 
 /** Street furniture along the pavements. */
-function furniture(d: Decorator, span: Span, rnd: Random, items: THREE.BufferGeometry[], every: [number, number] = [8, 13]): void {
+export function furniture(d: Decorator, span: Span, rnd: Random, items: THREE.BufferGeometry[], every: [number, number] = [8, 13]): void {
   for (let s = span.start + 6; s < span.end - 6; s += rnd.range(every[0], every[1])) d.sideProp(rnd.pick(items), s, rnd.chance(0.5) ? -1 : 1, rnd.range(0.4, 1.4));
 }
 
 /** A long strip of water beside the road (canal, river, harbour); its surface sits just above the land. */
-function waterBeside(d: Decorator, span: Span, side: number, dist: number, width: number, colour = '#3f8fb0'): void {
+export function waterBeside(d: Decorator, span: Span, side: number, dist: number, width: number, colour = '#3f8fb0'): void {
   const mid = d.sample((span.start + span.end) / 2);
   const right = mid.right.clone().setY(0).normalize();
   const yaw = Math.atan2(mid.tangent.x, mid.tangent.z);
@@ -84,7 +84,7 @@ function waterBeside(d: Decorator, span: Span, side: number, dist: number, width
   d.place(d.floats(new ModelKit().box(1, 1, 1, colour, { pattern: Pattern.Glass }).build(0, 5)), d.worldMatrix(mid.position.clone().addScaledVector(right, side * (dist + width / 2)).setY(0), yaw, new THREE.Vector3(width, 2.1, len)), false);
 }
 
-function hills(d: Decorator, span: Span, rnd: Random, kind: Parameters<typeof buildHill>[3], count: number, dist: [number, number], size: [number, number], height: [number, number]): void {
+export function hills(d: Decorator, span: Span, rnd: Random, kind: Parameters<typeof buildHill>[3], count: number, dist: [number, number], size: [number, number], height: [number, number]): void {
   for (let i = 0; i < count; i++) {
     const s = rnd.range(span.start, span.end);
     const f = d.sample(s);
@@ -95,7 +95,7 @@ function hills(d: Decorator, span: Span, rnd: Random, kind: Parameters<typeof bu
   }
 }
 
-const info = (geometry: THREE.BufferGeometry, width: number, depth: number, height: number) => ({ geometry, width, depth, height });
+export const info = (geometry: THREE.BufferGeometry, width: number, depth: number, height: number) => ({ geometry, width, depth, height });
 
 // ————— Chapter 6 · City Lights —————
 

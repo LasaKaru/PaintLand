@@ -999,5 +999,14 @@ const zh: Locale = {
   'trial.prevBest': ' · 最佳 {time} 秒',
   'trial.stillBest': '✓ {time} 秒 · 你的最佳成绩仍然保持',
   'trial.rejected': '服务器未接受此次成绩({reason})',
+  'mis.nextStop': "下一站：{place}",
+  'mis.resumed': "旅程继续：{title}",
+  'tour.passport': "护照",
+  'tour.stamped': "盖章！{n}/{total} 个国家",
+  'tour.book1': "第一册 · 遗失的调色板",
+  'tour.book2': "第二册 · 环游世界",
+  'tour.blurb': "环游世界的长途公路之旅：每段约十个街区、十公里，还有一段横跨整张地图的旅程。",
+  'tour.terminal': "✈ 环游世界",
+  'mis.journey': "旅程",
 };
 export default zh;

@@ -997,6 +997,15 @@ const en = {
   'trial.prevBest': ' · best {time}s',
   'trial.stillBest': '✓ {time}s · your best still stands',
   'trial.rejected': 'The server did not accept this run ({reason})',
+  'mis.nextStop': "Next stop: {place}",
+  'mis.resumed': "Journey resumed: {title}",
+  'tour.passport': "Passport",
+  'tour.stamped': "Stamped! {n}/{total} countries",
+  'tour.book1': "Book 1 · The Lost Palette",
+  'tour.book2': "Book 2 · The Grand Tour",
+  'tour.blurb': "Long road trips around the world: about ten districts and ten kilometres each, with a journey that crosses the whole map.",
+  'tour.terminal': "✈ Grand Tour",
+  'mis.journey': "Journey",
 } as const;
 
 export default en;

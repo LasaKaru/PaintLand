@@ -999,5 +999,14 @@ const it: Locale = {
   'trial.prevBest': ' · record {time} s',
   'trial.stillBest': '✓ {time} s · il tuo record resiste',
   'trial.rejected': 'Il server non ha accettato questo giro ({reason})',
+  'mis.nextStop': "Prossima fermata: {place}",
+  'mis.resumed': "Viaggio ripreso: {title}",
+  'tour.passport': "Passaporto",
+  'tour.stamped': "Timbrato! {n}/{total} paesi",
+  'tour.book1': "Libro 1 · La tavolozza perduta",
+  'tour.book2': "Libro 2 · Il grand tour",
+  'tour.blurb': "Lunghi viaggi on the road intorno al mondo: circa dieci quartieri e dieci chilometri ciascuno, con un viaggio che attraversa tutta la mappa.",
+  'tour.terminal': "✈ Grand tour",
+  'mis.journey': "Viaggio",
 };
 export default it;

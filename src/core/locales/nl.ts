@@ -999,5 +999,14 @@ const nl: Locale = {
   'trial.prevBest': ' · beste {time} s',
   'trial.stillBest': '✓ {time} s · je beste tijd blijft staan',
   'trial.rejected': 'De server heeft deze ronde niet aangenomen ({reason})',
+  'mis.nextStop': "Volgende halte: {place}",
+  'mis.resumed': "Reis hervat: {title}",
+  'tour.passport': "Paspoort",
+  'tour.stamped': "Gestempeld! {n}/{total} landen",
+  'tour.book1': "Boek 1 · Het verloren palet",
+  'tour.book2': "Boek 2 · De grote reis",
+  'tour.blurb': "Lange roadtrips rond de wereld: elk zo’n tien wijken en tien kilometer, met een reis dwars over de hele kaart.",
+  'tour.terminal': "✈ Grote reis",
+  'mis.journey': "Reis",
 };
 export default nl;

@@ -999,5 +999,14 @@ const sw: Locale = {
   'trial.prevBest': ' · bora sek {time}',
   'trial.stillBest': '✓ sek {time} · rekodi yako bora bado ipo',
   'trial.rejected': 'Seva haikukubali mzunguko huu ({reason})',
+  'mis.nextStop': "Kituo kijacho: {place}",
+  'mis.resumed': "Safari imeendelea: {title}",
+  'tour.passport': "Pasipoti",
+  'tour.stamped': "Imegongwa muhuri! Nchi {n}/{total}",
+  'tour.book1': "Kitabu 1 · Paleti Iliyopotea",
+  'tour.book2': "Kitabu 2 · Ziara Kuu",
+  'tour.blurb': "Safari ndefu za barabarani duniani kote: kila moja takriban mitaa kumi na kilomita kumi, pamoja na safari inayovuka ramani nzima.",
+  'tour.terminal': "✈ Ziara Kuu",
+  'mis.journey': "Safari",
 };
 export default sw;

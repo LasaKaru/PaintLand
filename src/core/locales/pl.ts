@@ -999,5 +999,14 @@ const pl: Locale = {
   'trial.prevBest': ' · rekord {time} s',
   'trial.stillBest': '✓ {time} s · twój rekord wciąż stoi',
   'trial.rejected': 'Serwer nie przyjął tego przejazdu ({reason})',
+  'mis.nextStop': "Następny przystanek: {place}",
+  'mis.resumed': "Podróż wznowiona: {title}",
+  'tour.passport': "Paszport",
+  'tour.stamped': "Podstemplowano! {n}/{total} krajów",
+  'tour.book1': "Księga 1 · Zaginiona paleta",
+  'tour.book2': "Księga 2 · Wielka podróż",
+  'tour.blurb': "Długie wyprawy samochodowe dookoła świata: każda to około dziesięciu dzielnic i dziesięciu kilometrów, z podróżą przez całą mapę.",
+  'tour.terminal': "✈ Wielka podróż",
+  'mis.journey': "Podróż",
 };
 export default pl;

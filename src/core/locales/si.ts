@@ -999,5 +999,14 @@ const si: Locale = {
   'trial.prevBest': ' · හොඳම තත්. {time}',
   'trial.stillBest': '✓ තත්. {time} · ඔබේ හොඳම කාලය තවමත් ඉහළින්',
   'trial.rejected': 'සේවාදායකය මෙම ධාවනය පිළිගත්තේ නැත ({reason})',
+  'mis.nextStop': "ඊළඟ නැවතුම: {place}",
+  'mis.resumed': "ගමන නැවත ආරම්භ විය: {title}",
+  'tour.passport': "ගමන් බලපත්‍රය",
+  'tour.stamped': "මුද්‍රා තැබුවා! රටවල් {n}/{total}",
+  'tour.book1': "1 වන පොත · නැතිවූ වර්ණ පුවරුව",
+  'tour.book2': "2 වන පොත · මහා සංචාරය",
+  'tour.blurb': "ලොව වටා දිගු මාර්ග චාරිකා: එක එකක දිස්ත්‍රික්ක දහයක් පමණ සහ කිලෝමීටර් දහයක් පමණ, මුළු සිතියමම හරහා යන ගමනක් සමඟ.",
+  'tour.terminal': "✈ මහා සංචාරය",
+  'mis.journey': "ගමන",
 };
 export default si;

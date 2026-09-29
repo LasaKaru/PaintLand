@@ -150,6 +150,21 @@ Point your domain's DNS at the server and open ports 80 and 443 first. Caddy red
 - There is a single instance, no menu and no DevTools in release builds.
 - Electron fuses are flipped in the exe: no RunAsNode, no `NODE_OPTIONS`, no `--inspect`, ASAR integrity checking, app loaded only from the ASAR, and cookie encryption on.
 
+## What is new · Book 2, "The Grand Tour"
+
+Long road trips, each a whole country in about ten districts and ten kilometres (a lap is 8–10 minutes). The eight story chapters are Book 1 and haven't changed.
+
+| System | Status | Where |
+| --- | --- | --- |
+| **Grand Tour · Great Britain** (🇬🇧): 10 km from Edinburgh to Brighton through ten districts: Edinburgh (tenements with crow-stepped gables, red pillar boxes, the castle on its rock), the Highlands (a loch in the fog, heather, Highland cows, a packhorse bridge), the Lake District (fells, a lake, dry-stone walls, sheep, whitewashed farms), York (leaning timber-framed Shambles, Micklegate Bar, the Minster), the Cotswolds (honey-stone and thatched cottages, the village church), Bath (the Royal Crescent, the Roman Baths), Stonehenge on Salisbury Plain, Cornwall (white cottages, fishing boats, a lighthouse), Wales (Caernarfon Castle, red-dragon flags, a chapel in the valley) and Brighton (beach huts, the Palace Pier and helter-skelter, the Royal Pavilion). Each district has its own 48-step tune in a British mode (pipe-march mixolydian, dorian slow airs, a phrygian Stonehenge) | ✅ | `src/world/chapters/britain.ts`, `src/world/dress/britain.ts`, `src/models/LandmarksBritain.ts` |
+| **Journey missions**: long multi-stop runs across a whole map. The *Royal Mail Run* calls at York, Bath, Cornwall and Brighton in order. The HUD shows the next stop and how far away it is. 8 Britain missions in all | ✅ | `src/gameplay/Missions.ts` |
+| **Mid-lap checkpoints**: on long chapters the game saves quietly every 800 m. **Continue** puts you back at that spot, with a journey in progress restored | ✅ | `src/gameplay/Checkpoint.ts`, `src/core/Game.ts` |
+| **Passport stamps**: a lap of a Grand Tour country stamps your passport (+400 ink). Stamps are counted on the chapters screen, and there are two new trophies | ✅ | `src/gameplay/GrandTour.ts`, `src/gameplay/Trophies.ts` |
+| **Chapters screen in two books**, and a **✈ Grand Tour** departures board in Harbour Town that opens Book 2 | ✅ | `src/ui/Menu.ts`, `src/world/Hub.ts` |
+| **Culling for long routes**: scenery whose copies spread over more than 1.2 km is split into 600 m cells, so only nearby cells are drawn | ✅ | `src/world/Decorator.ts` |
+
+Coming next, one country at a time: Japan, India, China, Korea, Germany, Canada and Australia. After that: wider avenues, a coastal highway and a ring road for Serendib City.
+
 ## What was new in milestone 10 · "Lantern Roads"
 
 | System | Status | Where |

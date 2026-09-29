@@ -999,5 +999,14 @@ const de: Locale = {
   'trial.prevBest': ' · Bestzeit {time} s',
   'trial.stillBest': '✓ {time} s · deine Bestzeit bleibt',
   'trial.rejected': 'Der Server hat diese Runde nicht angenommen ({reason})',
+  'mis.nextStop': "Nächster Halt: {place}",
+  'mis.resumed': "Reise fortgesetzt: {title}",
+  'tour.passport': "Reisepass",
+  'tour.stamped': "Gestempelt! {n}/{total} Länder",
+  'tour.book1': "Buch 1 · Die verlorene Palette",
+  'tour.book2': "Buch 2 · Die große Tour",
+  'tour.blurb': "Lange Roadtrips um die Welt: je etwa zehn Viertel und zehn Kilometer, mit einer Reise quer über die ganze Karte.",
+  'tour.terminal': "✈ Große Tour",
+  'mis.journey': "Reise",
 };
 export default de;

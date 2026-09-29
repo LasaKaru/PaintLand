@@ -999,5 +999,14 @@ const ar: Locale = {
   'trial.prevBest': ' · الأفضل {time} ث',
   'trial.stillBest': '✓ {time} ث · أفضل زمن لك ما زال قائمًا',
   'trial.rejected': 'لم يقبل الخادم هذه الجولة ({reason})',
+  'mis.nextStop': "المحطة التالية: {place}",
+  'mis.resumed': "استُؤنفت الرحلة: {title}",
+  'tour.passport': "جواز السفر",
+  'tour.stamped': "تم الختم! {n}/{total} دول",
+  'tour.book1': "الكتاب 1 · اللوحة المفقودة",
+  'tour.book2': "الكتاب 2 · الجولة الكبرى",
+  'tour.blurb': "رحلات برية طويلة حول العالم: نحو عشرة أحياء وعشرة كيلومترات لكل منها، مع رحلة تعبر الخريطة كلها.",
+  'tour.terminal': "✈ الجولة الكبرى",
+  'mis.journey': "رحلة",
 };
 export default ar;

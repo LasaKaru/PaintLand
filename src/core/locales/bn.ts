@@ -999,5 +999,14 @@ const bn: Locale = {
   'trial.prevBest': ' · সেরা {time} সে',
   'trial.stillBest': '✓ {time} সে · তোমার সেরা সময় অটুট',
   'trial.rejected': 'সার্ভার এই দৌড় গ্রহণ করেনি ({reason})',
+  'mis.nextStop': "পরের থামা: {place}",
+  'mis.resumed': "যাত্রা আবার শুরু: {title}",
+  'tour.passport': "পাসপোর্ট",
+  'tour.stamped': "সিলমোহর! {n}/{total}টি দেশ",
+  'tour.book1': "বই ১ · হারানো রঙের প্যালেট",
+  'tour.book2': "বই ২ · মহাভ্রমণ",
+  'tour.blurb': "পৃথিবী জুড়ে লম্বা সড়কযাত্রা: প্রতিটিতে প্রায় দশটি এলাকা আর দশ কিলোমিটার, সঙ্গে পুরো মানচিত্র পেরোনো একটি যাত্রা।",
+  'tour.terminal': "✈ মহাভ্রমণ",
+  'mis.journey': "যাত্রা",
 };
 export default bn;

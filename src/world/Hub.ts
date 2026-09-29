@@ -354,6 +354,20 @@ export class Hub implements FreeRoamArea {
     this.zones.push({ kind: 'trophies', label: '🏆 Trophy hall', x: 0, z: 39, r: 3.5, colour: '#f4d23b' });
     this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -16, z: 14, r: 4, colour: '#f6f0e4' });
     this.zones.push({ kind: 'viewpoint', label: '🌅 The Quay at Sunset', x: 30, z: 62, r: 2.6, colour: '#c9b8f0', view: { id: 'hb-quay', yaw: Math.PI, pitch: 0.02, lut: 'golden', name: 'The Quay at Sunset' } });
+    // The Grand Tour terminal: a departures board for Book 2's long road trips abroad.
+    const departures = new ModelKit()
+      .box(0.3, 4.2, 0.3, INK, { position: [-1.6, 2.1, 0] })
+      .box(0.3, 4.2, 0.3, INK, { position: [1.6, 2.1, 0] })
+      .box(4, 2, 0.3, '#2f5aa8', { position: [0, 3.6, 0], nightGlow: 1 })
+      .box(3.4, 0.25, 0.05, '#f4d23b', { position: [0, 4.1, 0.17], nightGlow: 1 })
+      .box(2.6, 0.25, 0.05, '#f6f0e4', { position: [-0.4, 3.6, 0.17], nightGlow: 1 })
+      .box(3, 0.25, 0.05, '#f6f0e4', { position: [-0.2, 3.1, 0.17], nightGlow: 1 })
+      .box(1.4, 0.2, 0.4, '#f6f0e4', { position: [0, 5, 0], rotation: [0, 0, 0.3] })
+      .box(0.3, 0.1, 1.2, '#f6f0e4', { position: [-0.1, 5, 0], rotation: [0, 0, 0.3] })
+      .build(0.02);
+    this.put(departures, 19.5, 10.5, -Math.PI / 3);
+    this.world.box(19.5, 10.5, 2, 0.5);
+    this.zones.push({ kind: 'tour', label: t('tour.terminal'), x: 16.5, z: 12.5, r: 3.2, colour: '#2f5aa8' });
     // Varna, the old painter: the story begins (and ends) with her.
     this.zones.push({ kind: 'story', label: '🎨 Varna', x: 16, z: 46, r: 3, colour: '#9a7ad8' });
     // The road to the World's End, past the lighthouse end of the quay.
@@ -476,6 +490,7 @@ export class Hub implements FreeRoamArea {
 
   zoneLabel(z: HubZone): string {
     if (z.kind === 'viewpoint' && z.view) return `🌅 ${t(`view.${z.view.id}` as StringKey)}`;
+    if (z.kind === 'tour') return t('tour.terminal');
     return z.kind === 'portal' || z.kind === 'area' || z.kind === 'story' ? z.label : t(`zone.${z.kind}` as StringKey);
   }
 
