@@ -30,7 +30,9 @@ export type DressStyle =
   // Grand Tour · China
   | 'beijing' | 'badaling' | 'xian' | 'lhasa' | 'chengdu' | 'zhangjiajie' | 'guilin' | 'suzhou' | 'shanghai' | 'hongkong'
   // Grand Tour · Korea
-  | 'seoul' | 'gangnam' | 'suwon' | 'seorak' | 'andong' | 'gyeongju' | 'boseong' | 'gamcheon' | 'haeundae' | 'jeju';
+  | 'seoul' | 'gangnam' | 'suwon' | 'seorak' | 'andong' | 'gyeongju' | 'boseong' | 'gamcheon' | 'haeundae' | 'jeju'
+  // Grand Tour · Germany
+  | 'berlin' | 'hamburg' | 'autobahn' | 'cologne' | 'rhine' | 'rothenburg' | 'blackforest' | 'munich' | 'neuschwanstein' | 'alps';
 /**
  * Seven-note scales only: the band builds chords by stacking thirds. Regional
  * colour comes from the mode plus melodies that lean on its pentatonic notes.

@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (98 districts)
+## 4 · Chapter themes (108 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -433,6 +433,20 @@ Each district tune is 48 steps long (six phrases), so these can be 2–3 minute 
 | Gamcheon | bright acoustic pop, ukulele and whistle, a colourful hillside |
 | Haeundae | summer city pop, surf guitar, beach at dusk |
 | Jeju | island song, sea waves, haenyeo divers' whistles, warm finale |
+
+### 4.14 Grand Tour · Germany (Book 2). Chapter style: *German road trip, accordion, brass, strings, folk and electronic touches, confident, 108 bpm, instrumental*
+| District | Add |
+|---|---|
+| Berlin | minimal techno, 128 bpm, deep kick, analogue synths, early morning |
+| Hamburg | Hanseatic sea shanty, accordion, ship horn, grey harbour |
+| The Autobahn | motorik krautrock, steady drums, synth arpeggios, open road, 140 bpm |
+| Cologne | Bach-like chorale, pipe organ, cathedral bells |
+| The Rhine Valley | romantic Lied, piano and horn, 6/8, castles in the mist |
+| Rothenburg | music-box waltz, celesta, storybook town |
+| The Black Forest | minor folk tale, zither, cuckoo-clock calls, deep forest |
+| Munich | Bavarian oompah brass band, tuba, clapping, beer tent, 132 bpm |
+| Neuschwanstein | Wagnerian orchestra, harp and horns, dreamy lydian, fairytale |
+| The Bavarian Alps | yodelling ländler, accordion, alphorn, cowbells, bright finale |
 
 ---
 

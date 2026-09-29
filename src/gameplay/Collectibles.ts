@@ -379,7 +379,7 @@ export class Collectibles {
 }
 
 /** How many speed pads and which pickups each district style gets. */
-const PADS: Partial<Record<DressStyle, number>> = { town: 3, chute: 3, bridge: 4, galleface: 3, lotus: 3, ninearch: 4, greatwall: 3, colosseum: 3, chichen: 3 };
+const PADS: Partial<Record<DressStyle, number>> = { town: 3, chute: 3, bridge: 4, galleface: 3, lotus: 3, ninearch: 4, greatwall: 3, colosseum: 3, chichen: 3, autobahn: 8 };
 const PICKUPS: Partial<Record<DressStyle, Item['kind'][]>> = {
   town: ['bolt', 'magnet'],
   ceiling: ['feather', 'fizzy'],

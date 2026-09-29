@@ -51,6 +51,13 @@ export const TOUR_STAMPS: TourStamp[] = [
     hex: '#2f5aa8',
     note: 'Palace gates and hanok roofs, dancing screens in Gangnam, a mountain on fire with maples, a hillside of painted houses, and tangerines on a volcanic island.',
   },
+  {
+    chapter: 'germany',
+    country: 'Germany',
+    flag: '🇩🇪',
+    hex: '#d8a82a',
+    note: 'Through the Brandenburg Gate, flat out on the Autobahn, castles along the Rhine, a cuckoo in the Black Forest, a brass band in Munich and cowbells under the Alps.',
+  },
 ];
 
 /** Ink for a first stamp. */

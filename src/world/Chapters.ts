@@ -15,13 +15,14 @@ import { JAPAN } from './chapters/japan';
 import { INDIA } from './chapters/india';
 import { CHINA } from './chapters/china';
 import { KOREA } from './chapters/korea';
+import { GERMANY } from './chapters/germany';
 
 /**
  * A chapter is one continuous route of districts plus its wider world
  * (docs/04 §1). Only one chapter is loaded at a time.
  */
 export interface ChapterDef {
-  id: 'sketch' | 'serendib' | 'wonders' | 'lanterns' | 'postcards' | 'citylights' | 'skylines' | 'islandtrip' | 'britain' | 'japan' | 'india' | 'china' | 'korea' | 'custom';
+  id: 'sketch' | 'serendib' | 'wonders' | 'lanterns' | 'postcards' | 'citylights' | 'skylines' | 'islandtrip' | 'britain' | 'japan' | 'india' | 'china' | 'korea' | 'germany' | 'custom';
   /** Book 1 (The Lost Palette, the default) or Book 2 (the Grand Tour: long road trips, after the story). */
   book?: 1 | 2;
   /** Grand Tour: the country's flag (menus, passport). */
@@ -39,7 +40,7 @@ export interface ChapterDef {
   background(d: Decorator, rnd: Random): void;
 }
 
-export const CHAPTERS: ChapterDef[] = [SKETCH, SERENDIB, WONDERS, LANTERNS, POSTCARDS, CITY_LIGHTS, SKYLINES, ISLAND_TRIP, BRITAIN, JAPAN, INDIA, CHINA, KOREA];
+export const CHAPTERS: ChapterDef[] = [SKETCH, SERENDIB, WONDERS, LANTERNS, POSTCARDS, CITY_LIGHTS, SKYLINES, ISLAND_TRIP, BRITAIN, JAPAN, INDIA, CHINA, KOREA, GERMANY];
 
 /** The Lost Palette's eight chapters (Book 1). */
 export const BOOK1 = (): ChapterDef[] => CHAPTERS.filter((c) => (c.book ?? 1) === 1);
