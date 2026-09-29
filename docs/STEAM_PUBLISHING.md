@@ -269,9 +269,32 @@ Interact" notice because of chat.
 
 ### Legal
 
-- **EULA:** optional. Steam has a default subscriber agreement.
-- **Privacy policy URL:** needed. The policy is written: `public/privacy.html`, served at `https://<your server>/privacy.html` and shown inside the game (Settings → Accessibility, and Account). Put that URL in Steamworks. Check it's still accurate before release (it names HelaO2 and support@helao2.com).
+- **EULA:** optional. Steam has a default subscriber agreement. The game's own **Terms of Use**
+  (`public/terms.html`) cover the online features, shared creations and in-game items. You can paste
+  them into Steamworks → *EULA* too, so buyers see them before purchase.
+- **Privacy policy URL:** needed. The policy is written: `public/privacy.html`, served at `https://<your server>/privacy.html` and shown inside the game (Help & legal, Settings → Accessibility, and Account). Put that URL in Steamworks. Check it's still accurate before release (it names HelaO2 and support@helao2.com).
 - **Copyright line:** `© 2026 HelaO2. All rights reserved.`
+- ⚠️ Have a lawyer in your country read the Terms of Use and Community Rules before a paid release.
+  They are a sound starting point written for this game, not legal advice.
+
+### What the game itself already has for release
+
+Everything below is in the build. The ⚖ **Release & legal** tab of the admin panel sets the
+details and switches.
+
+| In the game | Where | Admin setting |
+| --- | --- | --- |
+| **Help & legal** screen: version, Terms of Use, Community Rules, Privacy policy, Open-source licences, Health & safety, Contact support, what happens to your data | Main menu → ⚖ Help & legal | — |
+| **Terms of Use** (licence to play, age, online services, shared creations, in-game items have no money value, sponsors, liability, law) | `public/terms.html` | Legal name, country whose law applies, minimum age, date |
+| **Community Rules** (behaviour, family-friendly content, safety, fair play, how to report, what happens) | `public/rules.html` | — |
+| **Accept the terms before going online** (Multiplayer, races, Account, Gallery, Photo contest, Workshop and invite links). Declining keeps the offline game playable. A new date asks everyone again. | Dialog on first online use | *Ask players to accept …* and *Terms dated* |
+| **Health & photosensitivity notice** on first start (lightning, fireworks, fast scenes), always available again from Help & legal | Dialog after the splash | *Show the health notice* |
+| **Open-source licences** of every shipped package and font (Electron's Chromium notices ship next to the .exe as `LICENSES.chromium.html`) | `public/licenses.html`, made by `npm run licenses` (a test fails if a dependency is missing) | — |
+| **Credits** with your team, © line and "built with" | Main menu → Credits | Credits list, legal name |
+| **Quit to desktop** | Main menu (desktop app only) | — |
+| **No outside payment links** in the Steam build: coffee and funding links are hidden in the desktop app | Menu footer | *Hide the coffee and funding links in the desktop app* (on by default) |
+| **Support address** shown in the game (no mail program or browser needed) | Help & legal → Contact support, sponsor boards | Branding → contact email |
+| **Delete your data**: account deletion removes the account, cloud save, friends and club | Account | — |
 
 ## 8. Uploading the game (SteamPipe)
 
@@ -401,6 +424,8 @@ web version keeps working without Steam.
 - [ ] Controller support level chosen
 - [ ] Content survey, AI disclosure and IARC rating done
 - [ ] Privacy policy published and linked
+- [ ] Admin → ⚖ Release & legal filled in (legal name, country, minimum age, credits); Terms and Community Rules read by a lawyer
+- [ ] `npm run licenses` run after the last dependency change
 - [ ] Windows build uploaded with SteamPipe; launch option set; tested from Steam on a clean PC
 - [ ] Server live (Render/VPS), with the admin password changed and TURN set for voice
 - [ ] Store page submitted → approved → public as "Coming soon" ≥ 2 weeks

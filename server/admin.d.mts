@@ -8,7 +8,9 @@ export interface AdminConfig {
   maxPlayersPerRoom: number;
   sponsors: { id: string; name: string; url: string; file: string; weight: number; enabled: boolean }[];
   challenges?: AdminChallenge[];
+  legal: AdminLegal;
 }
+export interface AdminLegal { entity: string; country: string; minAge: number; updated: string; healthWarning: boolean; termsForOnline: boolean; hideDonationsInApp: boolean; credits: { name: string; role: string }[] }
 export interface AdminChallenge { id: string; sponsorId: string; title: string; text: string; kind: string; target: number; ink: number; item: string; start: number; end: number; enabled: boolean }
 export declare const CHALLENGE_KINDS: string[];
 export declare function activeChallenges(config: AdminConfig, now?: number): { id: string; title: string; text: string; kind: string; target: number; ink: number; item?: string; end: number; sponsor: { name: string; url: string; image: string } }[];

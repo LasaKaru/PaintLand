@@ -1,5 +1,5 @@
 import { api, apiBase, apiUrl, setApiBase } from '../net/Api';
-import { COMPANY_LOGO, brand, setBrand, type BrandConfig } from '../brand/Brand';
+import { COMPANY_LOGO, DEFAULT_LEGAL, brand, setBrand, type BrandConfig } from '../brand/Brand';
 import { paintedLogo } from '../brand/Watercolour';
 
 /** What /api/admin/stats returns (server/admin.mjs). */
@@ -117,7 +117,7 @@ interface Health {
 }
 type CrashFilter = 'active' | 'resolved' | 'ignored' | 'all';
 
-type Tab = 'dashboard' | 'health' | 'branding' | 'links' | 'sponsors' | 'business' | 'players' | 'security';
+type Tab = 'dashboard' | 'health' | 'branding' | 'links' | 'sponsors' | 'business' | 'release' | 'players' | 'security';
 
 const TOKEN = 'paintland.admin';
 const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
@@ -247,6 +247,7 @@ export class AdminPanel {
       sponsors: c.sponsors.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, url: s.url, weight: s.weight, image: `/api/brand/${s.file}` })),
       // Running challenges come in the public config on the next load; keep the current ones meanwhile.
       challenges: brand().challenges,
+      legal: { ...DEFAULT_LEGAL, ...c.legal },
     });
   }
 
@@ -274,8 +275,8 @@ export class AdminPanel {
   }
 
   private panel(): string {
-    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['health', '🩺 Crashes & speed'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['business', '🎟 Pass & challenges'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
-    const body = { dashboard: () => this.dashboard(), health: () => this.healthTab(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), business: () => this.businessTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
+    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['health', '🩺 Crashes & speed'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['business', '🎟 Pass & challenges'], ['release', '⚖ Release & legal'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
+    const body = { dashboard: () => this.dashboard(), health: () => this.healthTab(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), business: () => this.businessTab(), release: () => this.releaseTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
     return `<div class="card admin-panel">
       <div class="admin-head">
         <div class="admin-brand"><img src="${esc(this.config?.company.logo ? apiUrl(this.config.company.logo) : COMPANY_LOGO)}" alt=""><span class="hand">${esc(this.config?.company.name ?? 'HelaO2')} · Inkroads admin</span></div>
@@ -444,6 +445,36 @@ export class AdminPanel {
         </div>
       </div>
       <button class="btn primary" type="submit">Save branding</button>
+    </form>`;
+  }
+
+  /** What a store release (Steam) needs: who is responsible, which notices the game shows, and the credits. */
+  private releaseTab(): string {
+    const c = this.config;
+    if (!c) return '<p class="menu-hint">Loading…</p>';
+    const l = { ...DEFAULT_LEGAL, ...c.legal };
+    const credits = l.credits.map((x) => (x.role ? `${x.name} — ${x.role}` : x.name)).join('\n');
+    const doc = (file: string, label: string): string => `<a class="btn small" href="${file}" target="_blank" rel="noopener">${label}</a>`;
+    return `<form class="admin-form" data-form="release">
+      <p class="menu-hint">These fill in the Terms of Use, the Community Rules and the credits, and switch the notices a store release needs. Have a lawyer read the terms before a paid release: they are a sound starting point, not legal advice.</p>
+      <div class="grid2">
+        <div>
+          <label>Legal name (company or your own name)<input class="text-input" name="entity" maxlength="80" value="${esc(l.entity)}" required></label>
+          <label>Country whose law applies<input class="text-input" name="country" maxlength="60" value="${esc(l.country)}" required></label>
+          <label>Minimum age for online play without a parent<input class="text-input" name="minAge" type="number" min="0" max="21" value="${l.minAge}"></label>
+          <label>Terms dated (a new date asks every player to accept again)<input class="text-input" name="updated" type="date" value="${esc(l.updated)}" required></label>
+        </div>
+        <div>
+          <label class="check"><input type="checkbox" name="healthWarning" ${l.healthWarning ? 'checked' : ''}> Show the health &amp; photosensitivity notice on first start</label>
+          <label class="check"><input type="checkbox" name="termsForOnline" ${l.termsForOnline ? 'checked' : ''}> Ask players to accept the Terms and Community Rules before going online (multiplayer, accounts, sharing)</label>
+          <label class="check"><input type="checkbox" name="hideDonationsInApp" ${l.hideDonationsInApp ? 'checked' : ''}> Hide the coffee and funding links in the desktop (Steam) app — Steam does not allow links to outside payments</label>
+          <div class="field"><label>Pages players can open from Help &amp; legal</label>
+            <div class="row wrap">${doc('terms.html', 'Terms of Use')} ${doc('rules.html', 'Community Rules')} ${doc('privacy.html', 'Privacy')} ${doc('licenses.html', 'Licences')}</div>
+          </div>
+        </div>
+      </div>
+      <label>Credits: one person per line, “Name — role” (up to 40)<textarea class="text-input" name="credits" rows="6" placeholder="Lasantha — Game design and code">${esc(credits)}</textarea></label>
+      <button class="btn primary" type="submit">Save release settings</button>
     </form>`;
   }
 
@@ -799,6 +830,16 @@ export class AdminPanel {
         maxPlayersPerRoom: Number(v('maxPlayersPerRoom')),
       });
       if (saved) this.saved(saved, 'Branding saved. Players see it the next time they load the game.');
+    } else if (kind === 'release') {
+      const credits = v('credits')
+        .split('\n')
+        .map((line) => line.split(/\s+[—–-]\s+/))
+        .map(([name, ...role]) => ({ name: (name ?? '').trim(), role: role.join(' — ').trim() }))
+        .filter((x) => x.name);
+      const saved = await this.call<ServerConfig>('/api/admin/config', 'PUT', {
+        legal: { entity: v('entity'), country: v('country'), minAge: Number(v('minAge')), updated: v('updated'), healthWarning: f.get('healthWarning') === 'on', termsForOnline: f.get('termsForOnline') === 'on', hideDonationsInApp: f.get('hideDonationsInApp') === 'on', credits },
+      });
+      if (saved) this.saved(saved, 'Release settings saved.');
     } else if (kind === 'links') {
       const custom = [];
       for (let i = 0; i < 8; i++) if (v(`label${i}`) && v(`url${i}`)) custom.push({ label: v(`label${i}`), url: v(`url${i}`) });

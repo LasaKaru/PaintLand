@@ -137,6 +137,10 @@ app.whenReady().then(() => {
   };
   ipcMain.handle('workshop:status', (e) => fromGame(e) && workshop.available);
   ipcMain.handle('workshop:list', (e) => (fromGame(e) ? workshop.list() : []));
+  // "Quit to desktop" in the game's menu.
+  ipcMain.handle('app:quit', (e) => {
+    if (fromGame(e)) app.quit();
+  });
   ipcMain.handle('workshop:publish', (e, input) => (fromGame(e) ? workshop.publish(input) : { ok: false }));
 
   createWindow();

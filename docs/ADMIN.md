@@ -39,6 +39,7 @@ If you forget the password:
 | 🔗 **Menu links** | The links at the bottom of the main menu: website, social pages, donations, "advertise with us" |
 | 🤝 **Sponsors** | Upload, replace or delete sponsor logos and their links (shown on billboards in the towns and chapters) |
 | 🎟 **Pass & challenges** | The season pass (make one-use Patron codes, give an account the Patron track), and sponsor challenges (goal, reward ink and cosmetic, dates) |
+| ⚖ **Release & legal** | What a store release needs: the legal name and country in the Terms of Use, the minimum age for online play, the terms date (a new date asks every player to accept again), the health notice, asking for the terms before online play, hiding donation links in the desktop (Steam) app, and the credits list. See STEAM_PUBLISHING.md §7 |
 | 👥 **Players & chat** | Recent chat and player reports (dismiss, or ban the player name); ban and unban names; the **photo contest** (view, hide, show again or remove entries); reported **gallery roads** (keep or remove) |
 | 🔒 **Security** | Change the admin email and password; check which address the server sees for rate limits (needed behind Render's proxy, see HOSTING.md) |
 

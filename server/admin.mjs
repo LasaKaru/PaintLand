@@ -57,6 +57,17 @@ export const DEFAULT_CONFIG = {
   maxPlayersPerRoom: 32,
   sponsors: [],
   challenges: [],
+  /** Release and legal settings (the game's src/brand/Brand.ts LegalConfig). */
+  legal: {
+    entity: 'HelaO2',
+    country: 'Sri Lanka',
+    minAge: 13,
+    updated: '2026-09-29',
+    healthWarning: true,
+    termsForOnline: true,
+    hideDonationsInApp: true,
+    credits: [],
+  },
 };
 
 /** What a sponsor challenge can count (the game knows how: src/gameplay/SeasonPass.ts). */
@@ -111,6 +122,21 @@ export function sanitizeConfig(input, current) {
   }
   if (i.logoFrequency !== undefined) c.logoFrequency = Math.min(1, Math.max(0, Number(i.logoFrequency) || 0));
   if (i.showSponsorCta !== undefined) c.showSponsorCta = !!i.showSponsorCta;
+  if (i.legal && typeof i.legal === 'object') {
+    const l = i.legal;
+    c.legal = { ...structuredClone(DEFAULT_CONFIG.legal), ...c.legal };
+    if (l.entity !== undefined) c.legal.entity = clean(l.entity, 80) || c.legal.entity;
+    if (l.country !== undefined) c.legal.country = clean(l.country, 60) || c.legal.country;
+    if (l.minAge !== undefined) c.legal.minAge = Math.min(21, Math.max(0, Math.round(Number(l.minAge) || 0)));
+    if (l.updated !== undefined && /^\d{4}-\d{2}-\d{2}$/.test(String(l.updated)) && !Number.isNaN(Date.parse(String(l.updated)))) c.legal.updated = String(l.updated);
+    for (const k of ['healthWarning', 'termsForOnline', 'hideDonationsInApp']) if (l[k] !== undefined) c.legal[k] = !!l[k];
+    if (Array.isArray(l.credits)) {
+      c.legal.credits = l.credits
+        .slice(0, 40)
+        .map((x) => ({ name: clean(x?.name, 60), role: clean(x?.role, 60) }))
+        .filter((x) => x.name);
+    }
+  }
   if (i.maxPlayersPerRoom !== undefined) c.maxPlayersPerRoom = Math.min(64, Math.max(2, Math.round(Number(i.maxPlayersPerRoom) || 32)));
   if (Array.isArray(i.sponsors)) {
     // Only edits of existing sponsors (name, link, weight, on/off); uploads go through /api/admin/sponsor.
@@ -370,6 +396,7 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
       showSponsorCta: config.showSponsorCta,
       sponsors: config.sponsors.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, url: s.url, weight: s.weight, image: `/api/brand/${s.file}` })),
       challenges: activeChallenges(config),
+      legal: { ...DEFAULT_CONFIG.legal, ...config.legal },
     };
   }
 

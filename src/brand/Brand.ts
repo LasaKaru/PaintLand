@@ -9,7 +9,40 @@ export interface BrandConfig {
   sponsors: { id: string; name: string; url: string; weight: number; image: string }[];
   /** Sponsor challenges running now (see gameplay/SeasonPass.ts). */
   challenges?: import('../gameplay/SeasonPass').SponsorChallenge[];
+  /** Release and legal settings (admin panel → Release & legal). */
+  legal: LegalConfig;
 }
+
+/** What the store release needs from the owner: who is legally responsible, and which notices to show. */
+export interface LegalConfig {
+  /** The legal name behind the game (shown in the terms and credits). */
+  entity: string;
+  /** The country whose law governs the terms. */
+  country: string;
+  /** Youngest age allowed to use online features without a parent. */
+  minAge: number;
+  /** Date of the current terms (YYYY-MM-DD). Changing it asks players to accept them again. */
+  updated: string;
+  /** Show the health and photosensitivity notice the first time the game starts. */
+  healthWarning: boolean;
+  /** Ask players to accept the terms and community rules before their first online feature. */
+  termsForOnline: boolean;
+  /** Hide donation and funding links in the desktop (Steam) app: stores forbid outside payment links. */
+  hideDonationsInApp: boolean;
+  /** Extra credits: the team and helpers. */
+  credits: { name: string; role: string }[];
+}
+
+export const DEFAULT_LEGAL: LegalConfig = {
+  entity: 'HelaO2',
+  country: 'Sri Lanka',
+  minAge: 13,
+  updated: '2026-09-29',
+  healthWarning: true,
+  termsForOnline: true,
+  hideDonationsInApp: true,
+  credits: [],
+};
 
 export const COMPANY_LOGO = 'brand/helao2-logo.jpg';
 
@@ -19,6 +52,7 @@ export const DEFAULT_BRAND: BrandConfig = {
   logoFrequency: 0.35,
   showSponsorCta: true,
   sponsors: [],
+  legal: DEFAULT_LEGAL,
 };
 
 /** One picture that can go on a board in the world. */
@@ -38,10 +72,20 @@ const listeners: ((b: BrandConfig) => void)[] = [];
 function readCache(): BrandConfig | null {
   try {
     const raw = localStorage.getItem(CACHE);
-    return raw ? { ...DEFAULT_BRAND, ...(JSON.parse(raw) as BrandConfig) } : null;
+    return raw ? withDefaults(JSON.parse(raw) as BrandConfig) : null;
   } catch {
     return null;
   }
+}
+
+/** Fill anything an older server or cache left out. */
+function withDefaults(b: Partial<BrandConfig>): BrandConfig {
+  return { ...DEFAULT_BRAND, ...b, company: { ...DEFAULT_BRAND.company, ...b.company }, links: { ...DEFAULT_BRAND.links, ...b.links }, legal: { ...DEFAULT_LEGAL, ...b.legal } };
+}
+
+/** True inside the desktop (Steam) app. */
+export function inDesktopApp(): boolean {
+  return !!(globalThis as { paintlandDesktop?: unknown }).paintlandDesktop;
 }
 
 export function brand(): BrandConfig {
@@ -53,7 +97,7 @@ export function onBrandChange(fn: (b: BrandConfig) => void): void {
 }
 
 export function setBrand(b: BrandConfig): void {
-  current = { ...DEFAULT_BRAND, ...b, company: { ...DEFAULT_BRAND.company, ...b.company }, links: { ...DEFAULT_BRAND.links, ...b.links } };
+  current = withDefaults(b);
   try {
     localStorage.setItem(CACHE, JSON.stringify(current));
   } catch {

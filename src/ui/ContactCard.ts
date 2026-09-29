@@ -31,7 +31,7 @@ export function showContactCard(email: string, subject = ''): void {
   const d = document.createElement('dialog');
   d.className = 'contact-dialog';
   d.innerHTML = `<form method="dialog">
-      <h3 class="hand">✉ ${esc(t('contact.title'))}</h3>
+      <h3 class="hand" tabindex="-1" autofocus>✉ ${esc(t('contact.title'))}</h3>
       <p>${esc(t('contact.body'))}</p>
       <p class="contact-email"><code>${esc(email)}</code></p>
       ${subject ? `<p class="menu-hint">${esc(t('contact.subject', { subject }))}</p>` : ''}

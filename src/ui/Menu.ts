@@ -25,6 +25,8 @@ import { CHAINS, CITY_MISSIONS, missionUnlocked } from '../gameplay/CityMissions
 import { CATALOGUE, MAX_OUTFITS, MAX_TONICS, PALETTE } from '../gameplay/Profile';
 import type { ChapterDef } from '../world/Chapters';
 import { parseMailto, showContactCard } from './ContactCard';
+import { canQuit, donationsShown, quitApp, requireTerms, showDoc, showHealthWarning, type LegalDoc } from './Legal';
+import { APP_VERSION } from '../net/CrashReporter';
 import type { MissionDef } from '../gameplay/Missions';
 import { VEHICLES, type VehicleId } from '../models/Vehicles';
 import { defaultEngine, defaultHorn } from '../audio/VehicleSounds';
@@ -56,7 +58,10 @@ import { WorkshopScreen } from './WorkshopScreen';
 
 type SettingsTab = 'graphics' | 'look' | 'controls' | 'driving' | 'audio' | 'access' | 'family';
 
-export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'workshop' | 'none';
+/** Screens that use the online services: the first visit asks for the terms (when the owner has that on). */
+const ONLINE_SCREENS = new Set(['multiplayer', 'race', 'account', 'gallery', 'contest', 'workshop']);
+
+export type MenuScreen = 'splash' | 'main' | 'trials' | 'race' | 'chapters' | 'missions' | 'wardrobe' | 'garage' | 'shop' | 'multiplayer' | 'trophies' | 'settings' | 'credits' | 'legal' | 'citymissions' | 'daily' | 'livery' | 'roadstudio' | 'account' | 'gallery' | 'stickers' | 'mural' | 'pass' | 'mailbox' | 'home' | 'postcard' | 'contest' | 'festival' | 'story' | 'workshop' | 'none';
 
 /** Everything the menu needs from the game. */
 export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHost {
@@ -240,10 +245,22 @@ export class Menu {
     host.profile.onChange(() => this.refreshInk());
     // The privacy policy opens over the game (it also works inside the desktop app).
     this.root.addEventListener('click', (e) => {
-      const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-privacy]');
-      if (!a) return;
-      e.preventDefault();
-      showPrivacy();
+      const el = e.target as HTMLElement;
+      const a = el.closest<HTMLAnchorElement>('a[data-privacy]');
+      if (a) {
+        e.preventDefault();
+        showPrivacy();
+        return;
+      }
+      const doc = el.closest<HTMLElement>('[data-doc]');
+      if (doc) {
+        e.preventDefault();
+        showDoc(doc.dataset.doc as LegalDoc);
+        return;
+      }
+      const legal = el.closest<HTMLElement>('[data-legal-action]')?.dataset.legalAction;
+      if (legal === 'health') showHealthWarning();
+      else if (legal === 'contact' && brand().company.contact) showContactCard(brand().company.contact, 'Inkroads support');
     });
     this.root.addEventListener('click', (e) => {
       const a = (e.target as HTMLElement).closest<HTMLAnchorElement>('a[data-link]');
@@ -346,6 +363,7 @@ export class Menu {
       trials: () => this.trialsScreen(),
       race: () => this.raceScreen(),
       credits: () => this.credits(),
+      legal: () => this.legalScreen(),
     }[s]();
     // Keep a message that's still showing across re-renders (async actions re-render after toasting).
     const live = this.toastText && performance.now() < this.toastUntil;
@@ -384,8 +402,8 @@ export class Menu {
         <span class="label">${t('brand.by', { name: escapeHtml(b.company.name) })}</span>
       </a>
       <div class="brand-links">
-        ${link('coffee', b.links.coffee, `☕ ${t('brand.coffee')}`)}
-        ${link('fund', b.links.fund, `💛 ${t('brand.fund')}`)}
+        ${donationsShown() ? link('coffee', b.links.coffee, `☕ ${t('brand.coffee')}`) : ''}
+        ${donationsShown() ? link('fund', b.links.fund, `💛 ${t('brand.fund')}`) : ''}
         ${link('sponsor', b.links.sponsor, `🤝 ${t('brand.sponsor')}`)}
         ${b.links.custom.map((l, i) => link(`custom${i}`, l.url, escapeHtml(l.label))).join('')}
       </div>
@@ -484,7 +502,9 @@ export class Menu {
         <button class="menu-item" data-nav="trophies">${t('menu.trophies', { n: this.host.profile.data.trophies.length, total: TROPHIES.length })}</button>
         <button class="menu-item" data-nav="settings">${t('menu.settings')}</button>
         <button class="menu-item small" data-nav="intro">${t('menu.intro')}</button>
+        <button class="menu-item small" data-nav="legal">⚖ ${t('legal.menu')}</button>
         <button class="menu-item small" data-nav="credits">${t('menu.credits')}</button>
+        ${canQuit() ? `<button class="menu-item small" data-nav="quit">⏻ ${t('legal.quit')}</button>` : ''}
       </nav>
       <div class="menu-foot">
         <span>🎨 ${escapeHtml(p.name)}</span>
@@ -1144,14 +1164,38 @@ export class Menu {
   }
 
   private credits(): string {
+    const l = brand().legal;
     return `<div class="menu-panel">${this.header('Credits')}
-      <p><b>Inkroads</b> — a watercolour road game made with Three.js.</p>
+      <p><b>Inkroads</b> — a watercolour road game made with Three.js. © ${new Date().getFullYear()} ${escapeHtml(l.entity)}.</p>
+      ${l.credits.length ? `<h4>${t('legal.team')}</h4><ul class="credits-team">${l.credits.map((c) => `<li><b>${escapeHtml(c.name)}</b>${c.role ? ` — ${escapeHtml(c.role)}` : ''}</li>`).join('')}</ul>` : ''}
       <p>Everything you see is painted in code: every house, tree, landmark, vehicle and person is built procedurally, then inked and washed by the renderer. The radio’s eight stations are generated live in the district’s key; the Inkroads Studio station plays recorded tracks.</p>
       <p>Places visited: Colombo’s Lotus Tower and Galle Face Green, Sigiriya, Ella and the Nine Arch Bridge, Mirissa; the Great Wall, the Colosseum, the Taj Mahal, Machu Picchu, Christ the Redeemer, Chichen Itza and Petra — all as loving sketches, not replicas.</p>
       ${(() => {
         const music = this.host.soundtrack?.() ?? [];
         return music.length ? `<h4>Music · Inkroads Studio (109.5)</h4><ul class="credits-music">${music.map((m) => `<li><b>${escapeHtml(m.title)}</b>${m.artist ? ` — ${escapeHtml(m.artist)}` : ''}<br><small>${escapeHtml(m.license)}</small></li>`).join('')}</ul>` : '';
       })()}
+      <h4>${t('legal.builtWith')}</h4>
+      <p>Three.js, Electron, Noto Sans, Caveat, Permanent Marker, Space Mono, lil-gui. <button class="btn small" data-doc="licenses">${t('legal.licenses')}</button></p>
+    </div>`;
+  }
+
+  /** Help & legal: version, the legal pages, the health notice, support, and what happens to your data. */
+  private legalScreen(): string {
+    const b = brand();
+    const doc = (d: LegalDoc, icon: string, label: string): string => `<button class="btn" data-doc="${d}">${icon} ${label}</button>`;
+    return `<div class="menu-panel">${this.header(t('legal.menu'))}
+      <p class="menu-hint">Inkroads ${escapeHtml(APP_VERSION)} · © ${new Date().getFullYear()} ${escapeHtml(b.legal.entity)}</p>
+      <div class="legal-grid">
+        ${doc('terms', '📜', t('legal.terms'))}
+        ${doc('rules', '🌿', t('legal.rules'))}
+        ${doc('privacy', '🔒', t('priv.link'))}
+        ${doc('licenses', '🧾', t('legal.licenses'))}
+        <button class="btn" data-legal-action="health">⚠ ${t('health.title')}</button>
+        ${b.company.contact ? `<button class="btn" data-legal-action="contact">✉ ${t('legal.support')}</button>` : ''}
+        <button class="btn" data-nav="credits">🎨 ${t('menu.credits')}</button>
+      </div>
+      <h4>${t('legal.dataTitle')}</h4>
+      <p>${t('legal.data')}</p>
     </div>`;
   }
 
@@ -1253,6 +1297,13 @@ export class Menu {
       else if (d.nav === 'resume') this.host.resume();
       else if (d.nav === 'continue') {
         if (!this.host.continueGame()) this.toast(t('cp.none'));
+      }
+      else if (d.nav === 'quit') {
+        if (window.confirm(t('legal.quitSure'))) quitApp();
+      }
+      else if (ONLINE_SCREENS.has(d.nav)) {
+        const screen = d.nav as MenuScreen;
+        requireTerms(() => this.show(screen));
       }
       else {
         if (d.nav === 'citymissions') this.boardArea = null;
@@ -1676,11 +1727,5 @@ function focusSignature(root: HTMLElement): string | null {
 
 /** The privacy policy (public/privacy.html) in a dialog over the game. */
 export function showPrivacy(): void {
-  document.querySelector('.privacy-dialog')?.remove();
-  const d = document.createElement('dialog');
-  d.className = 'privacy-dialog';
-  d.innerHTML = `<form method="dialog"><button class="btn small" aria-label="${t('priv.close')}">✕ ${t('priv.close')}</button></form><iframe src="privacy.html" title="${t('priv.link')}"></iframe>`;
-  document.body.appendChild(d);
-  d.addEventListener('close', () => d.remove());
-  d.showModal();
+  showDoc('privacy');
 }

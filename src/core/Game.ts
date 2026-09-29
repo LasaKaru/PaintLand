@@ -2,6 +2,7 @@ import { settleChallenges } from '../ui/PassScreen';
 import { POCKETS, POCKET_INK, POCKET_REACH } from '../world/Pockets';
 import * as THREE from 'three';
 import { parseMailto, showContactCard } from '../ui/ContactCard';
+import { maybeHealthWarning, requireTerms } from '../ui/Legal';
 import { Input } from './Input';
 import { displaySpeed, loadOptions, saveOptions, type GameOptions } from './Options';
 import { clamp } from './MathUtil';
@@ -1704,10 +1705,16 @@ export class Game {
     if (this.state !== 'splash') return;
     const params = new URLSearchParams(window.location.search);
     const room = params.get('room');
+    // First start: the health and photosensitivity notice (when the owner has it on).
+    maybeHealthWarning();
     if (room) {
       const clean = room.replace(/[^a-zA-Z0-9_-]/g, '');
-      if (onlineAllowed(this.options.family)) this.net.connect(clean, params.get('server'), this.playerInfo());
-      this.hud.pop(t('mp.joining', { room: clean }), window.innerWidth / 2, window.innerHeight * 0.3, 'info');
+      // An invite link is online play too: the terms come first.
+      if (onlineAllowed(this.options.family))
+        requireTerms(() => {
+          this.net.connect(clean, params.get('server'), this.playerInfo());
+          this.hud.pop(t('mp.joining', { room: clean }), window.innerWidth / 2, window.innerHeight * 0.3, 'info');
+        });
     }
     if (!this.profile.data.seenIntro) this.startIntro();
     else this.openMenu();
