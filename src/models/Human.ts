@@ -4,15 +4,15 @@ import { ModelKit, Pattern, applyPrint, printKind, type FabricPrint } from './Mo
 import { PaintMaterial } from '../render/PaintMaterial';
 
 export type HairStyle = 'bob' | 'bun' | 'short' | 'curly' | 'long' | 'ponytail' | 'braids' | 'bald' | 'afro' | 'mohawk' | 'pigtails' | 'topknot' | 'spiky';
-export type TopStyle = 'tee' | 'shirt' | 'hoodie' | 'dress' | 'sari' | 'osariya' | 'national' | 'jacket' | 'vest' | 'kurta';
+export type TopStyle = 'tee' | 'shirt' | 'hoodie' | 'dress' | 'sari' | 'osariya' | 'national' | 'jacket' | 'vest' | 'kurta' | 'kimono' | 'hanbok' | 'qipao' | 'aodai' | 'thobe' | 'abaya' | 'robe';
 export type BottomStyle = 'trousers' | 'shorts' | 'skirt' | 'sarong' | 'cargo' | 'maxi';
-export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie' | 'crown' | 'helmet' | 'flowers' | 'conical' | 'catears' | 'wizard' | 'natcap' | 'bucket' | 'tophat' | 'visor' | 'headband' | 'bandana' | 'chef' | 'pirate' | 'party' | 'halo';
+export type HatStyle = 'none' | 'straw' | 'beret' | 'cap' | 'sunhat' | 'beanie' | 'crown' | 'helmet' | 'flowers' | 'conical' | 'catears' | 'wizard' | 'natcap' | 'bucket' | 'tophat' | 'visor' | 'headband' | 'bandana' | 'chef' | 'pirate' | 'party' | 'halo' | 'hijab' | 'turban' | 'kippah' | 'taqiyah';
 export type GlassesStyle = 'none' | 'round' | 'sun' | 'star' | 'heart' | 'goggles' | 'monocle' | 'shield';
 export type BackStyle = 'none' | 'backpack' | 'satchel' | 'guitar' | 'cape' | 'wings' | 'parasol' | 'kite' | 'rabana' | 'balloons' | 'jetpack' | 'easel';
 export type EyeStyle = 'dots' | 'happy' | 'sleepy' | 'wink' | 'big' | 'sparkle' | 'lashes' | 'hearts';
 export type MouthStyle = 'smile' | 'grin' | 'o' | 'cat' | 'smirk' | 'tongue' | 'fangs';
 export type FaceDetail = 'none' | 'freckles' | 'moustache' | 'beard' | 'bindi' | 'facepaint' | 'gems' | 'whiskers';
-export type Accessory = 'none' | 'earrings' | 'necklace' | 'headphones' | 'flower' | 'bowtie' | 'lei' | 'medal' | 'pearls' | 'tie';
+export type Accessory = 'none' | 'earrings' | 'necklace' | 'headphones' | 'flower' | 'bowtie' | 'lei' | 'medal' | 'pearls' | 'tie' | 'cross';
 
 /** Character creator values (docs/08 §1). */
 export interface HumanLook {
@@ -39,7 +39,22 @@ export interface HumanLook {
   bottomPrint?: FabricPrint;
   /** A pet that follows you on foot (see Pets.ts). */
   pet?: 'none' | 'fox' | 'cat' | 'crane';
+  /** Body build: 1 average, lower slimmer, higher broader (0.85 – 1.3). Townspeople only. */
+  build?: number;
+  /** An older person's stoop, 0 – 0.35 (townspeople). */
+  stoop?: number;
+  /** A walking stick or a wheelchair (townspeople). */
+  aid?: 'none' | 'cane' | 'wheelchair';
 }
+
+/**
+ * Faith dress: worn by townspeople as part of everyday life (see world/Peoples.ts),
+ * never sold in the shop or given as loot.
+ */
+export const FAITH_HATS: readonly HatStyle[] = ['hijab', 'turban', 'kippah', 'taqiyah'];
+export const FAITH_TOPS: readonly TopStyle[] = ['robe'];
+/** Long robes and dresses that reach the ankles. */
+const LONG_TOPS: readonly TopStyle[] = ['dress', 'sari', 'osariya', 'kimono', 'qipao', 'aodai', 'thobe', 'abaya', 'robe'];
 
 export const DEFAULT_HUMAN_LOOK: HumanLook = {
   skin: '#f0c7a6',
@@ -126,9 +141,11 @@ export class HumanModel {
     const topStyle = look.topStyle ?? 'tee';
     const bottomStyle = look.bottomStyle ?? 'trousers';
     const saree = topStyle === 'sari' || topStyle === 'osariya';
-    const longSkirt = topStyle === 'dress' || saree || bottomStyle === 'sarong' || bottomStyle === 'skirt' || bottomStyle === 'maxi';
-    const legColour = bottomStyle === 'shorts' || longSkirt ? look.skin : look.bottom;
-    const skirtColour = topStyle === 'dress' || saree ? look.top : look.bottom;
+    const robe = LONG_TOPS.includes(topStyle) && topStyle !== 'dress' && !saree;
+    const longSkirt = LONG_TOPS.includes(topStyle) || topStyle === 'hanbok' || bottomStyle === 'sarong' || bottomStyle === 'skirt' || bottomStyle === 'maxi';
+    // The ao dai is worn over trousers: its panels fall to the knee.
+    const legColour = topStyle === 'aodai' ? look.bottom : bottomStyle === 'shorts' || longSkirt ? look.skin : look.bottom;
+    const skirtColour = topStyle === 'dress' || saree || robe ? look.top : look.bottom;
 
     this.root.scale.setScalar(look.height ?? 1);
     this.hips.position.y = 0.86;
@@ -137,10 +154,12 @@ export class HumanModel {
     // Pelvis, with a skirt, sarong or dress hem when chosen.
     const pelvis = new ModelKit().box(0.36, 0.2, 0.22, longSkirt ? skirtColour : look.bottom);
     if (longSkirt) {
-      const len = bottomStyle === 'sarong' || bottomStyle === 'maxi' || saree ? 0.72 : 0.42;
+      const len = topStyle === 'aodai' ? 0.5 : bottomStyle === 'sarong' || bottomStyle === 'maxi' || saree || robe || topStyle === 'hanbok' ? 0.72 : 0.42;
       pelvis.cylinder(0.2, 0.3, len, 8, skirtColour, { position: [0, -len / 2 + 0.05, 0], pattern: bottomStyle === 'sarong' ? Pattern.Planks : Pattern.None });
     }
-    this.hips.add(mesh(pelvis.build(0.01, 1)));
+    const pelvisMesh = mesh(pelvis.build(0.01, 1));
+    pelvisMesh.scale.set(look.build ?? 1, 1, look.build ?? 1);
+    this.hips.add(pelvisMesh);
 
     this.chest.position.y = 0.1;
     this.hips.add(this.chest);
@@ -178,6 +197,36 @@ export class HumanModel {
       // A sleeveless vest with a deep V and buttons.
       torso.box(0.1, 0.2, 0.02, look.skin, { position: [0, 0.44, -0.2], rotation: [0, 0, 0] });
       for (let i = 0; i < 3; i++) torso.blob(0.014, '#2b2622', { position: [0, 0.3 - i * 0.08, -0.2], detail: 0 });
+    } else if (topStyle === 'kimono') {
+      // Kimono or yukata: the left panel over the right, a white collar edge, a wide obi at the waist.
+      torso.box(0.05, 0.4, 0.02, '#f6f0e4', { position: [-0.05, 0.3, -0.195], rotation: [0, 0, -0.45] });
+      torso.cylinder(0.205, 0.2, 0.14, 10, shadeHex(look.top, 0.6), { position: [0, 0.06, 0] });
+      torso.box(0.16, 0.12, 0.08, shadeHex(look.top, 0.6), { position: [0, 0.07, 0.2] });
+    } else if (topStyle === 'hanbok') {
+      // Hanbok: a short jeogori jacket with a white collar and a long ribbon (goreum); the skirt starts high.
+      torso.cylinder(0.24, 0.3, 0.3, 12, look.bottom, { position: [0, -0.02, 0] });
+      torso.box(0.16, 0.04, 0.02, '#f6f0e4', { position: [-0.03, 0.46, -0.2], rotation: [0, 0, -0.5] });
+      torso.box(0.04, 0.26, 0.02, '#d8463a', { position: [0.04, 0.2, -0.22], rotation: [0, 0, 0.15] });
+    } else if (topStyle === 'qipao') {
+      // Qipao: a fitted dress with a mandarin collar and a curved closure.
+      torso.cylinder(0.1, 0.11, 0.07, 10, look.top, { position: [0, 0.55, 0] });
+      torso.box(0.14, 0.03, 0.02, '#e8c872', { position: [0.05, 0.44, -0.195], rotation: [0, 0, -0.4] });
+      for (let i = 0; i < 3; i++) torso.blob(0.013, '#e8c872', { position: [0.1, 0.38 - i * 0.09, -0.195], detail: 0 });
+    } else if (topStyle === 'aodai') {
+      // Ao dai: a long tunic with a high collar, slit at the sides over trousers.
+      torso.cylinder(0.1, 0.11, 0.07, 10, look.top, { position: [0, 0.55, 0] });
+      torso.box(0.03, 0.2, 0.02, shadeHex(look.top, 0.8), { position: [0.08, 0.42, -0.195], rotation: [0, 0, -0.5] });
+    } else if (topStyle === 'thobe') {
+      // Thobe / kandura: a long plain robe with a small collar and buttons.
+      torso.cylinder(0.09, 0.1, 0.06, 10, look.top, { position: [0, 0.55, 0] });
+      for (let i = 0; i < 3; i++) torso.blob(0.012, shadeHex(look.top, 0.8), { position: [0, 0.46 - i * 0.07, -0.2], detail: 0 });
+    } else if (topStyle === 'abaya') {
+      // Abaya: a long, loose over-garment with a trim down the front.
+      torso.box(0.03, 0.5, 0.02, shadeHex(look.top, 1.5), { position: [0, 0.24, -0.2] });
+    } else if (topStyle === 'robe') {
+      // A monastic robe: wrapped round, one end drawn over the left shoulder.
+      torso.box(0.16, 0.66, 0.34, shadeHex(look.top, 0.88), { position: [-0.1, 0.24, 0], rotation: [0, 0, 0.5] });
+      torso.cylinder(0.205, 0.205, 0.06, 10, shadeHex(look.top, 0.8), { position: [0, 0.02, 0] });
     } else if (topStyle === 'kurta') {
       // A long kurta: knee-length, with an embroidered placket.
       torso.cylinder(0.2, 0.27, 0.42, 8, look.top, { position: [0, -0.16, 0] });
@@ -248,11 +297,14 @@ export class HumanModel {
       .blob(0.03, '#f09a8a', { position: [-0.12, 0.19, -0.16], scale: [1, 0.6, 0.4], detail: 0, roughness: 0 })
       .blob(0.03, '#f09a8a', { position: [0.12, 0.19, -0.16], scale: [1, 0.6, 0.4], detail: 0, roughness: 0 });
     addFace(headKit, look);
-    addHair(headKit, look);
+    // A headscarf or turban covers the hair.
+    if (look.hat !== 'hijab' && look.hat !== 'turban') addHair(headKit, look);
     const hatKit = new ModelKit();
     addHat(hatKit, look);
     addAccessory(headKit, torso, look.acc ?? 'none');
-    this.chest.add(mesh(torso.build(0.012, 2)));
+    const torsoMesh = mesh(torso.build(0.012, 2));
+    torsoMesh.scale.set(look.build ?? 1, 1, look.build ?? 1);
+    this.chest.add(torsoMesh);
     addGlasses(headKit, look.glasses ?? 'none');
     const headMesh = mesh(headKit.build(0.008, 4));
     this.head.add(headMesh);
@@ -263,7 +315,7 @@ export class HumanModel {
       this.headMeshes.push(this.hatMesh);
     }
 
-    const sleeve = topStyle === 'tee' || topStyle === 'dress' || topStyle === 'osariya' || topStyle === 'vest' ? look.skin : look.top;
+    const sleeve = topStyle === 'tee' || topStyle === 'dress' || topStyle === 'osariya' || topStyle === 'vest' || topStyle === 'robe' ? look.skin : look.top;
     for (const side of [-1, 1]) {
       const shoulder = new THREE.Bone();
       shoulder.name = side < 0 ? BONE.leftArm : BONE.rightArm;
@@ -308,6 +360,21 @@ export class HumanModel {
       this.legs.push({ hip, knee });
     }
     this.skeleton = new THREE.Skeleton([this.hips, this.chest, this.head, ...this.arms.flatMap((a) => [a.shoulder, a.elbow]), ...this.legs.flatMap((l) => [l.hip, l.knee])]);
+    // A walking stick in the right hand, or a wheelchair to sit in.
+    if (look.aid === 'cane') {
+      const cane = new THREE.Mesh(caneGeometry(), mat);
+      cane.rotation.x = Math.PI - 0.25;
+      this.hold(cane);
+    } else if (look.aid === 'wheelchair') {
+      const chair = new THREE.Mesh(wheelchairGeometry(), mat);
+      chair.castShadow = true;
+      this.root.add(chair);
+    }
+  }
+
+  /** Sits in a wheelchair (poses become sitting ones). */
+  get seated(): boolean {
+    return this.look.aid === 'wheelchair';
   }
 
   /** The clip playing most strongly now, if any. */
@@ -406,8 +473,17 @@ export class HumanModel {
    * Procedural animation. `speed` in m/s drives stride; poses blend smoothly.
    */
   animate(dt: number, pose: HumanPose, speed: number, time: number): void {
-    this.procedural(dt, pose, speed, time);
+    // In a wheelchair every pose is a seated one; the hands push the wheels while moving.
+    if (this.seated) {
+      this.procedural(dt, 'sit', 0, time);
+      if (pose === 'walk' || pose === 'run') {
+        const push = Math.sin(time * 4) * 0.35;
+        for (const arm of this.arms) arm.shoulder.rotation.x = 0.2 + push;
+      } else if (pose === 'wave') this.arms[1].shoulder.rotation.set(0, 0, -2.4 + Math.sin(time * 9) * 0.25);
+    } else this.procedural(dt, pose, speed, time);
     if (this.layers.length) this.applyClips(dt);
+    // An older person's gentle stoop.
+    if (this.look.stoop) this.chest.rotation.x -= this.look.stoop;
   }
 
   private procedural(dt: number, pose: HumanPose, speed: number, time: number): void {
@@ -672,9 +748,61 @@ function addHair(k: ModelKit, look: HumanLook): void {
   }
 }
 
+let caneGeo: THREE.BufferGeometry | null = null;
+/** A wooden walking stick (along +Y from the hand). */
+function caneGeometry(): THREE.BufferGeometry {
+  return (caneGeo ??= new ModelKit()
+    .cylinder(0.018, 0.022, 0.86, 6, '#7a4a2a', { position: [0, 0.43, 0] })
+    .box(0.12, 0.03, 0.03, '#7a4a2a', { position: [0.04, 0.02, 0] })
+    .cylinder(0.024, 0.024, 0.03, 6, INK, { position: [0, 0.86, 0] })
+    .build(0.004, 6));
+}
+
+let chairGeo: THREE.BufferGeometry | null = null;
+/** A wheelchair: two big wheels, small front castors, seat, back and footrest (seat at hip height when sitting). */
+function wheelchairGeometry(): THREE.BufferGeometry {
+  if (chairGeo) return chairGeo;
+  const k = new ModelKit();
+  const frame = '#5a6070';
+  for (const s of [-1, 1]) {
+    k.cylinder(0.3, 0.3, 0.04, 16, '#2b2622', { position: [s * 0.28, 0.3, 0.06], rotation: [0, 0, Math.PI / 2] });
+    k.cylinder(0.24, 0.24, 0.045, 16, '#c9c9d6', { position: [s * 0.28, 0.3, 0.06], rotation: [0, 0, Math.PI / 2] });
+    k.cylinder(0.06, 0.06, 0.04, 8, '#2b2622', { position: [s * 0.2, 0.06, -0.34], rotation: [0, 0, Math.PI / 2] });
+    k.box(0.03, 0.03, 0.5, frame, { position: [s * 0.22, 0.46, -0.08] });
+    k.box(0.03, 0.5, 0.03, frame, { position: [s * 0.22, 0.7, 0.2] });
+  }
+  k.box(0.44, 0.05, 0.42, '#3e6fa8', { position: [0, 0.46, -0.04] });
+  k.box(0.44, 0.4, 0.04, '#3e6fa8', { position: [0, 0.72, 0.2] });
+  k.box(0.36, 0.03, 0.14, frame, { position: [0, 0.12, -0.42] });
+  return (chairGeo = k.build(0.006, 6));
+}
+
 /** The hat (its own mesh, so it can come off in a low car). */
 function addHat(k: ModelKit, look: HumanLook): void {
   switch (look.hat) {
+    case 'hijab': {
+      // A headscarf: round the head and under the chin, falling to the shoulders; the face stays open.
+      const c = look.scarf ?? shadeHex(look.top, 0.85);
+      k.blob(0.228, c, { position: [0, 0.27, 0.05], scale: [1.02, 1.04, 0.86], detail: 1, roughness: 0.03 });
+      k.cylinder(0.15, 0.22, 0.16, 12, c, { position: [0, 0.05, 0.02] });
+      k.box(0.3, 0.2, 0.08, c, { position: [0, 0.02, 0.14], rotation: [0.25, 0, 0] });
+      break;
+    }
+    case 'turban': {
+      // A dastar: wound layers rising to a point at the front.
+      const c = look.scarf ?? '#2d4f8f';
+      k.blob(0.215, c, { position: [0, 0.33, 0.03], scale: [1.02, 0.78, 1.02], detail: 1, roughness: 0.03 });
+      k.cylinder(0.2, 0.215, 0.1, 12, shadeHex(c, 0.88), { position: [0, 0.37, 0.03] });
+      k.box(0.22, 0.12, 0.05, shadeHex(c, 1.12), { position: [0, 0.42, -0.17], rotation: [0.4, 0, 0] });
+      break;
+    }
+    case 'kippah':
+      k.cylinder(0.1, 0.1, 0.025, 12, look.scarf ?? '#2d3f6f', { position: [0, 0.445, 0.05] });
+      break;
+    case 'taqiyah':
+      // A round white prayer cap with a stitched pattern.
+      k.cylinder(0.19, 0.2, 0.09, 14, '#f6f0e4', { position: [0, 0.43, 0.02], pattern: Pattern.Thatch });
+      break;
     case 'straw':
       k.cylinder(0.34, 0.34, 0.03, 14, '#e8c872', { position: [0, 0.42, 0], pattern: Pattern.Thatch });
       k.cylinder(0.16, 0.19, 0.14, 12, '#e8c872', { position: [0, 0.5, 0], pattern: Pattern.Thatch });
@@ -902,6 +1030,12 @@ function addAccessory(head: ModelKit, torso: ModelKit, acc: Accessory): void {
         const a = (i / 16) * Math.PI * 2;
         torso.blob(0.016, '#f6f0e4', { position: [Math.cos(a) * 0.13, 0.52 - Math.max(0, -Math.sin(a)) * 0.05, Math.sin(a) * 0.12], detail: 0, roughness: 0 });
       }
+      break;
+    case 'cross':
+      // A small cross on a fine chain.
+      torso.box(0.012, 0.16, 0.012, '#c9a24a', { position: [0, 0.48, -0.19], rotation: [0.2, 0, 0] });
+      torso.box(0.03, 0.05, 0.012, '#c9a24a', { position: [0, 0.38, -0.2] });
+      torso.box(0.05, 0.012, 0.012, '#c9a24a', { position: [0, 0.39, -0.2] });
       break;
     case 'tie':
       torso.box(0.05, 0.05, 0.02, '#3e6fa8', { position: [0, 0.5, -0.2] });

@@ -1,3 +1,4 @@
+import { buildSynagogue } from '../../models/LandmarksFaith';
 import * as THREE from 'three';
 import type { Dresser, Decorator } from '../Decorator';
 import type { Random } from '../../core/Random';
@@ -33,6 +34,8 @@ const dressBerlin: Dresser = (d, span, rnd) => {
   d.landmark('The Brandenburg Gate', span.district, gs, gf.position.clone().setY(gf.position.y + 20));
   landmarkBeside(d, span, 0.3, 1, 80, buildReichstag(), 'The Reichstag', 30, 55);
   landmarkBeside(d, span, 0.7, -1, 90, buildFernsehturm(), 'The Fernsehturm', 140, 22);
+  // The New Synagogue's golden dome on Oranienburger Straße.
+  landmarkBeside(d, span, 0.52, -1, 55, buildSynagogue(), 'The New Synagogue', 30, 25);
   const towers = [0, 1, 2].map((i) => {
     const h = rnd.range(20, 34);
     return { geometry: buildSkyscraper(rnd.fork(i), 18, h, 16), width: 18, depth: 16, height: h };

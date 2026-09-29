@@ -13,7 +13,10 @@ import { buildFlowerBush, buildHill, buildPalm, buildRoundTree } from '../models
 import { buildTeaFactory, buildTrain, buildTukTukProp } from '../models/LandmarksSriLanka';
 import { buildTeaHut, buildWaterfall } from '../models/LandmarksPostcards';
 import { buildClockTower, buildSwanBoat, buildTudorPostOffice } from '../models/LandmarksIsland';
-import { HumanModel, randomLook } from '../models/Human';
+import { HumanModel } from '../models/Human';
+import { buildChurch, buildKodimaram } from '../models/LandmarksFaith';
+import { buildGopuram } from '../models/LandmarksIndia';
+import { personOf } from './Peoples';
 import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
@@ -89,6 +92,7 @@ export class Hills implements FreeRoamArea {
     this.buildTerraces();
     this.buildStation();
     this.buildFallsAndLake();
+    this.buildFaith();
     this.buildZones();
     this.flush();
     this.buildMovers();
@@ -97,6 +101,20 @@ export class Hills implements FreeRoamArea {
   }
 
   // ————— building helpers —————
+
+  /**
+   * Hill-country towns have a kovil for the estate families and an old stone church.
+   * (Own random numbers only, so nothing else in the town moves.)
+   */
+  private buildFaith(): void {
+    this.put(buildGopuram(new Random(47)), 0, 22, Math.PI, 0, 0.7);
+    this.world.box(0, 22, 8, 5);
+    this.put(buildKodimaram(), 0, 31, 0, 0, 0.7);
+    this.world.circle(0, 31, 1.2);
+    this.put(buildChurch('stone'), -60, 40, Math.PI / 2, 0, 0.7);
+    this.world.box(-60, 40, 12, 6.5);
+    this.places.push({ id: 'hills-kovil', name: 'the kovil', x: 0, z: 36 }, { id: 'hills-church', name: 'the stone church', x: -46, z: 40 });
+  }
 
   private put(geometry: THREE.BufferGeometry, x: number, z: number, yaw = 0, y = 0, scale = 1): void {
     const m = new THREE.Matrix4().compose(new THREE.Vector3(x, y, z), new THREE.Quaternion().setFromAxisAngle(_up, yaw), new THREE.Vector3(scale, scale, scale));
@@ -354,8 +372,9 @@ export class Hills implements FreeRoamArea {
 
   private buildFolk(): void {
     const rnd = new Random(1105);
-    for (let i = 0; i < 14; i++) {
-      const look = randomLook(() => rnd.next());
+    for (let i = 0; i < 18; i++) {
+      // Tea pickers (every third) dress for the estate; everyone else as they like.
+      const look = personOf('lanka', () => rnd.next(), i % 3 === 0 ? { age: 'adult', aids: false, faith: false } : {}).look;
       // Tea pickers in saris with baskets, and people in sarongs.
       if (i % 3 === 0) Object.assign(look, { topStyle: 'sari', top: rnd.pick(['#e8559a', '#f08a2e', '#3e86c9', '#5dbb3f']), back: 'satchel' });
       else if (i % 3 === 1) Object.assign(look, { bottomStyle: 'sarong', bottom: rnd.pick(['#2d4f8f', '#7a3b2e', '#2d8a5a']) });

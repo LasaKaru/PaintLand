@@ -1,3 +1,4 @@
+import { buildChurch } from '../../models/LandmarksFaith';
 import * as THREE from 'three';
 import type { Dresser, Decorator } from '../Decorator';
 import type { Random } from '../../core/Random';
@@ -37,6 +38,8 @@ const dressSeoul: Dresser = (d, span, rnd) => {
   rows(d, part(span, 0.2, 0.65), rnd, () => rnd.pick(hanok), [-1, 1], 1, 2);
   d.landmark('Bukchon hanok village', span.district, at(span, 0.4), beside(d, span, 0.4, 1, 10).p.setY(6));
   landmarkBeside(d, span, 0.85, 1, 160, buildSeoulTower(), 'N Seoul Tower on Namsan', 90, 50);
+  // Myeongdong Cathedral, red brick and a tall spire.
+  landmarkBeside(d, span, 0.72, -1, 60, buildChurch('brick'), 'Myeongdong Cathedral', 26, 30, 1.2);
   const lanterns = [buildLantern('#e0302a'), buildLantern('#3e6fa8'), buildLantern('#f4d23b')];
   for (let s = at(span, 0.2); s < at(span, 0.65); s += 8) d.sideProp(rnd.pick(lanterns), s, rnd.chance(0.5) ? -1 : 1, 0.6);
   sakuraRow(d, part(span, 0.66, 1), rnd, 12);

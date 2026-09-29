@@ -1,3 +1,5 @@
+import { buildBuddhistTemple, buildChurch, buildKodimaram, buildRedMosque } from '../models/LandmarksFaith';
+import { buildGopuram } from '../models/LandmarksIndia';
 import { addLeisure, leisureLabel } from './Leisure';
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/examples/jsm/utils/BufferGeometryUtils.js';
@@ -12,7 +14,8 @@ import { buildBin, buildFountain, buildBuntingLine } from '../models/StreetProps
 import { buildBush, buildFlowerBush, buildHill, buildPalm, buildRoundTree, buildCypress } from '../models/Nature';
 import { buildCabana, buildElephant, buildLotusTower, buildOruwa, buildStupa, buildTukTukProp } from '../models/LandmarksSriLanka';
 import { buildBillboard, buildBusStop, buildChest, buildCrossing, buildFoodCart, buildMarketUmbrella, buildPaintPot, buildParkedCar, buildSkyscraper, buildStatue, buildTrafficLight } from '../models/CityProps';
-import { HumanModel, randomLook } from '../models/Human';
+import { HumanModel } from '../models/Human';
+import { personOf } from './Peoples';
 import { VEHICLES, VehicleModel } from '../models/Vehicles';
 import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { PALETTE } from '../gameplay/Profile';
@@ -24,6 +27,17 @@ import type { MapInfo } from '../ui/MapView';
 import { Perahera } from './Perahera';
 
 /** Road grid lines (centre lines, metres). */
+/**
+ * Places of worship in downtown Colombo, each on a block of its own (downtown blocks
+ * use their own random numbers, so the rest of the city stays as it was).
+ */
+const FAITH_BLOCKS = [
+  { i: 5, j: 3, kind: 'mosque', name: 'the Red Mosque' },
+  { i: 5, j: 2, kind: 'kovil', name: 'the kovil' },
+  { i: 3, j: 4, kind: 'church', name: 'the old church' },
+  { i: 2, j: 5, kind: 'temple', name: 'the city temple' },
+] as const;
+
 export const CITY_X = [-620, -460, -340, -220, -100, 20, 140, 260, 380, 500, 620];
 export const CITY_Z = [-560, -460, -340, -220, -100, 20, 140, 260, 380, 480];
 const ROAD = 16;
@@ -431,7 +445,9 @@ export class City implements FreeRoamArea {
         const region = this.region(cx, cz);
         // Pavement slab for built-up blocks.
         if (region === 'downtown' || region === 'oldtown') this.merge(new ModelKit().box(x1 - x0 + 6, 0.2, z1 - z0 + 6, '#ddd3c2', { position: [0, 0.1, 0], pattern: Pattern.Stone }).build(0), cx, cz);
-        if (region === 'downtown') this.downtownBlock(x0, x1, z0, z1, i * 31 + j);
+        const faith = FAITH_BLOCKS.find((b) => b.i === i && b.j === j);
+        if (faith) this.faithBlock(faith, cx, cz);
+        else if (region === 'downtown') this.downtownBlock(x0, x1, z0, z1, i * 31 + j);
         else if (region === 'oldtown') this.rowBlock(houses, x0, x1, z0, z1, true);
         else if (region === 'suburb') {
           if (rnd.chance(0.55)) this.rowBlock(houses, x0, x1, z0, z1, false);
@@ -439,6 +455,24 @@ export class City implements FreeRoamArea {
         } else if (region === 'park') this.parkBlock(x0, x1, z0, z1, false);
       }
     }
+  }
+
+  /** A place of worship on its own block, with a forecourt and shade trees. */
+  private faithBlock(b: (typeof FAITH_BLOCKS)[number], cx: number, cz: number): void {
+    const [geo, hx, hz, scale] =
+      b.kind === 'mosque' ? [buildRedMosque(), 16, 12, 1.2] : b.kind === 'kovil' ? [buildGopuram(new Random(31)), 14, 9, 1.1] : b.kind === 'church' ? [buildChurch('colonial'), 9, 17, 1.2] : [buildBuddhistTemple(), 20, 17, 1.1];
+    // Facing the street to the south (+z).
+    this.merge(geo, cx, cz, Math.PI, 0, scale);
+    this.world.box(cx, cz, hx * scale, hz * scale);
+    if (b.kind === 'kovil') {
+      this.merge(buildKodimaram(), cx, cz + 16, 0, 0, 1);
+      this.world.circle(cx, cz + 16, 1.6);
+    }
+    for (const [dx, dz] of [[-36, -30], [36, -30], [-36, 30], [36, 30]]) {
+      this.inst('ftree', () => buildRoundTree(new Random(61), null, true), cx + dx, cz + dz);
+      this.world.circle(cx + dx, cz + dz, 1);
+    }
+    this.places.push({ id: `faith-${b.kind}`, name: b.name, x: cx, z: cz + 40 });
   }
 
   private downtownBlock(x0: number, x1: number, z0: number, z1: number, seed: number): void {
@@ -780,8 +814,9 @@ export class City implements FreeRoamArea {
 
   private buildWalkers(): void {
     const rnd = new Random(66);
-    for (let i = 0; i < 28; i++) {
-      const model = new HumanModel(randomLook(() => rnd.next()));
+    // Colombo's people: Sinhala, Tamil, Muslim, Burgher and visitors, in everyday dress (see Peoples.ts).
+    for (let i = 0; i < 44; i++) {
+      const model = new HumanModel(personOf('lanka', () => rnd.next()).look);
       const body = new FreeWalker();
       const p = this.pavementSpot(rnd);
       body.place(p.x, p.z, rnd.range(-3, 3));

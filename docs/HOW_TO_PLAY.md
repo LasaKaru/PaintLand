@@ -132,6 +132,29 @@ In a multiplayer room everyone in the same town hears your set (each game plays 
 audio is streamed) and dances on the glowing floor. With *Reduced motion* or *Calm lighting* on, the
 lights glow slowly instead of pulsing, and they never pulse faster than three times a second.
 
+## Local people and places of worship
+
+Every town and every chapter has local people walking by: families, friends, children, elders
+(some with a walking stick) and wheelchair users. They dress for where they live, and they have
+many skin tones and body shapes. In Seoul you may see a hanbok, in Kyoto a kimono, in Delhi a
+kurta, and in Sri Lanka everyday sarongs and saris.
+
+Faith is part of everyday life in these places. Some locals wear a hijab, turban, kippah or prayer
+cap, and in Sri Lanka and the Himalayas you may pass monks in saffron or maroon robes. These
+clothes belong to the people who wear them. You can't buy them in the shop or wear them yourself.
+
+Places of worship stand as landmarks:
+
+- **Serendib City:** the Red Mosque, a kovil, the old church and the city temple.
+- **Tea Hills:** a kovil and a small stone church.
+- **Delhi:** Gurudwara Bangla Sahib and the Jama Masjid.
+- **Berlin:** the New Synagogue.
+- **Seoul:** Myeongdong Cathedral.
+
+They are places to see and photograph. They are never races, targets or collectables.
+
+People are only drawn close to you, so crowds cost little even on long roads.
+
 ## Paper-plane flight
 
 Every town has a ✈ **Paper plane** ring with a big paper plane on a wooden stand. Stand (or park) in the ring and press **E**: a gust throws you up into the sky.

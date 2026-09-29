@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { RoadPath, createFrame } from '../road/RoadPath';
 import { KERB_WIDTH } from '../road/RoadMesh';
-import { HumanModel, randomLook, DEFAULT_HUMAN_LOOK, type HumanPose } from '../models/Human';
+import { HumanModel, DEFAULT_HUMAN_LOOK, type HumanLook, type HumanPose } from '../models/Human';
+import { personOf, regionFor } from '../world/Peoples';
 import { VEHICLES, VehicleModel, tuningFor } from '../models/Vehicles';
 import { RoverController } from './RoverController';
 import { Autopilot } from './Autopilot';
@@ -13,7 +14,12 @@ import { ModelKit } from '../models/ModelKit';
 import { PALETTE } from './Profile';
 
 interface Walker {
-  model: HumanModel;
+  /** Built the first time the walker comes near (so long routes load quickly). */
+  model: HumanModel | null;
+  look: HumanLook;
+  /** A companion walks beside this walker (a child with a parent, or friends). */
+  lead: Walker | null;
+  side: number;
   s: number;
   x: number;
   dir: number;
@@ -70,19 +76,29 @@ export class Population {
   private readonly doneGeo: THREE.BufferGeometry;
   private readonly stampGeo: THREE.BufferGeometry;
 
-  constructor(private readonly path: RoadPath, chapterId: string) {
+  /** Most pedestrians on one route (their models are built only when near). */
+  static readonly MAX_WALKERS = 110;
+
+  constructor(private readonly path: RoadPath, private readonly chapterId: string, private readonly districtIds: string[] = []) {
     this.group.name = 'population';
     const rnd = new Random(hashString(chapterId + ':people'));
-    // Pedestrians spread along the whole route.
-    const count = 16;
-    for (let i = 0; i < count; i++) {
-      const s = ((i + rnd.next()) / count) * (path.length - 60) + 30;
-      const side = rnd.chance(0.5) ? -1 : 1;
-      const f = path.sample(s, this.frame);
-      const x = side * (f.width / 2 + KERB_WIDTH + 0.8 + rnd.range(0, 1.4));
-      const model = new HumanModel(randomLook(() => rnd.next()));
-      this.group.add(model.root);
-      this.walkers.push({ model, s, x, dir: rnd.chance(0.5) ? 1 : -1, speed: rnd.range(0.9, 1.6), s0: s - rnd.range(15, 40), s1: s + rnd.range(15, 40), pause: rnd.range(0, 4), pose: 'walk' });
+    const r = () => rnd.next();
+    // Pedestrians in every district, dressed as the people who live there: people on their own,
+    // friends walking together, and a parent with a child.
+    const spans = path.length > 0 ? this.districtSpans() : [];
+    for (const sp of spans) {
+      const region = regionFor(chapterId, districtIds[sp.district]);
+      const groups = Math.max(3, Math.min(9, Math.round((sp.end - sp.start) / 110)));
+      for (let g = 0; g < groups && this.walkers.length < Population.MAX_WALKERS - 1; g++) {
+        const s = sp.start + ((g + 0.2 + rnd.next() * 0.6) / groups) * (sp.end - sp.start);
+        const side = rnd.chance(0.5) ? -1 : 1;
+        const f = path.sample(Math.min(path.length - 1, Math.max(1, s)), this.frame);
+        const x = side * (f.width / 2 + KERB_WIDTH + 0.8 + rnd.range(0, 1.2));
+        const kind = rnd.next();
+        const lead = this.addWalker(personOf(region, r, { age: kind < 0.22 ? 'adult' : undefined }).look, s, x, side, rnd, null);
+        if (kind < 0.22) this.addWalker(personOf(region, r, { age: 'child', aids: false }).look, s, x, side, rnd, lead);
+        else if (kind < 0.4) this.addWalker(personOf(region, r, { aids: false }).look, s, x, side, rnd, lead);
+      }
     }
     // Marker shapes.
     this.markerGeo = new ModelKit()
@@ -98,11 +114,44 @@ export class Population {
     for (let i = 0; i < 3; i++) this.addCar(trafficRnd, bodies[(i + 1) % bodies.length].id, 80 + i * 260, false);
   }
 
+  /** Where each district's stretch of road starts and ends. */
+  private districtSpans(): { district: number; start: number; end: number }[] {
+    const out: { district: number; start: number; end: number }[] = [];
+    const n = Math.max(1, this.districtIds.length);
+    for (let d = 0; d < n; d++) {
+      const sp = this.path.spanOf(d);
+      if (sp && sp.end - sp.start > 20) out.push({ district: d, start: sp.start + 10, end: sp.end - 10 });
+    }
+    // A route without district spans (a custom road): spread along the whole length.
+    if (!out.length && this.path.length > 60) out.push({ district: 0, start: 30, end: this.path.length - 30 });
+    return out;
+  }
+
+  private addWalker(look: HumanLook, s: number, x: number, side: number, rnd: Random, lead: Walker | null): Walker {
+    const slow = look.aid === 'cane' || (look.stoop ?? 0) > 0 ? 0.55 : look.aid === 'wheelchair' ? 0.8 : 1;
+    const w: Walker = {
+      model: null,
+      look,
+      lead,
+      side,
+      s,
+      x: lead ? lead.x + (side > 0 ? 0.75 : -0.75) : x,
+      dir: lead ? lead.dir : rnd.chance(0.5) ? 1 : -1,
+      speed: (lead ? lead.speed : rnd.range(0.9, 1.5)) * (lead ? 1 : slow),
+      s0: s - rnd.range(15, 40),
+      s1: s + rnd.range(15, 40),
+      pause: rnd.range(0, 4),
+      pose: 'walk',
+    };
+    this.walkers.push(w);
+    return w;
+  }
+
   private addCar(rnd: Random, id: string, s: number, rival: boolean): Car {
     const def = VEHICLES.find((v) => v.id === id) ?? VEHICLES[0];
     const look = { ...def.defaultLook, body: rnd.pick(PALETTE.paint), accent: rnd.pick(PALETTE.paint) };
     const model = new VehicleModel(def, look);
-    const driver = new HumanModel(randomLook(() => rnd.next()));
+    const driver = new HumanModel(personOf(regionFor(this.chapterId), () => rnd.next(), { age: 'adult', aids: false }).look);
     driver.root.scale.multiplyScalar(0.85);
     model.seat.add(driver.root);
     driver.root.position.set(0, -0.45, 0);
@@ -218,10 +267,20 @@ export class Population {
     const near = 170;
     for (const w of this.walkers) {
       const visible = Math.abs(w.s - focusS) < near;
-      w.model.root.visible = visible;
+      if (w.model) w.model.root.visible = visible;
       if (!visible) continue;
+      if (!w.model) {
+        w.model = new HumanModel(w.look);
+        this.group.add(w.model.root);
+      }
       const playerClose = Math.abs(w.s - focusS) < 7 && Math.abs(w.x - focusX) < 6;
-      if (w.pause > 0) {
+      if (w.lead) {
+        // Walk beside your companion.
+        w.s = w.lead.s - w.lead.dir * 0.4;
+        w.dir = w.lead.dir;
+        w.pause = w.lead.pause;
+        w.pose = w.lead.pose === 'walk' ? 'walk' : playerClose ? 'wave' : 'idle';
+      } else if (w.pause > 0) {
         w.pause -= dt;
         w.pose = playerClose ? 'wave' : 'idle';
       } else {

@@ -28,7 +28,7 @@ export class World {
     this.group.add(this.decor.build());
     this.items = new Collectibles(this.path, chapter.districts);
     this.group.add(this.items.group);
-    this.people = new Population(this.path, chapter.id);
+    this.people = new Population(this.path, chapter.id, chapter.districts.map((d) => d.id));
     this.group.add(this.people.group);
     this.missions = missionsFor(chapter.id);
   }

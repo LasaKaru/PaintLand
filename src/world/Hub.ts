@@ -11,7 +11,8 @@ import { buildBench, buildLamp, buildLighthouse, buildPaperBoat } from '../model
 import { buildBin, buildBicycle, buildCafeTable, buildCat, buildFountain, buildPlanter } from '../models/StreetProps';
 import { buildBush, buildFlowerBush, buildPalm, buildRoundTree } from '../models/Nature';
 import { buildOruwa, buildTukTukProp } from '../models/LandmarksSriLanka';
-import { HumanModel, randomLook } from '../models/Human';
+import { HumanModel } from '../models/Human';
+import { personOf } from './Peoples';
 import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
@@ -439,8 +440,9 @@ export class Hub implements FreeRoamArea {
 
   private buildFolk(): void {
     const rnd = new Random(77);
-    for (let i = 0; i < 14; i++) {
-      const model = new HumanModel(randomLook(() => rnd.next()));
+    // Harbour Town is a port: people from everywhere (see Peoples.ts).
+    for (let i = 0; i < 20; i++) {
+      const model = new HumanModel(personOf('mixed', () => rnd.next()).look);
       const body = new FreeWalker();
       const p = this.randomSpot(rnd);
       body.place(p.x, p.z, rnd.range(-3, 3));

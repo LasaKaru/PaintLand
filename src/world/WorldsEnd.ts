@@ -10,7 +10,8 @@ import { buildLamp } from '../models/Props';
 import { buildCypress, buildFloatingRock, buildHill, buildRoundTree } from '../models/Nature';
 import { buildPeak } from '../models/LandmarksWorld';
 import { buildWaterfall } from '../models/LandmarksPostcards';
-import { HumanModel, randomLook } from '../models/Human';
+import { HumanModel } from '../models/Human';
+import { personOf } from './Peoples';
 import { FreeWorld } from '../gameplay/FreeRoam';
 import { t, type StringKey } from '../core/i18n';
 import type { MapInfo } from '../ui/MapView';
@@ -315,7 +316,8 @@ export class WorldsEnd implements FreeRoamArea {
       [90, -50, 1.5, 'sitdown'],
     ];
     for (const [x, z, yaw, pose] of spots) {
-      const model = new HumanModel(randomLook(() => rnd.next()));
+      // Sitting and gazing: no wheelchair or stick needed for the pose.
+      const model = new HumanModel(personOf('mixed', () => rnd.next(), { age: 'adult', aids: false }).look);
       model.root.position.set(x, 0, z);
       model.root.rotation.y = yaw;
       this.group.add(model.root);

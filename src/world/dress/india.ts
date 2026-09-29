@@ -1,3 +1,4 @@
+import { buildGurdwara, buildMughalMosque } from '../../models/LandmarksFaith';
 import type { Dresser, Decorator } from '../Decorator';
 import type { Random } from '../../core/Random';
 import { walkableHalfWidth } from '../../road/RoadMesh';
@@ -55,6 +56,9 @@ const dressDelhi: Dresser = (d, span, rnd) => {
   const shops = [0, 1, 2, 3].map((i) => buildHouse(rnd.fork(i), ['#e8c878', '#e0906a', '#f0e0c0', '#9fd0c8'][i], 'shop'));
   rows(d, part(span, 0.45, 0.95), rnd, () => rnd.pick(shops), [-1], 0.3, 2);
   landmarkBeside(d, span, 0.7, 1, 70, buildRedFort(140), 'The Red Fort', 24, 40);
+  // Delhi's places of worship: Gurudwara Bangla Sahib by the lawns, the Jama Masjid in Old Delhi.
+  landmarkBeside(d, span, 0.34, -1, 60, buildGurdwara(), 'Gurudwara Bangla Sahib', 22, 32);
+  landmarkBeside(d, span, 0.92, 1, 95, buildMughalMosque(), 'The Jama Masjid', 30, 45);
   autos(d, part(span, 0.45, 1), 22);
   cows(d, span, rnd, 8);
   furniture(d, span, rnd, [buildLamp(rnd), buildBench()], [14, 22]);

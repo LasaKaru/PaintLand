@@ -11,7 +11,8 @@ import { buildBench, buildPaperBoat } from '../models/Props';
 import { buildBicycle, buildCat, buildPlanter } from '../models/StreetProps';
 import { buildBush, buildFlowerBush } from '../models/Nature';
 import { buildBambooClump, buildCherryTree, buildChorten, buildFox, buildFuji, buildJunk, buildKarst, buildLanternString, buildPagoda, buildPrayerFlags, buildShophouse, buildStoneLantern, buildTorii } from '../models/LandmarksAsia';
-import { HumanModel, randomLook } from '../models/Human';
+import { HumanModel } from '../models/Human';
+import { personOf } from './Peoples';
 import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
@@ -328,8 +329,8 @@ export class Village implements FreeRoamArea {
 
   private buildFolk(): void {
     const rnd = new Random(88);
-    for (let i = 0; i < 14; i++) {
-      const model = new HumanModel(randomLook(() => rnd.next()));
+    for (let i = 0; i < 18; i++) {
+      const model = new HumanModel(personOf('japan', () => rnd.next()).look);
       const body = new FreeWalker();
       const p = this.randomSpot(rnd);
       body.place(p.x, p.z, rnd.range(-3, 3));
