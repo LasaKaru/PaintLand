@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import type { RoadPath } from '../road/RoadPath';
 import { createFrame } from '../road/RoadPath';
-import { CITY_X, CITY_Z } from '../world/City';
+import { CITY_X, CITY_Z, roadWidthX, roadWidthZ } from '../world/City';
 import type { BoardSpot } from './BrandBoards';
 
 /** Seeded shuffle so the same corners get boards every time. */
@@ -26,13 +26,13 @@ export function citySpots(): BoardSpot[] {
     for (const z of CITY_Z.slice(1, -1)) {
       if (Math.hypot(x - 500, z + 300) < 110) continue; // the lake
       for (const [sx, sz] of [[1, 1], [-1, -1], [1, -1], [-1, 1]]) {
-        const bx = x + sx * 10.5;
-        const bz = z + sz * 10.5;
+        const bx = x + sx * (roadWidthX(x) / 2 + 2.5);
+        const bz = z + sz * (roadWidthZ(z) / 2 + 2.5);
         corners.push({ x: bx, z: bz, yaw: Math.atan2(x - bx, z - bz), style: 'billboard', scale: 1.4 });
       }
     }
   const picked = shuffled(corners, 2026).slice(0, 30);
-  for (let i = 0; i < 7; i++) picked.push({ x: -520 + i * 170, z: 494, yaw: Math.PI, style: 'banner', scale: 1.2 });
+  for (let i = 0; i < 7; i++) picked.push({ x: -520 + i * 170, z: 500, yaw: Math.PI, style: 'banner', scale: 1.2 });
   return picked;
 }
 

@@ -42,6 +42,7 @@ export const CHAINS: { id: string; name: string; icon: string; blurb: string; ar
   { id: 'palette', name: 'The Painter’s Palette', icon: '🎨', blurb: 'Amaya is out of colours and the city is full of them.', area: 'city' },
   { id: 'stunts', name: 'Stunt School', icon: '🏁', blurb: 'Ravi teaches jumps. Ravi does not teach landings.', area: 'city' },
   { id: 'secrets', name: 'City Secrets', icon: '🗝', blurb: 'An old storyteller knows where the city hides things.', area: 'city' },
+  { id: 'ring', name: 'Ring Road Rally', icon: '🛣', blurb: 'Dilan runs the island’s rally club, and the new ring road is his track.', area: 'city' },
   { id: 'tea', name: 'The Tea Trail', icon: '🍃', blurb: 'Malini picks the best tea in the hills, and she needs a fast pair of wheels.', area: 'hills' },
   { id: 'rail', name: 'The Hill Country Line', icon: '🚂', blurb: 'Stationmaster Perera runs the little blue train. Things keep going wrong.', area: 'hills' },
   { id: 'harbour', name: 'Harbour Errands', icon: '⚓', blurb: 'Anura the harbourmaster always has one more job.', area: 'harbour' },
@@ -240,6 +241,31 @@ export const CITY_MISSIONS: ChainMission[] = [
       { kind: 'photo', text: 'Photograph the pagoda (P, then Save)', targets: [T(45, -40, 30)] },
     ],
     reward: { ink: 280 },
+  },
+  // ————— Ring Road Rally —————
+  {
+    id: 'rr-1', chain: 'ring', title: 'Coast highway sprint', giver: 'Dilan the rally driver',
+    intro: 'Marine Drive is four lanes now and it runs all the way to the ring. From the pier to the eastern end of the coast highway, flat out!',
+    steps: [
+      { kind: 'goto', text: 'Meet Dilan by the pier', targets: [T(300, 470)] },
+      { kind: 'checkpoints', text: 'Race along the coast highway', targets: [T(500, 476), T(700, 476), T(740, 440)], time: 45 },
+    ],
+    reward: { ink: 180 },
+  },
+  {
+    id: 'rr-2', chain: 'ring', title: 'Through the tea hills', giver: 'Dilan the rally driver', requires: 'rr-1',
+    intro: 'Up the east road through the tea hills, across the whole northern ring, and down the west road. Mind the tuk-tuks.',
+    steps: [{ kind: 'checkpoints', text: 'Hit every gate on the northern loop', targets: [T(380, -600), T(380, -780), T(0, -790), T(-460, -780), T(-460, -600)], time: 120 }],
+    reward: { ink: 280, item: 'decal:checker' },
+  },
+  {
+    id: 'rr-3', chain: 'ring', title: 'The full lap', giver: 'Dilan the rally driver', requires: 'rr-2',
+    intro: 'The big one: one lap of the whole ring road, five and a half kilometres, past the paddy fields and back along the sea.',
+    steps: [
+      { kind: 'goto', text: 'Line up at the western end of the coast highway', targets: [T(-740, 470)] },
+      { kind: 'checkpoints', text: 'Lap the ring road', targets: [T(-740, -100), T(-740, -780), T(0, -790), T(740, -780), T(740, -100), T(740, 470), T(0, 476)], time: 300 },
+    ],
+    reward: { ink: 500, item: 'spoiler:twin' },
   },
 ];
 

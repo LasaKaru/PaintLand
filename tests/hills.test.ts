@@ -32,7 +32,7 @@ describe('Tea Hills and the free-roam mission chains', () => {
 
   it('every chain has three missions in its own town, and every target can be reached', () => {
     for (const c of CHAINS) expect(CITY_MISSIONS.filter((m) => m.chain === c.id), c.id).toHaveLength(3);
-    expect(CITY_MISSIONS.length).toBe(24);
+    expect(CITY_MISSIONS.length).toBe(CHAINS.length * 3);
     for (const m of CITY_MISSIONS) {
       const area = areas[missionArea(m)];
       const b = (area.world as unknown as { bounds: { minX: number; maxX: number; minZ: number; maxZ: number } }).bounds;

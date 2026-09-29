@@ -1,4 +1,5 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { RING } from '../src/world/City';
 import { FreeCar, FreeWorld } from '../src/gameplay/FreeRoam';
 import { ROVER_TUNING } from '../src/gameplay/RoverController';
 import { CATALOGUE, Profile } from '../src/gameplay/Profile';
@@ -159,8 +160,9 @@ describe('City mission chains', () => {
       for (const s of m.steps) expect(s.targets.length).toBeGreaterThan(0);
       if (m.requires) expect(ids.has(m.requires)).toBe(true);
       for (const s of m.steps) for (const t of s.targets) {
-        expect(Math.abs(t.x)).toBeLessThanOrEqual(640);
-        expect(t.z).toBeGreaterThanOrEqual(-600);
+        // Inside Serendib City's ring road (the largest free-roam area).
+        expect(Math.abs(t.x)).toBeLessThanOrEqual(RING.maxX + 20);
+        expect(t.z).toBeGreaterThanOrEqual(RING.minZ - 20);
         expect(t.z).toBeLessThanOrEqual(650);
       }
       if (m.reward.item) expect(CATALOGUE.some((i) => i.id === m.reward.item), m.reward.item).toBe(true);

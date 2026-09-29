@@ -26,6 +26,36 @@ import { Perahera } from './Perahera';
 export const CITY_X = [-620, -460, -340, -220, -100, 20, 140, 260, 380, 500, 620];
 export const CITY_Z = [-560, -460, -340, -220, -100, 20, 140, 260, 380, 480];
 const ROAD = 16;
+/** Four-lane avenues with a palm median: the Galle Road (x = 140), the Baseline Road (z = -100) and Marine Drive along the coast (z = 480). */
+const WIDE = 28;
+const AVENUES_X: readonly number[] = [140];
+const AVENUES_Z: readonly number[] = [-100, 480];
+/** Width of the grid road running north-south at `x`. */
+export const roadWidthX = (x: number): number => (AVENUES_X.includes(x) ? WIDE : ROAD);
+/** Width of the grid road running east-west at `z`. */
+export const roadWidthZ = (z: number): number => (AVENUES_Z.includes(z) ? WIDE : ROAD);
+/**
+ * The ring road round the whole city (about 5.4 km with the coast highway),
+ * two lanes wide, through the countryside beyond the grid. It meets the grid
+ * at both ends of Marine Drive and the Baseline Road, and two roads climb
+ * through the tea hills to its northern side.
+ */
+export const RING = { minX: -740, maxX: 740, minZ: -790, maxZ: 480, w: 20 } as const;
+/** Extra straight road pieces beyond the grid: [x1, z1, x2, z2, width]. */
+const OUTER_ROADS: [number, number, number, number, number][] = [
+  // The ring (the south side is Marine Drive, extended below).
+  [RING.minX, RING.minZ, RING.maxX, RING.minZ, RING.w],
+  [RING.minX, RING.minZ, RING.minX, RING.maxZ, RING.w],
+  [RING.maxX, RING.minZ, RING.maxX, RING.maxZ, RING.w],
+  // Marine Drive and the Baseline Road carried out to the ring as four-lane highways.
+  [RING.minX, 480, -628, 480, WIDE],
+  [628, 480, RING.maxX, 480, WIDE],
+  [RING.minX, -100, -628, -100, WIDE],
+  [628, -100, RING.maxX, -100, WIDE],
+  // Up through the tea hills to the northern ring.
+  [-460, RING.minZ, -460, -568, ROAD],
+  [380, RING.minZ, 380, -568, ROAD],
+];
 
 /** Stunt ramps: id, name, x, z, heading, launch power, metres to the landing. */
 const STUNT_RAMPS: [string, string, number, number, number, number, number][] = [
@@ -81,7 +111,7 @@ interface Walker {
 export class City implements FreeRoamArea {
   readonly id = 'city';
   readonly group = new THREE.Group();
-  readonly world = new FreeWorld({ minX: -640, maxX: 640, minZ: -600, maxZ: 548 });
+  readonly world = new FreeWorld({ minX: RING.minX - 30, maxX: RING.maxX + 30, minZ: RING.minZ - 30, maxZ: 548 });
   readonly murals: MuralBoard[] = [];
   readonly pockets: PlacedPocket[] = [];
   readonly seaZ = 550;
@@ -94,12 +124,12 @@ export class City implements FreeRoamArea {
   private readonly rnd = new Random(7_2026);
   private readonly material = new PaintMaterial({ vertexColors: true, flat: true, washable: true });
   readonly districts: District[] = CITY_DISTRICTS;
-  /** The night perahera walks a loop around Pettah's streets. */
+  /** The night perahera walks a loop around Pettah's streets (in the lanes, clear of the avenue medians). */
   readonly perahera = new Perahera([
-    { x: 140, z: -340 },
-    { x: 380, z: -340 },
-    { x: 380, z: -100 },
-    { x: 140, z: -100 },
+    { x: 147, z: -334 },
+    { x: 374, z: -334 },
+    { x: 374, z: -107 },
+    { x: 147, z: -107 },
   ]);
   private readonly merged: THREE.BufferGeometry[] = [];
   private readonly instances = new Map<string, { geo: THREE.BufferGeometry; mats: THREE.Matrix4[]; shadow: boolean }>();
@@ -116,6 +146,8 @@ export class City implements FreeRoamArea {
     this.group.position.y = AREA_Y;
     this.buildGround();
     this.buildRoads();
+    this.buildOuterRoads();
+    this.buildCountryside();
     this.buildBlocks();
     this.buildBeach();
     this.buildHills();
@@ -191,6 +223,7 @@ export class City implements FreeRoamArea {
 
   private region(x: number, z: number): Region {
     if (z > 480) return 'beach';
+    if (Math.abs(x) > 640 || z < -600) return 'hills';
     if (z < -560) return 'hills';
     if (x >= -460 && x <= 140 && z >= -460 && z <= 140) return 'downtown';
     if (x > 140 && x <= 380 && z >= -460 && z <= 140) return 'oldtown';
@@ -203,11 +236,13 @@ export class City implements FreeRoamArea {
 
   private buildGround(): void {
     const k = new ModelKit();
-    k.box(1290, 4, 1160, '#8cc36a', { position: [0, -2.02, -26], pattern: Pattern.Grass });
-    k.box(1292, 3.6, 70, '#ecd7a6', { position: [0, -2.2, 515] }); // beach sand
+    const w = RING.maxX - RING.minX + 120;
+    const zTop = RING.minZ - 60;
+    k.box(w, 4, 554 - zTop, '#8cc36a', { position: [0, -2.02, (554 + zTop) / 2], pattern: Pattern.Grass });
+    k.box(w + 2, 3.6, 70, '#ecd7a6', { position: [0, -2.2, 515] }); // beach sand
     this.merge(k.build(0), 0, 0);
     // Quay/sea wall at the south edge, and the lake in the park.
-    this.merge(new ModelKit().box(1292, AREA_Y + 3, 2, '#c9b58e', { position: [0, -(AREA_Y + 3) / 2 + 0.1, 0], pattern: Pattern.Stone }).build(0), 0, 550);
+    this.merge(new ModelKit().box(RING.maxX - RING.minX + 122, AREA_Y + 3, 2, '#c9b58e', { position: [0, -(AREA_Y + 3) / 2 + 0.1, 0], pattern: Pattern.Stone }).build(0), 0, 550);
     this.merge(new ModelKit().cylinder(70, 72, 0.3, 40, '#2f8fb8', { position: [0, 0.05, 0], pattern: Pattern.Glass }).cylinder(74, 74, 0.2, 40, '#d9c7a4', { position: [0, 0.02, 0] }).build(0), 500, -300);
     this.world.circle(500, -300, 70, 0.6); // low: the Lake leap flies over it
     this.places.push({ id: 'lake', name: 'the lake', x: 500, z: -210 });
@@ -221,42 +256,162 @@ export class City implements FreeRoamArea {
     const xMin = CITY_X[0];
     const xMax = CITY_X[CITY_X.length - 1];
     for (const x of CITY_X) {
-      k.box(ROAD, 0.06, zMax - zMin + ROAD, asphalt, { position: [x, 0.03, (zMin + zMax) / 2] });
-      for (const s of [-1, 1]) k.box(3, 0.18, zMax - zMin, '#e4dccb', { position: [x + s * (ROAD / 2 + 1.5), 0.09, (zMin + zMax) / 2] });
+      const w = roadWidthX(x);
+      k.box(w, 0.06, zMax - zMin + ROAD, asphalt, { position: [x, 0.03, (zMin + zMax) / 2] });
+      for (const s of [-1, 1]) k.box(3, 0.18, zMax - zMin, '#e4dccb', { position: [x + s * (w / 2 + 1.5), 0.09, (zMin + zMax) / 2] });
     }
     for (const z of CITY_Z) {
-      k.box(xMax - xMin + ROAD, 0.07, ROAD, asphalt, { position: [(xMin + xMax) / 2, 0.035, z] });
-      for (const s of [-1, 1]) k.box(xMax - xMin, 0.19, 3, '#e4dccb', { position: [(xMin + xMax) / 2, 0.095, z + s * (ROAD / 2 + 1.5)] });
+      const w = roadWidthZ(z);
+      k.box(xMax - xMin + ROAD, 0.07, w, asphalt, { position: [(xMin + xMax) / 2, 0.035, z] });
+      for (const s of [-1, 1]) k.box(xMax - xMin, 0.19, 3, '#e4dccb', { position: [(xMin + xMax) / 2, 0.095, z + s * (w / 2 + 1.5)] });
     }
     this.merge(k.build(0), 0, 0);
-    // Lane dashes (instanced) and crossings at downtown junctions.
-    for (const x of CITY_X) for (let z = zMin + 12; z < zMax - 8; z += 12) if (!CITY_Z.some((cz) => Math.abs(cz - z) < 10)) this.inst('dash', () => new ModelKit().box(0.3, 0.02, 3.5, '#f6f0e4', { position: [0, 0.08, 0] }).build(0), x, z, 0, 0, 1, false);
-    for (const z of CITY_Z) for (let x = xMin + 12; x < xMax - 8; x += 12) if (!CITY_X.some((cx) => Math.abs(cx - x) < 10)) this.inst('dash', () => new ModelKit().box(0.3, 0.02, 3.5, '#f6f0e4', { position: [0, 0.08, 0] }).build(0), x, z, Math.PI / 2, 0, 1, false);
+    // Lane dashes (instanced): one centre line, or two lane lines each side of an avenue's median.
+    const dashes = (w: number): number[] => (w === WIDE ? [-7, 7] : [0]);
+    const dash = (): THREE.BufferGeometry => new ModelKit().box(0.3, 0.02, 3.5, '#f6f0e4', { position: [0, 0.08, 0] }).build(0);
+    for (const x of CITY_X) for (let z = zMin + 12; z < zMax - 8; z += 12) if (!CITY_Z.some((cz) => Math.abs(cz - z) < roadWidthZ(cz) / 2 + 2)) for (const o of dashes(roadWidthX(x))) this.inst('dash', dash, x + o, z, 0, 0, 1, false);
+    for (const z of CITY_Z) for (let x = xMin + 12; x < xMax - 8; x += 12) if (!CITY_X.some((cx) => Math.abs(cx - x) < roadWidthX(cx) / 2 + 2)) for (const o of dashes(roadWidthZ(z))) this.inst('dash', dash, x, z + o, Math.PI / 2, 0, 1, false);
+    // Palm medians down the avenues, broken at every junction.
+    for (const x of AVENUES_X) this.median(x, zMin, zMax, 'z', CITY_Z.map((z) => [z, roadWidthZ(z)]));
+    for (const z of AVENUES_Z) this.median(z, xMin, xMax, 'x', CITY_X.map((x) => [x, roadWidthX(x)]));
     for (const x of CITY_X) for (const z of CITY_Z) {
       if (this.region(x, z) !== 'downtown' && this.region(x, z) !== 'oldtown') continue;
-      this.inst('crossing', () => buildCrossing(ROAD), x, z - ROAD / 2 - 1.8, 0, 0, 1, false);
-      this.inst('crossing', () => buildCrossing(ROAD), x - ROAD / 2 - 1.8, z, Math.PI / 2, 0, 1, false);
-      this.inst('trafficlight', buildTrafficLight, x + ROAD / 2 + 2.5, z + ROAD / 2 + 2.5, Math.PI);
-      this.world.circle(x + ROAD / 2 + 2.5, z + ROAD / 2 + 2.5, 0.3);
+      const wx = roadWidthX(x);
+      const wz = roadWidthZ(z);
+      this.inst(`crossing${wx}`, () => buildCrossing(wx), x, z - wz / 2 - 1.8, 0, 0, 1, false);
+      this.inst(`crossing${wz}`, () => buildCrossing(wz), x - wx / 2 - 1.8, z, Math.PI / 2, 0, 1, false);
+      this.inst('trafficlight', buildTrafficLight, x + wx / 2 + 2.5, z + wz / 2 + 2.5, Math.PI);
+      this.world.circle(x + wx / 2 + 2.5, z + wz / 2 + 2.5, 0.3);
     }
     // Street lamps down every road, both sides.
     const rnd = this.rnd;
     for (const x of CITY_X) for (let z = zMin + 20; z < zMax; z += 36) for (const s of [-1, 1]) {
-      if (CITY_Z.some((cz) => Math.abs(cz - z) < 12) || inStuntLane(x + s * (ROAD / 2 + 2.6), z)) continue;
-      this.inst('lamp', () => buildLamp(new Random(3)), x + s * (ROAD / 2 + 2.6), z, s > 0 ? -Math.PI / 2 : Math.PI / 2);
-      this.world.circle(x + s * (ROAD / 2 + 2.6), z, 0.3);
+      const lx = x + s * (roadWidthX(x) / 2 + 2.6);
+      if (CITY_Z.some((cz) => Math.abs(cz - z) < roadWidthZ(cz) / 2 + 4) || inStuntLane(lx, z)) continue;
+      this.inst('lamp', () => buildLamp(new Random(3)), lx, z, s > 0 ? -Math.PI / 2 : Math.PI / 2);
+      this.world.circle(lx, z, 0.3);
     }
     for (const z of CITY_Z) for (let x = xMin + 20; x < xMax; x += 36) {
-      if (CITY_X.some((cx) => Math.abs(cx - x) < 12) || inStuntLane(x, z - (ROAD / 2 + 2.6))) continue;
-      this.inst('lamp', () => buildLamp(new Random(3)), x, z - (ROAD / 2 + 2.6), 0);
-      this.world.circle(x, z - (ROAD / 2 + 2.6), 0.3);
-      if (rnd.chance(0.25)) this.inst('bin', buildBin, x + 3, z - (ROAD / 2 + 2.8));
+      const lz = z - (roadWidthZ(z) / 2 + 2.6);
+      if (CITY_X.some((cx) => Math.abs(cx - x) < roadWidthX(cx) / 2 + 4) || inStuntLane(x, lz)) continue;
+      this.inst('lamp', () => buildLamp(new Random(3)), x, lz, 0);
+      this.world.circle(x, lz, 0.3);
+      if (rnd.chance(0.25)) this.inst('bin', buildBin, x + 3, lz - 0.2);
     }
     // Boost pads on the long avenues.
-    for (const [x, z, yaw] of [[-340, 300, 0], [140, -280, 0], [-160, 480, Math.PI / 2], [260, 480, Math.PI / 2], [620, -120, 0], [-620, -200, 0], [380, -500, 0], [-460, -160, 0], [20, 380, 0], [500, 200, 0], [-40, -560, Math.PI / 2], [300, 20, Math.PI / 2]] as [number, number, number][]) {
+    for (const [x, z, yaw] of [[-340, 300, 0], [147, -280, 0], [-160, 487, Math.PI / 2], [260, 487, Math.PI / 2], [620, -120, 0], [-620, -200, 0], [380, -500, 0], [-460, -160, 0], [20, 380, 0], [500, 200, 0], [-40, -560, Math.PI / 2], [300, 20, Math.PI / 2]] as [number, number, number][]) {
       this.world.pads.push({ x, z, r: 2.8 });
-      this.inst('pad', () => new ModelKit().box(4.5, 0.08, 6, '#3e9fd8', { position: [0, 0.1, 0], nightGlow: 1 }).box(1, 0.1, 3, '#f6f0e4', { position: [-0.7, 0.14, 0], rotation: [0, 0.6, 0], nightGlow: 1 }).box(1, 0.1, 3, '#f6f0e4', { position: [0.7, 0.14, 0], rotation: [0, -0.6, 0], nightGlow: 1 }).build(0), x, z, yaw, 0, 1, false);
+      this.inst('pad', padGeo, x, z, yaw, 0, 1, false);
     }
+  }
+
+  /**
+   * A grassy median with palms down the middle of an avenue: along `axis`
+   * ('z' = the road runs north-south at x = `at`), from `from` to `to`,
+   * with gaps where the cross streets `[centre, width]` meet it.
+   */
+  private median(at: number, from: number, to: number, axis: 'x' | 'z', cross: [number, number][]): void {
+    const gaps = cross.map(([c, w]) => [c - w / 2 - 6, c + w / 2 + 6]);
+    let a = from;
+    const pieces: [number, number][] = [];
+    for (const [g0, g1] of [...gaps, [to, to]].sort((p, q) => p[0] - q[0])) {
+      if (g0 > a + 4) pieces.push([a, Math.min(g0, to)]);
+      a = Math.max(a, g1);
+    }
+    const k = new ModelKit();
+    for (const [p0, p1] of pieces) {
+      const len = p1 - p0;
+      const mid = (p0 + p1) / 2;
+      const [x, z] = axis === 'z' ? [at, mid] : [mid, at];
+      const [sx, sz] = axis === 'z' ? [2.6, len] : [len, 2.6];
+      k.box(sx + 0.4, 0.26, sz + 0.4, '#e4dccb', { position: [x, 0.13, z] });
+      k.box(sx, 0.3, sz, '#7fb85a', { position: [x, 0.16, z], pattern: Pattern.Grass });
+      for (let q = p0 + 8; q < p1 - 4; q += 24) {
+        const [px, pz] = axis === 'z' ? [at, q] : [q, at];
+        if (inStuntLane(px, pz, 1)) continue;
+        this.inst(`mpalm${Math.abs(Math.round(q)) % 3}`, () => buildPalm(new Random(40 + (Math.abs(Math.round(q)) % 3))), px, pz, (q * 0.37) % 6, 0.3);
+        this.world.circle(px, pz, 0.7);
+      }
+    }
+    if (!k.isEmpty) this.merge(k.build(0), 0, 0);
+  }
+
+  /** The ring road, the coast highway and the roads that join them to the grid. */
+  private buildOuterRoads(): void {
+    const k = new ModelKit();
+    const dash = (): THREE.BufferGeometry => new ModelKit().box(0.3, 0.02, 3.5, '#f6f0e4', { position: [0, 0.08, 0] }).build(0);
+    for (const [x1, z1, x2, z2, w] of OUTER_ROADS) {
+      const alongZ = x1 === x2;
+      const len = Math.abs(alongZ ? z2 - z1 : x2 - x1);
+      const cx = (x1 + x2) / 2;
+      const cz = (z1 + z2) / 2;
+      // Run the asphalt half a width past each end so corners and joins are filled.
+      k.box(alongZ ? w : len + w, 0.065, alongZ ? len + w : w, '#5d5a66', { position: [cx, 0.032, cz] });
+      for (const s of [-1, 1]) k.box(alongZ ? 1.2 : len, 0.14, alongZ ? len : 1.2, '#e4dccb', { position: [cx + (alongZ ? s * (w / 2 + 0.6) : 0), 0.07, cz + (alongZ ? 0 : s * (w / 2 + 0.6))] });
+      const lanes = w === WIDE ? [-7, 7] : [0];
+      const lo = Math.min(alongZ ? z1 : x1, alongZ ? z2 : x2);
+      for (let q = lo + 10; q < lo + len - 6; q += 12) for (const o of lanes) this.inst('dash', dash, alongZ ? x1 + o : q, alongZ ? q : z1 + o, alongZ ? 0 : Math.PI / 2, 0, 1, false);
+      if (w === WIDE) this.median(alongZ ? x1 : z1, lo, lo + len, alongZ ? 'z' : 'x', alongZ ? [] : [[RING.minX, RING.w], [RING.maxX, RING.w]]);
+      // Lamps every 48 m on one side; boost pads on the long straights.
+      for (let q = lo + 24; q < lo + len - 12; q += 48) {
+        const lx = alongZ ? x1 + (w / 2 + 2.4) : q;
+        const lz = alongZ ? q : z1 - (w / 2 + 2.4);
+        this.inst('lamp', () => buildLamp(new Random(3)), lx, lz, alongZ ? -Math.PI / 2 : 0);
+        this.world.circle(lx, lz, 0.3);
+      }
+      if (len > 1000) for (const t of [0.3, 0.7]) {
+        const q = lo + len * t;
+        const px = alongZ ? x1 - 4 : q;
+        const pz = alongZ ? q : z1 + 4;
+        this.world.pads.push({ x: px, z: pz, r: 2.8 });
+        this.inst('pad', padGeo, px, pz, alongZ ? 0 : Math.PI / 2, 0, 1, false);
+      }
+    }
+    this.merge(k.build(0), 0, 0);
+    this.places.push(
+      { id: 'ringnorth', name: 'the northern ring road', x: 0, z: RING.minZ },
+      { id: 'coasthighway', name: 'the coast highway', x: RING.maxX - 60, z: 480 },
+    );
+  }
+
+  /** Country between the grid and the ring: paddy fields, coconut groves, a roadside stall. */
+  private buildCountryside(): void {
+    const rnd = new Random(8_2026);
+    const onRoad = (x: number, z: number, pad: number): boolean =>
+      OUTER_ROADS.some(([x1, z1, x2, z2, w]) => x >= Math.min(x1, x2) - w / 2 - pad && x <= Math.max(x1, x2) + w / 2 + pad && z >= Math.min(z1, z2) - w / 2 - pad && z <= Math.max(z1, z2) + w / 2 + pad);
+    // Paddy fields in the west and east bands.
+    const paddy = (): THREE.BufferGeometry => new ModelKit().box(34, 0.5, 30, '#7a6a4a', { position: [0, 0.25, 0] }).box(32.6, 0.12, 28.6, '#8fc0b0', { position: [0, 0.5, 0], pattern: Pattern.Glass }).box(30, 0.3, 26, '#7fbf4a', { position: [0, 0.62, 0], pattern: Pattern.Grass }).build(0);
+    for (const side of [-1, 1]) for (let z = -520; z < 440; z += 38) {
+      if (Math.abs(z + 100) < 30) continue; // the Baseline Road
+      const x = side * 685;
+      if (!onRoad(x, z, 3)) this.inst('paddy', paddy, x, z, 0, 0, 1, false);
+    }
+    // Coconut palms along the ring road, both sides.
+    const palm = (i: number): THREE.BufferGeometry => buildPalm(new Random(60 + i));
+    for (const [x1, z1, x2, z2, w] of OUTER_ROADS) {
+      if (w !== RING.w) continue;
+      const alongZ = x1 === x2;
+      const lo = Math.min(alongZ ? z1 : x1, alongZ ? z2 : x2);
+      const hi = Math.max(alongZ ? z1 : x1, alongZ ? z2 : x2);
+      for (let q = lo + 14; q < hi - 10; q += rnd.range(14, 26)) for (const s of [-1, 1]) {
+        const off = s * (w / 2 + rnd.range(5, 14));
+        const x = alongZ ? x1 + off : q;
+        const z = alongZ ? q : z1 + off;
+        if (onRoad(x, z, 2) || Math.abs(x) > RING.maxX + 25 || z < RING.minZ - 25) continue;
+        const i = Math.floor(rnd.next() * 3);
+        this.inst(`cpalm${i}`, () => palm(i), x, z, rnd.range(0, 6));
+        this.world.circle(x, z, 0.7);
+      }
+    }
+    // A king-coconut stall with tuk-tuks at the Baseline Road junction on each side.
+    for (const side of [-1, 1]) {
+      const x = side * (RING.maxX - 26);
+      const z = -100 - 26;
+      this.inst('foodcart', () => buildFoodCart(new Random(2)), x, z, side > 0 ? -Math.PI / 2 : Math.PI / 2);
+      this.world.box(x, z, 0.8, 1.4);
+      this.inst('tuktuk0', () => buildTukTukProp('#2f8f86'), x + side * 5, z - 6, 0);
+    }
+    this.places.push({ id: 'paddies', name: 'the paddy fields', x: -685, z: 200 });
   }
 
   // ————— city blocks —————
@@ -266,10 +421,10 @@ export class City implements FreeRoamArea {
     const houses = Array.from({ length: 14 }, (_, i) => buildHouse(new Random(900 + i), WALLS[i % WALLS.length], (['townhouse', 'narrow', 'shop', 'townhouse', 'wooden', 'colonial'] as const)[i % 6]));
     for (let i = 0; i < CITY_X.length - 1; i++) {
       for (let j = 0; j < CITY_Z.length - 1; j++) {
-        const x0 = CITY_X[i] + ROAD / 2 + 4;
-        const x1 = CITY_X[i + 1] - ROAD / 2 - 4;
-        const z0 = CITY_Z[j] + ROAD / 2 + 4;
-        const z1 = CITY_Z[j + 1] - ROAD / 2 - 4;
+        const x0 = CITY_X[i] + roadWidthX(CITY_X[i]) / 2 + 4;
+        const x1 = CITY_X[i + 1] - roadWidthX(CITY_X[i + 1]) / 2 - 4;
+        const z0 = CITY_Z[j] + roadWidthZ(CITY_Z[j]) / 2 + 4;
+        const z1 = CITY_Z[j + 1] - roadWidthZ(CITY_Z[j + 1]) / 2 - 4;
         const cx = (x0 + x1) / 2;
         const cz = (z0 + z1) / 2;
         const region = this.region(cx, cz);
@@ -401,6 +556,7 @@ export class City implements FreeRoamArea {
       const x = rnd.range(x0 + 4, x1 - 4);
       const z = rnd.range(z0 + 4, z1 - 4);
       if (Math.hypot(x - 500, z + 300) < 80) continue; // not in the lake
+      if (inStuntLane(x, z, 1.5)) continue; // keep jump run-ups and landings clear
       const kind = k % 5;
       if (kind === 0) this.inst('cypress', () => buildCypress(new Random(11)), x, z, 0);
       else if (kind === 1) this.inst('flowerbush', () => buildFlowerBush(new Random(12)), x, z, rnd.range(0, 6));
@@ -416,7 +572,7 @@ export class City implements FreeRoamArea {
 
   private buildBeach(): void {
     const rnd = this.rnd;
-    for (let x = -600; x <= 600; x += 22) {
+    for (let x = RING.minX + 20; x <= RING.maxX - 20; x += 22) {
       this.inst(`palm${Math.abs(x) % 3}`, () => buildPalm(new Random(30 + (Math.abs(x) % 3))), x + rnd.range(-5, 5), 500 + rnd.range(0, 30), rnd.range(0, 6));
       if (rnd.chance(0.3)) this.inst('cabana', () => buildCabana(new Random(2)), x + 8, 528, Math.PI);
     }
@@ -439,10 +595,16 @@ export class City implements FreeRoamArea {
   private buildHills(): void {
     const rnd = this.rnd;
     for (let x = -660; x <= 660; x += 90) {
-      const hill = buildHill(rnd, rnd.range(55, 80), rnd.range(35, 70), rnd.chance(0.6) ? 'tea' : 'jungle');
-      this.merge(hill, x + rnd.range(-20, 20), -640 - rnd.range(0, 40));
+      const r = rnd.range(55, 72);
+      const hx = x + rnd.range(-20, 20);
+      const hz = -660 - rnd.range(0, 20);
+      // Leave the two hill roads to the ring clear.
+      if (Math.abs(hx + 460) < r + 12 || Math.abs(hx - 380) < r + 12) continue;
+      const hill = buildHill(rnd, r, rnd.range(35, 70), rnd.chance(0.6) ? 'tea' : 'jungle');
+      this.merge(hill, hx, hz);
+      this.world.circle(hx, hz, r * 0.8);
     }
-    this.world.bounds.minZ = -600;
+    this.world.bounds.minZ = RING.minZ - 30;
   }
 
   private buildLandmarks(): void {
@@ -507,7 +669,7 @@ export class City implements FreeRoamArea {
     secrets.forEach(([x, z, y, hint], i) => this.secrets.push({ id: `city-secret-${i}`, x, z, y, hint }));
     const chestSpots: [number, number, 0 | 1 | 2 | 3][] = [
       [-40, 470, 0], [200, -300, 0], [-380, 260, 1], [560, -120, 1], [-250, -480, 0], [420, 300, 1], [-600, -300, 2], [600, 100, 2],
-      [100, -540, 1], [-160, -115, 3], [330, 480, 0], [-460, -40, 0], [250, 90, 1], [0, -420, 2], [480, 460, 3], [-600, 420, 1], [-611, -150, 1], [-540, 12, 0],
+      [100, -540, 1], [-160, -115, 3], [330, 487, 0], [-460, -40, 0], [250, 90, 1], [0, -420, 2], [480, 460, 3], [-600, 420, 1], [-611, -150, 1], [-540, 12, 0],
     ];
     chestSpots.forEach(([x, z, tier], i) => this.chests.push({ id: `city-chest-${i}`, x, z, tier }));
     for (const s of this.secrets) {
@@ -562,7 +724,7 @@ export class City implements FreeRoamArea {
       this.merge(gate.build(0.02), gx, 425);
       for (const s of [-1, 1]) this.world.circle(gx + s * 8, 425, 0.9);
     }
-    this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -93, z: 487, r: 4, colour: '#f6f0e4' });
+    this.zones.push({ kind: 'launch', label: '✈ Paper plane', x: -93, z: 506, r: 4, colour: '#f6f0e4' });
     this.murals.push(...addMuralBoards(this, 'city', this.spawn));
     this.pockets.push(...addPockets(this));
     for (const z of [...zones, ...this.zones.splice(0)]) {
@@ -591,6 +753,8 @@ export class City implements FreeRoamArea {
       [-620, 620, -560, 480, 5],
       [140, 380, -460, 140, 2],
       [-340, 260, 140, 380, 3],
+      // Round the ring road and back along the coast highway.
+      [RING.minX, RING.maxX, RING.minZ, RING.maxZ, 7],
     ];
     const bodies = VEHICLES.filter((v) => v.id !== 'scooter');
     for (const [x0, x1, z0, z1, n] of loops) {
@@ -626,10 +790,12 @@ export class City implements FreeRoamArea {
   /** A point on a downtown or old-town pavement. */
   private pavementSpot(rnd: Random): { x: number; z: number } {
     if (rnd.chance(0.5)) {
-      const x = CITY_X[1 + rnd.int(0, 6)] + rnd.pick([-1, 1]) * (ROAD / 2 + 1.5);
+      const cx = CITY_X[1 + rnd.int(0, 6)];
+      const x = cx + rnd.pick([-1, 1]) * (roadWidthX(cx) / 2 + 1.5);
       return { x, z: rnd.range(-440, 130) };
     }
-    const z = CITY_Z[1 + rnd.int(0, 5)] + rnd.pick([-1, 1]) * (ROAD / 2 + 1.5);
+    const cz = CITY_Z[1 + rnd.int(0, 5)];
+    const z = cz + rnd.pick([-1, 1]) * (roadWidthZ(cz) / 2 + 1.5);
     return { x: rnd.range(-440, 370), z };
   }
 
@@ -670,12 +836,13 @@ export class City implements FreeRoamArea {
 
   mapInfo(paint: (districtId: string) => number): MapInfo {
     const roads: MapInfo['roads'] = [];
-    for (const x of CITY_X) roads.push({ x1: x, z1: CITY_Z[0], x2: x, z2: CITY_Z[CITY_Z.length - 1], w: ROAD });
-    for (const z of CITY_Z) roads.push({ x1: CITY_X[0], z1: z, x2: CITY_X[CITY_X.length - 1], z2: z, w: ROAD });
+    for (const x of CITY_X) roads.push({ x1: x, z1: CITY_Z[0], x2: x, z2: CITY_Z[CITY_Z.length - 1], w: roadWidthX(x) });
+    for (const z of CITY_Z) roads.push({ x1: CITY_X[0], z1: z, x2: CITY_X[CITY_X.length - 1], z2: z, w: roadWidthZ(z) });
+    for (const [x1, z1, x2, z2, w] of OUTER_ROADS) roads.push({ x1, z1, x2, z2, w });
     return {
       id: this.id,
       name: t('city.name'),
-      bounds: { minX: -660, maxX: 660, minZ: -640, maxZ: 660 },
+      bounds: { minX: RING.minX - 40, maxX: RING.maxX + 40, minZ: RING.minZ - 40, maxZ: 660 },
       regions: this.districts.map((d) => ({ id: d.id, name: d.name, rect: d.rect, colour: d.colour, paint: paint(d.id) })),
       roads,
       water: [{ x: 500, z: -300, r: 70 }],
@@ -775,3 +942,9 @@ const potGeo = (): THREE.BufferGeometry => (_pot ??= buildPaintPot());
 const _chests: THREE.BufferGeometry[] = [];
 const chestGeo = (tier: number): THREE.BufferGeometry => (_chests[tier] ??= buildChest(tier));
 const _up = new THREE.Vector3(0, 1, 0);
+const padGeo = (): THREE.BufferGeometry =>
+  new ModelKit()
+    .box(4.5, 0.08, 6, '#3e9fd8', { position: [0, 0.1, 0], nightGlow: 1 })
+    .box(1, 0.1, 3, '#f6f0e4', { position: [-0.7, 0.14, 0], rotation: [0, 0.6, 0], nightGlow: 1 })
+    .box(1, 0.1, 3, '#f6f0e4', { position: [0.7, 0.14, 0], rotation: [0, -0.6, 0], nightGlow: 1 })
+    .build(0);
