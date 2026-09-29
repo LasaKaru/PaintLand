@@ -308,3 +308,23 @@ describe('crowd density and stand-ins', () => {
     for (const w of built) expect(Math.abs(w.s - s)).toBeLessThanOrEqual(Population.FULL_MODEL + 1);
   });
 });
+
+describe('changing the crowd setting mid-game', () => {
+  it('someone benched leaves any game or taxi wave they were in', () => {
+    const world = new FreeWorld({ minX: -80, maxX: 80, minZ: -80, maxZ: 80 });
+    const life = new TownLife((r) => ({ x: r.range(-50, 50), z: r.range(-50, 50) }), new Random(31));
+    const r = new Random(32);
+    for (let i = 0; i < 10; i++) {
+      const look = personOf('lanka', () => r.next(), { age: 'child' }).look;
+      life.add(new HumanModel(look), look, r.range(-50, 50), r.range(-50, 50));
+    }
+    life.setDensity(1);
+    const last = life.people[9];
+    life.startTag([last], 60);
+    life.setDensity(0.5);
+    expect(last.benched).toBe(true);
+    expect(last.act).toBe('stroll');
+    life.update(1 / 30, 0, { x: 0, z: 0 }, world);
+    expect(last.model.root.visible).toBe(false);
+  });
+});

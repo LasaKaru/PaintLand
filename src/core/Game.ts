@@ -3396,6 +3396,8 @@ export class Game {
     if (this.area?.id === areaId) return;
     this.freeMissions.cancel();
     this.endTaxi(false);
+    this.endCricket();
+    this.street = null;
     this.splash = 1;
     this.audio.whoosh();
     // Arrive at the road back to where we came from, pointing into the new area.
@@ -3412,6 +3414,8 @@ export class Game {
   /** Hide the area and show the chapter world again (portals, menu, play). */
   private leaveHub(): void {
     this.endTaxi(false);
+    this.endCricket();
+    this.street = null;
     if (!this.inHub) return;
     this.inHub = false;
     this.stopFlight();
@@ -3582,7 +3586,13 @@ export class Game {
       else if (e.kind === 'say') this.hud.tip(t(e.key), 4, '🚕');
     }
     if (this.taxi.fare) {
-      this.taxi.fare.person.model.animate(dt, 'sit', 0, this.time);
+      // Swapped vehicles in the garage mid-ride: the passenger moves to the new back seat.
+      const m = this.taxi.fare.person.model;
+      if (m.root.parent !== this.vehicle.seat) {
+        this.vehicle.seat.add(m.root);
+        m.root.position.set(0, -0.45, 0.85);
+      }
+      m.animate(dt, 'sit', 0, this.time);
       this.taxiStop = this.taxi.atDestination(car) ? this.taxiStop + dt : 0;
       if (this.taxiStop > 0.6) this.endTaxi(true);
     }
@@ -3708,7 +3718,7 @@ export class Game {
     const me = { x: this.hubWalker.x, z: this.hubWalker.z };
     // Games are played on foot, in this town.
     const kids = sg.kind === 'tag' ? sg.kids : [sg.kid];
-    if (this.mode !== 'foot' || !kids.every((k) => life.people.includes(k))) {
+    if (this.mode !== 'foot' || !kids.every((k) => life.people.includes(k) && !k.benched)) {
       this.street = null;
       return;
     }

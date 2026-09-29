@@ -243,6 +243,11 @@ export class TownLife {
       if (p.benched && !was) {
         this.leave(p);
         p.model.root.visible = false;
+        // Out of any game or taxi wave they were in.
+        if (p.act === 'hail' || p.act === 'flee' || p.act === 'hide' || p.act === 'chat' || p.act === 'greet') {
+          p.act = 'stroll';
+          p.t = 1;
+        }
       }
     });
   }

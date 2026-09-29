@@ -152,7 +152,7 @@ export class Taxi {
     }
     this.lastV = car.v;
     // The one waving gave up (or walked off).
-    if (this.hail && this.hail.act !== 'hail') this.hail = null;
+    if (this.hail && (this.hail.act !== 'hail' || this.hail.benched)) this.hail = null;
     if (!allowed || f) return out;
     this.cool -= dt;
     if (!this.hail && this.cool <= 0 && Math.abs(car.v) > 1) {
