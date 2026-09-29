@@ -44,6 +44,13 @@ export const TOUR_STAMPS: TourStamp[] = [
     hex: '#b8322a',
     note: 'Driving on the Great Wall, eye to eye with the terracotta army, pandas in the bamboo, mountains floating in the mist, and red sails on Victoria Harbour.',
   },
+  {
+    chapter: 'korea',
+    country: 'Korea',
+    flag: '🇰🇷',
+    hex: '#2f5aa8',
+    note: 'Palace gates and hanok roofs, dancing screens in Gangnam, a mountain on fire with maples, a hillside of painted houses, and tangerines on a volcanic island.',
+  },
 ];
 
 /** Ink for a first stamp. */

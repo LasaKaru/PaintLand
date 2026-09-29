@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (88 districts)
+## 4 · Chapter themes (98 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -419,6 +419,20 @@ Each district tune is 48 steps long (six phrases), so these can be 2–3 minute 
 | Suzhou | pingtan ballad, pipa and sanxian, soft and ornamented, garden canals |
 | Shanghai | 1930s Shanghai jazz, big band with erhu, glamorous night |
 | Hong Kong | Cantopop, synths and strings, neon city night, big finale |
+
+### 4.13 Grand Tour · Korea (Book 2). Chapter style: *Korean road trip, gayageum, haegeum, daegeum flute, janggu drum, pentatonic, bright, 100 bpm, instrumental*
+| District | Add |
+|---|---|
+| Seoul | Arirang-coloured waltz, gayageum and strings, palace morning |
+| Gangnam | K-pop dance track, big synths, 808 bass, hooky, 128 bpm |
+| Suwon | daechwita royal procession, nabal horns, taepyeongso shawm, big drums |
+| Seoraksan | gyemyeonjo sanjo, haegeum bending notes, autumn wind, temple bell |
+| Andong | talchum mask dance, janggu and kkwaenggwari gongs, playful |
+| Gyeongju | ancient and calm, geomungo zither, soft chimes, Silla dusk |
+| Boseong | gentle folk, daegeum flute, green tea hills, morning dew |
+| Gamcheon | bright acoustic pop, ukulele and whistle, a colourful hillside |
+| Haeundae | summer city pop, surf guitar, beach at dusk |
+| Jeju | island song, sea waves, haenyeo divers' whistles, warm finale |
 
 ---
 
