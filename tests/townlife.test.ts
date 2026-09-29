@@ -35,7 +35,7 @@ function simulate(seconds: number, greetings: HumanPose[] = ['wave']): { life: T
       expect(Number.isFinite(p.body.x) && Number.isFinite(p.body.z)).toBe(true);
     }
     // Only speakers get a bubble, and no more than a handful at once.
-    const bubbles = life.group.children.filter((c) => c.visible);
+    const bubbles = life.group.children.filter((c) => c.visible && c.name === 'speech-bubble');
     expect(bubbles.length).toBeLessThanOrEqual(8);
   }
   return { life, seen };
@@ -252,5 +252,59 @@ describe('a day in town', () => {
       expect(buskers.length, A.name).toBeGreaterThan(0);
       for (const b of buskers) expect(area.world.resolve({ x: b.pitch!.x, z: b.pitch!.z }, 0.4), `${A.name} ${b.pitch!.x},${b.pitch!.z}`).toBeNull();
     }
+  });
+});
+
+describe('crowd density and stand-ins', () => {
+  const world = new FreeWorld({ minX: -300, maxX: 300, minZ: -300, maxZ: 300 });
+  const make = (): TownLife => {
+    const life = new TownLife((r) => ({ x: r.range(-200, 200), z: r.range(-200, 200) }), new Random(21));
+    const r = new Random(22);
+    for (let i = 0; i < 20; i++) {
+      const look = personOf('lanka', () => r.next()).look;
+      life.add(new HumanModel(look), look, r.range(-200, 200), r.range(-200, 200));
+    }
+    life.factory = (q) => {
+      const look = personOf('lanka', () => q.next()).look;
+      return { model: new HumanModel(look), look };
+    };
+    return life;
+  };
+
+  it('Few benches some people; Busy brings more out', () => {
+    const life = make();
+    life.setDensity(0.5);
+    expect(life.people.filter((p) => !p.benched).length).toBe(10);
+    life.update(1 / 30, 0, { x: 0, z: 0 }, world);
+    expect(life.people.filter((p) => p.benched).every((p) => !p.model.root.visible)).toBe(true);
+    life.setDensity(2.5);
+    expect(life.people.filter((p) => !p.benched).length).toBe(50);
+    life.setDensity(1);
+    expect(life.people.filter((p) => !p.benched).length).toBe(20);
+  });
+
+  it('far-away people are cheap stand-ins, close ones full models', () => {
+    const life = make();
+    life.setDensity(2.5);
+    life.update(1 / 30, 0, { x: 0, z: 0 }, world);
+    const far = life.people.filter((p) => !p.benched && Math.hypot(p.body.x, p.body.z) > 60);
+    const near = life.people.filter((p) => !p.benched && Math.hypot(p.body.x, p.body.z) < 50);
+    expect(far.length).toBeGreaterThan(10);
+    expect(life.standIns.count).toBe(far.length);
+    for (const p of far) expect(p.model.root.visible).toBe(false);
+    for (const p of near) expect(p.model.root.visible).toBe(true);
+  });
+
+  it('chapter roads: busier routes at Busy, and stand-ins beyond the full-model range', () => {
+    const c = chapterById('serendib');
+    Population.density = 2.5;
+    const busy = new Population(c.buildRoute(), c.id, c.districts.map((d) => d.id));
+    Population.density = 1;
+    const normal = new Population(c.buildRoute(), c.id, c.districts.map((d) => d.id));
+    expect(busy.walkers.length).toBeGreaterThan(normal.walkers.length * 1.8);
+    const s = busy.walkers[10].s;
+    busy.update(1 / 30, 0, s, 0, 1);
+    const built = busy.walkers.filter((w) => w.model && w.model.root.visible);
+    for (const w of built) expect(Math.abs(w.s - s)).toBeLessThanOrEqual(Population.FULL_MODEL + 1);
   });
 });

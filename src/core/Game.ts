@@ -1,3 +1,4 @@
+import { Population } from '../gameplay/Population';
 import { addSketch, eat, fedBonus, fedMinutes, FOOD_PRICE, FOOD_STALLS, nextSouvenir, SOUVENIRS, type SouvenirId } from '../gameplay/Bazaar';
 import { CricketMatch } from '../gameplay/Cricket';
 import { buildBat, type CricketPitch } from '../world/StreetFun';
@@ -1598,6 +1599,8 @@ export class Game {
   }
 
   private applySettings(): void {
+    // Crowds on chapter roads are set when a route is built (towns change straight away).
+    Population.density = this.settings.crowdDensity;
     const s = this.settings;
     if (this.rig) {
       this.rig.baseFov = s.fov;
@@ -5082,6 +5085,7 @@ export class Game {
     waterUniforms.uTime.value = this.time;
     const player = this.flight ? { x: this.glider.x, z: this.glider.z } : this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : { x: this.hubCar.x, z: this.hubCar.z };
     if (area.life) {
+      if (area.life.density !== this.settings.crowdDensity) area.life.setDensity(this.settings.crowdDensity);
       const radioOn = this.audio.radioOn;
       area.life.env = {
         hour: this.env.hour,

@@ -1219,5 +1219,10 @@ const pl: Locale = {
   'sketch.count': "Zapełniono {n} z {total} stron",
   'sketch.how': "Porozmawiaj z kimś w mieście, potem naciśnij E jeszcze raz, by narysować portret.",
   'sketch.of': "Portret z miejsca {town}",
+  'set.crowds': "Tłumy",
+  'crowd.few': "Mało",
+  'crowd.normal': "Normalnie",
+  'crowd.busy': "Tłoczno",
+  'crowd.hint': "Ilu ludzi jest w miastach i przy drogach. Dalekie postacie rysujemy prosto, by wszystko działało płynnie. Drogi zmienią się przy następnym wyjeździe.",
 };
 export default pl;

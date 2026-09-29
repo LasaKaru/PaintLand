@@ -4,6 +4,7 @@ import type { Carry, HumanLook, HumanModel, HumanPose } from '../models/Human';
 import { ModelKit } from '../models/ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
 import type { Random } from '../core/Random';
+import { StandIns, STAND_IN_FAR } from './StandIns';
 
 /** What a townsperson is doing right now. */
 export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk' | 'hail' | 'ride' | 'flee' | 'hide';
@@ -44,6 +45,8 @@ export interface TownPerson {
   pitch: { x: number; z: number; heading: number } | null;
   /** Where the model lives in the scene while walking (it moves into the car for a taxi ride). */
   parent: THREE.Object3D | null;
+  /** Not out today (the crowd setting is lower than the town's full cast). */
+  benched: boolean;
 }
 
 /** The world around the town this frame (set by the game before update). */
@@ -142,6 +145,17 @@ export class TownLife {
   /** The hour, weather and the player's car, set each frame by the game. */
   env: TownEnv = { hour: 12, rain: 0, car: null, onFoot: true, bpm: 96 };
   private carStill = 0;
+  /** Crowd setting: 0.5 few, 1 normal, 2.5 busy (Settings → Graphics). */
+  density = 1;
+  /** Makes an extra townsperson for a busier crowd (set by the town). */
+  factory: ((r: Random) => { model: HumanModel; look: HumanLook }) | null = null;
+  private baseCount = -1;
+  /** Far-away people, drawn cheaply. */
+  readonly standIns = new StandIns();
+  private readonly m4 = new THREE.Matrix4();
+  private readonly q4 = new THREE.Quaternion();
+  private readonly v4 = new THREE.Vector3();
+  private readonly s4 = new THREE.Vector3();
   private readonly bubbles: THREE.Mesh[] = [];
   private readonly greetings: HumanPose[];
   private readonly pace: number;
@@ -152,6 +166,7 @@ export class TownLife {
     private readonly opts: TownLifeOptions = {},
   ) {
     this.group.name = 'town-life';
+    this.group.add(this.standIns.group);
     this.greetings = opts.greetings?.length ? opts.greetings : ['wave'];
     this.pace = opts.pace ?? 0.45;
   }
@@ -180,6 +195,7 @@ export class TownLife {
       instrument: null,
       pitch: null,
       parent: null,
+      benched: false,
     };
     this.people.push(p);
     return p;
@@ -205,6 +221,28 @@ export class TownLife {
         if (!world.resolve({ ...q }, 0.6)) return q;
       }
     return { x, z };
+  }
+
+  /** Few, normal or busy: bench some of the town's people, or bring more out (made by `factory`). */
+  setDensity(d: number): void {
+    this.density = d;
+    const cast = () => this.people.filter((p) => p.act !== 'busk');
+    if (this.baseCount < 0) this.baseCount = cast().length;
+    const target = Math.max(2, Math.round(this.baseCount * d));
+    while (this.factory && cast().length < target) {
+      const { model, look } = this.factory(this.rnd);
+      const at = this.spot(this.rnd);
+      this.group.add(model.root);
+      this.add(model, look, at.x, at.z);
+    }
+    cast().forEach((p, i) => {
+      const was = p.benched;
+      p.benched = i >= target && p.act !== 'ride';
+      if (p.benched && !was) {
+        this.leave(p);
+        p.model.root.visible = false;
+      }
+    });
   }
 
   /** The nearest person the player could talk to (a busker too), or null. */
@@ -324,7 +362,7 @@ export class TownLife {
     let people = 0;
     let talk = 0;
     for (const p of this.people) {
-      if (p.act === 'away' || !p.model.root.visible) continue;
+      if (p.act === 'away' || p.act === 'ride' || p.benched) continue;
       const d = Math.hypot(p.body.x - x, p.body.z - z);
       if (d > 22) continue;
       const w = 1 - d / 22;
@@ -375,7 +413,7 @@ export class TownLife {
     let best: TownPerson | null = null;
     let bestD = 30;
     for (const q of this.people) {
-      if (q === p || q.other || (q.act !== 'stroll' && q.act !== 'pause')) continue;
+      if (q === p || q.other || q.benched || (q.act !== 'stroll' && q.act !== 'pause')) continue;
       const d = Math.hypot(q.body.x - p.body.x, q.body.z - p.body.z);
       if (d < bestD) {
         best = q;
@@ -430,10 +468,12 @@ export class TownLife {
     const wet = env.rain > 0.3;
     const sunny = env.rain < 0.1 && env.hour >= 10 && env.hour < 16;
     const dark = env.hour >= 19 || env.hour < 6;
+    this.standIns.begin();
     for (const p of this.people) {
       const pd = Math.hypot(player.x - p.body.x, player.z - p.body.z);
       // Riding in the player's taxi: the game looks after the model.
       if (p.act === 'ride') continue;
+      if (p.benched) continue;
       // At home: come back out (somewhere the player isn't looking) when the day starts.
       if (p.act === 'away') {
         p.model.root.visible = false;
@@ -519,7 +559,7 @@ export class TownLife {
           // Say hello to someone you pass.
           if (p.act === 'stroll' && p.cool <= 0) {
             p.cool = 2;
-            const q = this.people.find((o) => o !== p && !o.other && o.act === 'stroll' && Math.hypot(o.body.x - b.x, o.body.z - b.z) < 3);
+            const q = this.people.find((o) => o !== p && !o.other && !o.benched && o.act === 'stroll' && Math.hypot(o.body.x - b.x, o.body.z - b.z) < 3);
             if (q && rnd.chance(0.35)) {
               const greet = rnd.pick(this.greetings);
               for (const [a, o] of [[p, q], [q, p]] as const) {
@@ -728,10 +768,21 @@ export class TownLife {
       }
       if (p.kind === 'wheels' && (p.pose === 'sitdown' || p.pose === 'stretch')) p.pose = 'idle';
       if (p.act === 'dodge' && p.kind === 'adult' && p.pose === 'walk') p.pose = 'run';
+      if (pd > STAND_IN_FAR && p.model.root.visible && p.act !== 'busk') {
+        // Far away: a cheap stand-in (bobbing along when walking) instead of the full model.
+        p.model.root.visible = false;
+        const bob = p.pose === 'walk' || p.pose === 'run' ? Math.abs(Math.sin(time * 8 + p.temper * 20)) * 0.05 : 0;
+        const h = p.model.look.height ?? 1;
+        this.m4.compose(this.v4.set(b.x, b.y + bob, b.z), this.q4.setFromAxisAngle(_up, b.heading), this.s4.set(h * (p.model.look.build ?? 1), h, h * (p.model.look.build ?? 1)));
+        const l = p.model.look;
+        this.standIns.add(this.m4, l.top, l.skin, l.hat === 'hijab' || l.hat === 'turban' ? l.scarf ?? l.top : l.hair);
+        continue;
+      }
       p.model.root.position.set(b.x, b.y, b.z);
       p.model.root.rotation.y = b.heading;
       p.model.animate(dt, p.pose, b.speed, time);
     }
+    this.standIns.end();
     for (let i = bubble; i < this.bubbles.length; i++) this.bubbles[i].visible = false;
   }
 
@@ -763,3 +814,5 @@ export function speechBubble(): THREE.Mesh {
   m.name = 'speech-bubble';
   return m;
 }
+
+const _up = new THREE.Vector3(0, 1, 0);

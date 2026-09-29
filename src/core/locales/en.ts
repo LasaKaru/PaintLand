@@ -1217,6 +1217,11 @@ const en = {
   'sketch.count': "{n} of {total} pages filled",
   'sketch.how': "Talk to someone in town, then press E again to sketch their portrait.",
   'sketch.of': "A portrait from {town}",
+  'set.crowds': "Crowds",
+  'crowd.few': "Few",
+  'crowd.normal': "Normal",
+  'crowd.busy': "Busy",
+  'crowd.hint': "How many people are out in towns and along the roads. Far-away people are drawn simply to keep things smooth. Roads change the next time you set off.",
 } as const;
 
 export default en;

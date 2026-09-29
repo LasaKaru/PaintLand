@@ -5,6 +5,7 @@ import { HumanModel, DEFAULT_HUMAN_LOOK, type HumanLook, type HumanPose } from '
 import { personOf, regionFor, type RegionId } from '../world/Peoples';
 import { AnimalModel, COATS, type AnimalPose, type Species } from '../models/Animals';
 import { kindOf, presence, speechBubble, type Kind } from '../world/TownLife';
+import { StandIns } from '../world/StandIns';
 import { VEHICLES, VehicleModel, tuningFor } from '../models/Vehicles';
 import { RoverController } from './RoverController';
 import { Autopilot } from './Autopilot';
@@ -134,11 +135,18 @@ export class Population {
   /** The hour and the rain, set by the game each frame (umbrellas, lanterns, quiet nights). */
   env = { hour: 12, rain: 0 };
 
-  /** Most pedestrians on one route (their models are built only when near). */
+  /** Most pedestrians on one route at the normal crowd setting (their models are built only when near). */
   static readonly MAX_WALKERS = 110;
+  /** Crowd setting (Settings → Graphics → Crowds), used when a route is built. */
+  static density = 1;
+  /** Beyond this distance along the road, people are drawn as cheap stand-ins. */
+  static readonly FULL_MODEL = 60;
+  private readonly standIns = new StandIns(96);
+  private readonly dummy = new THREE.Object3D();
 
   constructor(private readonly path: RoadPath, private readonly chapterId: string, private readonly districtIds: string[] = []) {
     this.group.name = 'population';
+    this.group.add(this.standIns.group);
     const rnd = new Random(hashString(chapterId + ':people'));
     const r = () => rnd.next();
     // Pedestrians in every district, dressed as the people who live there: people on their own,
@@ -146,8 +154,9 @@ export class Population {
     const spans = path.length > 0 ? this.districtSpans() : [];
     for (const sp of spans) {
       const region = regionFor(chapterId, districtIds[sp.district]);
-      const groups = Math.max(3, Math.min(9, Math.round((sp.end - sp.start) / 110)));
-      for (let g = 0; g < groups && this.walkers.length < Population.MAX_WALKERS - 1; g++) {
+      const d = Population.density;
+      const groups = Math.max(2, Math.round(Math.max(3, Math.min(9, Math.round((sp.end - sp.start) / 110))) * d));
+      for (let g = 0; g < groups && this.walkers.length < Math.round(Population.MAX_WALKERS * d) - 1; g++) {
         const s = sp.start + ((g + 0.2 + rnd.next() * 0.6) / groups) * (sp.end - sp.start);
         const side = rnd.chance(0.5) ? -1 : 1;
         const f = path.sample(Math.min(path.length - 1, Math.max(1, s)), this.frame);
@@ -370,6 +379,7 @@ export class Population {
     let bubbles = 0;
     const wet = this.env.rain > 0.3;
     const dark = this.env.hour >= 19 || this.env.hour < 6;
+    this.standIns.begin();
     for (const w of this.walkers) {
       // At night most people are at home (a family goes in together).
       const head = w.lead ?? w;
@@ -378,10 +388,26 @@ export class Population {
       const visible = Math.abs(w.s - focusS) < near && out;
       if (w.model) w.model.root.visible = visible;
       if (!visible) continue;
+      // Further off: a cheap stand-in walking along (the full model is built only when close).
+      if (Math.abs(w.s - focusS) > Population.FULL_MODEL) {
+        if (w.model) w.model.root.visible = false;
+        if (w.pause <= 0 && !w.lead) {
+          w.s += w.dir * w.speed * dt;
+          if (w.s > w.s1 || w.s < w.s0) w.dir = -w.dir;
+        } else if (w.pause > 0 && !w.lead) w.pause -= dt;
+        else if (w.lead) w.s = w.lead.s - w.lead.dir * 0.4;
+        this.place(this.dummy, w.s, w.x, 0.18, w.dir > 0 ? 0 : Math.PI);
+        const h = w.look.height ?? 1;
+        this.dummy.scale.set(h * (w.look.build ?? 1), h, h * (w.look.build ?? 1));
+        this.dummy.updateMatrix();
+        this.standIns.add(this.dummy.matrix, w.look.top, w.look.skin, w.look.hat === 'hijab' || w.look.hat === 'turban' ? w.look.scarf ?? w.look.top : w.look.hair);
+        continue;
+      }
       if (!w.model) {
         w.model = new HumanModel(w.look);
         this.group.add(w.model.root);
       }
+      w.model.root.visible = true;
       const playerClose = Math.abs(w.s - focusS) < 7 && Math.abs(w.x - focusX) < 6;
       const want = wet && w.temper < 0.75 && !w.jogger ? 'umbrella' : dark && w.temper > 0.55 ? 'lantern' : null;
       if (w.model.carry !== want) w.model.setCarry(want, UMBRELLAS[Math.floor(w.temper * 97) % UMBRELLAS.length]);
@@ -433,6 +459,7 @@ export class Population {
         bubbles++;
       }
     }
+    this.standIns.end();
     for (let i = bubbles; i < this.bubbles.length; i++) this.bubbles[i].visible = false;
     for (const a of this.animals) this.updateAnimal(a, dt, time, focusS, focusX);
     for (const g of this.givers) {

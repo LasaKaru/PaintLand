@@ -1219,5 +1219,10 @@ const vi: Locale = {
   'sketch.count': "Đã vẽ {n} / {total} trang",
   'sketch.how': "Nói chuyện với ai đó trong thị trấn, rồi nhấn E lần nữa để vẽ chân dung họ.",
   'sketch.of': "Một bức chân dung ở {town}",
+  'set.crowds': "Đám đông",
+  'crowd.few': "Ít",
+  'crowd.normal': "Bình thường",
+  'crowd.busy': "Đông vui",
+  'crowd.hint': "Có bao nhiêu người trong thị trấn và dọc đường. Người ở xa được vẽ đơn giản để giữ mượt mà. Đường sẽ thay đổi vào lần khởi hành tới.",
 };
 export default vi;

@@ -332,6 +332,11 @@ export class Village implements FreeRoamArea {
 
   private buildFolk(): void {
     this.group.add(this.life.group);
+    // More people for a busier crowd (Settings → Graphics → Crowds).
+    this.life.factory = (r) => {
+      const look = personOf('japan', () => r.next()).look;
+      return { model: new HumanModel(look), look };
+    };
     this.group.add(this.animals.group);
     {
       const r = new Random(8802);

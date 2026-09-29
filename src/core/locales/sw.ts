@@ -1219,5 +1219,10 @@ const sw: Locale = {
   'sketch.count': "Kurasa {n} kati ya {total} zimejaa",
   'sketch.how': "Ongea na mtu mjini, kisha bonyeza E tena kuchora picha yake.",
   'sketch.of': "Picha kutoka {town}",
+  'set.crowds': "Umati",
+  'crowd.few': "Wachache",
+  'crowd.normal': "Kawaida",
+  'crowd.busy': "Wengi",
+  'crowd.hint': "Watu wangapi wako mijini na kando ya barabara. Watu walio mbali huchorwa kwa urahisi ili mambo yaende laini. Barabara hubadilika utakapoanza safari tena.",
 };
 export default sw;

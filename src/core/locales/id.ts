@@ -1219,5 +1219,10 @@ const id: Locale = {
   'sketch.count': "{n} dari {total} halaman terisi",
   'sketch.how': "Bicaralah dengan seseorang di kota, lalu tekan E lagi untuk menggambar potretnya.",
   'sketch.of': "Potret dari {town}",
+  'set.crowds': "Keramaian",
+  'crowd.few': "Sedikit",
+  'crowd.normal': "Normal",
+  'crowd.busy': "Ramai",
+  'crowd.hint': "Berapa banyak orang di kota dan di sepanjang jalan. Orang yang jauh digambar sederhana agar tetap lancar. Jalan berubah saat kamu berangkat lagi.",
 };
 export default id;

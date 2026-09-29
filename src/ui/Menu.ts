@@ -924,6 +924,8 @@ export class Menu {
           ${this.choice('s.fpsCap', 'Frame rate limit', [[0, 'Off'], [30, '30'], [60, '60'], [120, '120']])}
           <h4>Distance</h4>
           ${this.slider('s.drawDistance', 'Draw distance', 1500, 6000, 100, (v) => `${(v / 1000).toFixed(1)} km`)}
+          ${this.choice('s.crowdDensity', t('set.crowds'), [[0.5, t('crowd.few')], [1, t('crowd.normal')], [2.5, t('crowd.busy')]])}
+          <p class="menu-hint">${t('crowd.hint')}</p>
           ${this.rendererSetting()}
         </div>
         <div>

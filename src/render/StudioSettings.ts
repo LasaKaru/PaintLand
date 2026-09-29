@@ -73,6 +73,8 @@ export interface StudioSettings {
   fxaa: boolean;
   hdr: boolean;
   drawDistance: number;
+  /** How many people are out: 0.5 few, 1 normal, 2.5 busy (far ones are cheap stand-ins). */
+  crowdDensity: number;
   /** 0 = unlimited. */
   fpsCap: number;
 }
@@ -132,18 +134,19 @@ export const DEFAULT_STUDIO: StudioSettings = {
   fxaa: true,
   hdr: true,
   drawDistance: 3500,
+  crowdDensity: 1,
   fpsCap: 0,
 };
 
 /** Graphics presets. Only the listed keys change; `custom` is whatever the player set. */
 export const QUALITY_PRESETS: Record<Exclude<QualityLevel, 'custom'>, Partial<StudioSettings>> = {
-  low: { renderScale: 0.75, autoResolution: true, maxPixelRatio: 1, shadowQuality: 1, shadowDistance: 55, softShadows: false, aoQuality: 0, bloomQuality: 1, shafts: false, fxaa: false, hdr: false, drawDistance: 1800 },
-  medium: { renderScale: 1, autoResolution: true, maxPixelRatio: 1, shadowQuality: 2, shadowDistance: 70, softShadows: false, aoQuality: 1, bloomQuality: 1, shafts: false, fxaa: true, hdr: true, drawDistance: 2600 },
-  high: { renderScale: 1, autoResolution: true, maxPixelRatio: 1.5, shadowQuality: 2, shadowDistance: 90, softShadows: true, aoQuality: 1, bloomQuality: 2, shafts: true, fxaa: true, hdr: true, drawDistance: 3500 },
-  ultra: { renderScale: 1, autoResolution: false, maxPixelRatio: 2, shadowQuality: 3, shadowDistance: 130, softShadows: true, aoQuality: 2, bloomQuality: 2, shafts: true, fxaa: true, hdr: true, drawDistance: 5000 },
+  low: { renderScale: 0.75, autoResolution: true, maxPixelRatio: 1, shadowQuality: 1, shadowDistance: 55, softShadows: false, aoQuality: 0, bloomQuality: 1, shafts: false, fxaa: false, hdr: false, drawDistance: 1800, crowdDensity: 0.5 },
+  medium: { renderScale: 1, autoResolution: true, maxPixelRatio: 1, shadowQuality: 2, shadowDistance: 70, softShadows: false, aoQuality: 1, bloomQuality: 1, shafts: false, fxaa: true, hdr: true, drawDistance: 2600, crowdDensity: 1 },
+  high: { renderScale: 1, autoResolution: true, maxPixelRatio: 1.5, shadowQuality: 2, shadowDistance: 90, softShadows: true, aoQuality: 1, bloomQuality: 2, shafts: true, fxaa: true, hdr: true, drawDistance: 3500, crowdDensity: 1 },
+  ultra: { renderScale: 1, autoResolution: false, maxPixelRatio: 2, shadowQuality: 3, shadowDistance: 130, softShadows: true, aoQuality: 2, bloomQuality: 2, shafts: true, fxaa: true, hdr: true, drawDistance: 5000, crowdDensity: 2.5 },
 };
 
-export const QUALITY_KEYS = ['renderScale', 'autoResolution', 'maxPixelRatio', 'shadowQuality', 'shadowDistance', 'softShadows', 'aoQuality', 'bloomQuality', 'shafts', 'fxaa', 'hdr', 'drawDistance'] as const;
+export const QUALITY_KEYS = ['renderScale', 'autoResolution', 'maxPixelRatio', 'shadowQuality', 'shadowDistance', 'softShadows', 'aoQuality', 'bloomQuality', 'shafts', 'fxaa', 'hdr', 'drawDistance', 'crowdDensity'] as const;
 
 export function applyQuality(s: StudioSettings, level: QualityLevel): void {
   s.quality = level;

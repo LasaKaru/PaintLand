@@ -1219,5 +1219,10 @@ const de: Locale = {
   'sketch.count': "{n} von {total} Seiten gefüllt",
   'sketch.how': "Sprich mit jemandem in der Stadt und drücke dann noch einmal E, um ein Porträt zu zeichnen.",
   'sketch.of': "Ein Porträt aus {town}",
+  'set.crowds': "Menschenmenge",
+  'crowd.few': "Wenig",
+  'crowd.normal': "Mittel",
+  'crowd.busy': "Belebt",
+  'crowd.hint': "Wie viele Leute in Städten und an den Straßen unterwegs sind. Weit entfernte Leute werden vereinfacht gezeichnet, damit alles flüssig bleibt. Straßen ändern sich bei der nächsten Abfahrt.",
 };
 export default de;

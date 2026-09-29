@@ -1219,5 +1219,10 @@ const ja: Locale = {
   'sketch.count': "{total}ページ中{n}ページ",
   'sketch.how': "町の人と話したあと、もう一度Eを押すと似顔絵を描けます。",
   'sketch.of': "{town}の似顔絵",
+  'set.crowds': "人の多さ",
+  'crowd.few': "少なめ",
+  'crowd.normal': "ふつう",
+  'crowd.busy': "にぎやか",
+  'crowd.hint': "町や道にいる人の数。遠くの人はシンプルに描いて動作を軽く保ちます。道は次に出発したときに変わります。",
 };
 export default ja;

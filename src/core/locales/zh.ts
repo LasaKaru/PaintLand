@@ -1219,5 +1219,10 @@ const zh: Locale = {
   'sketch.count': "{total} 页中已画 {n} 页",
   'sketch.how': "在镇上和人聊天，再按一次 E 就能为他们画像。",
   'sketch.of': "来自{town}的肖像",
+  'set.crowds': "人群",
+  'crowd.few': "少",
+  'crowd.normal': "正常",
+  'crowd.busy': "热闹",
+  'crowd.hint': "城镇和道路上有多少人。远处的人用简化方式绘制，保持流畅。道路会在下次出发时改变。",
 };
 export default zh;

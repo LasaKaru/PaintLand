@@ -1219,5 +1219,10 @@ const tr: Locale = {
   'sketch.count': "{total} sayfanın {n} tanesi dolu",
   'sketch.how': "Kasabada biriyle konuş, sonra portresini çizmek için tekrar E'ye bas.",
   'sketch.of': "{town} portresi",
+  'set.crowds': "Kalabalık",
+  'crowd.few': "Az",
+  'crowd.normal': "Normal",
+  'crowd.busy': "Yoğun",
+  'crowd.hint': "Kasabalarda ve yollarda kaç kişi olduğu. Uzaktaki insanlar akıcılık için basitçe çizilir. Yollar bir sonraki yola çıkışında değişir.",
 };
 export default tr;

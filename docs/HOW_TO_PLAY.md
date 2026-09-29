@@ -238,7 +238,10 @@ Places of worship stand as landmarks:
 
 They are places to see and photograph. They are never races, targets or collectables.
 
-People are only drawn close to you, so crowds cost little even on long roads.
+People are only drawn in full close to you. Further away they are simple painted stand-ins, so
+crowds cost little even on long roads. **Settings → Graphics → Crowds** picks how many people are
+out: **Few**, **Normal** or **Busy** (two and a half times as many). Towns change straight away;
+chapter roads change the next time you set off.
 
 ## Paper-plane flight
 

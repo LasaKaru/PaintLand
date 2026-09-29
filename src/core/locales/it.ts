@@ -1219,5 +1219,10 @@ const it: Locale = {
   'sketch.count': "{n} pagine piene su {total}",
   'sketch.how': "Parla con qualcuno in città, poi premi di nuovo E per fargli un ritratto.",
   'sketch.of': "Un ritratto da {town}",
+  'set.crowds': "Folla",
+  'crowd.few': "Poca",
+  'crowd.normal': "Normale",
+  'crowd.busy': "Tanta",
+  'crowd.hint': "Quante persone ci sono in città e lungo le strade. Le persone lontane sono disegnate in modo semplice per restare fluidi. Le strade cambiano alla prossima partenza.",
 };
 export default it;

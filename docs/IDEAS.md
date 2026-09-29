@@ -39,6 +39,12 @@ These were on earlier idea lists and are now in the game:
   - checkpoints and Continue;
   - call your vehicle.
   - **Book 2, the Grand Tour**: 10 km country road trips with journey missions, mid-lap checkpoints and passport stamps. all eight countries are built: Great Britain, Japan, India, China, Korea, Germany, Canada and Australia. Candidates for more: the USA, Norway, New Zealand, Iceland, Italy/France, Morocco and Mexico.
+- **Living towns:**
+  - people follow daily routines and react to the weather;
+  - they react to you, and you can talk to anyone;
+  - taxi rides, street cricket, tag and hide-and-seek;
+  - buskers, animals, street food, souvenirs and the sketchbook;
+  - crowd density with far-away stand-ins.
 - **Operations:**
   - the **crash and performance dashboard** (admin → 🩺 Crashes & speed);
   - the Microsoft Store package on every push.

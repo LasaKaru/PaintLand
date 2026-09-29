@@ -1219,5 +1219,10 @@ const ko: Locale = {
   'sketch.count': "{total}쪽 중 {n}쪽 채움",
   'sketch.how': "마을 사람과 이야기한 뒤 E를 한 번 더 누르면 초상화를 그려요.",
   'sketch.of': "{town}에서 그린 초상화",
+  'set.crowds': "인파",
+  'crowd.few': "적게",
+  'crowd.normal': "보통",
+  'crowd.busy': "북적북적",
+  'crowd.hint': "마을과 길에 사람이 얼마나 있는지. 멀리 있는 사람은 단순하게 그려 부드럽게 유지해요. 길은 다음에 출발할 때 바뀌어요.",
 };
 export default ko;

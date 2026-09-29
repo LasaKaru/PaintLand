@@ -1219,5 +1219,10 @@ const nl: Locale = {
   'sketch.count': "{n} van {total} pagina's gevuld",
   'sketch.how': "Praat met iemand in de stad en druk dan nog eens op E om een portret te tekenen.",
   'sketch.of': "Een portret uit {town}",
+  'set.crowds': "Drukte",
+  'crowd.few': "Weinig",
+  'crowd.normal': "Normaal",
+  'crowd.busy': "Druk",
+  'crowd.hint': "Hoeveel mensen er in de steden en langs de wegen zijn. Mensen ver weg worden eenvoudig getekend zodat alles soepel blijft. Wegen veranderen de volgende keer dat je vertrekt.",
 };
 export default nl;
