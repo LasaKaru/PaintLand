@@ -1,3 +1,8 @@
+import { Taxi, type TaxiCar } from '../gameplay/Taxi';
+import { talkLine } from '../gameplay/TownTalk';
+import { regionFor } from '../world/Peoples';
+import { Random as TaxiRandom } from '../core/Random';
+import type { TownLife, TownPerson } from '../world/TownLife';
 import type { Animal } from '../world/AnimalLife';
 import { settleChallenges } from '../ui/PassScreen';
 import { POCKETS, POCKET_INK, POCKET_REACH } from '../world/Pockets';
@@ -280,6 +285,15 @@ export class Game {
   /** Festival decorations built per area (removed when the festival or setting changes). */
   private festivalDecor = new Map<string, { festival: Festival; group: THREE.Group }>();
   private festivalGreeted: Festival | null = null;
+  /** Taxi rides in the towns (see Taxi.ts). */
+  private readonly taxi = new Taxi(new TaxiRandom(Date.now() % 100000));
+  private readonly talkRnd = new TaxiRandom(Date.now() % 7919);
+  /** The town the passenger belongs to (a ride ends when you leave it). */
+  private taxiLife: TownLife | null = null;
+  private taxiStop = 0;
+  private hailBeacon: THREE.Mesh | null = null;
+  /** A townsperson close enough to talk to (on foot). */
+  private nearPerson: TownPerson | null = null;
   /** A dog or cat close enough to pet (on foot in a town). */
   private nearPet: Animal | null = null;
   /** The time/weather the current district set, to undo when leaving it. */
@@ -3363,6 +3377,7 @@ export class Game {
   private travelTo(areaId: string): void {
     if (this.area?.id === areaId) return;
     this.freeMissions.cancel();
+    this.endTaxi(false);
     this.splash = 1;
     this.audio.whoosh();
     // Arrive at the road back to where we came from, pointing into the new area.
@@ -3378,6 +3393,7 @@ export class Game {
 
   /** Hide the area and show the chapter world again (portals, menu, play). */
   private leaveHub(): void {
+    this.endTaxi(false);
     if (!this.inHub) return;
     this.inHub = false;
     this.stopFlight();
@@ -3507,6 +3523,7 @@ export class Game {
       }
     }
     this.checkPickups(area, p.x, p.z);
+    this.taxiStep(dt, area);
     this.leisure.update(dt, this.time);
     if (this.mode === 'foot') this.profile.addStat('walked', this.hubWalker.speed * dt);
     this.discoverTimer -= dt;
@@ -3525,6 +3542,86 @@ export class Game {
     if (this.viewing) this.viewing.t += dt;
     if (this.viewing?.zone.view?.id === 'we-edge' && this.viewing.t > 3 && !this.ending && endingDue(storyState(this.profile.data))) this.startEnding();
     this.trackStats(dt);
+  }
+
+  /** The car as the taxi sees it. */
+  private taxiCar(): TaxiCar {
+    return { x: this.hubCar.x, z: this.hubCar.z, v: this.hubCar.v, grounded: this.hubCar.grounded };
+  }
+
+  /** Someone may wave you down; the passenger talks; stop at the beacon to drop them off. */
+  private taxiStep(dt: number, area: FreeRoamArea): void {
+    // A ride ends if you leave the car (or the town).
+    if (this.taxi.fare && (this.mode !== 'drive' || this.taxiLife !== area.life)) this.endTaxi(false);
+    if (!area.life) return;
+    const car = this.taxiCar();
+    const allowed = this.mode === 'drive' && !this.freeMissions.mission && !this.leisure.active && !this.battle && this.state === 'hub';
+    for (const e of this.taxi.step(dt, area.life, car, allowed)) {
+      if (e.kind === 'hail') this.hud.tip(t('taxi.hailed'), 6, '🚕');
+      else if (e.kind === 'say') this.hud.tip(t(e.key), 4, '🚕');
+    }
+    if (this.taxi.fare) {
+      this.taxi.fare.person.model.animate(dt, 'sit', 0, this.time);
+      this.taxiStop = this.taxi.atDestination(car) ? this.taxiStop + dt : 0;
+      if (this.taxiStop > 0.6) this.endTaxi(true);
+    }
+  }
+
+  /** Finish a ride (paid) or cancel it (the passenger gets out where they are). */
+  private endTaxi(paid: boolean): void {
+    const life = this.taxiLife;
+    if (!this.taxi.fare || !life) {
+      this.taxi.forgetHail();
+      return;
+    }
+    this.taxiStop = 0;
+    const e = this.taxi.dropOff(life, this.taxiCar(), paid);
+    this.taxiLife = null;
+    this.audio.door();
+    if (e?.kind === 'arrived') {
+      const got = this.profile.earn(e.pay + e.tip);
+      this.profile.addStat('fares');
+      this.audio.secret();
+      this.hud.lootCard(t('taxi.title'), '#f4d23b', '★'.repeat(e.stars) + '☆'.repeat(5 - e.stars), `${t('taxi.paid', { pay: e.pay, tip: e.tip })} · +${got}`);
+      this.checkTrophies();
+    } else if (e?.kind === 'cancel') this.hud.tip(t('taxi.cancel'), 4, '🚕');
+  }
+
+  /** A few words with a townsperson (or a tip for a street musician). */
+  private chatWith(p: TownPerson, area: FreeRoamArea): void {
+    const life = area.life!;
+    const me = { x: this.hubWalker.x, z: this.hubWalker.z };
+    const region = regionFor(area.id);
+    if (p.act === 'busk') {
+      if (this.profile.data.ink < 5) {
+        this.hud.tip(t('talk.noInk'), 3, '🎵');
+        return;
+      }
+      this.profile.earn(-5);
+      this.audio.cheer();
+    } else life.talkTo(p, me);
+    // A hint toward the nearest golden pot not yet found (by the nearest named place).
+    const hidden = area.secrets.filter((s) => !this.profile.data.seen.includes(`secret:${s.id}`) && Math.hypot(s.x - me.x, s.z - me.z) < 160);
+    let secretNear: string | null = null;
+    if (hidden.length && area.places.length) {
+      const s = hidden[0];
+      secretNear = area.places.reduce((a, b) => (Math.hypot(a.x - s.x, a.z - s.z) < Math.hypot(b.x - s.x, b.z - s.z) ? a : b)).name;
+    }
+    const line = talkLine(
+      {
+        region,
+        kind: p.kind,
+        busker: p.act === 'busk',
+        hour: this.env.hour,
+        rain: this.env.rain,
+        carNear: Math.hypot(this.hubCar.x - me.x, this.hubCar.z - me.z) < 12,
+        secretNear,
+        places: area.places.map((q) => q.name),
+      },
+      this.talkRnd,
+    );
+    this.hud.tip(t(line.key, line.params), 5, `${line.hello}!`);
+    this.profile.addStat('chats');
   }
 
   /** Golden paint pots (found once) and loot chests (once a day each). */
@@ -3686,7 +3783,21 @@ export class Game {
     if (inp.consume('interact')) {
       const zone = this.hubZone;
       if (zone) this.useZone(zone);
-      else if (this.mode === 'drive') {
+      else if (this.mode === 'drive' && this.area?.life && this.taxi.canPickUp(this.taxiCar())) {
+        const fare = this.taxi.pickUp(this.area.life, this.area.places, this.taxiCar());
+        if (fare) {
+          this.taxiLife = this.area.life;
+          // On the back seat.
+          const m = fare.person.model;
+          this.vehicle.seat.add(m.root);
+          m.root.position.set(0, -0.45, 0.85);
+          m.root.rotation.set(0, 0, 0);
+          m.root.scale.setScalar(0.85 * (m.look.height ?? 1));
+          m.setCarry(null);
+          this.audio.door();
+          this.hud.tip(t('taxi.to', { place: fare.to.name }), 5, '🚕');
+        }
+      } else if (this.mode === 'drive') {
         if (Math.abs(this.hubCar.v) > 4) this.popAtPawn(t('prompt.slowDown'), 'info');
         else if (this.hubCar.y < -0.5) this.popAtPawn(t('prompt.onWater'), 'info');
         else {
@@ -3699,6 +3810,8 @@ export class Game {
           this.updateHeadVisibility();
           this.audio.door();
         }
+      } else if (this.nearPerson && this.area?.life) {
+        this.chatWith(this.nearPerson, this.area);
       } else if (this.nearPet && this.area?.animals) {
         // Pet a dog or a cat: it sits happily (a dog may follow you about for a while).
         this.area!.animals!.pet(this.nearPet);
@@ -4590,7 +4703,8 @@ export class Game {
   /** Beacons over mission targets, the compass and the objective card. */
   private updateMissionHud(px: number, pz: number, cam: THREE.PerspectiveCamera): void {
     const tr = this.freeMissions;
-    const targets = tr.targets();
+    const fare = !tr.mission ? this.taxi.fare : null;
+    const targets = fare ? [{ x: fare.to.x, z: fare.to.z, r: 10 }] : tr.targets();
     for (let i = 0; i < Math.max(targets.length, this.beacons.length); i++) {
       let b = this.beacons[i];
       if (!b && targets[i]) {
@@ -4606,6 +4720,26 @@ export class Game {
         b.scale.set(tg.r / 6, 1 + Math.sin(this.time * 3 + i) * 0.05, tg.r / 6);
         b.rotation.y = this.time * 0.6;
       }
+    }
+    // Someone waving for a taxi: a small beacon over them.
+    const hail = this.taxi.hail;
+    if (hail && !this.hailBeacon) {
+      this.hailBeacon = new THREE.Mesh(buildBeacon('#f4d23b'), this.pickupMaterial);
+      this.scene.add(this.hailBeacon);
+    }
+    if (this.hailBeacon) {
+      this.hailBeacon.visible = !!hail && this.state !== 'photo';
+      if (hail) {
+        this.hailBeacon.position.set(hail.body.x, HUB_Y, hail.body.z);
+        this.hailBeacon.scale.set(0.2, 0.5, 0.2);
+      }
+    }
+    if (fare) {
+      this.hud.objective(t('taxi.title'), t('taxi.objective', { place: fare.to.name }), t('taxi.stopHere'));
+      const dir = cam.getWorldDirection(_v);
+      const bearing = Math.atan2(fare.to.x - px, -(fare.to.z - pz)) - Math.atan2(dir.x, -dir.z);
+      this.hud.compass((bearing * 180) / Math.PI, Math.hypot(fare.to.x - px, fare.to.z - pz));
+      return;
     }
     const step = tr.current;
     if (!tr.mission || !step) {
@@ -4761,6 +4895,7 @@ export class Game {
     boards?.update(dt, this.time, cam, here);
     this.nearBoard = this.mode === 'foot' && !nearCar && !this.hubZone ? boards?.nearest(here) ?? null : null;
     const pet = this.mode === 'foot' && !nearCar && !this.hubZone && !this.flight ? area.animals?.nearest(player.x, player.z, 1.8) : null;
+    this.nearPerson = this.mode === 'foot' && !nearCar && !this.hubZone && !this.flight && !this.leisure.active ? area.life?.nearest(player.x, player.z, 2) ?? null : null;
     this.nearPet = pet && (pet.species === 'dog' || pet.species === 'cat') ? pet : null;
     // Barks, meows, caws, moos and trumpets, quieter further away.
     for (const c of area.animals?.calls ?? []) {
@@ -4768,7 +4903,9 @@ export class Game {
       if (d < 30) this.audio.animal(c.call, 1 - d / 30);
     }
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t(this.freeMissions.mission ? 'prompt.enterOnly' : 'prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
-    const boardText = this.nearPet ? t(this.nearPet.species === 'dog' ? 'prompt.petDog' : 'prompt.petCat') : this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
+    const taxiText = this.mode === 'drive' && this.taxi.canPickUp(this.taxiCar()) ? t('taxi.pickPrompt') : null;
+    const personText = this.nearPerson ? t(this.nearPerson.act === 'busk' ? 'talk.tipPrompt' : 'talk.prompt') : null;
+    const boardText = taxiText ?? personText ?? (this.nearPet ? t(this.nearPet.species === 'dog' ? 'prompt.petDog' : 'prompt.petCat') : this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null);
     this.hud.setPrompt(this.state === 'photo' || this.flight || this.leisure.active ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
     this.drawBattle(dt);
     if (this.flight) this.updateFlightHud(cam);

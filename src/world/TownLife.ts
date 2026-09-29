@@ -6,7 +6,7 @@ import { PaintMaterial } from '../render/PaintMaterial';
 import type { Random } from '../core/Random';
 
 /** What a townsperson is doing right now. */
-export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk';
+export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk' | 'hail' | 'ride';
 
 /** Who someone is, which decides what they like to do. */
 export type Kind = 'child' | 'adult' | 'elder' | 'wheels';
@@ -42,6 +42,8 @@ export interface TownPerson {
   instrument: Carry;
   /** A busker's pitch (they stay put). */
   pitch: { x: number; z: number; heading: number } | null;
+  /** Where the model lives in the scene while walking (it moves into the car for a taxi ride). */
+  parent: THREE.Object3D | null;
 }
 
 /** The world around the town this frame (set by the game before update). */
@@ -177,6 +179,7 @@ export class TownLife {
       away: { x: 0, z: 0 },
       instrument: null,
       pitch: null,
+      parent: null,
     };
     this.people.push(p);
     return p;
@@ -202,6 +205,70 @@ export class TownLife {
         if (!world.resolve({ ...q }, 0.6)) return q;
       }
     return { x, z };
+  }
+
+  /** The nearest person the player could talk to (a busker too), or null. */
+  nearest(x: number, z: number, reach = 2): TownPerson | null {
+    let best: TownPerson | null = null;
+    let bestD = reach;
+    for (const p of this.people) {
+      if (p.act === 'away' || p.act === 'ride' || p.act === 'home' || !p.model.root.visible) continue;
+      const d = Math.hypot(p.body.x - x, p.body.z - z);
+      if (d < bestD) {
+        best = p;
+        bestD = d;
+      }
+    }
+    return best;
+  }
+
+  /** Stop and chat with the player for a few seconds. */
+  talkTo(p: TownPerson, player: { x: number; z: number }): void {
+    if (p.act === 'busk') return;
+    this.leave(p);
+    p.act = 'pause';
+    p.still = 'talk';
+    p.t = 4;
+    p.away = { x: player.x, z: player.z };
+  }
+
+  /** Someone who would like a taxi ride, somewhere between `near` and `far` metres from the car. */
+  pickHail(car: { x: number; z: number }, near = 20, far = 70): TownPerson | null {
+    const ok = this.people.filter((p) => {
+      if (p.kind !== 'adult' && p.kind !== 'elder') return false;
+      if (p.act !== 'stroll' && p.act !== 'pause') return false;
+      if (!p.model.root.visible) return false;
+      const d = Math.hypot(p.body.x - car.x, p.body.z - car.z);
+      return d > near && d < far;
+    });
+    if (!ok.length) return null;
+    const p = this.rnd.pick(ok);
+    this.leave(p);
+    p.act = 'hail';
+    p.t = 45;
+    return p;
+  }
+
+  /** Get into the car (the game moves the model onto the back seat). */
+  board(p: TownPerson): void {
+    this.leave(p);
+    p.act = 'ride';
+    p.t = Infinity;
+    p.parent = p.model.root.parent;
+  }
+
+  /** Get out of the car at (x, z) and walk off. */
+  alight(p: TownPerson, x: number, z: number): void {
+    const parent = p.parent;
+    if (parent) parent.add(p.model.root);
+    p.model.root.scale.setScalar(p.model.look.height ?? 1);
+    p.model.root.rotation.set(0, 0, 0);
+    p.body.place(x, z, p.body.heading);
+    p.act = 'pause';
+    p.still = 'wave';
+    p.t = 2;
+    p.home = { x, z };
+    p.target = this.spot(this.rnd);
   }
 
   /** People nearby clap and cheer (a big jump landed, a district painted back to colour). */
@@ -333,6 +400,8 @@ export class TownLife {
     const dark = env.hour >= 19 || env.hour < 6;
     for (const p of this.people) {
       const pd = Math.hypot(player.x - p.body.x, player.z - p.body.z);
+      // Riding in the player's taxi: the game looks after the model.
+      if (p.act === 'ride') continue;
       // At home: come back out (somewhere the player isn't looking) when the day starts.
       if (p.act === 'away') {
         p.model.root.visible = false;
@@ -368,11 +437,11 @@ export class TownLife {
       let jump = false;
       let face: { x: number; z: number } | null = null;
       let pose: HumanPose | null = null;
-      const busy = p.act === 'chat' || p.act === 'jog' || p.act === 'dodge' || p.act === 'home' || p.act === 'busk';
-      const near = pd < 5 && !busy && !(p.act === 'pause' && (p.still === 'clap' || p.still === 'cheer'));
+      const busy = p.act === 'chat' || p.act === 'jog' || p.act === 'dodge' || p.act === 'home' || p.act === 'busk' || p.act === 'hail';
+      const near = pd < 5 && !busy && !(p.act === 'pause' && (p.still === 'clap' || p.still === 'cheer' || p.still === 'talk'));
       if (p.t <= 0) this.next(p);
       // A car coming fast: step out of its way (then point after it: slow down!).
-      if (car && carSpeed > 9 && p.act !== 'dodge' && p.act !== 'busk') {
+      if (car && carSpeed > 9 && p.act !== 'dodge' && p.act !== 'busk' && p.act !== 'hail') {
         const rx = b.x - car.x;
         const rz = b.z - car.z;
         const along = (rx * car.vx + rz * car.vz) / carSpeed;
@@ -432,6 +501,12 @@ export class TownLife {
           }
           break;
         }
+        case 'hail':
+          // Arm up, waving down the player's car.
+          pose = 'wave';
+          if (car) face = car;
+          if (p.t <= dt) p.t = 0;
+          break;
         case 'dodge':
           mx = p.away.x;
           my = -p.away.z;
@@ -512,7 +587,7 @@ export class TownLife {
         case 'pause':
           pose = wet && (p.still === 'sitdown' || p.still === 'stretch' || p.still === 'dance') ? 'idle' : p.still;
           // Clapping, cheering and taking photos face what they're looking at.
-          if (p.still === 'clap' || p.still === 'cheer' || p.still === 'photo' || p.still === 'point') face = p.away.x || p.away.z ? p.away : null;
+          if (p.still === 'clap' || p.still === 'cheer' || p.still === 'photo' || p.still === 'point' || p.still === 'talk') face = p.away.x || p.away.z ? p.away : null;
           break;
       }
       // Caught in the rain without an umbrella: hurry (children splash about happily).

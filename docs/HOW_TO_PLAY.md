@@ -174,6 +174,23 @@ drummer with a Sri Lankan *geta bera*. They play in time with your radio.
 
 Everything except an elephant gets out of the way of a fast car.
 
+**Talk to anyone.** Walk up to a townsperson and press **E**. They stop, turn to you and say hello
+in their own language (*ayubowan*, *vanakkam*, *konnichiwa*…). Then they say something about the
+weather, the time of day, your car or a place worth seeing, or drop a hint about a golden paint
+pot hidden nearby. Children want to play tag. Press **E** by a street musician to give a tip
+(5 ink).
+
+**Taxi rides.** While you drive around a town, someone may wave you down: a yellow beacon marks
+them. Stop beside them and press **E** to pick them up, then drive to the place they ask for,
+following the compass and the beacon. Stop at the beacon to let them out. They pay by distance and
+tip by stars:
+
+- **In a hurry:** go fast.
+- **Gentle (often an elder):** drive smoothly. Hard braking, jumps and speeding cost stars.
+- **Chatty:** they just enjoy the company.
+
+Get out of the car or leave the town, and the passenger gets out unpaid.
+
 Faith is part of everyday life in these places. Some locals wear a hijab, turban, kippah or prayer
 cap, and in Sri Lanka and the Himalayas you may pass monks in saffron or maroon robes. These
 clothes belong to the people who wear them. You can't buy them in the shop or wear them yourself.
