@@ -26,7 +26,9 @@ export type DressStyle =
   // Grand Tour · Japan
   | 'asakusa' | 'hakone' | 'shirakawa' | 'kinkakuji' | 'nara' | 'osaka' | 'himeji' | 'miyajima' | 'beppu' | 'okinawa'
   // Grand Tour · India
-  | 'delhi' | 'varanasi' | 'agra' | 'jaipur' | 'thar' | 'mumbai' | 'goa' | 'kerala' | 'madurai' | 'kanyakumari';
+  | 'delhi' | 'varanasi' | 'agra' | 'jaipur' | 'thar' | 'mumbai' | 'goa' | 'kerala' | 'madurai' | 'kanyakumari'
+  // Grand Tour · China
+  | 'beijing' | 'badaling' | 'xian' | 'lhasa' | 'chengdu' | 'zhangjiajie' | 'guilin' | 'suzhou' | 'shanghai' | 'hongkong';
 /**
  * Seven-note scales only: the band builds chords by stacking thirds. Regional
  * colour comes from the mode plus melodies that lean on its pentatonic notes.

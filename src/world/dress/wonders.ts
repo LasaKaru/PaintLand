@@ -14,7 +14,7 @@ import { commonSky, landUnder } from './sketch';
 
 /** Stone body under the road down to the ground, plus crenellations on both edges. */
 /** `maxHeight` caps how far the stone body reaches down; `onlyBelow` skips spots where the road is higher than that. */
-function wallUnderRoad(d: Decorator, s0: number, s1: number, colour: string, merlons: boolean, maxHeight = Infinity, onlyBelow = Infinity): void {
+export function wallUnderRoad(d: Decorator, s0: number, s1: number, colour: string, merlons: boolean, maxHeight = Infinity, onlyBelow = Infinity): void {
   const kit = new ModelKit();
   const f = createFrame();
   const step = 4;
@@ -36,7 +36,7 @@ function wallUnderRoad(d: Decorator, s0: number, s1: number, colour: string, mer
 }
 
 /** Mountains near a span (keeps clear of the road). */
-function peaksAround(d: Decorator, s0: number, s1: number, rnd: Random, count: number, radius: [number, number], height: [number, number], green: number): void {
+export function peaksAround(d: Decorator, s0: number, s1: number, rnd: Random, count: number, radius: [number, number], height: [number, number], green: number): void {
   for (let i = 0; i < count; i++) {
     const s = rnd.range(s0, s1);
     const f = d.sample(s);

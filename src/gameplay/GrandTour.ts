@@ -37,6 +37,13 @@ export const TOUR_STAMPS: TourStamp[] = [
     hex: '#f08a2e',
     note: 'Lamps on the Ganges at dusk, the Taj at dawn, camels on the dunes, a houseboat on the backwaters, and three seas meeting at the very end.',
   },
+  {
+    chapter: 'china',
+    country: 'China',
+    flag: '🇨🇳',
+    hex: '#b8322a',
+    note: 'Driving on the Great Wall, eye to eye with the terracotta army, pandas in the bamboo, mountains floating in the mist, and red sails on Victoria Harbour.',
+  },
 ];
 
 /** Ink for a first stamp. */

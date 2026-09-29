@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (78 districts)
+## 4 · Chapter themes (88 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -405,6 +405,20 @@ Each district tune is 48 steps long (six phrases), so these can be 2–3 minute 
 | Kerala | vanchipattu boat song, chenda drums far off, rain on the backwaters |
 | Madurai | Carnatic nadaswaram and thavil, temple festival, bright and loud |
 | Kanyakumari | veena and flute, waves, sunset and moonrise, peaceful finale |
+
+### 4.12 Grand Tour · China (Book 2). Chapter style: *Chinese road trip, guzheng, erhu, dizi flute, pipa, gongs and drums, pentatonic, bright and grand, 100 bpm, instrumental*
+| District | Add |
+|---|---|
+| Beijing | court music, bianzhong bronze bells, stately, imperial |
+| The Great Wall | heroic, big drums and brass, erhu melody, over the ridges |
+| Xi'an | minor pentatonic march, war drums, terracotta soldiers, ancient |
+| Lhasa | Tibetan singing bowls, dungchen long horns, deep chant, thin mountain air, 72 bpm |
+| Chengdu | playful Sichuan folk, suona and woodblocks, pandas, teahouse |
+| Zhangjiajie | misty and floating, xiao flute, soft strings, mysterious |
+| Guilin | guzheng river song, gentle ripples, morning mist |
+| Suzhou | pingtan ballad, pipa and sanxian, soft and ornamented, garden canals |
+| Shanghai | 1930s Shanghai jazz, big band with erhu, glamorous night |
+| Hong Kong | Cantopop, synths and strings, neon city night, big finale |
 
 ---
 
