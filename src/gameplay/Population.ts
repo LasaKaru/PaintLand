@@ -3,6 +3,7 @@ import { RoadPath, createFrame } from '../road/RoadPath';
 import { KERB_WIDTH } from '../road/RoadMesh';
 import { HumanModel, DEFAULT_HUMAN_LOOK, type HumanLook, type HumanPose } from '../models/Human';
 import { personOf, regionFor } from '../world/Peoples';
+import { kindOf, speechBubble, type Kind } from '../world/TownLife';
 import { VEHICLES, VehicleModel, tuningFor } from '../models/Vehicles';
 import { RoverController } from './RoverController';
 import { Autopilot } from './Autopilot';
@@ -19,6 +20,8 @@ interface Walker {
   look: HumanLook;
   /** A companion walks beside this walker (a child with a parent, or friends). */
   lead: Walker | null;
+  /** The companion walking beside this lead walker, if any. */
+  mate: Walker | null;
   side: number;
   s: number;
   x: number;
@@ -28,6 +31,14 @@ interface Walker {
   s1: number;
   pause: number;
   pose: HumanPose;
+  kind: Kind;
+  /** Out for a run (a few adults jog up and down the pavement). */
+  jogger: boolean;
+  /** Held while stopped: a phone, a stretch, or chatting with your companion. */
+  still: HumanPose;
+  /** A child's hop: height above the pavement and upward speed. */
+  hop: number;
+  vy: number;
 }
 
 export interface Giver {
@@ -76,6 +87,15 @@ export class Population {
   private readonly doneGeo: THREE.BufferGeometry;
   private readonly stampGeo: THREE.BufferGeometry;
 
+  /** Things people do when they stop on their own, by who they are. */
+  private static readonly STILLS: Record<Kind, HumanPose[]> = {
+    adult: ['idle', 'phone', 'phone', 'stretch', 'point'],
+    child: ['cheer', 'point', 'wave'],
+    elder: ['idle', 'point'],
+    wheels: ['idle', 'phone', 'point'],
+  };
+  private readonly bubbles: THREE.Mesh[] = [];
+
   /** Most pedestrians on one route (their models are built only when near). */
   static readonly MAX_WALKERS = 110;
 
@@ -96,6 +116,13 @@ export class Population {
         const x = side * (f.width / 2 + KERB_WIDTH + 0.8 + rnd.range(0, 1.2));
         const kind = rnd.next();
         const lead = this.addWalker(personOf(region, r, { age: kind < 0.22 ? 'adult' : undefined }).look, s, x, side, rnd, null);
+        // Some people on their own are out for a run.
+        if (kind >= 0.4 && lead.kind === 'adult' && rnd.chance(0.25)) {
+          lead.jogger = true;
+          lead.speed = rnd.range(2.8, 3.6);
+          lead.s0 = s - rnd.range(40, 70);
+          lead.s1 = s + rnd.range(40, 70);
+        }
         if (kind < 0.22) this.addWalker(personOf(region, r, { age: 'child', aids: false }).look, s, x, side, rnd, lead);
         else if (kind < 0.4) this.addWalker(personOf(region, r, { aids: false }).look, s, x, side, rnd, lead);
       }
@@ -133,6 +160,7 @@ export class Population {
       model: null,
       look,
       lead,
+      mate: null,
       side,
       s,
       x: lead ? lead.x + (side > 0 ? 0.75 : -0.75) : x,
@@ -142,7 +170,13 @@ export class Population {
       s1: s + rnd.range(15, 40),
       pause: rnd.range(0, 4),
       pose: 'walk',
+      kind: kindOf(look),
+      jogger: false,
+      still: 'idle',
+      hop: 0,
+      vy: 0,
     };
+    if (lead) lead.mate = w;
     this.walkers.push(w);
     return w;
   }
@@ -265,6 +299,7 @@ export class Population {
   /** Per render frame: walk, animate, and hide what is far away. */
   update(dt: number, time: number, focusS: number, focusX: number, alpha: number): void {
     const near = 170;
+    let bubbles = 0;
     for (const w of this.walkers) {
       const visible = Math.abs(w.s - focusS) < near;
       if (w.model) w.model.root.visible = visible;
@@ -274,26 +309,55 @@ export class Population {
         this.group.add(w.model.root);
       }
       const playerClose = Math.abs(w.s - focusS) < 7 && Math.abs(w.x - focusX) < 6;
+      let yaw = w.dir > 0 ? 0 : Math.PI;
       if (w.lead) {
-        // Walk beside your companion.
+        // Walk beside your companion; when they stop, chat (or wave at the player).
         w.s = w.lead.s - w.lead.dir * 0.4;
         w.dir = w.lead.dir;
         w.pause = w.lead.pause;
-        w.pose = w.lead.pose === 'walk' ? 'walk' : playerClose ? 'wave' : 'idle';
+        const talking = w.lead.pose === 'talk' || w.lead.pose === 'listen';
+        w.pose = w.lead.pose === 'walk' ? 'walk' : playerClose ? 'wave' : talking ? (w.lead.pose === 'talk' ? 'listen' : 'talk') : 'idle';
+        if (talking && !playerClose) yaw = w.x > w.lead.x ? Math.PI / 2 : -Math.PI / 2;
+        if (w.pose === 'listen' && Math.sin(time * 0.7 + w.s) > 0.93) w.pose = 'laugh';
+        // Children hop and skip beside their parent.
+        if (w.kind === 'child' && w.pose === 'walk' && w.hop <= 0 && Math.random() < dt * 0.6) w.vy = 3.2;
       } else if (w.pause > 0) {
         w.pause -= dt;
-        w.pose = playerClose ? 'wave' : 'idle';
+        const partner = w.mate;
+        if (playerClose) w.pose = 'wave';
+        else if (partner) {
+          // Friends and families stop for a chat, taking turns to talk.
+          w.pose = Math.sin(time * 0.9 + w.s) > 0 ? 'talk' : 'listen';
+          yaw = partner.x > w.x ? -Math.PI / 2 : Math.PI / 2;
+        } else w.pose = w.still;
       } else {
         w.s += w.dir * w.speed * dt;
-        w.pose = 'walk';
-        if (w.s > w.s1 || w.s < w.s0) {
-          w.dir = -w.dir;
-          w.pause = 1 + Math.random() * 3;
+        w.pose = w.jogger ? 'run' : 'walk';
+        const turn = w.s > w.s1 || w.s < w.s0;
+        // Now and then people stop along the way (joggers stop to stretch at the ends).
+        if (turn || (!w.jogger && Math.random() < dt * 0.04)) {
+          if (turn) w.dir = -w.dir;
+          w.pause = w.jogger ? (turn ? 3 + Math.random() * 3 : 0) : 2 + Math.random() * 5;
+          w.still = w.jogger ? 'stretch' : Population.STILLS[w.kind][Math.floor(Math.random() * Population.STILLS[w.kind].length)];
         }
       }
-      this.place(w.model.root, w.s, w.x, 0.18, w.dir > 0 ? 0 : Math.PI);
-      w.model.animate(dt, w.pose, w.pose === 'walk' ? w.speed : 0, time);
+      if (w.vy > 0 || w.hop > 0) {
+        w.vy -= 14 * dt;
+        w.hop = Math.max(0, w.hop + w.vy * dt);
+        if (w.hop <= 0) w.vy = 0;
+        else w.pose = 'air';
+      }
+      this.place(w.model.root, w.s, w.x, 0.18 + w.hop, yaw);
+      w.model.animate(dt, w.pose, w.pose === 'walk' || w.pose === 'run' ? w.speed : 0, time);
+      if (w.pose === 'talk' && bubbles < 6 && Math.abs(w.s - focusS) < 40) {
+        if (!this.bubbles[bubbles]) this.group.add((this.bubbles[bubbles] = speechBubble()));
+        const b = this.bubbles[bubbles];
+        b.visible = true;
+        this.place(b, w.s, w.x, 0.18 + (w.kind === 'wheels' ? 1.85 : 2.4) * (w.look.height ?? 1) + Math.sin(time * 3 + bubbles) * 0.05, 0);
+        bubbles++;
+      }
     }
+    for (let i = bubbles; i < this.bubbles.length; i++) this.bubbles[i].visible = false;
     for (const g of this.givers) {
       const visible = Math.abs(g.s - focusS) < near + 60;
       g.model.root.visible = g.marker.visible = visible;

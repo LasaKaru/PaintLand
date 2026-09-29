@@ -139,6 +139,13 @@ Every town and every chapter has local people walking by: families, friends, chi
 many skin tones and body shapes. In Seoul you may see a hanbok, in Kyoto a kimono, in Delhi a
 kurta, and in Sri Lanka everyday sarongs and saris.
 
+They go about their day. People stroll and jog. Children run about, hop and skip. Friends meet up
+and chat, taking turns to talk, and a little "…" bubble shows who is speaking. Others stop to check
+a phone, stretch, point something out or sit on the grass. Neighbours greet each other as they
+pass, and they greet you when you walk up: a wave in Harbour Town, a bow in the Lantern Village,
+and *ayubowan* in Serendib City and the Tea Hills. Elders and wheelchair users go at their own
+pace, and they never run or jump.
+
 Faith is part of everyday life in these places. Some locals wear a hijab, turban, kippah or prayer
 cap, and in Sri Lanka and the Himalayas you may pass monks in saffron or maroon robes. These
 clothes belong to the people who wear them. You can't buy them in the shop or wear them yourself.

@@ -13,18 +13,12 @@ import { buildBush, buildFlowerBush } from '../models/Nature';
 import { buildBambooClump, buildCherryTree, buildChorten, buildFox, buildFuji, buildJunk, buildKarst, buildLanternString, buildPagoda, buildPrayerFlags, buildShophouse, buildStoneLantern, buildTorii } from '../models/LandmarksAsia';
 import { HumanModel } from '../models/Human';
 import { personOf } from './Peoples';
-import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
+import { TownLife } from './TownLife';
+import { FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
 import type { MapInfo } from '../ui/MapView';
 import { AREA_Y, type AreaZone, type Chest, type FreeRoamArea, type Place, type Secret, type StuntJump } from './FreeRoamArea';
-
-interface Townsfolk {
-  model: HumanModel;
-  body: FreeWalker;
-  target: { x: number; z: number };
-  wait: number;
-}
 
 const INK = '#2b2622';
 const VERMILION = '#e0432f';
@@ -63,7 +57,8 @@ export class Village implements FreeRoamArea {
   readonly seaZ = 70;
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -90, z: 4, heading: -Math.PI / 2 };
-  readonly folk: Townsfolk[] = [];
+  /** Townspeople going about their day (see TownLife.ts). */
+  readonly life = new TownLife((r) => this.randomSpot(r), new Random(88001), { greetings: ['bow', 'wave'] });
   private readonly labels: HTMLDivElement[] = [];
   private labelLang = '';
   private readonly zoneRings: THREE.Mesh[] = [];
@@ -328,14 +323,14 @@ export class Village implements FreeRoamArea {
   }
 
   private buildFolk(): void {
+    this.group.add(this.life.group);
     const rnd = new Random(88);
     for (let i = 0; i < 18; i++) {
-      const model = new HumanModel(personOf('japan', () => rnd.next()).look);
-      const body = new FreeWalker();
+      const look = personOf('japan', () => rnd.next()).look;
+      const model = new HumanModel(look);
       const p = this.randomSpot(rnd);
-      body.place(p.x, p.z, rnd.range(-3, 3));
       this.group.add(model.root);
-      this.folk.push({ model, body, target: this.randomSpot(rnd), wait: rnd.range(0, 3) });
+      this.life.add(model, look, p.x, p.z);
     }
   }
 
@@ -402,28 +397,7 @@ export class Village implements FreeRoamArea {
   }
 
   update(dt: number, time: number, player: { x: number; z: number }, camera: THREE.PerspectiveCamera): void {
-    const rnd = this.rnd;
-    for (const f of this.folk) {
-      const dx = f.target.x - f.body.x;
-      const dz = f.target.z - f.body.z;
-      const d = Math.hypot(dx, dz);
-      const near = Math.hypot(player.x - f.body.x, player.z - f.body.z) < 5;
-      let mx = 0;
-      let my = 0;
-      if (f.wait > 0) f.wait -= dt;
-      else if (d < 1.2) {
-        f.target = this.randomSpot(rnd);
-        f.wait = rnd.range(1, 5);
-      } else if (!near) {
-        mx = dx / d;
-        my = -dz / d;
-      }
-      f.body.step(dt, { moveX: mx * 0.45, moveY: my * 0.45, cameraYaw: 0, sprint: false, walk: false, jump: false, faceCamera: false }, this.world);
-      if (near) f.body.heading = Math.atan2(-(player.x - f.body.x), -(player.z - f.body.z));
-      f.model.root.position.set(f.body.x, f.body.y, f.body.z);
-      f.model.root.rotation.y = f.body.heading;
-      f.model.animate(dt, near ? 'wave' : f.body.pose, f.body.speed, time);
-    }
+    this.life.update(dt, time, player, this.world);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     const langNow = document.documentElement.lang;
     if (langNow !== this.labelLang) {

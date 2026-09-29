@@ -16,8 +16,9 @@ import { buildCabana, buildElephant, buildLotusTower, buildOruwa, buildStupa, bu
 import { buildBillboard, buildBusStop, buildChest, buildCrossing, buildFoodCart, buildMarketUmbrella, buildPaintPot, buildParkedCar, buildSkyscraper, buildStatue, buildTrafficLight } from '../models/CityProps';
 import { HumanModel } from '../models/Human';
 import { personOf } from './Peoples';
+import { TownLife } from './TownLife';
 import { VEHICLES, VehicleModel } from '../models/Vehicles';
-import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
+import { FreeWorld } from '../gameplay/FreeRoam';
 import { PALETTE } from '../gameplay/Profile';
 import { AREA_Y, type AreaZone, type Chest, type DynamicBody, type FreeRoamArea, type Place, type Secret, type StuntJump } from './FreeRoamArea';
 import { t, type StringKey } from '../core/i18n';
@@ -108,13 +109,6 @@ interface TrafficCar {
   heading: number;
 }
 
-interface Walker {
-  model: HumanModel;
-  body: FreeWalker;
-  target: { x: number; z: number };
-  wait: number;
-}
-
 /**
  * Serendib City (docs/04 §3 "hubs", scaled up to an open world): about 1.3 km
  * across. A downtown of glass towers around a Lotus Tower plaza; an old town
@@ -150,7 +144,8 @@ export class City implements FreeRoamArea {
   private readonly instances = new Map<string, { geo: THREE.BufferGeometry; mats: THREE.Matrix4[]; shadow: boolean }>();
   private readonly nm = new THREE.Matrix3();
   private readonly traffic: TrafficCar[] = [];
-  private readonly walkers: Walker[] = [];
+  /** Townspeople going about their day (see TownLife.ts). */
+  readonly life = new TownLife((r) => this.pavementSpot(r), new Random(66001), { greetings: ['ayubowan', 'wave'], cull: 160, pace: 0.4 });
   private readonly labels: HTMLDivElement[] = [];
   private readonly rings: THREE.Mesh[] = [];
   private labelLang = '';
@@ -813,15 +808,15 @@ export class City implements FreeRoamArea {
   }
 
   private buildWalkers(): void {
+    this.group.add(this.life.group);
     const rnd = new Random(66);
     // Colombo's people: Sinhala, Tamil, Muslim, Burgher and visitors, in everyday dress (see Peoples.ts).
     for (let i = 0; i < 44; i++) {
-      const model = new HumanModel(personOf('lanka', () => rnd.next()).look);
-      const body = new FreeWalker();
+      const look = personOf('lanka', () => rnd.next()).look;
+      const model = new HumanModel(look);
       const p = this.pavementSpot(rnd);
-      body.place(p.x, p.z, rnd.range(-3, 3));
       this.group.add(model.root);
-      this.walkers.push({ model, body, target: this.pavementSpot(rnd), wait: rnd.range(0, 3) });
+      this.life.add(model, look, p.x, p.z);
     }
   }
 
@@ -924,30 +919,7 @@ export class City implements FreeRoamArea {
       car.model.roll(blocked ? 0 : car.speed * dt);
       car.model.setBrakeLights(blocked);
     }
-    // Pedestrians near the player.
-    const rnd = this.rnd;
-    for (const w of this.walkers) {
-      const near = Math.hypot(w.body.x - player.x, w.body.z - player.z) < 160;
-      w.model.root.visible = near;
-      if (!near) continue;
-      const dx = w.target.x - w.body.x;
-      const dz = w.target.z - w.body.z;
-      const d = Math.hypot(dx, dz);
-      let mx = 0;
-      let my = 0;
-      if (w.wait > 0) w.wait -= dt;
-      else if (d < 1.5) {
-        w.target = this.pavementSpot(rnd);
-        w.wait = rnd.range(1, 4);
-      } else {
-        mx = dx / d;
-        my = -dz / d;
-      }
-      w.body.step(dt, { moveX: mx * 0.4, moveY: my * 0.4, cameraYaw: 0, sprint: false, walk: false, jump: false, faceCamera: false }, this.world);
-      w.model.root.position.set(w.body.x, w.body.y, w.body.z);
-      w.model.root.rotation.y = w.body.heading;
-      w.model.animate(dt, w.body.pose, w.body.speed, time);
-    }
+    this.life.update(dt, time, player, this.world);
     // Secrets and chests bob and spin.
     for (const s of this.secrets) if (s.mesh?.visible) {
       s.mesh.rotation.y = time * 1.5;

@@ -82,7 +82,12 @@ export const LEISURE_POSES = ['fish', 'reel', 'sip', 'tend', 'dj', 'sleep'] as c
 export type LeisurePose = (typeof LEISURE_POSES)[number];
 export const isLeisurePose = (v: unknown): v is LeisurePose => typeof v === 'string' && (LEISURE_POSES as readonly string[]).includes(v);
 
-export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote | LeisurePose;
+/** Everyday things townspeople do: chatting, listening, checking a phone, stretching, pointing something out. */
+export const AMBIENT_POSES = ['talk', 'listen', 'phone', 'stretch', 'point'] as const;
+export type AmbientPose = (typeof AMBIENT_POSES)[number];
+export const isAmbientPose = (v: unknown): v is AmbientPose => typeof v === 'string' && (AMBIENT_POSES as readonly string[]).includes(v);
+
+export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote | LeisurePose | AmbientPose;
 
 const INK = '#2b2622';
 const _clipQ = new THREE.Quaternion();
@@ -480,6 +485,14 @@ export class HumanModel {
         const push = Math.sin(time * 4) * 0.35;
         for (const arm of this.arms) arm.shoulder.rotation.x = 0.2 + push;
       } else if (pose === 'wave') this.arms[1].shoulder.rotation.set(0, 0, -2.4 + Math.sin(time * 9) * 0.25);
+      else if (pose === 'talk' || pose === 'point' || pose === 'phone') this.ambient(pose, time);
+      else if (pose === 'ayubowan') {
+        // Palms together at the chest.
+        this.arms[0].shoulder.rotation.set(0.75, 0, 0.55);
+        this.arms[1].shoulder.rotation.set(0.75, 0, -0.55);
+        this.arms[0].elbow.rotation.x = this.arms[1].elbow.rotation.x = 1.75;
+      }
+      else if (pose === 'laugh' || pose === 'listen') this.head.rotation.x = (pose === 'laugh' ? 0.3 : -0.05) + Math.max(0, Math.sin(time * 2.4)) ** 4 * 0.15;
     } else this.procedural(dt, pose, speed, time);
     if (this.layers.length) this.applyClips(dt);
     // An older person's gentle stoop.
@@ -509,7 +522,7 @@ export class HumanModel {
       this.arms[1].shoulder.rotation.set(1.0, 0, -0.15);
       for (const arm of this.arms) arm.elbow.rotation.x = 0.4;
       this.hips.position.y = 0.5;
-      this.chest.rotation.x = ride ? -0.2 : -0.05;
+      this.chest.rotation.set(ride ? -0.2 : -0.05, 0, 0);
       this.head.rotation.set(Math.sin(time * 1.3) * 0.04, Math.sin(time * 0.7) * 0.15, 0);
       return;
     }
@@ -556,6 +569,54 @@ export class HumanModel {
     this.head.rotation.set(-this.chest.rotation.x * 0.6, 0, 0);
     if (isEmote(pose)) this.emote(pose, time);
     else if (isLeisurePose(pose)) this.leisure(pose, time);
+    else if (isAmbientPose(pose)) this.ambient(pose, time);
+  }
+
+  /** Everyday poses for townspeople (rotation.x > 0 swings a limb forward). */
+  private ambient(p: AmbientPose, time: number): void {
+    const [left, right] = this.arms;
+    switch (p) {
+      case 'talk': {
+        // Hands move with the words; the head nods and turns a little.
+        right.shoulder.rotation.set(0.45 + Math.sin(time * 3.1) * 0.25, 0, -0.25);
+        right.elbow.rotation.x = 1.0 + Math.sin(time * 4.3) * 0.35;
+        left.shoulder.rotation.set(0.25 + Math.max(0, Math.sin(time * 2.2 + 1)) * 0.45, 0, 0.2);
+        left.elbow.rotation.x = 0.7 + Math.max(0, Math.sin(time * 2.2 + 1)) * 0.6;
+        this.head.rotation.set(Math.sin(time * 5) * 0.06, Math.sin(time * 0.8) * 0.15, 0);
+        break;
+      }
+      case 'listen':
+        // Hands behind the back, nodding now and then.
+        left.shoulder.rotation.set(-0.35, 0, 0.12);
+        right.shoulder.rotation.set(-0.35, 0, -0.12);
+        left.elbow.rotation.x = right.elbow.rotation.x = 0.5;
+        this.head.rotation.set(-0.05 + Math.max(0, Math.sin(time * 2.4)) ** 4 * 0.2, 0, Math.sin(time * 0.6) * 0.06);
+        break;
+      case 'phone':
+        // Looking down at a phone held in front.
+        right.shoulder.rotation.set(0.75, 0, -0.3);
+        right.elbow.rotation.x = 1.55;
+        left.shoulder.rotation.set(0.55, 0, 0.3);
+        left.elbow.rotation.x = 1.45;
+        this.head.rotation.set(-0.4, 0, 0);
+        break;
+      case 'stretch': {
+        // Arms up, leaning slowly side to side.
+        const lean = Math.sin(time * 0.9);
+        left.shoulder.rotation.set(0, 0, 2.8);
+        right.shoulder.rotation.set(0, 0, -2.8);
+        left.elbow.rotation.x = right.elbow.rotation.x = 0.1;
+        this.chest.rotation.z = lean * 0.18;
+        this.head.rotation.set(0.15, 0, lean * 0.1);
+        break;
+      }
+      case 'point':
+        // "Look over there!"
+        right.shoulder.rotation.set(1.5 + Math.sin(time * 1.5) * 0.05, 0, -0.15);
+        right.elbow.rotation.x = 0.05;
+        this.head.rotation.set(0.1, -0.15, 0);
+        break;
+    }
   }
 
   /** Standing poses for the quiet things to do (rotation.x > 0 swings a limb forward). */

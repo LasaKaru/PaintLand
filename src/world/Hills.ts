@@ -17,18 +17,12 @@ import { HumanModel } from '../models/Human';
 import { buildChurch, buildKodimaram } from '../models/LandmarksFaith';
 import { buildGopuram } from '../models/LandmarksIndia';
 import { personOf } from './Peoples';
-import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
+import { TownLife } from './TownLife';
+import { FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
 import type { MapInfo } from '../ui/MapView';
 import { AREA_Y, type AreaZone, type Chest, type FreeRoamArea, type Place, type Secret, type StuntJump } from './FreeRoamArea';
-
-interface Townsfolk {
-  model: HumanModel;
-  body: FreeWalker;
-  target: { x: number; z: number };
-  wait: number;
-}
 
 const INK = '#2b2622';
 const TEA = '#4f9a4a';
@@ -70,7 +64,8 @@ export class Hills implements FreeRoamArea {
   readonly seaZ = 70;
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -96, z: 4, heading: -Math.PI / 2 };
-  readonly folk: Townsfolk[] = [];
+  /** Townspeople going about their day (see TownLife.ts). */
+  readonly life = new TownLife((r) => this.randomSpot(r), new Random(1105001), { greetings: ['ayubowan', 'wave'] });
   private readonly labels: HTMLDivElement[] = [];
   private labelLang = '';
   private readonly zoneRings: THREE.Mesh[] = [];
@@ -371,6 +366,7 @@ export class Hills implements FreeRoamArea {
   }
 
   private buildFolk(): void {
+    this.group.add(this.life.group);
     const rnd = new Random(1105);
     for (let i = 0; i < 18; i++) {
       // Tea pickers (every third) dress for the estate; everyone else as they like.
@@ -379,11 +375,9 @@ export class Hills implements FreeRoamArea {
       if (i % 3 === 0) Object.assign(look, { topStyle: 'sari', top: rnd.pick(['#e8559a', '#f08a2e', '#3e86c9', '#5dbb3f']), back: 'satchel' });
       else if (i % 3 === 1) Object.assign(look, { bottomStyle: 'sarong', bottom: rnd.pick(['#2d4f8f', '#7a3b2e', '#2d8a5a']) });
       const model = new HumanModel(look);
-      const body = new FreeWalker();
       const p = this.randomSpot(rnd);
-      body.place(p.x, p.z, rnd.range(-3, 3));
       this.group.add(model.root);
-      this.folk.push({ model, body, target: this.randomSpot(rnd), wait: rnd.range(0, 3) });
+      this.life.add(model, look, p.x, p.z);
     }
   }
 
@@ -467,28 +461,7 @@ export class Hills implements FreeRoamArea {
       s.rotation.y = Math.sin(time * 0.1 + i) > 0 ? Math.PI / 2 : -Math.PI / 2;
       s.position.y = -AREA_Y + 0.3 + Math.sin(time * 1.3 + i) * 0.08;
     });
-    const rnd = this.rnd;
-    for (const f of this.folk) {
-      const dx = f.target.x - f.body.x;
-      const dz = f.target.z - f.body.z;
-      const d = Math.hypot(dx, dz);
-      const near = Math.hypot(player.x - f.body.x, player.z - f.body.z) < 5;
-      let mx = 0;
-      let my = 0;
-      if (f.wait > 0) f.wait -= dt;
-      else if (d < 1.2) {
-        f.target = this.randomSpot(rnd);
-        f.wait = rnd.range(1, 5);
-      } else if (!near) {
-        mx = dx / d;
-        my = -dz / d;
-      }
-      f.body.step(dt, { moveX: mx * 0.45, moveY: my * 0.45, cameraYaw: 0, sprint: false, walk: false, jump: false, faceCamera: false }, this.world);
-      if (near) f.body.heading = Math.atan2(-(player.x - f.body.x), -(player.z - f.body.z));
-      f.model.root.position.set(f.body.x, f.body.y, f.body.z);
-      f.model.root.rotation.y = f.body.heading;
-      f.model.animate(dt, near ? 'wave' : f.body.pose, f.body.speed, time);
-    }
+    this.life.update(dt, time, player, this.world);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     const langNow = document.documentElement.lang;
     if (langNow !== this.labelLang) {

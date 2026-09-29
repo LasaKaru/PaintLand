@@ -13,7 +13,8 @@ import { buildBush, buildFlowerBush, buildPalm, buildRoundTree } from '../models
 import { buildOruwa, buildTukTukProp } from '../models/LandmarksSriLanka';
 import { HumanModel } from '../models/Human';
 import { personOf } from './Peoples';
-import { FreeWalker, FreeWorld } from '../gameplay/FreeRoam';
+import { TownLife } from './TownLife';
+import { FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
 
@@ -24,13 +25,6 @@ import { HomePlot, homeToWorld } from './HomePlot';
 /** Ground height of the hub above the sea. */
 export const HUB_Y = AREA_Y;
 export type HubZone = AreaZone;
-
-interface Townsfolk {
-  model: HumanModel;
-  body: FreeWalker;
-  target: { x: number; z: number };
-  wait: number;
-}
 
 const WALLS = ['#f4e3c8', '#f2c6b4', '#e9b8c8', '#cfe3d6', '#f6f0e4', '#f7d9a8', '#d8d4ec', '#bfd9e8', '#f0c9a0'];
 const INK = '#2b2622';
@@ -68,7 +62,8 @@ export class Hub implements FreeRoamArea {
   /** Your home by the harbour gardens (see HomePlot). */
   readonly home = new HomePlot();
   readonly spawn = { x: 0, z: 30, heading: 0 };
-  readonly folk: Townsfolk[] = [];
+  /** Townspeople going about their day (see TownLife.ts). */
+  readonly life = new TownLife((r) => this.randomSpot(r), new Random(77001), { greetings: ['wave'] });
   private readonly labels: HTMLDivElement[] = [];
   private labelLang = '';
   private readonly zoneRings: THREE.Mesh[] = [];
@@ -439,15 +434,15 @@ export class Hub implements FreeRoamArea {
   }
 
   private buildFolk(): void {
+    this.group.add(this.life.group);
     const rnd = new Random(77);
     // Harbour Town is a port: people from everywhere (see Peoples.ts).
     for (let i = 0; i < 20; i++) {
-      const model = new HumanModel(personOf('mixed', () => rnd.next()).look);
-      const body = new FreeWalker();
+      const look = personOf('mixed', () => rnd.next()).look;
+      const model = new HumanModel(look);
       const p = this.randomSpot(rnd);
-      body.place(p.x, p.z, rnd.range(-3, 3));
       this.group.add(model.root);
-      this.folk.push({ model, body, target: this.randomSpot(rnd), wait: rnd.range(0, 3) });
+      this.life.add(model, look, p.x, p.z);
     }
   }
 
@@ -514,29 +509,7 @@ export class Hub implements FreeRoamArea {
 
   /** Townsfolk stroll between spots; everyone waves at the player. Labels follow their zones. */
   update(dt: number, time: number, player: { x: number; z: number }, camera: THREE.PerspectiveCamera): void {
-    const rnd = this.rnd;
-    for (const f of this.folk) {
-      const dx = f.target.x - f.body.x;
-      const dz = f.target.z - f.body.z;
-      const d = Math.hypot(dx, dz);
-      const near = Math.hypot(player.x - f.body.x, player.z - f.body.z) < 5;
-      let mx = 0;
-      let my = 0;
-      if (f.wait > 0) f.wait -= dt;
-      else if (d < 1.2) {
-        f.target = this.randomSpot(rnd);
-        f.wait = rnd.range(1, 5);
-      } else if (!near) {
-        // Walk toward the target: express it as camera-relative input with a camera facing −Z.
-        mx = dx / d;
-        my = -dz / d;
-      }
-      f.body.step(dt, { moveX: mx * 0.45, moveY: my * 0.45, cameraYaw: 0, sprint: false, walk: false, jump: false, faceCamera: false }, this.world);
-      if (near) f.body.heading = Math.atan2(-(player.x - f.body.x), -(player.z - f.body.z));
-      f.model.root.position.set(f.body.x, f.body.y, f.body.z);
-      f.model.root.rotation.y = f.body.heading;
-      f.model.animate(dt, near ? 'wave' : f.body.pose, f.body.speed, time);
-    }
+    this.life.update(dt, time, player, this.world);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     // Labels (re-drawn when the language changes).
     const langNow = document.documentElement.lang;
