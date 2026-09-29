@@ -84,3 +84,38 @@ describe('Missions and shop', () => {
     expect(new Set(MISSIONS.map((m) => m.id)).size).toBe(MISSIONS.length);
   });
 });
+
+describe('rivers, lakes and seas beside the road', () => {
+  it.each(CHAPTERS.map((c) => [c.name, c] as const))('%s: nothing stands in the water, and no landmark was lost to it', (_name, chapter) => {
+    const d = new Decorator(chapter.buildRoute(), chapter);
+    d.build();
+    // Water strips follow the road: none of them may cover the road itself.
+    const f = { x: 0, z: 0 };
+    let onRoad = 0;
+    for (let s = 0; s < d.path.length; s += 10) {
+      const p = d.sample(s).position;
+      f.x = p.x;
+      f.z = p.z;
+      if (d.inWater(f.x, f.z, 1)) onRoad++;
+    }
+    expect(onRoad, 'road centre points inside a river or lake').toBe(0);
+    // Every building taken out of the water was an extra, never a named landmark.
+    const lost = d.wetBig.filter((w) => d.landmarks.some((l) => Math.hypot(l.position.x - w.x, l.position.z - w.z) < 25)).map((w) => d.landmarks.find((l) => Math.hypot(l.position.x - w.x, l.position.z - w.z) < 25)!.name);
+    expect(lost).toEqual([]);
+    // And whatever is left standing on the ground is dry.
+    d.group.updateMatrixWorld(true);
+    const m = new THREE.Matrix4();
+    const pos = new THREE.Vector3();
+    const wet: string[] = [];
+    d.group.traverse((o) => {
+      const im = o as THREE.InstancedMesh;
+      if (!im.isInstancedMesh || d.isWaterOk(im.geometry)) return;
+      for (let i = 0; i < im.count; i++) {
+        im.getMatrixAt(i, m);
+        pos.setFromMatrixPosition(m);
+        if (d.inWater(pos.x, pos.z, 1) && !d.nearRoad(pos, 14)) wet.push(`${pos.x.toFixed(0)},${pos.z.toFixed(0)}`);
+      }
+    });
+    expect(wet).toEqual([]);
+  }, 60000);
+});

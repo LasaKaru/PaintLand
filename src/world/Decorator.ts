@@ -58,6 +58,12 @@ export class Decorator {
   private readonly buckets = new Map<THREE.BufferGeometry, THREE.Matrix4[]>();
   /** Painted land (discs, x/z/radius): anything standing at sea level must be on one. */
   readonly land: { x: number; z: number; r: number }[] = [];
+  /** Rivers, lakes and canals laid over the land: oriented rectangles (centre, axis, half sizes). */
+  readonly water: { x: number; z: number; c: number; s: number; hw: number; hl: number }[] = [];
+  /** How many placed things were taken out of the water (see dropWet). */
+  wetDropped = 0;
+  /** Where big one-off structures were taken out of the water (checked against the landmarks in tests). */
+  readonly wetBig: { x: number; z: number }[] = [];
   /** Things meant to be in the water (boats, sea rocks, islands). */
   private readonly waterOk = new Set<THREE.BufferGeometry>();
   /** Islets added under things that would otherwise stand in the sea (for tests and tools). */
@@ -80,6 +86,7 @@ export class Decorator {
       dress(this, span, rnd, def);
     }
     this.chapter.background(this, new Random(hashString(this.chapter.id + ':bg')));
+    this.dropWet();
     this.groundStrays();
     this.flush();
     return this.group;
@@ -95,6 +102,76 @@ export class Decorator {
   /** Is (x, z) on painted land (at least `margin` metres in)? */
   onLand(x: number, z: number, margin = 0): boolean {
     return this.land.some((l) => Math.hypot(x - l.x, z - l.z) <= l.r - margin);
+  }
+
+  /** Record a stretch of river or lake: centre, heading (yaw of its length), width and length. */
+  addWater(x: number, z: number, yaw: number, width: number, length: number): void {
+    this.water.push({ x, z, c: Math.cos(yaw), s: Math.sin(yaw), hw: width / 2, hl: length / 2 });
+  }
+
+  private roadPts: { x: number; z: number }[] | null = null;
+
+  /** Would a water rectangle (centre, yaw of its length, width, length) cover any part of the road (plus `margin`)? */
+  waterCoversRoad(x: number, z: number, yaw: number, width: number, length: number, margin = 6): boolean {
+    if (!this.roadPts) {
+      this.roadPts = [];
+      const f = createFrame();
+      for (let s = 0; s < this.path.length; s += 6) {
+        const p = this.path.sample(s, f).position;
+        this.roadPts.push({ x: p.x, z: p.z });
+      }
+    }
+    const c = Math.cos(yaw);
+    const sn = Math.sin(yaw);
+    const reach = Math.hypot(width, length) / 2 + margin;
+    for (const p of this.roadPts) {
+      const dx = p.x - x;
+      const dz = p.z - z;
+      if (Math.abs(dx) > reach || Math.abs(dz) > reach) continue;
+      if (Math.abs(dx * sn + dz * c) <= length / 2 + margin && Math.abs(dx * c - dz * sn) <= width / 2 + margin) return true;
+    }
+    return false;
+  }
+
+  /** Is (x, z) in a river or lake (at least `margin` metres in from its edge)? */
+  inWater(x: number, z: number, margin = 0): boolean {
+    return this.water.some((w) => {
+      const dx = x - w.x;
+      const dz = z - w.z;
+      // The length runs along (sin yaw, cos yaw); the width across it.
+      const along = dx * w.s + dz * w.c;
+      const across = dx * w.c - dz * w.s;
+      return Math.abs(along) <= w.hl - margin && Math.abs(across) <= w.hw - margin;
+    });
+  }
+
+  /**
+   * Nothing that stands on the ground may stand in a river or lake: houses,
+   * trees and props whose base falls in the water are removed (the road
+   * itself, and what stands at its edge, may cross water on a causeway).
+   */
+  private dropWet(): void {
+    if (!this.water.length) return;
+    const pos = new THREE.Vector3();
+    for (const [geo, matrices] of this.buckets) {
+      if (this.waterOk.has(geo)) continue;
+      if (!geo.boundingBox) geo.computeBoundingBox();
+      const size = geo.boundingBox!.getSize(new THREE.Vector3());
+      const big = matrices.length <= 3 && Math.max(size.x, size.y, size.z) >= 20;
+      const keep = matrices.filter((m) => {
+        pos.setFromMatrixPosition(m);
+        if (!this.inWater(pos.x, pos.z, 1)) return true;
+        // Lamps, kerbs and walls at the roadside stay (the road may cross water on a causeway).
+        if (this.nearRoad(pos, 14)) return true;
+        // Big one-off structures are recorded: a test checks none of them was a named landmark
+        // (a bridge or pier is marked as floating; a building belongs on land).
+        if (big) this.wetBig.push({ x: pos.x, z: pos.z });
+        return false;
+      });
+      this.wetDropped += matrices.length - keep.length;
+      if (keep.length) this.buckets.set(geo, keep);
+      else this.buckets.delete(geo);
+    }
   }
 
   /** Is this geometry meant to be in the water? */

@@ -149,7 +149,7 @@ const dressMumbai: Dresser = (d, span, rnd) => {
   for (let s = span.start + 4; s < span.end; s += 14) d.sideProp(lamps, s, 1, 0.8); // the Queen's Necklace
   const taxi = buildKaaliPeeli();
   for (let s = span.start + 16; s < span.end - 10; s += 34) d.sideProp(taxi, s, -1, 0.8, 0.18);
-  landmarkBeside(d, span, 0.8, 1, 26, buildGatewayOfIndia(), 'The Gateway of India', 22, 18);
+  landmarkBeside(d, span, 0.8, 1, 26, d.floats(buildGatewayOfIndia()), 'The Gateway of India', 22, 18);
   d.landmark('Marine Drive, the Queen’s Necklace', span.district, at(span, 0.3), beside(d, span, 0.3, 1, 10).p.setY(6));
   const palms = [0, 1].map((i) => buildPalm(rnd.fork(i + 30)));
   for (let s = span.start + 7; s < span.end; s += 28) d.sideProp(rnd.pick(palms), s, -1, 1.2);
@@ -216,7 +216,7 @@ const dressKanyakumari: Dresser = (d, span, rnd) => {
   landAlong(d, span.start, span.end, 90, '#6fae3a', '#e6d6b0');
   waterBeside(d, span, 1, 16, 320, '#3f8fb8');
   const r = beside(d, span, 0.7, 1, 160);
-  d.place(buildRockMemorials(), d.worldMatrix(r.p.setY(0), r.face), false);
+  d.place(d.floats(buildRockMemorials()), d.worldMatrix(r.p.setY(0), r.face), false);
   d.landmark('Vivekananda Rock and the Thiruvalluvar statue', span.district, r.s, r.p.clone().setY(20));
   const palms = [0, 1, 2].map((i) => buildPalm(rnd.fork(i + 80)));
   for (let s = span.start + 4; s < span.end; s += 8) d.sideProp(rnd.pick(palms), s, -1, rnd.range(1, 8));

@@ -137,7 +137,7 @@ const dressGuilin: Dresser = (d, span, rnd) => {
   waterBeside(d, span, 1, 14, 90, '#4f9a8a');
   for (let i = 0; i < 24; i++) {
     const { p } = beside(d, span, rnd.range(0, 1), rnd.chance(0.3) ? -1 : 1, rnd.range(40, 200));
-    if (!d.nearRoad(p, 30)) d.place(buildKarst(rnd.fork(i), rnd.range(20, 34), rnd.range(40, 80)), d.worldMatrix(p, rnd.range(0, 6)), false);
+    if (!d.nearRoad(p, 30)) d.place(d.floats(buildKarst(rnd.fork(i), rnd.range(20, 34), rnd.range(40, 80))), d.worldMatrix(p, rnd.range(0, 6)), false);
   }
   const raft = d.floats(buildBambooRaft());
   let named = false;
@@ -166,7 +166,8 @@ const dressSuzhou: Dresser = (d, span, rnd) => {
     named = true;
   }
   waterBeside(d, part(span, 0.65, 1), 1, 14, 160, '#5a9aa8'); // West Lake
-  landmarkBeside(d, span, 0.8, 1, 60, buildPagoda(), 'The Leifeng Pagoda by the lake', 14, 9, 1.6);
+  // On the lake's near shore (the lake is 14–174 m out), not in it.
+  landmarkBeside(d, span, 0.8, -1, 30, buildPagoda(), 'The Leifeng Pagoda by the lake', 14, 9, 1.6);
   lanternStreet(d, part(span, 0, 0.6), rnd, 20);
   const willows = [0, 1].map((i) => buildRoundTree(rnd.fork(i + 40), null));
   for (let s = at(span, 0.62); s < span.end; s += 10) d.sideProp(rnd.pick(willows), s, 1, 3);

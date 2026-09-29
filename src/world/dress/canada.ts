@@ -66,7 +66,7 @@ const dressNiagara: Dresser = (d, span, rnd) => {
   landAlong(d, span.start, span.end, 150, '#7fae4a');
   waterBeside(d, span, 1, 20, 160, '#3f8fa8');
   const f = beside(d, span, 0.5, 1, 140);
-  d.place(buildHorseshoeFalls(), d.worldMatrix(f.p.setY(0), f.face), false);
+  d.place(d.floats(buildHorseshoeFalls()), d.worldMatrix(f.p.setY(0), f.face), false);
   d.landmark('The Horseshoe Falls', span.district, f.s, f.p.clone().setY(24));
   const b = beside(d, span, 0.5, 1, 70);
   d.place(d.floats(buildMistBoat()), d.worldMatrix(b.p.setY(0), b.face + Math.PI / 2), false);
@@ -144,7 +144,7 @@ const dressVancouver: Dresser = (d, span, rnd) => {
     first = false;
   }
   const b = beside(d, span, 0.85, 1, 240);
-  d.place(buildSuspensionBridge(460), d.worldMatrix(b.p.setY(0), b.face + Math.PI / 2), false);
+  d.place(d.floats(buildSuspensionBridge(460)), d.worldMatrix(b.p.setY(0), b.face + Math.PI / 2), false);
   d.landmark('The Lions Gate Bridge', span.district, b.s, b.p.clone().setY(50));
   pines(d, part(span, 0.5, 1), rnd, 5, [3, 20]);
 };

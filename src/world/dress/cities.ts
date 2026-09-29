@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import type { Decorator, Dresser } from '../Decorator';
 import { walkableHalfWidth } from '../../road/RoadMesh';
+import { createFrame } from '../../road/RoadPath';
 import type { Random } from '../../core/Random';
 import { ModelKit, Pattern } from '../../models/ModelKit';
 import { buildHouse } from '../../models/Buildings';
@@ -75,13 +76,29 @@ export function furniture(d: Decorator, span: Span, rnd: Random, items: THREE.Bu
   for (let s = span.start + 6; s < span.end - 6; s += rnd.range(every[0], every[1])) d.sideProp(rnd.pick(items), s, rnd.chance(0.5) ? -1 : 1, rnd.range(0.4, 1.4));
 }
 
-/** A long strip of water beside the road (canal, river, harbour); its surface sits just above the land. */
+/**
+ * A strip of water beside the road (canal, river, lake shore, sea front). It
+ * follows the road's curve in short segments, so on a long, winding district
+ * it never swings across the road or onto the land on the far side. Its
+ * surface sits just above the land, with a low stone bank along the road side.
+ */
 export function waterBeside(d: Decorator, span: Span, side: number, dist: number, width: number, colour = '#3f8fb0'): void {
-  const mid = d.sample((span.start + span.end) / 2);
-  const right = mid.right.clone().setY(0).normalize();
-  const yaw = Math.atan2(mid.tangent.x, mid.tangent.z);
-  const len = span.end - span.start + 60;
-  d.place(d.floats(new ModelKit().box(1, 1, 1, colour, { pattern: Pattern.Glass }).build(0, 5)), d.worldMatrix(mid.position.clone().addScaledVector(right, side * (dist + width / 2)).setY(0), yaw, new THREE.Vector3(width, 2.1, len)), false);
+  const step = 30;
+  const kit = new ModelKit();
+  const f = createFrame();
+  for (let s = span.start - 30; s < span.end + 30; s += step) {
+    d.sample(Math.max(0, Math.min(d.path.length, s)), f);
+    const right = f.right.clone().setY(0).normalize();
+    const yaw = Math.atan2(f.tangent.x, f.tangent.z);
+    const centre = f.position.clone().addScaledVector(right, side * (dist + width / 2)).setY(0);
+    // On a tight bend (or where the road doubles back) the segment would cover the road: leave it out.
+    if (d.waterCoversRoad(centre.x, centre.z, yaw, width, step + 4, Math.min(6, Math.max(2, dist - 6)))) continue;
+    kit.box(width, 2.1, step + 4, colour, { position: [centre.x, 0, centre.z], rotation: [0, yaw, 0], pattern: Pattern.Glass });
+    const bank = f.position.clone().addScaledVector(right, side * (dist - 0.6)).setY(0);
+    kit.box(1.6, 2.3, step + 4, '#b8ae9a', { position: [bank.x, 0, bank.z], rotation: [0, yaw, 0], pattern: Pattern.Stone });
+    d.addWater(centre.x, centre.z, yaw, width, step + 4);
+  }
+  if (!kit.isEmpty) d.place(d.floats(kit.build(0, 5)), new THREE.Matrix4(), false);
 }
 
 export function hills(d: Decorator, span: Span, rnd: Random, kind: Parameters<typeof buildHill>[3], count: number, dist: [number, number], size: [number, number], height: [number, number]): void {
@@ -119,10 +136,11 @@ const dressLondon: Dresser = (d, span, rnd, def) => {
   furniture(d, span, rnd, [buildLamp(rnd), buildPhoneBox(), buildBench()]);
   const bus = buildDoubleDecker();
   for (let s = span.start + 30; s < span.end - 20; s += 70) d.sideProp(bus, s, -1, 0.8);
-  landmarkBeside(d, span, 0.25, 1, 50, buildBigBen(), 'Big Ben', 70, 14);
-  landmarkBeside(d, span, 0.8, 1, 60, buildTowerBridge(70, 8), 'Tower Bridge', 40, 30);
+  // Big Ben and the Eye stand on the far bank of the Thames (the river is 12–82 m out).
+  landmarkBeside(d, span, 0.25, 1, 96, buildBigBen(), 'Big Ben', 70, 14);
+  landmarkBeside(d, span, 0.8, 1, 60, d.floats(buildTowerBridge(70, 8)), 'Tower Bridge', 40, 30);
   // The London Eye: a turning wheel on its frame.
-  const eye = beside(d, span, 0.55, 1, 45);
+  const eye = beside(d, span, 0.55, 1, 112);
   if (!d.nearRoad(eye.p, 30)) {
     d.place(buildLondonEyeFrame(28), d.worldMatrix(eye.p, eye.face), false);
     d.addSpinner(buildLondonEyeWheel(28), d.worldMatrix(eye.p.clone().setY(31), eye.face), 'x', 0.05);
@@ -151,7 +169,8 @@ const dressAmsterdam: Dresser = (d, span, rnd) => {
   const houses = [0, 1, 2, 3, 4, 5, 6].map((i) => info(buildCanalHouse(rnd.fork(i)), 5.4, 9, 14));
   const half = { ...span, end: span.start + (span.end - span.start) * 0.55 };
   rows(d, half, rnd, () => rnd.pick(houses), [-1, 1], 0.05, 5);
-  waterBeside(d, half, 1, 0.5, 4, '#3f7f9a');
+  // The canal runs between the road and the right-hand houses.
+  waterBeside(d, half, 1, 7.5, 3, '#3f7f9a');
   const bikes = ['#d8463a', '#2b2622', '#3e6fa8', '#f4d23b'].map(buildBicycle);
   for (let s = span.start + 4; s < half.end; s += rnd.range(3, 6)) d.sideProp(rnd.pick(bikes), s, -1, 0.4);
   // Tulip fields out in the country.
@@ -326,7 +345,7 @@ const dressSydney: Dresser = (d, span, rnd) => {
   d.landmark('Sydney Harbour Bridge', span.district, s0 + 60, f.position.clone().add(new THREE.Vector3(0, 40, 0)));
   waterBeside(d, span, 1, 10, 200, '#3f7fb0');
   waterBeside(d, span, -1, 10, 60, '#3f7fb0');
-  landmarkBeside(d, span, 0.75, 1, 80, buildOperaHouse(), 'The Sydney Opera House', 28, 50, 1.7);
+  landmarkBeside(d, span, 0.75, 1, 80, d.floats(buildOperaHouse()), 'The Sydney Opera House', 28, 50, 1.7);
   const ferry = buildFerry();
   for (let i = 0; i < 6; i++) {
     const { p } = beside(d, span, rnd.range(0.1, 0.9), 1, rnd.range(30, 180), 1.1);

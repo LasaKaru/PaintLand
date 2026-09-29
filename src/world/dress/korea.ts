@@ -142,7 +142,7 @@ const dressHaeundae: Dresser = (d, span, rnd) => {
   for (let s = span.start + 10; s < span.end - 10; s += 7) d.sideProp(rnd.pick(umbrellas), s, 1, rnd.range(8, 18), 0.05);
   d.landmark('Haeundae Beach', span.district, at(span, 0.3), beside(d, span, 0.3, 1, 14).p.setY(3));
   const b = beside(d, span, 0.7, 1, 260);
-  d.place(buildSuspensionBridge(500), d.worldMatrix(b.p.setY(0), b.face + Math.PI / 2), false);
+  d.place(d.floats(buildSuspensionBridge(500)), d.worldMatrix(b.p.setY(0), b.face + Math.PI / 2), false);
   d.landmark('Gwangan Bridge', span.district, b.s, b.p.clone().setY(60));
   const palms = [0, 1].map((i) => buildPalm(rnd.fork(i + 30)));
   for (let s = span.start + 5; s < span.end; s += 16) d.sideProp(rnd.pick(palms), s, 1, 2);
@@ -158,7 +158,7 @@ const dressJeju: Dresser = (d, span, rnd) => {
   const tangerines = [0, 1].map((i) => buildRoundTree(rnd.fork(i + 60), '#f08a2e'));
   for (let s = span.start; s < span.end; s += 5) d.sideProp(rnd.pick(tangerines), s, -1, rnd.range(4, 20));
   const crater = beside(d, span, 0.8, 1, 260);
-  d.place(buildCraterPeak(), d.worldMatrix(crater.p.setY(0), 0), false);
+  d.place(d.floats(buildCraterPeak()), d.worldMatrix(crater.p.setY(0), 0), false);
   d.landmark('Seongsan Ilchulbong, the Sunrise Peak', span.district, crater.s, crater.p.clone().setY(70));
   hills(d, part(span, 0, 0.6), rnd, 'forest', 3, [300, 450], [180, 240], [120, 180]); // Hallasan
 };

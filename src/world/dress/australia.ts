@@ -35,9 +35,9 @@ const dressHarbourCity: Dresser = (d, span, rnd) => {
   towers(d, part(span, 0, 0.5), rnd, [-1], 40, 110);
   waterBeside(d, span, 1, 12, 240, '#3f7fb0');
   const b = beside(d, span, 0.3, 1, 130);
-  d.place(buildHarbourBridge(160, 60, 12), d.worldMatrix(b.p.setY(0), b.face + Math.PI / 2), false);
+  d.place(d.floats(buildHarbourBridge(160, 60, 12)), d.worldMatrix(b.p.setY(0), b.face + Math.PI / 2), false);
   d.landmark('The Sydney Harbour Bridge', span.district, b.s, b.p.clone().setY(50));
-  landmarkBeside(d, span, 0.75, 1, 80, buildOperaHouse(), 'The Sydney Opera House', 28, 50, 1.7);
+  landmarkBeside(d, span, 0.75, 1, 80, d.floats(buildOperaHouse()), 'The Sydney Opera House', 28, 50, 1.7);
   const ferry = buildFerry();
   for (let i = 0; i < 5; i++) {
     const { p } = beside(d, span, rnd.range(0.1, 0.9), 1, rnd.range(40, 200), 1.1);

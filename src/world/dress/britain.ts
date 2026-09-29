@@ -134,7 +134,8 @@ const dressCornwall: Dresser = (d, span, rnd) => {
     const { p, face } = beside(d, span, 0.08 + i * 0.035, 1, 30 + (i % 3) * 9);
     d.place(rnd.pick(boats), d.worldMatrix(p.setY(0.3), face + rnd.range(-1, 1)), false);
   }
-  landmarkBeside(d, span, 0.85, 1, 22, buildLighthouse(), 'Lizard Point lighthouse', 12, 6, 1.6);
+  // The lighthouse stands out on its rocky point, in the sea.
+  landmarkBeside(d, span, 0.85, 1, 22, d.floats(buildLighthouse()), 'Lizard Point lighthouse', 12, 6, 1.6);
   hills(d, span, rnd, 'grass', 6, [40, 140], [50, 90], [20, 40]);
 };
 

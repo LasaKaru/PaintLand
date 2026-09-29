@@ -51,7 +51,7 @@ const dressHamburg: Dresser = (d, span, rnd) => {
   rows(d, part(span, 0, 0.65), rnd, () => rnd.pick(stores), [1], 1, 24);
   d.landmark('The Speicherstadt', span.district, at(span, 0.3), beside(d, span, 0.3, -1, 14).p.setY(14));
   waterBeside(d, part(span, 0.65, 1), 1, 14, 200, '#4f7a8a'); // the Elbe
-  landmarkBeside(d, span, 0.85, 1, 90, buildElbphilharmonie(), 'The Elbphilharmonie', 60, 55);
+  landmarkBeside(d, span, 0.85, 1, 90, d.floats(buildElbphilharmonie()), 'The Elbphilharmonie', 60, 55);
   const barges = [0, 1].map((i) => d.floats(buildBarge(rnd.fork(i))));
   for (const t of [0.72, 0.95]) {
     const { p, face } = beside(d, span, t, 1, 50);
