@@ -19,6 +19,7 @@ import { buildGopuram } from '../models/LandmarksIndia';
 import { personOf } from './Peoples';
 import { TownLife } from './TownLife';
 import { AnimalLife } from './AnimalLife';
+import { addCricket, type CricketPitch } from './StreetFun';
 import type { Species } from '../models/Animals';
 import { FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
@@ -67,6 +68,8 @@ export class Hills implements FreeRoamArea {
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -96, z: 4, heading: -Math.PI / 2 };
   /** Townspeople going about their day (see TownLife.ts). */
+  /** Street cricket pitches (see StreetFun.ts). */
+  readonly cricket: CricketPitch[] = [];
   /** Dogs, cats, crows and more (see AnimalLife.ts). */
   readonly animals = new AnimalLife(new Random(11051));
   readonly life = new TownLife((r) => this.randomSpot(r), new Random(1105001), { greetings: ['ayubowan', 'wave'] });
@@ -339,6 +342,7 @@ export class Hills implements FreeRoamArea {
     this.murals.push(...addMuralBoards(this, 'hills', this.spawn));
     // Fishing spots, resting at home and DJ stages (see Leisure.ts).
     addLeisure(this, 'hills');
+    this.cricket.push(...addCricket(this, 'hills', 'lanka'));
     for (const z of this.zones) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.35, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
       ring.position.set(z.x, 0.1, z.z);
@@ -488,6 +492,7 @@ export class Hills implements FreeRoamArea {
     });
     this.life.update(dt, time, player, this.world);
     this.animals.update(dt, time, player, this.world, this.life.env);
+    for (const c of this.cricket) c.update(dt, time);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     const langNow = document.documentElement.lang;
     if (langNow !== this.labelLang) {

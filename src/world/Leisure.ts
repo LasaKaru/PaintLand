@@ -63,6 +63,7 @@ export function leisureZones(area: string): AreaZone[] {
 export function leisureLabel(z: AreaZone): string | null {
   if (z.kind === 'fishing') return `🎣 ${t('zone.fishing')}`;
   if (z.kind === 'dj') return `🎧 ${t('zone.dj')}`;
+  if (z.kind === 'cricket') return `🏏 ${t('zone.cricket')}`;
   if (z.kind === 'rest' && z.spot) return `${REST_ICON[z.spot as RestKind] ?? ''} ${t(`rest.${z.spot}` as StringKey)}`;
   return null;
 }

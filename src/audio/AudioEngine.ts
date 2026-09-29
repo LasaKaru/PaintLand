@@ -840,6 +840,11 @@ export class AudioEngine {
     this.ambience?.animal(call, level * this.ambienceVolume);
   }
 
+  /** A child giggling from a hiding place (0..1 by distance). */
+  giggle(level: number): void {
+    this.ambience?.giggle(level * this.ambienceVolume);
+  }
+
   /** A crowd-ish burst of claps (stunts). */
   cheer(): void {
     if (!this.ctx) return;

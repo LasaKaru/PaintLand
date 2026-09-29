@@ -6,7 +6,7 @@ import { PaintMaterial } from '../render/PaintMaterial';
 import type { Random } from '../core/Random';
 
 /** What a townsperson is doing right now. */
-export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk' | 'hail' | 'ride';
+export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk' | 'hail' | 'ride' | 'flee' | 'hide';
 
 /** Who someone is, which decides what they like to do. */
 export type Kind = 'child' | 'adult' | 'elder' | 'wheels';
@@ -249,6 +249,38 @@ export class TownLife {
     return p;
   }
 
+  /** Tag! These children run from the player until caught (or the time runs out). */
+  startTag(kids: TownPerson[], seconds = 60): void {
+    for (const k of kids) {
+      this.leave(k);
+      k.act = 'flee';
+      k.t = seconds;
+      k.target = this.spot(this.rnd);
+    }
+  }
+
+  /** Hide-and-seek: the child runs off to a hiding place and crouches there. */
+  startHide(kid: TownPerson, spot: { x: number; z: number }, seconds = 90): void {
+    this.leave(kid);
+    kid.act = 'hide';
+    kid.t = seconds;
+    kid.target = spot;
+  }
+
+  /** Caught (tag) or found (hide-and-seek): a laugh and a cheer, then back to playing. */
+  caught(p: TownPerson): void {
+    p.act = 'pause';
+    p.still = 'laugh';
+    p.t = 2.5;
+  }
+
+  /** Other children within reach of `p` who are free to join a game. */
+  playmates(p: TownPerson, reach = 30, max = 2): TownPerson[] {
+    return this.people
+      .filter((q) => q !== p && q.kind === 'child' && (q.act === 'stroll' || q.act === 'play' || q.act === 'pause') && q.model.root.visible && Math.hypot(q.body.x - p.body.x, q.body.z - p.body.z) < reach)
+      .slice(0, max);
+  }
+
   /** Get into the car (the game moves the model onto the back seat). */
   board(p: TownPerson): void {
     this.leave(p);
@@ -437,7 +469,7 @@ export class TownLife {
       let jump = false;
       let face: { x: number; z: number } | null = null;
       let pose: HumanPose | null = null;
-      const busy = p.act === 'chat' || p.act === 'jog' || p.act === 'dodge' || p.act === 'home' || p.act === 'busk' || p.act === 'hail';
+      const busy = p.act === 'chat' || p.act === 'jog' || p.act === 'dodge' || p.act === 'home' || p.act === 'busk' || p.act === 'hail' || p.act === 'flee' || p.act === 'hide';
       const near = pd < 5 && !busy && !(p.act === 'pause' && (p.still === 'clap' || p.still === 'cheer' || p.still === 'talk'));
       if (p.t <= 0) this.next(p);
       // A car coming fast: step out of its way (then point after it: slow down!).
@@ -499,6 +531,38 @@ export class TownLife {
               }
             }
           }
+          break;
+        }
+        case 'flee': {
+          // Tag: run from the player when they come close, otherwise play about (hop now and then).
+          const away = pd < 12;
+          const goal = away ? { x: b.x + ((b.x - player.x) / Math.max(pd, 0.1)) * 8 + Math.sin(time * 1.7 + p.temper * 9) * 4, z: b.z + ((b.z - player.z) / Math.max(pd, 0.1)) * 8 + Math.cos(time * 1.3 + p.temper * 7) * 4 } : p.target;
+          const dx = goal.x - b.x;
+          const dz = goal.z - b.z;
+          const d = Math.hypot(dx, dz);
+          if (!away && d < 1.2) p.target = this.spot(rnd);
+          if (d > 0.3) {
+            mx = dx / d;
+            my = -dz / d;
+          }
+          speed = away ? 0.95 : 0.6;
+          p.beat -= dt;
+          if (p.beat <= 0 && b.grounded) {
+            jump = rnd.chance(0.3);
+            p.beat = rnd.range(0.8, 2);
+          }
+          if (p.t <= dt) p.t = 0;
+          break;
+        }
+        case 'hide': {
+          const dx = p.target.x - b.x;
+          const dz = p.target.z - b.z;
+          const d = Math.hypot(dx, dz);
+          if (d > 0.6) {
+            mx = dx / d;
+            my = -dz / d;
+            speed = 0.9;
+          } else pose = 'sitdown';
           break;
         }
         case 'hail':
@@ -657,7 +721,7 @@ export class TownLife {
       if (face) b.heading = Math.atan2(-(face.x - b.x), -(face.z - b.z));
       // Jogging and running children look like running, even below sprint speed.
       const moving = b.pose === 'walk' || b.pose === 'run';
-      p.pose = !b.grounded ? 'air' : moving ? ((p.act === 'jog' || p.act === 'play') && b.speed > 2.5 ? 'run' : 'walk') : pose ?? 'idle';
+      p.pose = !b.grounded ? 'air' : moving ? ((p.act === 'jog' || p.act === 'play' || p.act === 'flee' || p.act === 'hide') && b.speed > 2.5 ? 'run' : 'walk') : pose ?? 'idle';
       // Elders and wheelchair users never run or hop; sitting down is for those who can get up easily.
       if (p.kind === 'elder' || p.kind === 'wheels') {
         if (p.pose === 'run' || p.pose === 'air') p.pose = 'walk';

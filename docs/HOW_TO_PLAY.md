@@ -191,6 +191,21 @@ tip by stars:
 
 Get out of the car or leave the town, and the passenger gets out unpaid.
 
+**Street cricket.** Local kids play cricket on Galle Face Green in Serendib City, on the Harbour
+Town green and at the Tea Hills ground. Walk into the 🏏 ring at the batting end and press **E** to
+take the bat for an over of six balls. Press **E** or **Space** as the ball reaches you:
+
+- **Dead on:** a six.
+- **Close:** a four.
+- **Near enough:** a run or two.
+
+Miss a ball on the stumps and you're bowled. Each run is worth 3 ink, and your best innings is
+kept. Walk away to stop.
+
+**Tag and hide-and-seek.** Talk to a child and they may challenge you. In **tag** you have 60
+seconds to touch them and their friends (sprint!). In **hide-and-seek** they run off to hide, and
+you have 90 seconds to find them. Listen for giggles, which get louder as you get closer.
+
 Faith is part of everyday life in these places. Some locals wear a hijab, turban, kippah or prayer
 cap, and in Sri Lanka and the Himalayas you may pass monks in saffron or maroon robes. These
 clothes belong to the people who wear them. You can't buy them in the shop or wear them yourself.

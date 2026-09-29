@@ -1,3 +1,6 @@
+import { CricketMatch } from '../gameplay/Cricket';
+import { buildBat, type CricketPitch } from '../world/StreetFun';
+import { TownLife as TownLifeClass } from '../world/TownLife';
 import { Taxi, type TaxiCar } from '../gameplay/Taxi';
 import { talkLine } from '../gameplay/TownTalk';
 import { regionFor } from '../world/Peoples';
@@ -292,6 +295,12 @@ export class Game {
   private taxiLife: TownLife | null = null;
   private taxiStop = 0;
   private hailBeacon: THREE.Mesh | null = null;
+  /** Batting at a street cricket pitch. */
+  private cricketAt: CricketPitch | null = null;
+  private batMesh: THREE.Mesh | null = null;
+  private swingT = 0;
+  /** A game of tag or hide-and-seek with the town's children. */
+  private street: { kind: 'tag'; kids: TownPerson[]; caught: Set<TownPerson>; time: number } | { kind: 'hide'; kid: TownPerson; time: number; giggle: number } | null = null;
   /** A townsperson close enough to talk to (on foot). */
   private nearPerson: TownPerson | null = null;
   /** A dog or cat close enough to pet (on foot in a town). */
@@ -3498,7 +3507,7 @@ export class Game {
     } else {
       // The parked car is solid while walking (once it has landed, if it was called).
       area.world.colliders.push({ type: 'circle', x: this.hubCar.x, z: this.hubCar.z, r: this.carDrop.active ? 0 : 1.4 });
-      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0 || !!this.viewing || !!this.leisure.active;
+      const out = (this.battle?.out.get(this.selfBattleId()) ?? 0) > 0 || !!this.viewing || !!this.leisure.active || !!this.cricketAt;
       const move = out ? { x: 0, y: 0 } : inp.moveAxes();
       this.hubWalker.step(dt, { moveX: move.x, moveY: move.y, cameraYaw: this.hubCam.yaw, sprint: inp.held('sprint'), walk: inp.held('crouch'), jump: inp.consume('hop'), faceCamera: false }, area.world);
       area.world.colliders.pop();
@@ -3524,6 +3533,8 @@ export class Game {
     }
     this.checkPickups(area, p.x, p.z);
     this.taxiStep(dt, area);
+    this.cricketStep();
+    this.streetStep(dt, area);
     this.leisure.update(dt, this.time);
     if (this.mode === 'foot') this.profile.addStat('walked', this.hubWalker.speed * dt);
     this.discoverTimer -= dt;
@@ -3587,6 +3598,109 @@ export class Game {
     } else if (e?.kind === 'cancel') this.hud.tip(t('taxi.cancel'), 4, '🚕');
   }
 
+  /** Take the bat at a street cricket pitch (on foot). */
+  private startCricket(zone: HubZone): void {
+    const pitch = this.area?.cricket?.find((c) => c.def.id === zone.spot);
+    if (!pitch || this.mode !== 'foot') return;
+    const c = pitch.crease;
+    this.hubWalker.place(c.x, c.z, c.yaw);
+    this.hubCam.yaw = c.yaw;
+    this.batMesh ??= new THREE.Mesh(buildBat(), this.pickupMaterial);
+    this.batMesh.rotation.set(Math.PI - 0.5, 0, 0);
+    this.humanModel.hold(this.batMesh);
+    this.swingT = 0;
+    pitch.start(new TaxiRandom(Date.now() % 10007));
+    this.cricketAt = pitch;
+  }
+
+  /** End the innings (walked off, or the over is done). */
+  private endCricket(): void {
+    const pitch = this.cricketAt;
+    if (!pitch) return;
+    const m = pitch.match;
+    pitch.stop();
+    this.cricketAt = null;
+    this.humanModel.hold(null);
+    if (m && m.balls > 0) {
+      const ink = this.profile.earn(CricketMatch.reward(m.runs));
+      const best = Math.max(this.profile.stat('cricketBest'), m.runs);
+      this.profile.recordStat('cricketBest', m.runs);
+      this.hud.lootCard(t('cricket.title'), '#5dbb3f', t('cricket.done', { runs: m.runs }), `${t('cricket.best', { runs: best })} · +${ink} ink`);
+      this.checkTrophies();
+    }
+  }
+
+  /** Shots in the innings: a pop, a cheer, the end of the over. */
+  private cricketStep(): void {
+    const pitch = this.cricketAt;
+    if (!pitch) return;
+    for (const shot of pitch.shots.splice(0)) {
+      const m = pitch.match!;
+      const text = shot === 'six' ? t('cricket.six') : shot === 'four' ? t('cricket.four') : shot === 'runs' ? t(m.last?.runs === 2 ? 'cricket.two' : 'cricket.one') : shot === 'dot' ? t('cricket.dot') : t('cricket.bowled');
+      this.popAtPawn(text, shot === 'six' || shot === 'four' ? 'big' : shot === 'bowled' ? 'info' : 'good');
+      if (shot === 'six' || shot === 'four') this.audio.cheer();
+      if (shot === 'six') this.audio.secret();
+      if (shot === 'bowled') this.audio.bump();
+    }
+    if (pitch.match?.over) this.endCricket();
+  }
+
+  /** Tag and hide-and-seek: touch the children (or find the one hiding) before time runs out. */
+  private streetStep(dt: number, area: FreeRoamArea): void {
+    const sg = this.street;
+    const life = area.life;
+    if (!sg || !life) return;
+    const me = { x: this.hubWalker.x, z: this.hubWalker.z };
+    // Games are played on foot, in this town.
+    const kids = sg.kind === 'tag' ? sg.kids : [sg.kid];
+    if (this.mode !== 'foot' || !kids.every((k) => life.people.includes(k))) {
+      this.street = null;
+      return;
+    }
+    sg.time -= dt;
+    if (sg.kind === 'tag') {
+      for (const k of sg.kids) {
+        if (sg.caught.has(k) || Math.hypot(k.body.x - me.x, k.body.z - me.z) > 1.4) continue;
+        sg.caught.add(k);
+        life.caught(k);
+        this.popAtPawn(t('tag.caught'), 'good');
+        this.audio.cheer();
+      }
+      if (sg.caught.size === sg.kids.length) {
+        const ink = this.profile.earn(15 * sg.kids.length + 20);
+        this.hud.lootCard(t('tag.title'), '#e8559a', t('tag.win'), `+${ink} ink`);
+        this.profile.addStat('tagWins');
+        for (const k of sg.kids) k.still = 'cheer';
+        this.street = null;
+        this.checkTrophies();
+      } else if (sg.time <= 0) {
+        this.hud.tip(t('tag.lose'), 4, '🏃');
+        this.street = null;
+      }
+      return;
+    }
+    const k = sg.kid;
+    const d = Math.hypot(k.body.x - me.x, k.body.z - me.z);
+    // Giggles from the hiding place, louder when you're close.
+    sg.giggle -= dt;
+    if (sg.giggle <= 0) {
+      sg.giggle = 5;
+      this.audio.giggle(Math.max(0.15, 1 - d / 50));
+    }
+    if (k.act === 'hide' && d < 2) {
+      life.caught(k);
+      const ink = this.profile.earn(40);
+      this.hud.lootCard(t('hide.title'), '#e8559a', t('hide.found'), `+${ink} ink`);
+      this.profile.addStat('hideWins');
+      this.audio.cheer();
+      this.street = null;
+      this.checkTrophies();
+    } else if (sg.time <= 0) {
+      this.hud.tip(t('hide.lose'), 4, '🙈');
+      this.street = null;
+    }
+  }
+
   /** A few words with a townsperson (or a tip for a street musician). */
   private chatWith(p: TownPerson, area: FreeRoamArea): void {
     const life = area.life!;
@@ -3620,6 +3734,23 @@ export class Game {
       },
       this.talkRnd,
     );
+    // Children want to play: tag, or hide-and-seek.
+    if (p.kind === 'child' && !this.street) {
+      if (this.talkRnd.chance(0.5)) {
+        const kids = [p, ...life.playmates(p)];
+        life.startTag(kids, 60);
+        this.street = { kind: 'tag', kids, caught: new Set(), time: 60 };
+      } else {
+        const a = this.talkRnd.range(0, Math.PI * 2);
+        const d = this.talkRnd.range(18, 35);
+        const spot = TownLifeClass.clearSpot(area.world, p.body.x + Math.cos(a) * d, p.body.z + Math.sin(a) * d);
+        life.startHide(p, spot, 90);
+        this.street = { kind: 'hide', kid: p, time: 90, giggle: 6 };
+        this.hud.tip(t('talk.hide'), 5, `${line.hello}!`);
+        this.profile.addStat('chats');
+        return;
+      }
+    }
     this.hud.tip(t(line.key, line.params), 5, `${line.hello}!`);
     this.profile.addStat('chats');
   }
@@ -3780,7 +3911,15 @@ export class Game {
         this.callCar();
       }
     } else if (!inp.held('interact')) this.callHold = 0;
-    if (inp.consume('interact')) {
+    if (this.cricketAt) {
+      // Batting: E or Space swings; walking off ends the innings.
+      if (inp.consume('interact') || inp.consume('hop')) {
+        this.cricketAt.swing();
+        this.swingT = 0.001;
+      }
+      const mv = inp.moveAxes();
+      if (Math.hypot(mv.x, mv.y) > 0.5) this.endCricket();
+    } else if (inp.consume('interact')) {
       const zone = this.hubZone;
       if (zone) this.useZone(zone);
       else if (this.mode === 'drive' && this.area?.life && this.taxi.canPickUp(this.taxiCar())) {
@@ -3854,6 +3993,7 @@ export class Game {
     else if (zone.kind === 'launch') this.startFlight(zone);
     else if (zone.kind === 'viewpoint') this.enterViewpoint(zone);
     else if (zone.kind === 'fishing' || zone.kind === 'rest' || zone.kind === 'dj') this.startLeisure(zone);
+    else if (zone.kind === 'cricket') this.startCricket(zone);
     else if (zone.kind === 'story') this.talkToVarna();
     else if (zone.kind === 'mural' && zone.mural) {
       this.muralId = zone.mural;
@@ -4734,6 +4874,19 @@ export class Game {
         this.hailBeacon.scale.set(0.2, 0.5, 0.2);
       }
     }
+    if (this.cricketAt?.match) {
+      const m = this.cricketAt.match;
+      this.hud.objective(t('cricket.title'), t('cricket.status', { runs: m.runs, ball: Math.min(6, m.balls + (m.phase === 'result' || m.phase === 'done' ? 0 : 1)) }), t('cricket.hint'));
+      this.hud.compass(null);
+      return;
+    }
+    const sg = this.street;
+    if (sg) {
+      if (sg.kind === 'tag') this.hud.objective(t('tag.title'), t('tag.status', { n: sg.caught.size, total: sg.kids.length, s: Math.ceil(sg.time) }));
+      else this.hud.objective(t('hide.title'), t('hide.status', { s: Math.ceil(sg.time) }));
+      this.hud.compass(null);
+      return;
+    }
     if (fare) {
       this.hud.objective(t('taxi.title'), t('taxi.objective', { place: fare.to.name }), t('taxi.stopHere'));
       const dir = cam.getWorldDirection(_v);
@@ -4793,7 +4946,12 @@ export class Game {
       hm.root.position.set(w.x, HUB_Y + w.y + this.leisure.lift(), w.z);
       hm.root.quaternion.setFromAxisAngle(_y, w.heading);
       this.tickEmote(dt, this.hubWalker.speed);
-      hm.animate(dt, this.viewing ? 'sit' : this.waveTimer > 0 ? this.emoteName : this.leisure.pose() ?? this.hubWalker.pose, this.hubWalker.speed, this.time);
+      if (this.cricketAt) {
+        this.swingT = this.swingT > 0 ? Math.min(1, this.swingT + dt * 4) : 0;
+        if (this.cricketAt.match?.phase === 'runup') this.swingT = 0;
+        hm.swing = this.swingT;
+      }
+      hm.animate(dt, this.viewing ? 'sit' : this.cricketAt ? 'bat' : this.waveTimer > 0 ? this.emoteName : this.leisure.pose() ?? this.hubWalker.pose, this.hubWalker.speed, this.time);
       this.updatePet(dt, hm.root);
       if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
         this.footstepTimer -= dt * this.hubWalker.speed;
@@ -4906,7 +5064,7 @@ export class Game {
     const taxiText = this.mode === 'drive' && this.taxi.canPickUp(this.taxiCar()) ? t('taxi.pickPrompt') : null;
     const personText = this.nearPerson ? t(this.nearPerson.act === 'busk' ? 'talk.tipPrompt' : 'talk.prompt') : null;
     const boardText = taxiText ?? personText ?? (this.nearPet ? t(this.nearPet.species === 'dog' ? 'prompt.petDog' : 'prompt.petCat') : this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null);
-    this.hud.setPrompt(this.state === 'photo' || this.flight || this.leisure.active ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
+    this.hud.setPrompt(this.state === 'photo' || this.flight || this.leisure.active || this.cricketAt ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
     this.drawBattle(dt);
     if (this.flight) this.updateFlightHud(cam);
     else this.updateMissionHud(player.x, player.z, cam);

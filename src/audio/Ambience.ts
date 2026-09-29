@@ -471,15 +471,20 @@ export class Ambience {
     }
   }
 
+  /** A child's giggle (higher and quicker than a laugh). */
+  giggle(level: number): void {
+    this.laugh(this.ctx.currentTime, level * 1.4, 1.9);
+  }
+
   /** "Ha-ha-ha": quick falling syllables. */
-  private laugh(t: number, level: number): void {
+  private laugh(t: number, level: number, pitch = 1): void {
     const ctx = this.ctx;
     const pan = ctx.createStereoPanner();
     pan.pan.value = Math.random() * 1.2 - 0.6;
     pan.connect(this.bus);
-    const f0 = 220 + Math.random() * 180;
+    const f0 = (220 + Math.random() * 180) * pitch;
     for (let i = 0; i < 4; i++) {
-      const at = t + i * 0.14;
+      const at = t + (i * 0.14) / Math.sqrt(pitch);
       const o = ctx.createOscillator();
       o.type = 'triangle';
       o.frequency.setValueAtTime(f0 * (1 - i * 0.05), at);

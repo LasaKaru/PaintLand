@@ -83,7 +83,7 @@ export type LeisurePose = (typeof LEISURE_POSES)[number];
 export const isLeisurePose = (v: unknown): v is LeisurePose => typeof v === 'string' && (LEISURE_POSES as readonly string[]).includes(v);
 
 /** Everyday things townspeople do: chatting, listening, a phone, stretching, pointing, taking a photo, busking. */
-export const AMBIENT_POSES = ['talk', 'listen', 'phone', 'stretch', 'point', 'photo', 'strum', 'drum'] as const;
+export const AMBIENT_POSES = ['talk', 'listen', 'phone', 'stretch', 'point', 'photo', 'strum', 'drum', 'bat', 'bowl'] as const;
 export type AmbientPose = (typeof AMBIENT_POSES)[number];
 export const isAmbientPose = (v: unknown): v is AmbientPose => typeof v === 'string' && (AMBIENT_POSES as readonly string[]).includes(v);
 
@@ -455,6 +455,8 @@ export class HumanModel {
   private sunHat: THREE.Mesh | null = null;
   /** Beats per minute for strumming and drumming (buskers play in time with the radio). */
   tempo = 100;
+  /** 0..1 through a cricket swing ('bat') or a bowling action ('bowl'). */
+  swing = 0;
 
   /**
    * Carry an umbrella or lantern in the right hand, or wear a guitar or drum.
@@ -705,6 +707,33 @@ export class HumanModel {
         left.elbow.rotation.x = 0.55;
         this.head.rotation.set(-0.15 + hit * 0.06, 0.25, 0);
         this.hips.position.y = 0.86 - hit * 0.02;
+        break;
+      }
+      case 'bat': {
+        // Batting: knees bent, bat back (swing 0) through to a high follow-through (swing 1).
+        const k = this.swing;
+        const arc = k < 0.15 ? -0.7 - k * 2 : -1 + ((k - 0.15) / 0.85) * 3;
+        right.shoulder.rotation.set(arc, 0, -0.35 + k * 0.2);
+        left.shoulder.rotation.set(arc * 0.9, 0, 0.45 - k * 0.3);
+        right.elbow.rotation.x = left.elbow.rotation.x = 0.35;
+        this.chest.rotation.set(-0.25 + k * 0.15, -0.4 + k * 0.9, 0);
+        for (const leg of this.legs) {
+          leg.hip.rotation.x = 0.25;
+          leg.knee.rotation.x = -0.4;
+        }
+        this.hips.position.y = 0.8;
+        this.head.rotation.set(0.1, 0.3 - k * 0.3, 0);
+        break;
+      }
+      case 'bowl': {
+        // Bowling: the arm goes over the top, straight (swing 0 → 1).
+        const k = this.swing;
+        right.shoulder.rotation.set(-0.3 - k * 5.8, 0, -0.1);
+        left.shoulder.rotation.set(1.6 - k * 2.2, 0, 0.3);
+        right.elbow.rotation.x = left.elbow.rotation.x = 0.1;
+        this.chest.rotation.set(0.2 - k * 0.5, 0, 0);
+        this.legs[0].hip.rotation.x = 0.5 - k;
+        this.legs[1].hip.rotation.x = -0.3 + k * 0.6;
         break;
       }
       case 'drum': {
