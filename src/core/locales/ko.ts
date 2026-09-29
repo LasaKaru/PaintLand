@@ -1224,5 +1224,12 @@ const ko: Locale = {
   'crowd.normal': "보통",
   'crowd.busy': "북적북적",
   'crowd.hint': "마을과 길에 사람이 얼마나 있는지. 멀리 있는 사람은 단순하게 그려 부드럽게 유지해요. 길은 다음에 출발할 때 바뀌어요.",
+  'rest.cook': "요리하기",
+  'restTip.cook': "표시가 목표를 지날 때 E · 움직이면 멈춰요",
+  'cook.none': "먼저 마을에서 길거리 음식을 맛보면 집에서 만들 수 있어요.",
+  'cook.chop': "썰기! 목표에서 E",
+  'cook.stir': "젓기! 목표에서 E",
+  'cook.serve': "담기! 목표에서 E",
+  'cook.done': "집에서 만든 {food}! {min}분 동안 배불러요",
 };
 export default ko;

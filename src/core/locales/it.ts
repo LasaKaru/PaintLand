@@ -1224,5 +1224,12 @@ const it: Locale = {
   'crowd.normal': "Normale",
   'crowd.busy': "Tanta",
   'crowd.hint': "Quante persone ci sono in città e lungo le strade. Le persone lontane sono disegnate in modo semplice per restare fluidi. Le strade cambiano alla prossima partenza.",
+  'rest.cook': "Cucinare",
+  'restTip.cook': "Premi E quando l’indicatore passa sul bersaglio · muoviti per smettere",
+  'cook.none': "Prima assaggia il cibo di strada in città, poi potrai cucinarlo a casa.",
+  'cook.chop': "Taglia! E sul bersaglio",
+  'cook.stir': "Mescola! E sul bersaglio",
+  'cook.serve': "Servi! E sul bersaglio",
+  'cook.done': "{food} fatto in casa! Sazio per {min} min",
 };
 export default it;

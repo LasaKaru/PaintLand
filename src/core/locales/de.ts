@@ -1224,5 +1224,12 @@ const de: Locale = {
   'crowd.normal': "Mittel",
   'crowd.busy': "Belebt",
   'crowd.hint': "Wie viele Leute in Städten und an den Straßen unterwegs sind. Weit entfernte Leute werden vereinfacht gezeichnet, damit alles flüssig bleibt. Straßen ändern sich bei der nächsten Abfahrt.",
+  'rest.cook': "Kochen",
+  'restTip.cook': "Drücke E, wenn die Markierung das Ziel kreuzt · bewegen zum Aufhören",
+  'cook.none': "Probiere zuerst Streetfood in der Stadt, dann kannst du es zu Hause kochen.",
+  'cook.chop': "Schneiden! E auf dem Ziel",
+  'cook.stir': "Rühren! E auf dem Ziel",
+  'cook.serve': "Anrichten! E auf dem Ziel",
+  'cook.done': "{food}, selbst gemacht! {min} Min. satt",
 };
 export default de;

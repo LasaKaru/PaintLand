@@ -216,6 +216,11 @@ you have 90 seconds to find them. Listen for giggles, which get louder as you ge
 A snack leaves you **well fed** for 12 minutes, which gives +5% ink from everything, on top of being
 well rested.
 
+**Cooking at home.** Once you've tasted a dish at a stall, you can cook it at the 🍳 stove in your
+home. There are three steps: chop, stir and serve. For each one, press **E** as the sweeping marker
+passes the target. Each hit is a star. A home-cooked dish keeps you well fed for 15 minutes, plus 5
+more for each star.
+
 **Souvenirs.** Once you've visited a country on the Grand Tour, the souvenir stall in Harbour Town
 sells a local craft from there: an Ambalangoda mask, a kokeshi doll, a brass diya lamp and more.
 They go on a shelf in your home. They're cosmetic only.

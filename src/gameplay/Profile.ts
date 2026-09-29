@@ -242,6 +242,8 @@ export interface ProfileData {
   fish?: import('./Fishing').FishBook;
   /** Resting at home: well rested until when, and the plants (see Rest.ts). */
   rest?: import('./Rest').RestState;
+  /** Street food tasted (so you can cook it at home; see Cooking.ts). */
+  tasted?: string[];
   /** Well fed from a street snack until when (ms; see Bazaar.ts). */
   fed?: number;
   /** Souvenirs bought at the port market (see Bazaar.ts). */

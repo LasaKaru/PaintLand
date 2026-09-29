@@ -1224,5 +1224,12 @@ const es: Locale = {
   'crowd.normal': "Normal",
   'crowd.busy': "Muchas",
   'crowd.hint': "Cuánta gente hay en los pueblos y en las carreteras. La gente lejana se dibuja de forma sencilla para que todo vaya fluido. Las carreteras cambian la próxima vez que salgas.",
+  'rest.cook': "Cocinar un plato",
+  'restTip.cook': "Pulsa E cuando la marca pase por el objetivo · muévete para parar",
+  'cook.none': "Prueba antes comida callejera en el pueblo y luego podrás cocinarla en casa.",
+  'cook.chop': "¡Corta! Pulsa E en el objetivo",
+  'cook.stir': "¡Remueve! Pulsa E en el objetivo",
+  'cook.serve': "¡Sirve! Pulsa E en el objetivo",
+  'cook.done': "¡{food} casero! Bien alimentado {min} min",
 };
 export default es;

@@ -101,3 +101,28 @@ describe('the sketchbook', () => {
     expect(calls).toBeGreaterThan(20);
   });
 });
+
+describe('cooking at home', () => {
+  it('three steps; pressing on the target is a star, off it a miss; better dishes keep you fed longer', async () => {
+    const { CookGame, cookedMinutes } = await import('../src/gameplay/Cooking');
+    const g = new CookGame('kottu', new Random(3));
+    const hitNow = () => {
+      for (let i = 0; i < 2000 && Math.abs(g.marker - g.target) > 0.02; i++) g.update(0.002);
+      return g.press();
+    };
+    expect(hitNow()).toBe('hit');
+    for (let i = 0; i < 400; i++) g.update(0.005);
+    // Wait until the marker is far from the target, then press.
+    for (let i = 0; i < 4000 && Math.abs(g.marker - g.target) < 0.3; i++) g.update(0.002);
+    expect(g.press()).toBe('miss');
+    for (let i = 0; i < 400; i++) g.update(0.005);
+    expect(hitNow()).toBe('hit');
+    expect(g.done).toBe(true);
+    expect(g.hits).toBe(2);
+    // After the last step, the short pause still runs out (so the dish is served).
+    for (let i = 0; i < 200; i++) g.update(0.01);
+    expect(g.pause).toBeLessThanOrEqual(0);
+    expect(cookedMinutes(3)).toBeGreaterThan(cookedMinutes(0));
+    expect(cookedMinutes(0)).toBeGreaterThan(12);
+  });
+});

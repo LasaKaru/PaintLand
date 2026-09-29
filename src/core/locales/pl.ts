@@ -1224,5 +1224,12 @@ const pl: Locale = {
   'crowd.normal': "Normalnie",
   'crowd.busy': "Tłoczno",
   'crowd.hint': "Ilu ludzi jest w miastach i przy drogach. Dalekie postacie rysujemy prosto, by wszystko działało płynnie. Drogi zmienią się przy następnym wyjeździe.",
+  'rest.cook': "Ugotuj danie",
+  'restTip.cook': "Naciśnij E, gdy znacznik mija cel · ruszaj się, by przerwać",
+  'cook.none': "Najpierw spróbuj ulicznego jedzenia w mieście, potem ugotujesz je w domu.",
+  'cook.chop': "Kroj! E na celu",
+  'cook.stir': "Mieszaj! E na celu",
+  'cook.serve': "Podawaj! E na celu",
+  'cook.done': "Domowe {food}! Najedzony przez {min} min",
 };
 export default pl;

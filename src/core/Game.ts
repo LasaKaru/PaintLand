@@ -3617,6 +3617,8 @@ export class Game {
     }
     this.profile.earn(-FOOD_PRICE);
     this.profile.data.fed = eat(Date.now());
+    const tasted = (this.profile.data.tasted ??= []);
+    if (!tasted.includes(id)) tasted.push(id);
     this.profile.addStat('snacks');
     this.profile.save();
     this.eatTimer = 2.5;

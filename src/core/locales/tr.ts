@@ -1224,5 +1224,12 @@ const tr: Locale = {
   'crowd.normal': "Normal",
   'crowd.busy': "Yoğun",
   'crowd.hint': "Kasabalarda ve yollarda kaç kişi olduğu. Uzaktaki insanlar akıcılık için basitçe çizilir. Yollar bir sonraki yola çıkışında değişir.",
+  'rest.cook': "Yemek pişir",
+  'restTip.cook': "İşaret hedeften geçerken E'ye bas · durmak için hareket et",
+  'cook.none': "Önce kasabada sokak yemeği tat, sonra evde pişirebilirsin.",
+  'cook.chop': "Doğra! Hedefte E",
+  'cook.stir': "Karıştır! Hedefte E",
+  'cook.serve': "Servis et! Hedefte E",
+  'cook.done': "Ev yapımı {food}! {min} dk tok",
 };
 export default tr;

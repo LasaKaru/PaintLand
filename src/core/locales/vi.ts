@@ -1224,5 +1224,12 @@ const vi: Locale = {
   'crowd.normal': "Bình thường",
   'crowd.busy': "Đông vui",
   'crowd.hint': "Có bao nhiêu người trong thị trấn và dọc đường. Người ở xa được vẽ đơn giản để giữ mượt mà. Đường sẽ thay đổi vào lần khởi hành tới.",
+  'rest.cook': "Nấu một món",
+  'restTip.cook': "Nhấn E khi vạch đi qua mục tiêu · di chuyển để dừng",
+  'cook.none': "Hãy nếm đồ ăn đường phố trong thị trấn trước, rồi bạn có thể nấu ở nhà.",
+  'cook.chop': "Thái! Nhấn E đúng mục tiêu",
+  'cook.stir': "Khuấy! Nhấn E đúng mục tiêu",
+  'cook.serve': "Bày ra! Nhấn E đúng mục tiêu",
+  'cook.done': "{food} tự nấu! No bụng {min} phút",
 };
 export default vi;

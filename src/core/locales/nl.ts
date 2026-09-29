@@ -1224,5 +1224,12 @@ const nl: Locale = {
   'crowd.normal': "Normaal",
   'crowd.busy': "Druk",
   'crowd.hint': "Hoeveel mensen er in de steden en langs de wegen zijn. Mensen ver weg worden eenvoudig getekend zodat alles soepel blijft. Wegen veranderen de volgende keer dat je vertrekt.",
+  'rest.cook': "Koken",
+  'restTip.cook': "Druk op E als de markering het doel passeert · beweeg om te stoppen",
+  'cook.none': "Proef eerst straatvoedsel in de stad, dan kun je het thuis koken.",
+  'cook.chop': "Snijden! E op het doel",
+  'cook.stir': "Roeren! E op het doel",
+  'cook.serve': "Opdienen! E op het doel",
+  'cook.done': "Zelfgemaakte {food}! {min} min goed gevoed",
 };
 export default nl;

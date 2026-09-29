@@ -1222,6 +1222,13 @@ const en = {
   'crowd.normal': "Normal",
   'crowd.busy': "Busy",
   'crowd.hint': "How many people are out in towns and along the roads. Far-away people are drawn simply to keep things smooth. Roads change the next time you set off.",
+  'rest.cook': "Cook a dish",
+  'restTip.cook': "Press E as the marker passes the target · move to stop",
+  'cook.none': "Taste some street food in town first, then you can cook it at home.",
+  'cook.chop': "Chop! Press E on the target",
+  'cook.stir': "Stir! Press E on the target",
+  'cook.serve': "Serve! Press E on the target",
+  'cook.done': "{food}, home-made! Well fed for {min} min",
 } as const;
 
 export default en;

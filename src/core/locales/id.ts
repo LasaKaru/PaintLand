@@ -1224,5 +1224,12 @@ const id: Locale = {
   'crowd.normal': "Normal",
   'crowd.busy': "Ramai",
   'crowd.hint': "Berapa banyak orang di kota dan di sepanjang jalan. Orang yang jauh digambar sederhana agar tetap lancar. Jalan berubah saat kamu berangkat lagi.",
+  'rest.cook': "Memasak",
+  'restTip.cook': "Tekan E saat penanda melewati sasaran · bergerak untuk berhenti",
+  'cook.none': "Cicipi jajanan kaki lima di kota dulu, lalu kamu bisa memasaknya di rumah.",
+  'cook.chop': "Potong! Tekan E di sasaran",
+  'cook.stir': "Aduk! Tekan E di sasaran",
+  'cook.serve': "Sajikan! Tekan E di sasaran",
+  'cook.done': "{food} buatan rumah! Kenyang {min} menit",
 };
 export default id;

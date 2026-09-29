@@ -14,8 +14,8 @@ import { homeToWorld, HOME_SPOT } from './HomePlot';
  */
 
 /** Things to do at home (kind 'rest'). */
-export type RestKind = 'sofa' | 'bed' | 'tea' | 'plants' | 'records' | 'pet';
-export const REST_KINDS: RestKind[] = ['sofa', 'bed', 'tea', 'plants', 'records', 'pet'];
+export type RestKind = 'sofa' | 'bed' | 'tea' | 'plants' | 'records' | 'pet' | 'cook';
+export const REST_KINDS: RestKind[] = ['sofa', 'bed', 'tea', 'plants', 'records', 'pet', 'cook'];
 
 /**
  * Where each home activity is, in the house's own coordinates (see HomePlot):
@@ -28,6 +28,8 @@ export const HOME_REST: Record<RestKind, { ring: [number, number]; at: [number, 
   bed: { ring: [4.6, -0.9], at: [4.6, -3.1], face: [0, 1] },
   plants: { ring: [6.0, 1.2], at: [6.0, 1.2], face: [1, 0] },
   records: { ring: [5.2, 3.8], at: [5.2, 3.8], face: [1, 0.6] },
+  // The stove against the right-hand wall.
+  cook: { ring: [6.7, -0.9], at: [6.9, -0.9], face: [1, 0] },
 };
 
 /** A home spot in Harbour Town coordinates, with the walker's yaw. */
@@ -74,7 +76,7 @@ export function leisureLabel(z: AreaZone): string | null {
   return null;
 }
 
-const REST_ICON: Record<RestKind, string> = { sofa: '🛋', bed: '🛏', tea: '🫖', plants: '🪴', records: '🎶', pet: '🐾' };
+const REST_ICON: Record<RestKind, string> = { sofa: '🛋', bed: '🛏', tea: '🫖', plants: '🪴', records: '🎶', pet: '🐾', cook: '🍳' };
 
 // ————— models —————
 

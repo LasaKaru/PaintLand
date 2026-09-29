@@ -1224,5 +1224,12 @@ const zh: Locale = {
   'crowd.normal': "正常",
   'crowd.busy': "热闹",
   'crowd.hint': "城镇和道路上有多少人。远处的人用简化方式绘制，保持流畅。道路会在下次出发时改变。",
+  'rest.cook': "做一道菜",
+  'restTip.cook': "标记经过目标时按 E · 移动即可停止",
+  'cook.none': "先在镇上尝尝街头小吃，然后就能在家做了。",
+  'cook.chop': "切！在目标处按 E",
+  'cook.stir': "搅！在目标处按 E",
+  'cook.serve': "装盘！在目标处按 E",
+  'cook.done': "自制{food}！饱足 {min} 分钟",
 };
 export default zh;

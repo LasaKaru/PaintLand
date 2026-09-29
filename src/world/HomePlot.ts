@@ -184,6 +184,11 @@ export function buildHome(look: HomeLook): THREE.BufferGeometry {
   k.blob(0.22, '#f6f0e4', { position: [-2.4, 1.18, -1.7], scale: [1, 0.85, 1], detail: 1 });
   k.box(0.18, 0.06, 0.06, '#f6f0e4', { position: [-2.12, 1.2, -1.7], rotation: [0, 0, 0.5] });
   for (const cx of [-2.95, -2.2]) k.cylinder(0.08, 0.06, 0.12, 8, '#8fd0c8', { position: [cx, 1.05, -1.25] });
+  // A little kitchen: a stove with a pan and a pot against the right-hand wall.
+  k.box(0.9, 1.0, 1.7, '#d9d0c0', { position: [7.4, 0.8, -0.9] });
+  k.box(0.95, 0.06, 1.75, '#3a3530', { position: [7.4, 1.33, -0.9] });
+  k.cylinder(0.26, 0.24, 0.08, 12, '#2b2622', { position: [7.35, 1.4, -1.35] });
+  k.cylinder(0.2, 0.22, 0.3, 12, '#b8b8c0', { position: [7.35, 1.5, -0.45] });
   // The bed, with a lamp beside it.
   k.box(2.6, 0.55, 3.9, '#7a5a3a', { position: [4.6, 0.45, -D / 2 + 2.15], pattern: Pattern.Planks });
   k.box(2.4, 0.3, 3.7, '#f6f0e4', { position: [4.6, 0.85, -D / 2 + 2.15] });

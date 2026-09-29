@@ -1224,5 +1224,12 @@ const sw: Locale = {
   'crowd.normal': "Kawaida",
   'crowd.busy': "Wengi",
   'crowd.hint': "Watu wangapi wako mijini na kando ya barabara. Watu walio mbali huchorwa kwa urahisi ili mambo yaende laini. Barabara hubadilika utakapoanza safari tena.",
+  'rest.cook': "Pika mlo",
+  'restTip.cook': "Bonyeza E alama inapopita lengo · sogea kusimama",
+  'cook.none': "Onja chakula cha mtaani mjini kwanza, kisha unaweza kukipika nyumbani.",
+  'cook.chop': "Katakata! Bonyeza E kwenye lengo",
+  'cook.stir': "Koroga! Bonyeza E kwenye lengo",
+  'cook.serve': "Pakua! Bonyeza E kwenye lengo",
+  'cook.done': "{food} ya nyumbani! Umeshiba dakika {min}",
 };
 export default sw;

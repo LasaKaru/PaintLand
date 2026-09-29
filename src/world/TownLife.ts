@@ -152,6 +152,8 @@ export class TownLife {
   private baseCount = -1;
   /** Far-away people, drawn cheaply. */
   readonly standIns = new StandIns();
+  /** Beyond this distance people are stand-ins (Infinity turns them off). */
+  standInFar = STAND_IN_FAR;
   private readonly m4 = new THREE.Matrix4();
   private readonly q4 = new THREE.Quaternion();
   private readonly v4 = new THREE.Vector3();
@@ -768,7 +770,7 @@ export class TownLife {
       }
       if (p.kind === 'wheels' && (p.pose === 'sitdown' || p.pose === 'stretch')) p.pose = 'idle';
       if (p.act === 'dodge' && p.kind === 'adult' && p.pose === 'walk') p.pose = 'run';
-      if (pd > STAND_IN_FAR && p.model.root.visible && p.act !== 'busk') {
+      if (pd > this.standInFar && p.model.root.visible && p.act !== 'busk') {
         // Far away: a cheap stand-in (bobbing along when walking) instead of the full model.
         p.model.root.visible = false;
         const bob = p.pose === 'walk' || p.pose === 'run' ? Math.abs(Math.sin(time * 8 + p.temper * 20)) * 0.05 : 0;

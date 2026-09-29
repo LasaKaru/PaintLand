@@ -1,3 +1,6 @@
+import { Random } from '../core/Random';
+import { CookGame, cookedMinutes, STEP_ICON } from './Cooking';
+import type { FoodId } from './Bazaar';
 import * as THREE from 'three';
 import type { AudioEngine } from '../audio/AudioEngine';
 import { t, type StringKey } from '../core/i18n';
@@ -49,7 +52,7 @@ export interface LeisureHost {
 
 type Activity =
   | { kind: 'fishing'; spot: FishingSpot; game: ReelGame | null; idle: number; show: number; caught: FishDef | null }
-  | { kind: 'rest'; what: RestKind; t: number; done: boolean }
+  | { kind: 'rest'; what: RestKind; t: number; done: boolean; cook?: CookGame }
   | { kind: 'dj'; stage: string };
 
 const RARITY_COLOURS = ['#9a9a9a', '#4f9a5a', '#4a90c9', '#f4a52a'];
@@ -129,9 +132,19 @@ export class LeisureMode {
         this.host.hud.showRecords(this.host.audio.stationNames, { station: this.host.audio.stationIndex, track: this.host.audio.trackIndex });
         return true;
       }
+      // Cooking: a dish you've tasted at a street stall.
+      let cook: CookGame | undefined;
+      if (what === 'cook') {
+        const tasted = this.host.profile.data.tasted ?? [];
+        if (!tasted.length) {
+          this.host.toast(t('cook.none'));
+          return true;
+        }
+        cook = new CookGame(tasted[Math.floor(Math.random() * tasted.length)] as FoodId, new Random(Date.now() % 9973));
+      }
       const p = restPlace(what);
       this.host.walker().place(p.x, p.z, p.yaw);
-      this.active = { kind: 'rest', what, t: 0, done: false };
+      this.active = { kind: 'rest', what, t: 0, done: false, cook };
       this.host.hud.setTip(t(`restTip.${what}` as StringKey));
       if (what === 'bed') {
         this.host.hud.setSleep(true);
@@ -164,6 +177,7 @@ export class LeisureMode {
       this.float.visible = this.line.visible = this.held.visible = false;
       if (a.game?.phase === 'reel') this.host.toast(t('fish.gotAway'));
     } else if (a.kind === 'rest') {
+      if (a.cook) this.host.hud.setMeter(null);
       if (a.what === 'bed') {
         this.host.hud.setSleep(false);
         this.host.hudHidden(false);
@@ -183,6 +197,15 @@ export class LeisureMode {
       return true;
     }
     if (a.kind === 'rest') {
+      // Cooking: E on each step; moving away stops.
+      if (a.cook && !a.done) {
+        if (leave) this.stop();
+        else if (pressed) {
+          const r = a.cook.press();
+          if (r) this.host.audio.blip(r === 'hit' ? 880 : 220, 0.12, r === 'hit' ? 'triangle' : 'square', 0.05);
+        }
+        return true;
+      }
       // Sleeping can't be cut short (it's only a few seconds); everything else ends when you move.
       if ((leave || pressed) && (a.what !== 'bed' || a.done)) this.stop();
       return true;
@@ -340,6 +363,27 @@ export class LeisureMode {
     a.t += dt;
     const now = Date.now();
     if (a.done) return;
+    if (a.cook) {
+      const c = a.cook;
+      c.update(dt);
+      if (!c.done) {
+        const step = c.current!;
+        h.hud.setMeter({ fish: c.target, bar: c.marker - 0.04, size: 0.08, progress: c.step / 3, holding: Math.abs(c.marker - c.target) <= c.window / 2, icon: STEP_ICON[step] });
+        h.hud.setTip(`${STEP_ICON[step]} ${t(`cook.${step}` as StringKey)}`);
+        return;
+      }
+      if (c.pause > 0) return;
+      a.done = true;
+      h.hud.setMeter(null);
+      const min = cookedMinutes(c.hits);
+      h.profile.data.fed = Math.max(h.profile.data.fed ?? 0, now + min * 60000);
+      h.profile.addStat('cooked');
+      h.profile.save();
+      h.loot(t('rest.cook'), '#e0432f', `${'★'.repeat(c.hits)}${'☆'.repeat(3 - c.hits)}`, t('cook.done', { food: t(`food.${c.dish}` as StringKey), min }));
+      h.hud.setTip(null);
+      h.checkTrophies();
+      return;
+    }
     if (a.what === 'sofa' && a.t > REST_RULES.sofaSeconds) {
       a.done = true;
       const m = addRest(this.rest, REST_RULES.minutes.sofa, now);
@@ -612,6 +656,7 @@ export class LeisureMode {
     if (!a) return this.dancing() ? 'dance' : null;
     if (a.kind === 'fishing') return a.game?.phase === 'reel' ? 'reel' : 'fish';
     if (a.kind === 'dj') return 'dj';
+    if (a.what === 'cook') return a.cook?.current === 'chop' ? 'drum' : a.cook?.current === 'serve' ? 'sip' : 'tend';
     return a.what === 'sofa' ? 'sit' : a.what === 'bed' ? 'sleep' : a.what === 'tea' ? 'sip' : a.what === 'records' ? 'idle' : 'tend';
   }
 

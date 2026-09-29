@@ -1224,5 +1224,12 @@ const ja: Locale = {
   'crowd.normal': "ふつう",
   'crowd.busy': "にぎやか",
   'crowd.hint': "町や道にいる人の数。遠くの人はシンプルに描いて動作を軽く保ちます。道は次に出発したときに変わります。",
+  'rest.cook': "料理する",
+  'restTip.cook': "マーカーが目標を通るときにE · 動くとやめます",
+  'cook.none': "まず町で屋台の料理を味わうと、家で作れるようになります。",
+  'cook.chop': "切る！ 目標でEを押そう",
+  'cook.stir': "混ぜる！ 目標でEを押そう",
+  'cook.serve': "盛りつけ！ 目標でEを押そう",
+  'cook.done': "手作りの{food}！ {min}分間おなかいっぱい",
 };
 export default ja;
