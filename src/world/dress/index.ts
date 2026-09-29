@@ -7,6 +7,7 @@ import { LANTERN_DRESSERS } from './lanterns';
 import { POSTCARD_DRESSERS } from './postcards';
 import { CITY_DRESSERS } from './cities';
 import { BRITAIN_DRESSERS } from './britain';
+import { JAPAN_DRESSERS } from './japan';
 
 /** Every district style, mapped to the function that dresses it. */
 export const DRESSERS: Record<DressStyle, Dresser> = {
@@ -17,4 +18,5 @@ export const DRESSERS: Record<DressStyle, Dresser> = {
   ...POSTCARD_DRESSERS,
   ...CITY_DRESSERS,
   ...BRITAIN_DRESSERS,
+  ...JAPAN_DRESSERS,
 };

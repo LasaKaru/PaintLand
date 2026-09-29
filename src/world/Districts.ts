@@ -22,7 +22,8 @@ export type DressStyle =
   // Chapter 8 · Island Road Trip
   | 'colombo' | 'kandyday' | 'nuwaraeliya' | 'ellaroad' | 'yala' | 'galle'
   // Grand Tour · Great Britain
-  | 'edinburgh' | 'highlands' | 'lakes' | 'york' | 'cotswolds' | 'bath' | 'stonehenge' | 'cornwall' | 'wales' | 'brighton';
+  | 'edinburgh' | 'highlands' | 'lakes' | 'york' | 'cotswolds' | 'bath' | 'stonehenge' | 'cornwall' | 'wales' | 'brighton'
+  | 'asakusa' | 'fuji' | 'shirakawa' | 'kinkakuji' | 'nara' | 'osaka' | 'himeji' | 'miyajima' | 'beppu' | 'okinawa';
 /**
  * Seven-note scales only: the band builds chords by stacking thirds. Regional
  * colour comes from the mode plus melodies that lean on its pentatonic notes.

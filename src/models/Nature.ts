@@ -172,7 +172,7 @@ export function buildFloatingRock(rnd: Random, size: number): THREE.BufferGeomet
   return k.build(size * 0.06, rnd.int(0, 999));
 }
 
-export type HillKind = 'grass' | 'tea' | 'jungle' | 'rock' | 'sandstone' | 'snowpeak';
+export type HillKind = 'grass' | 'tea' | 'jungle' | 'rock' | 'sandstone' | 'snowpeak' | 'forest';
 
 /**
  * Terrain hill: a faceted dome with a patterned surface. Tea hills get the
@@ -181,8 +181,8 @@ export type HillKind = 'grass' | 'tea' | 'jungle' | 'rock' | 'sandstone' | 'snow
  */
 export function buildHill(rnd: Random, radius: number, height: number, kind: HillKind): THREE.BufferGeometry {
   const k = new ModelKit();
-  const colour = { grass: '#8cc63f', tea: '#6fae3a', jungle: '#4f9a4a', rock: '#a6a3b8', sandstone: '#e0987a', snowpeak: '#a6a3b8' }[kind];
-  const pattern = { grass: Pattern.Grass, tea: Pattern.Tea, jungle: Pattern.Leaves, rock: Pattern.Stone, sandstone: Pattern.Sandstone, snowpeak: Pattern.Stone }[kind];
+  const colour = { grass: '#8cc63f', tea: '#6fae3a', jungle: '#4f9a4a', rock: '#a6a3b8', sandstone: '#e0987a', snowpeak: '#a6a3b8', forest: '#4f8f3f' }[kind];
+  const pattern = { grass: Pattern.Grass, tea: Pattern.Tea, jungle: Pattern.Leaves, rock: Pattern.Stone, sandstone: Pattern.Sandstone, snowpeak: Pattern.Stone, forest: Pattern.Grass }[kind];
   const g = new THREE.SphereGeometry(1, 14, 8, 0, Math.PI * 2, 0, Math.PI / 2);
   const pos = g.attributes.position;
   const v = new THREE.Vector3();
@@ -194,8 +194,9 @@ export function buildHill(rnd: Random, radius: number, height: number, kind: Hil
     pos.setXYZ(i, v.x * radius * n, v.y * height * m, v.z * radius * n);
   }
   k.add(g, colour, { pattern });
-  if (kind === 'jungle' || kind === 'tea') {
-    const trees = kind === 'jungle' ? Math.round(radius / 3) : Math.round(radius / 10);
+  if (kind === 'jungle' || kind === 'tea' || kind === 'forest') {
+    // Forest: a green (not leaf-patterned) hill under dark cedar clumps, like Japan's mountains.
+    const trees = kind === 'tea' ? Math.round(radius / 10) : Math.round(radius / 3);
     for (let i = 0; i < trees; i++) {
       const a = rnd.range(0, Math.PI * 2);
       const rr = rnd.range(0.1, 0.85);

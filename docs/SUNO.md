@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (58 districts)
+## 4 · Chapter themes (68 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -377,6 +377,20 @@ Each district tune is 48 steps long (six phrases), so these can be 2–3 minute 
 | Cornwall | sea shanty, accordion, stomping, fishermen's chorus humming, harbour, salt air |
 | Wales | male voice choir humming a hymn, harp, broad and warm, D minor, valleys |
 | Brighton | seaside music hall, brass band, honky-tonk piano, fairground organ, joyful finale |
+
+### 4.10 Grand Tour · Japan (Book 2). Chapter style: *Japanese road trip, koto, shakuhachi, shamisen, taiko, modern city pop touches, bright, 100 bpm, instrumental*
+| District | Add |
+|---|---|
+| Tokyo | 80s Japanese city pop, slap bass, synth brass, neon night drive, 124 bpm |
+| Mount Fuji | yō pentatonic, shakuhachi and koto, calm lake morning, wide open |
+| Shirakawa-gō | rural folk song, shamisen and flute, rice fields, a train passing |
+| Kyoto | in scale (miyako-bushi), koto and temple bell, slow and golden, 80 bpm |
+| Nara | gentle and playful, wooden flute, temple drum, deer in the park |
+| Osaka | matsuri festival, taiko and shinobue, cheeky and loud, 132 bpm |
+| Himeji | "sakura"-like koto melody, strings, blossom falling, graceful |
+| Miyajima | gagaku court music colour, shō mouth organ, hichiriki, sea at dusk |
+| Beppu | slow and steamy, soft koto, water sounds, relaxing hot spring |
+| Okinawa | Ryūkyū scale, sanshin (snakeskin banjo), eisā drums, sunny island finale |
 
 ---
 

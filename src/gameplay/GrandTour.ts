@@ -23,6 +23,13 @@ export const TOUR_STAMPS: TourStamp[] = [
     hex: '#2f5aa8',
     note: 'From the castle rock in Edinburgh to the pier at Brighton: bagpipes, sheep on the road, a cream tea in the Cotswolds, and the sea at the end of it all.',
   },
+  {
+    chapter: 'japan',
+    country: 'Japan',
+    flag: '🇯🇵',
+    hex: '#d8263a',
+    note: 'Neon in Shibuya, Fuji over the lake, deer bowing in Nara, the White Heron in blossom, a gate standing in the sea, and a warm white beach in Okinawa.',
+  },
 ];
 
 /** Ink for a first stamp. */

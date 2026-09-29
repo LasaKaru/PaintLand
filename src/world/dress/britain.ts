@@ -1,9 +1,8 @@
 import * as THREE from 'three';
 import type { Decorator, Dresser } from '../Decorator';
 import type { Random } from '../../core/Random';
-import { createFrame } from '../../road/RoadPath';
 import { buildHouse } from '../../models/Buildings';
-import { buildHill, buildRoundTree, buildCypress, buildBush, buildFlowerBush, buildCloud } from '../../models/Nature';
+import { buildRoundTree, buildCypress, buildBush, buildFlowerBush } from '../../models/Nature';
 import { buildLamp, buildBench, buildLighthouse } from '../../models/Props';
 import { buildDoubleDecker, buildPhoneBox } from '../../models/LandmarksCities';
 import {
@@ -13,6 +12,7 @@ import {
 } from '../../models/LandmarksBritain';
 import { beside, furniture, hills, landmarkBeside, rows, waterBeside, type Span } from './cities';
 import { landAlong } from './sketch';
+import { tourBackground } from './tour';
 
 // ————— helpers —————
 
@@ -187,33 +187,9 @@ export const BRITAIN_DRESSERS = {
   brighton: dressBrighton,
 };
 
-/**
- * Background for a long route: rather than scattering around the route's
- * centre (which leaves the ends bare on a 10 km map), the sky and far hills
- * follow the road.
- */
-/** Districts with the sea on the right (+1) side of the road: nothing grows out there. */
 const SEA_RIGHT = new Set(['cornwall', 'brighton']);
 
 export function britainBackground(d: Decorator, rnd: Random): void {
-  landAlong(d, 0, d.path.length, 200, '#7fae4a');
-  const clouds = [0, 1, 2, 3].map((i) => buildCloud(rnd.fork(i + 30)));
   const trees = [0, 1, 2].map((i) => (i === 2 ? buildCypress(rnd.fork(i)) : buildRoundTree(rnd.fork(i), null)));
-  const f = createFrame();
-  for (let s = 0; s < d.path.length; s += 60) {
-    d.sample(s, f);
-    const right = f.right.clone().setY(0).normalize();
-    const seaRight = SEA_RIGHT.has(d.chapter.districts[f.district]?.style ?? '');
-    for (const side of seaRight ? [-1] : [-1, 1]) {
-      const cloud = f.position.clone().addScaledVector(right, side * rnd.range(250, 900)).setY(rnd.range(120, 380));
-      if (rnd.chance(0.35)) d.place(rnd.pick(clouds), d.worldMatrix(cloud, rnd.range(0, 6), rnd.range(1, 2.4)), false);
-      const tree = f.position.clone().addScaledVector(right, side * rnd.range(60, 160)).setY(0);
-      if (rnd.chance(0.6) && !d.nearRoad(tree, 30)) d.place(rnd.pick(trees), d.worldMatrix(tree, rnd.range(0, 6), rnd.range(1, 1.6)), false);
-    }
-    if (s % 480 === 0) {
-      const side = seaRight || rnd.chance(0.5) ? -1 : 1;
-      const p = f.position.clone().addScaledVector(right, side * rnd.range(450, 800)).setY(0);
-      if (!d.nearRoad(p, 250)) d.place(buildHill(rnd.fork(s), rnd.range(140, 240), rnd.range(70, 150), 'grass'), d.worldMatrix(p, rnd.range(0, 6)), false);
-    }
-  }
+  tourBackground(d, rnd, { grass: '#7fae4a', trees, hill: 'grass', seaRight: SEA_RIGHT });
 }

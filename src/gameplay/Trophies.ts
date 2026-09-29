@@ -66,6 +66,8 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'chapters-8', name: 'The Whole Sketchbook', text: 'Finish a lap of all eight chapters.', icon: '🌍', reward: 800, progress: (p) => [['sketch', 'serendib', 'wonders', 'lanterns', 'postcards', 'citylights', 'skylines', 'islandtrip'].filter((c) => p.data.bestLap[c] !== undefined).length, 8] },
   // ————— the Grand Tour —————
   { id: 'tour-britain', name: 'Land’s End to John o’ Groats', text: 'Finish a lap of the Grand Tour of Great Britain and get your passport stamped.', icon: '🇬🇧', reward: 300, progress: (p) => [p.data.tour?.includes('britain') ? 1 : 0, 1] },
+  { id: 'tour-japan', name: 'From Neon to Coral', text: 'Finish a lap of the Grand Tour of Japan and get your passport stamped.', icon: '🇯🇵', reward: 300, progress: (p) => [p.data.tour?.includes('japan') ? 1 : 0, 1] },
+  { id: 'tour-ekiben', name: 'All Aboard', text: 'Deliver every lunch box on the Ekiben Run from Tokyo to Okinawa.', icon: '🍱', reward: 250, progress: (p) => [p.data.missionsDone.includes('jp-bento') ? 1 : 0, 1] },
   { id: 'tour-mail', name: 'First Class Post', text: 'Finish the Royal Mail Run from Edinburgh to Brighton.', icon: '📮', reward: 250, progress: (p) => [p.data.missionsDone.includes('gb-mail') ? 1 : 0, 1] },
   { id: 'laps-50', name: 'Road Regular', text: 'Finish 50 laps.', icon: '🛞', reward: 250, progress: stat('laps', 50) },
   { id: 'laps-100', name: 'Centurion', text: 'Finish 100 laps.', icon: '💯', reward: 500, progress: stat('laps', 100) },
