@@ -34,7 +34,9 @@ export type DressStyle =
   // Grand Tour · Germany
   | 'berlin' | 'hamburg' | 'autobahn' | 'cologne' | 'rhine' | 'rothenburg' | 'blackforest' | 'munich' | 'neuschwanstein' | 'alps'
   // Grand Tour · Canada
-  | 'quebec' | 'ottawa' | 'toronto' | 'niagara' | 'algonquin' | 'prairies' | 'banff' | 'icefields' | 'vancouver' | 'tofino';
+  | 'quebec' | 'ottawa' | 'toronto' | 'niagara' | 'algonquin' | 'prairies' | 'banff' | 'icefields' | 'vancouver' | 'tofino'
+  // Grand Tour · Australia
+  | 'harbourcity' | 'bluemountains' | 'melbourne' | 'oceanroad' | 'outback' | 'uluru' | 'daintree' | 'reef' | 'byron' | 'goldcoast';
 /**
  * Seven-note scales only: the band builds chords by stacking thirds. Regional
  * colour comes from the mode plus melodies that lean on its pentatonic notes.

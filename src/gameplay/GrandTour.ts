@@ -65,6 +65,13 @@ export const TOUR_STAMPS: TourStamp[] = [
     hex: '#d8263a',
     note: 'Coast to coast: a castle over the St Lawrence, the roar of Niagara, a moose among the maples, wheat to the horizon, glaciers, and orcas in the Pacific.',
   },
+  {
+    chapter: 'australia',
+    country: 'Australia',
+    flag: '🇦🇺',
+    hex: '#e8a02a',
+    note: 'Ferries under the bridge, a koala in a gum tree, stone giants in the surf, red earth to the horizon, Uluru on fire at sunset, and coral you can see from the road.',
+  },
 ];
 
 /** Ink for a first stamp. */

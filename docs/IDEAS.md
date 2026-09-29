@@ -38,7 +38,7 @@ These were on earlier idea lists and are now in the game:
   - calm viewpoints;
   - checkpoints and Continue;
   - call your vehicle.
-  - **Book 2, the Grand Tour**: 10 km country road trips with journey missions, mid-lap checkpoints and passport stamps. Great Britain, Japan, India, China, Korea, Germany and Canada are built; Australia comes next.
+  - **Book 2, the Grand Tour**: 10 km country road trips with journey missions, mid-lap checkpoints and passport stamps. all eight countries are built: Great Britain, Japan, India, China, Korea, Germany, Canada and Australia. Candidates for more: the USA, Norway, New Zealand, Iceland, Italy/France, Morocco and Mexico.
 - **Operations:**
   - the **crash and performance dashboard** (admin → 🩺 Crashes & speed);
   - the Microsoft Store package on every push.

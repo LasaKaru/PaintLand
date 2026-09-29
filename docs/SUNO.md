@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (118 districts)
+## 4 · Chapter themes (128 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -461,6 +461,20 @@ Each district tune is 48 steps long (six phrases), so these can be 2–3 minute 
 | The Icefields | cold ambient, glassy synth pads, creaking ice, vast |
 | Vancouver | rainy indie pop, soft drums, glass towers and ocean |
 | The Pacific Coast | West-coast surf guitar and hand drums, orca calls, sunset finale |
+
+### 4.16 Grand Tour · Australia (Book 2). Chapter style: *Australian road trip, acoustic guitar, didgeridoo, clapsticks, surf guitar, sunny and wide, 104 bpm, instrumental*
+| District | Add |
+|---|---|
+| Sydney | bright harbour pop, ferry horn, strings and piano |
+| The Blue Mountains | misty dorian folk, kookaburra calls, eucalyptus haze |
+| Melbourne | laneway indie rock, tram bells, cloudy |
+| The Great Ocean Road | sweeping cinematic strings, crashing surf, golden hour |
+| The Outback | bush ballad, twangy guitar, harmonica, road-train horn |
+| Uluru | didgeridoo drone and clapsticks, slow and ancient, sunset |
+| The Daintree | lush rainforest ambience, birdsong, soft marimba, rain |
+| The Great Barrier Reef | shimmering steel drums and glassy synths, underwater calm |
+| Byron Bay | laid-back acoustic surf, slide guitar, dolphins |
+| The Gold Coast | surf rock finale, reverb guitars, 132 bpm |
 
 ---
 
