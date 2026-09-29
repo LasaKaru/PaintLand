@@ -18,6 +18,7 @@ import { HumanModel } from '../models/Human';
 import { personOf } from './Peoples';
 import { TownLife } from './TownLife';
 import { AnimalLife } from './AnimalLife';
+import { spotsIn } from '../gameplay/Fishing';
 import { addCricket, addStalls, type CricketPitch, type Stall } from './StreetFun';
 import type { Species } from '../models/Animals';
 import { VEHICLES, VehicleModel } from '../models/Vehicles';
@@ -769,6 +770,10 @@ export class City implements FreeRoamArea {
     // Fishing spots, resting at home and DJ stages (see Leisure.ts).
     addLeisure(this, 'city');
     this.stalls.push(...addStalls(this, 'city', 'lanka'));
+    // Daily routines: fishermen at dawn, the school run, shelter from the rain (see TownLife).
+    this.life.fishingSpots = spotsIn('city');
+    this.life.school = this.pavementSpot(new Random(99));
+    this.life.shelters = this.stalls.map((st) => ({ x: st.zone.x, z: st.zone.z }));
     this.cricket.push(...addCricket(this, 'city', 'lanka'));
     for (const z of [...zones, ...this.zones.splice(0)]) {
       this.zones.push(z);
@@ -953,7 +958,7 @@ export class City implements FreeRoamArea {
     }
     this.life.update(dt, time, player, this.world);
     this.animals.update(dt, time, player, this.world, this.life.env);
-    for (const st of this.stalls) st.update(dt, time);
+    for (const st of this.stalls) st.update(dt, time, this.life.env.hour);
     for (const c of this.cricket) c.update(dt, time);
     // Secrets and chests bob and spin.
     for (const s of this.secrets) if (s.mesh?.visible) {

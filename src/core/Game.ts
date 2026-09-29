@@ -1,7 +1,8 @@
+import { speechBubble } from '../world/TownLife';
 import { Population } from '../gameplay/Population';
 import { addSketch, eat, fedBonus, fedMinutes, FOOD_PRICE, FOOD_STALLS, nextSouvenir, SOUVENIRS, type SouvenirId } from '../gameplay/Bazaar';
-import { CricketMatch } from '../gameplay/Cricket';
-import { buildBat, type CricketPitch } from '../world/StreetFun';
+import { BowlOver, CricketMatch } from '../gameplay/Cricket';
+import { buildBat, Stall, type CricketPitch } from '../world/StreetFun';
 import { TownLife as TownLifeClass } from '../world/TownLife';
 import { Taxi, type TaxiCar } from '../gameplay/Taxi';
 import { talkLine } from '../gameplay/TownTalk';
@@ -296,7 +297,11 @@ export class Game {
   /** The town the passenger belongs to (a ride ends when you leave it). */
   private taxiLife: TownLife | null = null;
   private taxiStop = 0;
+  private taxiBubble = 0;
+  private taxiBubbleMesh: THREE.Mesh | null = null;
   private hailBeacon: THREE.Mesh | null = null;
+  /** Seconds of painted rain the town is still reacting to (weather brush). */
+  private brushRain = 0;
   /** Eating a snack (seconds left). */
   private eatTimer = 0;
   /** The last person talked to, and when (talk again to sketch them). */
@@ -3414,6 +3419,7 @@ export class Game {
   /** Hide the area and show the chapter world again (portals, menu, play). */
   private leaveHub(): void {
     this.endTaxi(false);
+    this.audio.busker = { level: 0, kind: 'guitar' };
     this.endCricket();
     this.street = null;
     if (!this.inHub) return;
@@ -3581,10 +3587,29 @@ export class Game {
     if (!area.life) return;
     const car = this.taxiCar();
     const allowed = this.mode === 'drive' && !this.freeMissions.mission && !this.leisure.active && !this.battle && this.state === 'hub';
+    // A tuk-tuk is the town's taxi: people wave it down more often and tip a little more.
+    this.taxi.tuk = this.profile.data.vehicle === 'tuktuk' || this.profile.data.vehicle === 'tukracer';
     for (const e of this.taxi.step(dt, area.life, car, allowed)) {
-      if (e.kind === 'hail') this.hud.tip(t('taxi.hailed'), 6, '🚕');
-      else if (e.kind === 'say') this.hud.tip(t(e.key), 4, '🚕');
+      if (e.kind === 'hail') this.hud.tip(t('taxi.hailed'), 6, this.taxi.tuk ? '🛺' : '🚕');
+      else if (e.kind === 'say') {
+        this.hud.tip(t(e.key, e.params), 4, '💬');
+        this.taxiBubble = 3;
+      } else if (e.kind === 'photo') {
+        // Click! A flash from the back seat.
+        this.hud.tip(t('taxi.photoThanks'), 4, '📸');
+        this.audio.blip(1800, 0.05, 'square', 0.05);
+        this.particles.emit('spark', _v4.set(this.hubCar.x, HUB_Y + 1.8, this.hubCar.z), _v5.set(0, 1.5, 0), 20, 0.6);
+        this.taxiBubble = 0;
+      }
     }
+    // The passenger's speech bubble over the back seat while they talk.
+    this.taxiBubble = Math.max(0, this.taxiBubble - dt);
+    if (this.taxi.fare && this.taxiBubble > 0) {
+      this.taxiBubbleMesh ??= speechBubble();
+      if (this.taxiBubbleMesh.parent !== this.vehicle.seat) this.vehicle.seat.add(this.taxiBubbleMesh);
+      this.taxiBubbleMesh.visible = true;
+      this.taxiBubbleMesh.position.set(0, -0.45 + 2.2 * 0.85 * (this.taxi.fare.person.model.look.height ?? 1), 0.85);
+    } else if (this.taxiBubbleMesh) this.taxiBubbleMesh.visible = false;
     if (this.taxi.fare) {
       // Swapped vehicles in the garage mid-ride: the passenger moves to the new back seat.
       const m = this.taxi.fare.person.model;
@@ -3621,6 +3646,10 @@ export class Game {
   /** Buy a snack at a street food stall: well fed for a while (+5% ink). */
   private buySnack(id: string): void {
     if (this.mode !== 'foot') return;
+    if (!Stall.isOpen(this.env.hour)) {
+      this.hud.tip(t('food.closed', { h: Stall.hours.open }), 4, '🕙');
+      return;
+    }
     if (this.profile.data.ink < FOOD_PRICE) {
       this.hud.tip(t('food.poor'), 3, '🍽');
       return;
@@ -3665,6 +3694,18 @@ export class Game {
 
   /** Take the bat at a street cricket pitch (on foot). */
   private startCricket(zone: HubZone): void {
+    // The bowler's end: bowl an over to the kids.
+    if (zone.spot?.endsWith(':bowl')) {
+      const pitch = this.area?.cricket?.find((c) => `${c.def.id}:bowl` === zone.spot);
+      if (!pitch || this.mode !== 'foot') return;
+      const e = pitch.bowlingEnd;
+      this.hubWalker.place(e.x, e.z, e.yaw);
+      this.hubCam.yaw = e.yaw;
+      this.swingT = 0;
+      pitch.startBowling(new TaxiRandom(Date.now() % 10009));
+      this.cricketAt = pitch;
+      return;
+    }
     const pitch = this.area?.cricket?.find((c) => c.def.id === zone.spot);
     if (!pitch || this.mode !== 'foot') return;
     const c = pitch.crease;
@@ -3682,6 +3723,19 @@ export class Game {
   private endCricket(): void {
     const pitch = this.cricketAt;
     if (!pitch) return;
+    if (pitch.bowling) {
+      const o = pitch.bowling.over;
+      pitch.stopBowling();
+      this.cricketAt = null;
+      this.leisureHud.setMeter(null);
+      if (o.balls > 0) {
+        const ink = this.profile.earn(BowlOver.reward(o.wickets, o.runs));
+        this.profile.recordStat('cricketWickets', o.wickets);
+        this.hud.lootCard(t('cricket.title'), '#f4a13b', t('cricket.bowlDone', { w: o.wickets, runs: o.runs }), `+${ink} ink`);
+        this.checkTrophies();
+      }
+      return;
+    }
     const m = pitch.match;
     pitch.stop();
     this.cricketAt = null;
@@ -3699,6 +3753,23 @@ export class Game {
   private cricketStep(): void {
     const pitch = this.cricketAt;
     if (!pitch) return;
+    if (pitch.bowling) {
+      const o = pitch.bowling.over;
+      for (const shot of pitch.bowlShots.splice(0)) {
+        const runs = pitch.bowling.match.last?.runs ?? 0;
+        const text = shot === 'bowled' ? t('cricket.wicket') : shot === 'six' ? t('cricket.six') : shot === 'four' ? t('cricket.four') : shot === 'runs' ? t(runs === 2 ? 'cricket.two' : 'cricket.one') : t('cricket.dot');
+        this.popAtPawn(text, shot === 'bowled' ? 'big' : shot === 'dot' ? 'good' : 'info');
+        if (shot === 'bowled') {
+          this.audio.cheer();
+          this.audio.secret();
+        }
+      }
+      // The aiming meter.
+      this.leisureHud.setMeter(o.phase === 'aim' ? { fish: o.target, bar: o.marker - 0.04, size: 0.08, progress: o.balls / 6, holding: Math.abs(o.marker - o.target) < 0.06, icon: '🎯' } : null);
+      if (o.phase === 'aim') this.swingT = 0;
+      if (o.phase === 'done' && pitch.bowling.match.phase !== 'flight') this.endCricket();
+      return;
+    }
     for (const shot of pitch.shots.splice(0)) {
       const m = pitch.match!;
       const text = shot === 'six' ? t('cricket.six') : shot === 'four' ? t('cricket.four') : shot === 'runs' ? t(m.last?.runs === 2 ? 'cricket.two' : 'cricket.one') : shot === 'dot' ? t('cricket.dot') : t('cricket.bowled');
@@ -3813,6 +3884,7 @@ export class Game {
         carNear: Math.hypot(this.hubCar.x - me.x, this.hubCar.z - me.z) < 12,
         secretNear,
         places: area.places.map((q) => q.name),
+        facts: area.places.filter((q) => Math.hypot(q.x - me.x, q.z - me.z) < 90).map((q) => q.id),
       },
       this.talkRnd,
     );
@@ -3996,8 +4068,10 @@ export class Game {
     if (this.cricketAt) {
       // Batting: E or Space swings; walking off ends the innings.
       if (inp.consume('interact') || inp.consume('hop')) {
-        this.cricketAt.swing();
-        this.swingT = 0.001;
+        if (this.cricketAt.bowling) {
+          if (this.cricketAt.release() !== null) this.swingT = 0.001;
+        } else this.cricketAt.swing();
+        if (!this.cricketAt.bowling) this.swingT = 0.001;
       }
       const mv = inp.moveAxes();
       if (Math.hypot(mv.x, mv.y) > 0.5) this.endCricket();
@@ -4928,7 +5002,9 @@ export class Game {
   private updateMissionHud(px: number, pz: number, cam: THREE.PerspectiveCamera): void {
     const tr = this.freeMissions;
     const fare = !tr.mission ? this.taxi.fare : null;
-    const targets = fare ? [{ x: fare.to.x, z: fare.to.z, r: 10 }] : tr.targets();
+    // A tourist's photo stop comes first.
+    const goal = fare ? (fare.stop && !fare.stopDone ? fare.stop : fare.to) : null;
+    const targets = fare && goal ? [{ x: goal.x, z: goal.z, r: 10 }] : tr.targets();
     for (let i = 0; i < Math.max(targets.length, this.beacons.length); i++) {
       let b = this.beacons[i];
       if (!b && targets[i]) {
@@ -4958,6 +5034,12 @@ export class Game {
         this.hailBeacon.scale.set(0.2, 0.5, 0.2);
       }
     }
+    if (this.cricketAt?.bowling) {
+      const o = this.cricketAt.bowling.over;
+      this.hud.objective(t('cricket.title'), t('cricket.bowlStatus', { w: o.wickets, runs: o.runs, ball: Math.min(6, o.balls + (o.phase === 'aim' ? 1 : 0)) }), t('cricket.bowlHint'));
+      this.hud.compass(null);
+      return;
+    }
     if (this.cricketAt?.match) {
       const m = this.cricketAt.match;
       this.hud.objective(t('cricket.title'), t('cricket.status', { runs: m.runs, ball: Math.min(6, m.balls + (m.phase === 'result' || m.phase === 'done' ? 0 : 1)) }), t('cricket.hint'));
@@ -4971,11 +5053,12 @@ export class Game {
       this.hud.compass(null);
       return;
     }
-    if (fare) {
-      this.hud.objective(t('taxi.title'), t('taxi.objective', { place: fare.to.name }), t('taxi.stopHere'));
+    if (fare && goal) {
+      const photo = goal !== fare.to;
+      this.hud.objective(t('taxi.title'), photo ? t('taxi.photoStop', { place: goal.name }) : t('taxi.objective', { place: fare.to.name }), t('taxi.stopHere'));
       const dir = cam.getWorldDirection(_v);
-      const bearing = Math.atan2(fare.to.x - px, -(fare.to.z - pz)) - Math.atan2(dir.x, -dir.z);
-      this.hud.compass((bearing * 180) / Math.PI, Math.hypot(fare.to.x - px, fare.to.z - pz));
+      const bearing = Math.atan2(goal.x - px, -(goal.z - pz)) - Math.atan2(dir.x, -dir.z);
+      this.hud.compass((bearing * 180) / Math.PI, Math.hypot(goal.x - px, goal.z - pz));
       return;
     }
     const step = tr.current;
@@ -5035,7 +5118,7 @@ export class Game {
         if (this.cricketAt.match?.phase === 'runup') this.swingT = 0;
         hm.swing = this.swingT;
       }
-      hm.animate(dt, this.viewing ? 'sit' : this.cricketAt ? 'bat' : this.eatTimer > 0 ? 'sip' : this.waveTimer > 0 ? this.emoteName : this.leisure.pose() ?? this.hubWalker.pose, this.hubWalker.speed, this.time);
+      hm.animate(dt, this.viewing ? 'sit' : this.cricketAt ? (this.cricketAt.bowling ? (this.swingT > 0 ? 'bowl' : 'idle') : 'bat') : this.eatTimer > 0 ? 'sip' : this.waveTimer > 0 ? this.emoteName : this.leisure.pose() ?? this.hubWalker.pose, this.hubWalker.speed, this.time);
       this.updatePet(dt, hm.root);
       if (this.hubWalker.grounded && this.hubWalker.speed > 0.5) {
         this.footstepTimer -= dt * this.hubWalker.speed;
@@ -5101,13 +5184,26 @@ export class Game {
       const radioOn = this.audio.radioOn;
       area.life.env = {
         hour: this.env.hour,
-        rain: this.env.rain,
+        rain: Math.max(this.env.rain, this.brushRain > 0 ? 0.7 : 0),
+        carValue: Math.min(1, (vehicleById(this.profile.data.vehicle)?.price ?? 0) / 1000),
         car: this.mode === 'drive' && !this.flight ? { x: this.hubCar.x, z: this.hubCar.z, vx: -Math.sin(this.hubCar.heading) * this.hubCar.v, vz: -Math.cos(this.hubCar.heading) * this.hubCar.v } : null,
         onFoot: this.mode === 'foot' && !this.flight,
         bpm: radioOn ? this.audio.beat.bpm : 96,
       };
     }
+    this.brushRain = Math.max(0, this.brushRain - dt);
+    // The nearest street musician plays along with the radio's song, louder as you get close.
+    let busk: { level: number; kind: 'guitar' | 'drum' } = { level: 0, kind: 'guitar' };
+    for (const q of area.life?.people ?? []) {
+      if (q.act !== 'busk' || !q.model.root.visible || !q.instrument || q.instrument === 'umbrella' || q.instrument === 'lantern' || q.instrument === 'rod') continue;
+      const d = Math.hypot(q.body.x - player.x, q.body.z - player.z);
+      const level = d < 25 ? Math.pow(1 - d / 25, 1.5) : 0;
+      if (level > busk.level) busk = { level, kind: q.instrument };
+    }
+    this.audio.busker = this.state === 'hub' && !this.flight ? busk : { level: 0, kind: 'guitar' };
     area.update(dt * this.timeScale, this.time, player, cam);
+    // Children splashing in the puddles.
+    for (const s of area.life?.splashes ?? []) this.particles.emit('splash', _v4.set(s.x, HUB_Y + 0.1, s.z), _v5.set(0, 2.2, 0), 10, 0.5);
     this.updateDistricts(area, player.x, player.z, dt);
     this.updateFireworks(dt);
     if (area.perahera?.active && this.state !== 'paused') {
@@ -5192,10 +5288,14 @@ export class Game {
     const amb = area.ambienceAt(player.x, player.z);
     const flyWind = this.flight ? clamp(this.glider.y / 50, 0.2, 1) : 0;
     this.audio.calm = calm;
-    const crowd = area.life && !this.flight ? area.life.crowdAt(player.x, player.z) : { people: 0, talk: 0 };
+    const crowd = area.life && !this.flight ? area.life.crowdAt(player.x, player.z) : { people: 0, talk: 0, steps: 0 };
+    // Louder by the market stalls, quieter up in the hills.
+    const market = (area.stalls ?? []).some((st) => Stall.isOpen(this.env.hour) && Math.hypot(st.x - player.x, st.z - player.z) < 22) ? 1.5 : 1;
+    const loud = (area.id === 'hills' ? 0.6 : area.id === 'city' ? 1.15 : 1) * market;
+    const region = regionFor(area.id);
     // The clang of kottu being chopped, near a kottu stall.
-    const kottu = (area.stalls ?? []).filter((st) => st.kind === 'kottu').reduce((a, st) => Math.max(a, 1 - Math.hypot(st.x - player.x, st.z - player.z) / 28), 0);
-    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...amb, wind: Math.max(amb.wind ?? 0, flyWind), calm, crowd: crowd.people * (1 - this.env.rain * 0.5), chatter: crowd.talk, kottu: Math.max(0, kottu) });
+    const kottu = (area.stalls ?? []).filter((st) => st.kind === 'kottu' && Stall.isOpen(this.env.hour)).reduce((a, st) => Math.max(a, 1 - Math.hypot(st.x - player.x, st.z - player.z) / 28), 0);
+    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...amb, wind: Math.max(amb.wind ?? 0, flyWind), calm, crowd: Math.min(1, crowd.people * loud) * (1 - this.env.rain * 0.5), chatter: Math.min(1, crowd.talk * loud), steps: crowd.steps * loud, voice: region === 'lanka' || region === 'japan' ? region : 'mixed', kottu: Math.max(0, kottu) });
     this.audioFrame(this.mode === 'drive' && !this.flight && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);
@@ -5655,6 +5755,18 @@ export class Game {
 
   private exitPhoto(): void {
     if (this.state !== 'photo') return;
+    // The weather brush changes what the town does: painted rain or snow brings out the umbrellas
+    // for a minute; petals, fireflies and lanterns make people stop, point and take photos.
+    const painted = this.skyBrush.byKind;
+    const life = this.inHub ? this.area?.life : null;
+    if (life) {
+      if ((painted.rain ?? 0) + (painted.snow ?? 0) > 150) this.brushRain = 60;
+      if ((painted.petal ?? 0) + (painted.firefly ?? 0) + (painted.lantern ?? 0) > 60) {
+        const me = this.mode === 'foot' ? this.hubWalker : this.hubCar;
+        life.marvel(me.x, me.z);
+      }
+    }
+    for (const k of Object.keys(painted)) delete painted[k as keyof typeof painted];
     this.photo.close();
     this.skyBrush.clear();
     this.skyBrush.kind = null;

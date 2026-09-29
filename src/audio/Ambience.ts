@@ -25,6 +25,10 @@ export interface AmbienceParams {
   crowd?: number;
   /** 0..1 how many of them are talking, laughing or cheering (chatter and laughs). */
   chatter?: number;
+  /** 0..1 people walking nearby (soft footsteps on the street). */
+  steps?: number;
+  /** How the locals talk: the pace and pitch of the made-up chatter. */
+  voice?: 'lanka' | 'japan' | 'mixed';
   /** 0..1 how close a kottu stall is (the clang of the blades on the griddle). */
   kottu?: number;
   /** Master volume for ambience (Settings → Audio). */
@@ -56,6 +60,7 @@ export class Ambience {
   private readonly murmurFilter: BiquadFilterNode;
   private nextSyllable = 0;
   private kottuStep = 0;
+  private nextStep = 0;
   private nextKottu = 0;
   private nextLaugh = 0;
   private readonly padVoices: OscillatorNode[] = [];
@@ -227,6 +232,12 @@ export class Ambience {
       const accent = this.kottuStep % 4 === 0 ? 1 : this.kottuStep % 2 ? 0.45 : 0.7;
       if (this.kottuStep !== 7 && this.kottuStep !== 15) this.clang(t, kottu * kottu * accent * v, this.kottuStep % 2);
     }
+    // Footsteps of the people walking by, a soft scuff now and then.
+    const steps = p.steps ?? 0;
+    if (steps > 0.05 && t > this.nextStep) {
+      this.nextStep = t + 0.12 + Math.random() * (0.9 - steps * 0.7);
+      this.footstep(t, steps * v * (1 - p.rain * 0.3));
+    }
     if (t > this.nextLaugh) {
       this.nextLaugh = t + 4 + Math.random() * 8;
       if (chatter > 0.3 && Math.random() < chatter) this.laugh(t, chatter * v);
@@ -397,20 +408,44 @@ export class Ambience {
   }
 
   /** A far-away car horn, filtered and quiet. */
-  /** A few made-up syllables: nobody's words, just the sound of a conversation. */
+  /** A soft footstep: a short burst of filtered noise. */
+  private footstep(t: number, level: number): void {
+    const ctx = this.ctx;
+    const src = ctx.createBufferSource();
+    src.buffer = this.noise;
+    const f = ctx.createBiquadFilter();
+    f.type = 'bandpass';
+    f.frequency.value = 500 + Math.random() * 700;
+    f.Q.value = 1.4;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.02 * level, t);
+    g.gain.exponentialRampToValueAtTime(0.0005, t + 0.07);
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = Math.random() * 1.4 - 0.7;
+    src.connect(f).connect(g).connect(pan).connect(this.bus);
+    src.start(t, Math.random() * 1.5, 0.09);
+  }
+
+  /** A few made-up syllables: nobody's words, just the sound of a conversation (paced like the local speech). */
   private babble(t: number, level: number): void {
     const ctx = this.ctx;
+    // Sri Lanka: quick, lilting syllables; Japan: softer, higher, shorter phrases; a port town: a mix.
+    const voice = this.p.voice ?? 'mixed';
+    const pace = voice === 'lanka' ? 0.75 : voice === 'japan' ? 0.9 : 1;
+    const lift = voice === 'japan' ? 1.15 : voice === 'lanka' ? 1.05 : 1;
+    const soft = voice === 'japan' ? 0.75 : 1;
     const pan = ctx.createStereoPanner();
     pan.pan.value = Math.random() * 1.4 - 0.7;
     pan.connect(this.bus);
-    const voice = 120 + Math.random() * 160;
-    const n = 2 + Math.floor(Math.random() * 4);
+    const pitch = (120 + Math.random() * 160) * lift;
+    const n = voice === 'lanka' ? 3 + Math.floor(Math.random() * 5) : voice === 'japan' ? 2 + Math.floor(Math.random() * 3) : 2 + Math.floor(Math.random() * 4);
     let at = t;
     for (let i = 0; i < n; i++) {
-      const dur = 0.07 + Math.random() * 0.1;
+      const dur = (0.07 + Math.random() * 0.1) * pace;
       const o = ctx.createOscillator();
       o.type = 'sawtooth';
-      const f0 = voice * (0.9 + Math.random() * 0.25);
+      // A lilt: the pitch rises and falls through the phrase.
+      const f0 = pitch * (0.9 + Math.random() * 0.25) * (voice === 'lanka' ? 1 + Math.sin((i / n) * Math.PI) * 0.12 : 1);
       o.frequency.setValueAtTime(f0, at);
       o.frequency.linearRampToValueAtTime(f0 * (0.85 + Math.random() * 0.3), at + dur);
       // A vowel: one formant band, different each syllable.
@@ -420,12 +455,12 @@ export class Ambience {
       form.Q.value = 5;
       const g = ctx.createGain();
       g.gain.setValueAtTime(0, at);
-      g.gain.linearRampToValueAtTime(0.018 * level, at + 0.02);
+      g.gain.linearRampToValueAtTime(0.018 * level * soft, at + 0.02);
       g.gain.linearRampToValueAtTime(0, at + dur);
       o.connect(form).connect(g).connect(pan);
       o.start(at);
       o.stop(at + dur + 0.02);
-      at += dur + 0.02 + Math.random() * 0.06;
+      at += dur + (0.02 + Math.random() * 0.06) * pace;
     }
   }
 

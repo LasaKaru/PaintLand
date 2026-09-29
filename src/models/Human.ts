@@ -88,7 +88,7 @@ export type AmbientPose = (typeof AMBIENT_POSES)[number];
 export const isAmbientPose = (v: unknown): v is AmbientPose => typeof v === 'string' && (AMBIENT_POSES as readonly string[]).includes(v);
 
 /** Something carried: an umbrella in the rain, a paper lantern at night, a busker's guitar or drum. */
-export type Carry = 'umbrella' | 'lantern' | 'guitar' | 'drum' | null;
+export type Carry = 'umbrella' | 'lantern' | 'guitar' | 'drum' | 'rod' | null;
 
 export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote | LeisurePose | AmbientPose;
 
@@ -464,7 +464,7 @@ export class HumanModel {
    */
   setCarry(c: Carry, colour = '#e0432f'): boolean {
     if (c === this.carry) return true;
-    if (c && (this.look.aid === 'cane' || this.look.aid === 'wheelchair') && c !== 'lantern') return false;
+    if (c && (this.look.aid === 'cane' || this.look.aid === 'wheelchair') && c !== 'lantern' && c !== 'rod') return false;
     if (c === 'lantern' && this.look.aid === 'cane') return false;
     if (this.carryObj) {
       if (this.carryObj === this.held) this.hold(null);
@@ -482,7 +482,10 @@ export class HumanModel {
       // A Sri Lankan drum, played on both ends, slung across the waist.
       obj.position.set(0, -0.12, -0.3);
       this.chest.add(obj);
-    } else this.hold(obj);
+    } else {
+      if (c === 'rod') obj.rotation.set(-2.38, 0, 0);
+      this.hold(obj);
+    }
     this.carryObj = obj;
     return true;
   }
@@ -961,6 +964,10 @@ function carryGeometry(c: Exclude<Carry, null>, colour: string): THREE.BufferGeo
     k.cylinder(0.08, 0.09, 0.2, 8, '#f6c453', { position: [0, -0.3, 0], nightGlow: 1 });
     k.cylinder(0.05, 0.05, 0.03, 8, '#b0352a', { position: [0, -0.19, 0] });
     k.cylinder(0.05, 0.05, 0.03, 8, '#b0352a', { position: [0, -0.41, 0] });
+  } else if (c === 'rod') {
+    // A bamboo fishing rod (tip +Y).
+    k.cylinder(0.022, 0.035, 2.6, 6, '#c9a860', { position: [0, 1.3, 0] });
+    for (const y of [0.5, 1.1, 1.7, 2.2]) k.cylinder(0.04, 0.04, 0.05, 6, '#8a6a3a', { position: [0, y, 0] });
   } else if (c === 'guitar') {
     k.blob(0.2, '#c8843a', { position: [0, -0.2, 0], scale: [1, 1.15, 0.35], detail: 1 });
     k.cylinder(0.05, 0.05, 0.02, 10, INK, { position: [0, -0.16, -0.07], rotation: [Math.PI / 2, 0, 0] });

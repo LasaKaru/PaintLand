@@ -162,3 +162,63 @@ export const PITCHES: { id: string; area: string; x: number; z: number; yaw: num
 
 /** Length of the pitch: bowler's release point to the bat. */
 export const PITCH_LENGTH = 18;
+
+/**
+ * Bowling an over to the local kids: a marker sweeps back and forth, and you
+ * press E to bowl as it crosses the target. The better the ball, the likelier
+ * the kid batter mistimes it and is bowled; a loose one goes for four or six.
+ */
+export class BowlOver {
+  phase: 'aim' | 'ball' | 'done' = 'aim';
+  marker = 0;
+  private dir = 1;
+  target = 0.5;
+  balls = 0;
+  wickets = 0;
+  runs = 0;
+  last: Shot | null = null;
+
+  constructor(private readonly rnd: Random) {
+    this.target = rnd.range(0.25, 0.75);
+  }
+
+  update(dt: number): void {
+    if (this.phase !== 'aim') return;
+    this.marker += this.dir * 1.2 * dt;
+    if (this.marker > 1) {
+      this.marker = 2 - this.marker;
+      this.dir = -1;
+    } else if (this.marker < 0) {
+      this.marker = -this.marker;
+      this.dir = 1;
+    }
+  }
+
+  /** Bowl now: returns how good the ball is (0..1), or null when not aiming. */
+  release(): number | null {
+    if (this.phase !== 'aim') return null;
+    this.phase = 'ball';
+    return Math.max(0, 1 - Math.abs(this.marker - this.target) / 0.35);
+  }
+
+  /** The kid batter's timing error for a ball of quality `a` (seconds; 0 = perfect). */
+  batterError(a: number): number {
+    const sign = this.rnd.chance(0.5) ? -1 : 1;
+    return sign * (a > 0.6 ? this.rnd.range(0.12, 0.35) : a > 0.3 ? this.rnd.range(0.05, 0.18) : this.rnd.range(0, 0.07));
+  }
+
+  /** How the ball went. */
+  result(shot: Shot, runs: number): void {
+    this.balls++;
+    this.last = shot;
+    if (shot === 'bowled') this.wickets++;
+    this.runs += runs;
+    this.target = this.rnd.range(0.2, 0.8);
+    this.phase = this.balls >= OVER ? 'done' : 'aim';
+  }
+
+  /** Ink for an over: wickets and tight bowling pay. */
+  static reward(wickets: number, runs: number): number {
+    return wickets * 30 + Math.max(0, 18 - runs) * 2;
+  }
+}

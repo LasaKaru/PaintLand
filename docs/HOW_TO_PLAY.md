@@ -148,19 +148,31 @@ pace, and they never run or jump.
 
 Towns follow the clock and the weather:
 
-- **Morning:** joggers are out and children walk to school.
-- **Midday:** people rest in the shade, and on sunny days some wear straw hats.
+- **Dawn:** fishermen walk down to the water with their rods, one to each fishing spot, and fish
+  until nine.
+- **Morning:** joggers are out and children walk to school. Most are in class until two, then
+  they're back out to play.
+- **Midday:** the market stalls open at eleven (they set up from ten and close at ten at night).
+  People rest in the shade, and on sunny days some wear straw hats.
 - **Evening:** families walk and friends stop to chat.
 - **Night:** most people go home, and those still out carry paper lanterns.
-- **Rain:** umbrellas come out, and people without one hurry along. Nobody sits on wet grass.
+- **Rain:** umbrellas come out. People without one run for the nearest stall awning and wait
+  there until it stops. Children go out to jump in the puddles (splash!). Nobody sits on wet grass.
+- **Weather brush:** paint rain or snow over a town and people react as above. Paint petals,
+  fireflies or lanterns and everyone nearby stops to look, point and take photos.
 
 They also notice you. Drive fast and they step out of the way and point after you (slow down!).
-Stop your car near them and someone may take a photo of it. Land a big jump, or paint a district
+Stop your car near them and someone may take a photo of it (the fancier the car, the more
+photos). Land a big jump, or paint a district
 back to colour, and everyone nearby claps and cheers. People keep to the right and step aside
-for each other and for you. Near a crowd you hear a soft murmur of voices, chatter and laughter.
+for each other and for you. Near a crowd you hear a soft murmur of voices, chatter, laughter and
+footsteps. It's louder in the city and by the open market stalls, quieter in the Tea Hills, and the
+voices have a local rhythm: a lilting Sri Lankan murmur, a quicker, softer one in the Lantern
+Village.
 
 **Street musicians** play in every town from 09:00 to 22:00 (not in the rain): a guitarist or a
-drummer with a Sri Lankan *geta bera*. They play in time with your radio.
+drummer with a Sri Lankan *geta bera*. Walk up close and you hear them play along with the song on
+your radio: the guitarist strums its chords and the drummer keeps its beat.
 
 **Animals** live in the towns and along the roads:
 
@@ -177,7 +189,8 @@ Everything except an elephant gets out of the way of a fast car.
 **Talk to anyone.** Walk up to a townsperson and press **E**. They stop, turn to you and say hello
 in their own language (*ayubowan*, *vanakkam*, *konnichiwa*…). Then they say something about the
 weather, the time of day, your car or a place worth seeing, or drop a hint about a golden paint
-pot hidden nearby. Children want to play tag. Press **E** by a street musician to give a tip
+pot hidden nearby. Near a landmark they often tell you something about it (the Lotus Tower, the Red
+Mosque, the tea factory, the torii, the bamboo grove and more). Children want to play tag. Press **E** by a street musician to give a tip
 (5 ink).
 
 **Taxi rides.** While you drive around a town, someone may wave you down: a yellow beacon marks
@@ -188,6 +201,12 @@ tip by stars:
 - **In a hurry:** go fast.
 - **Gentle (often an elder):** drive smoothly. Hard braking, jumps and speeding cost stars.
 - **Chatty:** they just enjoy the company.
+- **Tourist:** they ask to stop for a photo at a place on the way. Pull up there for a moment
+  (the compass shows it first) and they give five stars; skip it and they give two.
+- **Funny:** they tell jokes all the way.
+
+The passenger's words appear in a speech bubble above the car. In a tuk-tuk, people wave you
+down twice as often and tip a quarter more.
 
 Get out of the car or leave the town, and the passenger gets out unpaid.
 
@@ -202,11 +221,16 @@ take the bat for an over of six balls. Press **E** or **Space** as the ball reac
 Miss a ball on the stumps and you're bowled. Each run is worth 3 ink, and your best innings is
 kept. Walk away to stop.
 
+To **bowl** instead, walk into the 🎯 ring at the other end and press **E**. A marker sweeps along
+a bar: press **E** or **Space** as it crosses the target. The better the ball, the harder it is for
+the kid batting to hit. Each wicket is worth 30 ink, and a tight over (fewer than 18 runs) earns a
+little more.
+
 **Tag and hide-and-seek.** Talk to a child and they may challenge you. In **tag** you have 60
 seconds to touch them and their friends (sprint!). In **hide-and-seek** they run off to hide, and
 you have 90 seconds to find them. Listen for giggles, which get louder as you get closer.
 
-**Street food.** Snack stalls sell a treat for 10 ink:
+**Street food.** Snack stalls are open from 11:00 to 22:00 and sell a treat for 10 ink:
 
 - **Serendib City:** kottu roti (listen for the clang of the blades) and isso vadai.
 - **Tea Hills:** egg hoppers.
@@ -245,7 +269,7 @@ They are places to see and photograph. They are never races, targets or collecta
 
 People are only drawn in full close to you. Further away they are simple painted stand-ins, so
 crowds cost little even on long roads. **Settings → Graphics → Crowds** picks how many people are
-out: **Few**, **Normal** or **Busy** (two and a half times as many). Towns change straight away;
+out: **Few**, **Normal** or **Busy** (three and a half times as many). Towns change straight away;
 chapter roads change the next time you set off.
 
 ## Paper-plane flight

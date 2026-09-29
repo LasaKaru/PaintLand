@@ -487,6 +487,8 @@ export class AudioEngine {
       if (this.fillSteps % 2 === 0) this.kick(t);
     }
 
+    // A street musician nearby plays along live: the song's chords, in its tempo.
+    if (this.busker.level > 0.02) this.buskerStep(s16, chord, t);
     // A recorded track is playing: the band and pad sit out (the picked-up notes still ring).
     if (this.studioActive && this.radioOn) return;
     // The pad always plays (quietly with the radio off) so notes have a bed.
@@ -724,6 +726,53 @@ export class AudioEngine {
       o.connect(filter);
       o.start(t);
       o.stop(t + dur + 0.5);
+    }
+  }
+
+  /** A street musician close by (0..1 by distance), playing guitar or a geta bera drum along with the radio's song. */
+  busker: { level: number; kind: 'guitar' | 'drum' } = { level: 0, kind: 'guitar' };
+
+  private buskerStep(s16: number, chord: number[], t: number): void {
+    const ctx = this.ctx!;
+    const lv = this.busker.level * this.ambienceVolume;
+    if (this.busker.kind === 'guitar') {
+      // A strummed acoustic: down-strums on the beat, a lighter up-strum on the "and".
+      if (![0, 6, 8, 12, 14].includes(s16)) return;
+      const up = s16 === 6 || s16 === 14;
+      const notes = [0, 1, 2, 3].map((i) => midiToHz(this.degreeMidi(chord[i % chord.length], i === 0 ? -1 : 0)));
+      (up ? [...notes].reverse() : notes).forEach((f, i) => {
+        const at = t + i * 0.014;
+        const o = ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.value = f;
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass';
+        lp.frequency.setValueAtTime(2600, at);
+        lp.frequency.exponentialRampToValueAtTime(700, at + 0.3);
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0, at);
+        g.gain.linearRampToValueAtTime((up ? 0.012 : 0.02) * lv, at + 0.004);
+        g.gain.exponentialRampToValueAtTime(0.0001, at + 0.7);
+        o.connect(lp).connect(g).connect(this.sfxBus);
+        o.start(at);
+        o.stop(at + 0.75);
+      });
+    } else {
+      // A geta bera: deep strokes on one end, sharp slaps on the other.
+      const low = [0, 6, 8].includes(s16);
+      const high = [3, 10, 12, 14].includes(s16);
+      if (!low && !high) return;
+      const o = ctx.createOscillator();
+      const f0 = low ? 95 : 240;
+      o.frequency.setValueAtTime(f0 * 1.7, t);
+      o.frequency.exponentialRampToValueAtTime(f0, t + 0.05);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.16 * lv, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + (low ? 0.4 : 0.14));
+      o.connect(g).connect(this.sfxBus);
+      o.start(t);
+      o.stop(t + 0.45);
+      if (high) this.noiseHit(t, 'bandpass', 2400, 0.05 * lv, 0.05, this.sfxBus);
     }
   }
 

@@ -23,6 +23,8 @@ export class SkyBrush {
   /** 0.3–2: how wide each dab of weather is. */
   size = 1;
   painted = 0;
+  /** How much of each kind was painted (the crowd reacts after the photo). */
+  readonly byKind: Partial<Record<BrushKind, number>> = {};
 
   constructor() {
     this.particles.still = true;
@@ -57,6 +59,7 @@ export class SkyBrush {
       }
     }
     this.painted += n;
+    this.byKind[this.kind] = (this.byKind[this.kind] ?? 0) + n;
     return n;
   }
 

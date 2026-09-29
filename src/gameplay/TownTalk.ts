@@ -30,9 +30,13 @@ export type TalkKey =
   | 'talk.secret'
   | 'talk.place';
 
+/** Places with a local fact to share (the key is `fact.<place id>`). */
+export const FACT_PLACES = ['lotus', 'beach', 'oldtown', 'faith-mosque', 'stupa', 'elephants', 'hills-factory', 'hills-station', 'hills-terraces', 'torii', 'pagoda', 'bamboo'] as const;
+export type FactKey = `fact.${(typeof FACT_PLACES)[number]}`;
+
 export interface TalkLine {
   hello: string;
-  key: TalkKey;
+  key: TalkKey | FactKey;
   params: Record<string, string>;
 }
 
@@ -49,6 +53,8 @@ export interface TalkContext {
   secretNear: string | null;
   /** Places in town to recommend. */
   places: string[];
+  /** Landmarks close by with a fact to tell (place ids from FACT_PLACES). */
+  facts?: string[];
 }
 
 /**
@@ -58,10 +64,13 @@ export interface TalkContext {
  */
 export function talkLine(ctx: TalkContext, rnd: Random): TalkLine {
   const hello = ctx.hour >= 4 && ctx.hour < 11 && ctx.region === 'japan' ? 'Ohayō' : rnd.pick(GREETINGS[ctx.region]);
-  const line = (key: TalkKey, params: Record<string, string> = {}): TalkLine => ({ hello, key, params });
+  const line = (key: TalkKey | FactKey, params: Record<string, string> = {}): TalkLine => ({ hello, key, params });
   if (ctx.busker) return line('talk.busker');
   if (ctx.kind === 'child') return line('talk.child');
   if (ctx.secretNear && rnd.chance(0.4)) return line('talk.secret', { place: ctx.secretNear });
+  // A fact about a landmark close by.
+  const facts = (ctx.facts ?? []).filter((f): f is (typeof FACT_PLACES)[number] => (FACT_PLACES as readonly string[]).includes(f));
+  if (facts.length && rnd.chance(0.45)) return line(`fact.${rnd.pick(facts)}`);
   if (ctx.rain > 0.3) return line('talk.rain');
   if (ctx.carNear && rnd.chance(0.35)) return line('talk.car');
   if (ctx.places.length && rnd.chance(0.35)) return line('talk.place', { place: rnd.pick(ctx.places) });

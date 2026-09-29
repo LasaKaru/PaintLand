@@ -19,6 +19,7 @@ import { buildGopuram } from '../models/LandmarksIndia';
 import { personOf } from './Peoples';
 import { TownLife } from './TownLife';
 import { AnimalLife } from './AnimalLife';
+import { spotsIn } from '../gameplay/Fishing';
 import { addCricket, addStalls, type CricketPitch, type Stall } from './StreetFun';
 import type { Species } from '../models/Animals';
 import { FreeWorld } from '../gameplay/FreeRoam';
@@ -345,6 +346,10 @@ export class Hills implements FreeRoamArea {
     // Fishing spots, resting at home and DJ stages (see Leisure.ts).
     addLeisure(this, 'hills');
     this.stalls.push(...addStalls(this, 'hills', 'lanka'));
+    // Daily routines: fishermen at dawn, the school run, shelter from the rain (see TownLife).
+    this.life.fishingSpots = spotsIn('hills');
+    this.life.school = { x: 95, z: 0 };
+    this.life.shelters = this.stalls.map((st) => ({ x: st.zone.x, z: st.zone.z }));
     this.cricket.push(...addCricket(this, 'hills', 'lanka'));
     for (const z of this.zones) {
       const ring = new THREE.Mesh(new THREE.RingGeometry(z.r - 0.35, z.r, 40).rotateX(-Math.PI / 2), new PaintMaterial({ color: z.colour, emissive: 0.8, side: THREE.DoubleSide }));
@@ -500,7 +505,7 @@ export class Hills implements FreeRoamArea {
     });
     this.life.update(dt, time, player, this.world);
     this.animals.update(dt, time, player, this.world, this.life.env);
-    for (const st of this.stalls) st.update(dt, time);
+    for (const st of this.stalls) st.update(dt, time, this.life.env.hour);
     for (const c of this.cricket) c.update(dt, time);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     const langNow = document.documentElement.lang;

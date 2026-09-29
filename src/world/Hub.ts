@@ -15,6 +15,7 @@ import { HumanModel } from '../models/Human';
 import { personOf } from './Peoples';
 import { TownLife } from './TownLife';
 import { AnimalLife } from './AnimalLife';
+import { spotsIn } from '../gameplay/Fishing';
 import { addCricket, addStalls, type CricketPitch, type Stall } from './StreetFun';
 import type { Species } from '../models/Animals';
 import { FreeWorld } from '../gameplay/FreeRoam';
@@ -428,6 +429,10 @@ export class Hub implements FreeRoamArea {
     // Fishing spots, resting at home and DJ stages (see Leisure.ts).
     addLeisure(this, 'harbour');
     this.stalls.push(...addStalls(this, 'harbour', 'mixed'));
+    // Daily routines: fishermen at dawn, the school run, shelter from the rain (see TownLife).
+    this.life.fishingSpots = spotsIn('harbour');
+    this.life.school = { x: 0, z: -105 };
+    this.life.shelters = this.stalls.map((st) => ({ x: st.zone.x, z: st.zone.z }));
     this.cricket.push(...addCricket(this, 'harbour', 'mixed'));
     // Glowing rings on the ground and floating labels.
     for (const z of this.zones) {
@@ -549,7 +554,7 @@ export class Hub implements FreeRoamArea {
   update(dt: number, time: number, player: { x: number; z: number }, camera: THREE.PerspectiveCamera): void {
     this.life.update(dt, time, player, this.world);
     this.animals.update(dt, time, player, this.world, this.life.env);
-    for (const st of this.stalls) st.update(dt, time);
+    for (const st of this.stalls) st.update(dt, time, this.life.env.hour);
     for (const c of this.cricket) c.update(dt, time);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     // Labels (re-drawn when the language changes).

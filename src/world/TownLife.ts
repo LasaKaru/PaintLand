@@ -7,7 +7,7 @@ import type { Random } from '../core/Random';
 import { StandIns, STAND_IN_FAR } from './StandIns';
 
 /** What a townsperson is doing right now. */
-export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk' | 'hail' | 'ride' | 'flee' | 'hide';
+export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk' | 'hail' | 'ride' | 'flee' | 'hide' | 'fish' | 'school' | 'shelter';
 
 /** Who someone is, which decides what they like to do. */
 export type Kind = 'child' | 'adult' | 'elder' | 'wheels';
@@ -61,12 +61,16 @@ export interface TownEnv {
   onFoot: boolean;
   /** Tempo for buskers (the radio's, if it is playing). */
   bpm: number;
+  /** 0..1 how fancy the player's car is (fancier cars get photographed more). */
+  carValue?: number;
 }
 
 /** Share of townspeople out and about at each hour (the rest are at home). */
 export function presence(hour: number, kind: Kind): number {
   const h = ((hour % 24) + 24) % 24;
-  if (kind === 'child') return h >= 7 && h < 20 ? 1 : h >= 6 && h < 21 ? 0.3 : 0;
+  // Children walk to school in the morning and most are in class until two (the little ones
+  // and any on holiday stay out), then they're out to play until evening.
+  if (kind === 'child') return h >= 8.5 && h < 14 ? 0.35 : h >= 7 && h < 20 ? 1 : h >= 6 && h < 21 ? 0.3 : 0;
   if (h >= 7 && h < 21) return 1;
   if (h >= 6 && h < 22) return 0.7;
   if (h >= 5 && h < 23) return 0.45;
@@ -145,6 +149,16 @@ export class TownLife {
   /** The hour, weather and the player's car, set each frame by the game. */
   env: TownEnv = { hour: 12, rain: 0, car: null, onFoot: true, bpm: 96 };
   private carStill = 0;
+  /** Was it raining last frame (the first drops send people running)? */
+  private wasWet = false;
+  /** Where fishermen head at dawn (the town's fishing spots). */
+  fishingSpots: { x: number; z: number; yaw: number }[] = [];
+  /** Where the children go to school in the morning. */
+  school: { x: number; z: number } | null = null;
+  /** Awnings and doorways to run to when it rains. */
+  shelters: { x: number; z: number }[] = [];
+  /** Where children landed a splash in a puddle this frame (the game adds the spray). */
+  readonly splashes: { x: number; z: number }[] = [];
   /** Crowd setting: 0.5 few, 1 normal, 2.5 busy (Settings → Graphics). */
   density = 1;
   /** Makes an extra townsperson for a busier crowd (set by the town). */
@@ -364,10 +378,27 @@ export class TownLife {
     return n;
   }
 
+  /** Something lovely in the sky (petals, fireflies, lanterns from the weather brush): people stop to look, point and take photos. */
+  marvel(x: number, z: number, radius = 45): number {
+    let n = 0;
+    for (const p of this.people) {
+      if (p.benched || p.act === 'away' || p.act === 'home' || p.act === 'busk' || p.act === 'ride' || p.act === 'dodge') continue;
+      if (Math.hypot(p.body.x - x, p.body.z - z) > radius) continue;
+      this.leave(p);
+      p.act = 'pause';
+      p.still = p.kind === 'child' ? this.rnd.pick(['cheer', 'point'] as HumanPose[]) : this.rnd.pick(['photo', 'point', 'photo', 'clap'] as HumanPose[]);
+      p.t = this.rnd.range(4, 7);
+      p.away = { x, z };
+      n++;
+    }
+    return n;
+  }
+
   /** How lively it sounds around the player: how many people are near, and how many are talking or laughing. */
-  crowdAt(x: number, z: number): { people: number; talk: number } {
+  crowdAt(x: number, z: number): { people: number; talk: number; steps: number } {
     let people = 0;
     let talk = 0;
+    let steps = 0;
     for (const p of this.people) {
       if (p.act === 'away' || p.act === 'ride' || p.benched) continue;
       const d = Math.hypot(p.body.x - x, p.body.z - z);
@@ -375,8 +406,9 @@ export class TownLife {
       const w = 1 - d / 22;
       people += w;
       if (p.pose === 'talk' || p.pose === 'laugh' || p.pose === 'cheer' || p.pose === 'clap') talk += w;
+      if ((p.pose === 'walk' || p.pose === 'run') && d < 14) steps += (1 - d / 14) * (p.pose === 'run' ? 1.6 : 1);
     }
-    return { people: Math.min(1, people / 8), talk: Math.min(1, talk / 3) };
+    return { people: Math.min(1, people / 8), talk: Math.min(1, talk / 3), steps: Math.min(1, steps / 4) };
   }
 
   /** Pick the next thing to do. */
@@ -391,8 +423,41 @@ export class TownLife {
       p.t = 60;
       return;
     }
+    const h = this.env.hour;
+    // The school run.
+    if (p.kind === 'child' && this.school && h >= 7 && h < 8.5) {
+      p.act = 'school';
+      p.target = this.school;
+      p.t = 60;
+      return;
+    }
+    // Fishermen head for the water at dawn (one to each spot, standing beside it).
+    if ((p.kind === 'adult' || p.kind === 'elder') && h >= 5 && h < 8.5 && p.temper >= 0.3 && p.temper < 0.5 && this.fishingSpots.length) {
+      const i = Math.floor(p.temper * 97) % this.fishingSpots.length;
+      if (!this.people.some((q) => q.act === 'fish' && q.beat === i)) {
+        const s = this.fishingSpots[i];
+        p.act = 'fish';
+        p.beat = i;
+        // Three metres to the side of the spot (the ring stays free for the player).
+        p.target = { x: s.x + Math.cos(s.yaw) * 3, z: s.z - Math.sin(s.yaw) * 3 };
+        p.t = 1e6;
+        return;
+      }
+    }
     const wet = this.env.rain > 0.3;
-    const weights = WEIGHTS[p.kind].map(([a, w]) => [a, w * hourBias(this.env.hour, a, p.kind) * (wet && a === 'chat' ? 0.4 : 1)] as [Activity, number]);
+    // Caught in the rain without an umbrella: run for the nearest shelter.
+    if (wet && p.kind !== 'child' && p.model.carry !== 'umbrella' && this.shelters.length) {
+      const near = this.shelters.reduce((a, q) => (Math.hypot(q.x - p.body.x, q.z - p.body.z) < Math.hypot(a.x - p.body.x, a.z - p.body.z) ? q : a));
+      if (Math.hypot(near.x - p.body.x, near.z - p.body.z) < 70) {
+        p.act = 'shelter';
+        p.target = { x: near.x + rnd.range(-1.2, 1.2), z: near.z + rnd.range(-1.2, 1.2) };
+        p.t = 1e6;
+        return;
+      }
+    }
+    // Children love the rain: out to jump in the puddles.
+    const puddles = wet && p.kind === 'child' && p.model.carry !== 'umbrella';
+    const weights = WEIGHTS[p.kind].map(([a, w]) => [a, w * hourBias(this.env.hour, a, p.kind) * (wet && a === 'chat' ? 0.4 : 1) * (puddles && a === 'play' ? 4 : 1)] as [Activity, number]);
     let roll = rnd.next() * weights.reduce((a, [, w]) => a + w, 0);
     let act: Activity = 'stroll';
     for (const [a, w] of weights) if ((roll -= w) <= 0) {
@@ -476,6 +541,12 @@ export class TownLife {
     const sunny = env.rain < 0.1 && env.hour >= 10 && env.hour < 16;
     const dark = env.hour >= 19 || env.hour < 6;
     this.standIns.begin();
+    this.splashes.length = 0;
+    // The first drops: people out walking or resting rethink within a few seconds (umbrella up, run for cover, puddles!).
+    if (wet && !this.wasWet) {
+      for (const p of this.people) if (!p.benched && (p.act === 'stroll' || p.act === 'pause' || p.act === 'play')) p.t = Math.min(p.t, this.rnd.range(0.2, 3));
+    }
+    this.wasWet = wet;
     for (const p of this.people) {
       const pd = Math.hypot(player.x - p.body.x, player.z - p.body.z);
       // Riding in the player's taxi: the game looks after the model.
@@ -503,7 +574,7 @@ export class TownLife {
       } else p.model.root.visible = true;
       // What they carry and wear: umbrellas in the rain, lanterns after dark, a sun hat at midday.
       if (p.act !== 'busk') {
-        const want: Carry = wet && p.temper < 0.75 ? 'umbrella' : dark && p.temper > 0.55 ? 'lantern' : null;
+        const want: Carry = p.act === 'fish' ? 'rod' : wet && p.temper < 0.75 ? 'umbrella' : dark && p.temper > 0.55 ? 'lantern' : null;
         if (p.model.carry !== want) p.model.setCarry(want, UMBRELLAS[Math.floor(p.temper * 97) % UMBRELLAS.length]);
       }
       p.model.setSunHat(sunny && p.temper > 0.62);
@@ -516,7 +587,7 @@ export class TownLife {
       let jump = false;
       let face: { x: number; z: number } | null = null;
       let pose: HumanPose | null = null;
-      const busy = p.act === 'chat' || p.act === 'jog' || p.act === 'dodge' || p.act === 'home' || p.act === 'busk' || p.act === 'hail' || p.act === 'flee' || p.act === 'hide';
+      const busy = p.act === 'chat' || p.act === 'jog' || p.act === 'dodge' || p.act === 'home' || p.act === 'busk' || p.act === 'hail' || p.act === 'flee' || p.act === 'hide' || p.act === 'fish' || p.act === 'shelter';
       const near = pd < 5 && !busy && !(p.act === 'pause' && (p.still === 'clap' || p.still === 'cheer' || p.still === 'talk'));
       if (p.t <= 0) this.next(p);
       // A car coming fast: step out of its way (then point after it: slow down!).
@@ -534,7 +605,7 @@ export class TownLife {
         }
       }
       // A car stopped nearby: someone may take a photo of it.
-      if (car && this.carStill > 1 && this.carStill < 1.2 && pd < 11 && (p.act === 'stroll' || p.act === 'pause') && p.kind !== 'child' && rnd.chance(0.3)) {
+      if (car && this.carStill > 1 && this.carStill < 1.2 && pd < 11 && (p.act === 'stroll' || p.act === 'pause') && p.kind !== 'child' && rnd.chance(0.1 + 0.5 * (env.carValue ?? 0.3))) {
         p.act = 'pause';
         p.still = 'photo';
         p.t = rnd.range(2.5, 4);
@@ -610,6 +681,38 @@ export class TownLife {
             my = -dz / d;
             speed = 0.9;
           } else pose = 'sitdown';
+          break;
+        }
+        case 'school':
+        case 'fish':
+        case 'shelter': {
+          const dx = p.target.x - b.x;
+          const dz = p.target.z - b.z;
+          const d = Math.hypot(dx, dz);
+          if (d > 0.8) {
+            mx = dx / d;
+            my = -dz / d;
+            speed = p.act === 'shelter' ? 0.9 : p.act === 'school' ? 0.55 : this.pace;
+          } else if (p.act === 'school') {
+            // In through the school gate (once the player isn't looking).
+            if (pd > 30) {
+              p.act = 'away';
+              p.t = 5;
+              p.model.root.visible = false;
+            }
+          } else if (p.act === 'fish') {
+            const s = this.fishingSpots[p.beat];
+            if (s) b.heading = s.yaw;
+            pose = 'fish';
+          } else pose = 'idle';
+          // The morning's fishing ends at nine; the rain stops; school starts.
+          if (p.act === 'fish' && env.hour >= 9) p.t = 0;
+          if (p.act === 'shelter' && !wet) p.t = 0;
+          if (p.act === 'school' && env.hour >= 8.5 && d > 0.8 && pd > 30) {
+            p.act = 'away';
+            p.t = 5;
+            p.model.root.visible = false;
+          }
           break;
         }
         case 'hail':
@@ -764,7 +867,10 @@ export class TownLife {
         face = player;
         pose = p.hello;
       }
+      const wasUp = !b.grounded;
       b.step(dt, { moveX: mx * speed, moveY: my * speed, cameraYaw: 0, sprint: false, walk: false, jump, faceCamera: false }, world);
+      // Splash! A child landing in the rain.
+      if (wasUp && b.grounded && wet && p.kind === 'child' && pd < 60) this.splashes.push({ x: b.x, z: b.z });
       if (face) b.heading = Math.atan2(-(face.x - b.x), -(face.z - b.z));
       // Jogging and running children look like running, even below sprint speed.
       const moving = b.pose === 'walk' || b.pose === 'run';

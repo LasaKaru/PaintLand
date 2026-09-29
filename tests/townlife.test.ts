@@ -144,7 +144,12 @@ describe('a day in town', () => {
     expect(away.length).toBeGreaterThan(life.people.length / 2);
     for (const p of life.people.filter((q) => q.kind === 'child')) expect(['away', 'home']).toContain(p.act);
     expect(life.people.filter((p) => p.act === 'away').every((p) => !p.model.root.visible)).toBe(true);
+    // Morning: the grown-ups are back out (most children are in class until two)…
     life.env = { ...life.env, hour: 9 };
+    run(life, 60);
+    expect(life.people.filter((p) => p.act === 'away' && p.kind !== 'child').length).toBe(0);
+    // …and after school everyone is.
+    life.env = { ...life.env, hour: 15 };
     run(life, 60);
     expect(life.people.filter((p) => p.act === 'away').length).toBe(0);
   });
@@ -277,15 +282,15 @@ describe('crowd density and stand-ins', () => {
     expect(life.people.filter((p) => !p.benched).length).toBe(10);
     life.update(1 / 30, 0, { x: 0, z: 0 }, world);
     expect(life.people.filter((p) => p.benched).every((p) => !p.model.root.visible)).toBe(true);
-    life.setDensity(2.5);
-    expect(life.people.filter((p) => !p.benched).length).toBe(50);
+    life.setDensity(3.5);
+    expect(life.people.filter((p) => !p.benched).length).toBe(70);
     life.setDensity(1);
     expect(life.people.filter((p) => !p.benched).length).toBe(20);
   });
 
   it('far-away people are cheap stand-ins, close ones full models', () => {
     const life = make();
-    life.setDensity(2.5);
+    life.setDensity(3.5);
     life.update(1 / 30, 0, { x: 0, z: 0 }, world);
     const far = life.people.filter((p) => !p.benched && Math.hypot(p.body.x, p.body.z) > 60);
     const near = life.people.filter((p) => !p.benched && Math.hypot(p.body.x, p.body.z) < 50);
@@ -297,11 +302,11 @@ describe('crowd density and stand-ins', () => {
 
   it('chapter roads: busier routes at Busy, and stand-ins beyond the full-model range', () => {
     const c = chapterById('serendib');
-    Population.density = 2.5;
+    Population.density = 3.5;
     const busy = new Population(c.buildRoute(), c.id, c.districts.map((d) => d.id));
     Population.density = 1;
     const normal = new Population(c.buildRoute(), c.id, c.districts.map((d) => d.id));
-    expect(busy.walkers.length).toBeGreaterThan(normal.walkers.length * 1.8);
+    expect(busy.walkers.length).toBeGreaterThan(normal.walkers.length * 2.5);
     const s = busy.walkers[10].s;
     busy.update(1 / 30, 0, s, 0, 1);
     const built = busy.walkers.filter((w) => w.model && w.model.root.visible);

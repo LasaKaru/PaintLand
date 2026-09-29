@@ -3,7 +3,7 @@ import { ModelKit, Pattern } from '../models/ModelKit';
 import { HumanModel } from '../models/Human';
 import { PaintMaterial } from '../render/PaintMaterial';
 import { Random } from '../core/Random';
-import { CricketMatch, PITCHES, PITCH_LENGTH, type Shot } from '../gameplay/Cricket';
+import { BowlOver, CricketMatch, PITCHES, PITCH_LENGTH, type Shot } from '../gameplay/Cricket';
 import { FOOD_STALLS, type FoodId } from '../gameplay/Bazaar';
 import { personOf, type RegionId } from './Peoples';
 import type { AreaZone } from './FreeRoamArea';
@@ -44,8 +44,14 @@ export class CricketPitch {
   readonly zone: AreaZone;
   /** The player's innings, when batting. */
   match: CricketMatch | null = null;
+  /** Balls in the player's over since the game last looked. */
+  readonly bowlShots: Shot[] = [];
   /** Shots in the player's innings since the game last looked. */
   readonly shots: Shot[] = [];
+  /** Bowling an over to the kids: the over, the ball in play, and when the kid batter swings. */
+  bowling: { over: BowlOver; match: CricketMatch; swingAt: number; rnd: Random } | null = null;
+  /** The ring at the bowler's end. */
+  readonly bowlZone: AreaZone;
   private readonly kids: HumanModel[] = [];
   private readonly ball: THREE.Mesh;
   private readonly kidBat: THREE.Mesh;
@@ -105,6 +111,43 @@ export class CricketPitch {
     this.kidMatch = new CricketMatch(new Random(seed + 1));
     const ring = at(1.6, 0);
     this.zone = { kind: 'cricket', label: '🏏', x: ring.x, z: ring.z, r: 1.8, colour: '#5dbb3f', spot: def.id };
+    const bring = at(PITCH_LENGTH + 3.5, 0);
+    this.bowlZone = { kind: 'cricket', label: '🎯', x: bring.x, z: bring.z, r: 1.6, colour: '#f4a13b', spot: `${def.id}:bowl` };
+  }
+
+  /** Where the player bowls from, facing the batter. */
+  get bowlingEnd(): { x: number; z: number; yaw: number } {
+    return { x: this.def.x + this.fwd.x * (PITCH_LENGTH + 0.8), z: this.def.z + this.fwd.z * (PITCH_LENGTH + 0.8), yaw: this.def.yaw + Math.PI };
+  }
+
+  /** Take the ball: the kid bowler goes to field. */
+  startBowling(rnd: Random): BowlOver {
+    const match = new CricketMatch(rnd);
+    match.phase = 'result';
+    match.t = 0;
+    this.bowling = { over: new BowlOver(rnd), match, swingAt: 99, rnd };
+    this.kids[0].root.visible = false;
+    return this.bowling.over;
+  }
+
+  stopBowling(): void {
+    this.bowling = null;
+    this.kids[0].root.visible = true;
+  }
+
+  /** Bowl the ball (E): how good it is sets the kid batter's timing. */
+  release(): number | null {
+    const b = this.bowling;
+    if (!b) return null;
+    const a = b.over.release();
+    if (a === null) return null;
+    const m = b.match;
+    m.ball = { flight: 0.85 + (1 - a) * 0.2, short: a < 0.3, onStumps: a > 0.45 || b.rnd.chance(0.25) };
+    m.phase = 'flight';
+    m.t = 0;
+    m.swung = false;
+    b.swingAt = m.ball.flight + b.over.batterError(a);
+    return a;
   }
 
   /** Where the player stands to bat, facing the bowler. */
@@ -166,12 +209,27 @@ export class CricketPitch {
   }
 
   update(dt: number, time: number): Shot | null {
-    const m = this.match ?? this.kidMatch;
+    const bw = this.bowling;
+    const m = bw ? bw.match : this.match ?? this.kidMatch;
     const auto = !this.match;
-    let shot = m.step(dt);
-    // The kid batter swings on their own, some good, some not.
-    if (auto && m.phase === 'flight' && !m.swung && m.t > m.ball.flight - 0.25 + Math.sin(time * 7.3) * 0.2) shot = m.swing() ?? shot;
-    if (auto && m.over) this.kidMatch.reset();
+    let shot: Shot | null = null;
+    if (bw) {
+      // The player bowls: the ball flies from their hand; the kid batter swings when they judge it.
+      bw.over.update(dt);
+      if (m.phase === 'flight') {
+        shot = m.step(dt);
+        if (!shot && !m.swung && m.t >= bw.swingAt) shot = m.swing();
+        if (shot) {
+          bw.over.result(shot, m.last?.runs ?? 0);
+          this.bowlShots.push(shot);
+        }
+      } else m.t += dt;
+    } else {
+      shot = m.step(dt);
+      // The kid batter swings on their own, some good, some not.
+      if (auto && m.phase === 'flight' && !m.swung && m.t > m.ball.flight - 0.25 + Math.sin(time * 7.3) * 0.2) shot = m.swing() ?? shot;
+      if (auto && m.over) this.kidMatch.reset();
+    }
     if (shot) this.hit(shot);
     this.joy = Math.max(0, this.joy - dt);
     const [bowler, keeper, f1, f2, batter] = this.kids;
@@ -182,9 +240,9 @@ export class CricketPitch {
     // The bowler runs in, bowls, and walks back.
     const s = m.phase === 'runup' ? PITCH_LENGTH + 5 - (m.t / 1.4) * 4.5 : m.phase === 'flight' ? PITCH_LENGTH + 0.5 : PITCH_LENGTH + 0.5 + Math.min(1, m.t / 1.6) * 4.5;
     const bp = { x: this.def.x + this.fwd.x * s, z: this.def.z + this.fwd.z * s };
-    face(bowler, bp, this.def.x, this.def.z);
+    if (!bw) face(bowler, bp, this.def.x, this.def.z);
     bowler.swing = m.phase === 'flight' ? Math.min(1, m.t / 0.25) : 0;
-    bowler.animate(dt, m.phase === 'runup' ? 'run' : m.phase === 'flight' && m.t < 0.4 ? 'bowl' : this.joy > 0 ? 'clap' : 'idle', m.phase === 'runup' ? 4 : 0, time);
+    if (!bw) bowler.animate(dt, m.phase === 'runup' ? 'run' : m.phase === 'flight' && m.t < 0.4 ? 'bowl' : this.joy > 0 ? 'clap' : 'idle', m.phase === 'runup' ? 4 : 0, time);
     face(keeper, this.spots[1], this.def.x + this.fwd.x * 10, this.def.z + this.fwd.z * 10);
     keeper.animate(dt, this.joy > 0 ? 'cheer' : 'idle', 0, time);
     // Fielders: chase the ball, then drift back.
@@ -205,6 +263,13 @@ export class CricketPitch {
       } else face(f, cur, this.def.x, this.def.z);
       f.animate(dt, running ? (this.flying ? 'run' : 'walk') : this.joy > 0 ? 'cheer' : 'idle', running ? (this.flying ? 5 : 1.6) : 0, time);
     }
+    // While the player bowls, the kid bowler fields at mid-on.
+    if (bw) {
+      const mid = { x: this.def.x + this.fwd.x * 12 + this.right.x * 6, z: this.def.z + this.fwd.z * 12 + this.right.z * 6 };
+      bowler.root.visible = true;
+      face(bowler, mid, this.def.x, this.def.z);
+      bowler.animate(dt, this.joy > 0 ? 'cheer' : 'idle', 0, time);
+    }
     // The kid batter (hidden while the player bats).
     if (!this.match) {
       face(batter, this.spots[4], this.def.x + this.fwd.x * 10, this.def.z + this.fwd.z * 10);
@@ -223,6 +288,10 @@ export class CricketPitch {
       const b = m.ballPosition();
       const along = PITCH_LENGTH * (1 - b.along) + 0.8 * b.along;
       this.ball.position.set(this.def.x + this.fwd.x * along + this.right.x * 0.2, b.height, this.def.z + this.fwd.z * along + this.right.z * 0.2);
+    } else if (bw) {
+      // In the player's hand at the bowling end.
+      const e = this.bowlingEnd;
+      this.ball.position.set(e.x + this.right.x * 0.3, 1.2, e.z + this.right.z * 0.3);
     } else {
       this.ball.position.set(bp.x + this.right.x * 0.3, 1.1, bp.z + this.right.z * 0.3);
     }
@@ -237,7 +306,7 @@ export function addCricket(area: { zones: AreaZone[]; world: FreeWorld; group: T
   for (const [i, def] of PITCHES.filter((p) => p.area === id).entries()) {
     const pitch = new CricketPitch(def, region, 900 + i + id.length * 17);
     area.group.add(pitch.group);
-    area.zones.push(pitch.zone);
+    area.zones.push(pitch.zone, pitch.bowlZone);
     pitch.addColliders(area.world);
     out.push(pitch);
   }
@@ -362,9 +431,19 @@ export class Stall {
     world.circle(this.x, this.z, 1.35);
   }
 
-  update(dt: number, time: number): void {
-    // The kottu maker chops on the griddle (clang-clang!); the others chat to customers.
-    const pose = this.kind === 'kottu' ? 'drum' : Math.sin(time * 0.4 + this.x) > 0.3 ? 'talk' : 'idle';
+  /** Open for business: sellers set up from 10:00 and serve 11:00–22:00. */
+  static hours = { setup: 10, open: 11, close: 22 };
+  static isOpen(hour: number): boolean {
+    return hour >= Stall.hours.open && hour < Stall.hours.close;
+  }
+
+  update(dt: number, time: number, hour = 12): void {
+    const h = Stall.hours;
+    // The seller arrives to set up, serves through the day, and goes home at night.
+    this.vendor.root.visible = hour >= h.setup && hour < h.close;
+    if (!this.vendor.root.visible) return;
+    // Setting up (unpacking, wiping the counter); then the kottu maker chops on the griddle (clang-clang!), the others chat to customers.
+    const pose = hour < h.open ? 'tend' : this.kind === 'kottu' ? 'drum' : Math.sin(time * 0.4 + this.x) > 0.3 ? 'talk' : 'idle';
     this.vendor.animate(dt, pose, 0, time);
   }
 }
