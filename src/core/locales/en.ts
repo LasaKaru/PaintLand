@@ -1138,6 +1138,8 @@ const en = {
   'tour.blurb': "Long road trips around the world: about ten districts and ten kilometres each, with a journey that crosses the whole map.",
   'tour.terminal': "✈ Grand Tour",
   'mis.journey': "Journey",
+  'prompt.petDog': "E · Pet the dog",
+  'prompt.petCat': "E · Pet the cat",
 } as const;
 
 export default en;

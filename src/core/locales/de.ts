@@ -1140,5 +1140,7 @@ const de: Locale = {
   'tour.blurb': "Lange Roadtrips um die Welt: je etwa zehn Viertel und zehn Kilometer, mit einer Reise quer über die ganze Karte.",
   'tour.terminal': "✈ Große Tour",
   'mis.journey': "Reise",
+  'prompt.petDog': "E · Hund streicheln",
+  'prompt.petCat': "E · Katze streicheln",
 };
 export default de;

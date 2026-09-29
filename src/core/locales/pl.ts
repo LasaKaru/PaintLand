@@ -1140,5 +1140,7 @@ const pl: Locale = {
   'tour.blurb': "Długie wyprawy samochodowe dookoła świata: każda to około dziesięciu dzielnic i dziesięciu kilometrów, z podróżą przez całą mapę.",
   'tour.terminal': "✈ Wielka podróż",
   'mis.journey': "Podróż",
+  'prompt.petDog': "E · Pogłaszcz psa",
+  'prompt.petCat': "E · Pogłaszcz kota",
 };
 export default pl;

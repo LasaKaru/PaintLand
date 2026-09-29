@@ -1,3 +1,4 @@
+import type { Animal } from '../world/AnimalLife';
 import { settleChallenges } from '../ui/PassScreen';
 import { POCKETS, POCKET_INK, POCKET_REACH } from '../world/Pockets';
 import * as THREE from 'three';
@@ -279,6 +280,8 @@ export class Game {
   /** Festival decorations built per area (removed when the festival or setting changes). */
   private festivalDecor = new Map<string, { festival: Festival; group: THREE.Group }>();
   private festivalGreeted: Festival | null = null;
+  /** A dog or cat close enough to pet (on foot in a town). */
+  private nearPet: Animal | null = null;
   /** The time/weather the current district set, to undo when leaving it. */
   private districtEnv: { preset?: string; weather?: string } | null = null;
   /** The mural board being painted. */
@@ -3696,6 +3699,10 @@ export class Game {
           this.updateHeadVisibility();
           this.audio.door();
         }
+      } else if (this.nearPet && this.area?.animals) {
+        // Pet a dog or a cat: it sits happily (a dog may follow you about for a while).
+        this.area!.animals!.pet(this.nearPet);
+        this.particles.emit('petal', _v4.set(this.nearPet.x, HUB_Y + 0.8, this.nearPet.z), _v5.set(0, 1.5, 0), 12, 0.4);
       } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) >= 4 && this.nearBoard) {
         this.visitBrand(this.nearBoard);
       } else if (Math.hypot(this.hubWalker.x - this.hubCar.x, this.hubWalker.z - this.hubCar.z) < 4 && !this.carDrop.active) {
@@ -4753,8 +4760,15 @@ export class Game {
     const here = _v6.set(player.x, HUB_Y, player.z);
     boards?.update(dt, this.time, cam, here);
     this.nearBoard = this.mode === 'foot' && !nearCar && !this.hubZone ? boards?.nearest(here) ?? null : null;
+    const pet = this.mode === 'foot' && !nearCar && !this.hubZone && !this.flight ? area.animals?.nearest(player.x, player.z, 1.8) : null;
+    this.nearPet = pet && (pet.species === 'dog' || pet.species === 'cat') ? pet : null;
+    // Barks, meows, caws, moos and trumpets, quieter further away.
+    for (const c of area.animals?.calls ?? []) {
+      const d = Math.hypot(c.x - player.x, c.z - player.z);
+      if (d < 30) this.audio.animal(c.call, 1 - d / 30);
+    }
     const zoneText = this.hubZone ? (this.hubZone.kind === 'portal' || this.hubZone.kind === 'area' ? t(this.freeMissions.mission ? 'prompt.enterOnly' : 'prompt.enter', { place: area.zoneLabel(this.hubZone).replace('→ ', '') }) : `E · ${area.zoneLabel(this.hubZone)}`) : null;
-    const boardText = this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
+    const boardText = this.nearPet ? t(this.nearPet.species === 'dog' ? 'prompt.petDog' : 'prompt.petCat') : this.nearBoard ? t('brand.visit', { name: this.nearBoard.kind === 'cta' ? t('brand.advertise') : this.nearBoard.name }) : null;
     this.hud.setPrompt(this.state === 'photo' || this.flight || this.leisure.active ? null : zoneText ?? (nearCar ? t('prompt.getIn') : boardText ?? (this.mode === 'drive' && Math.abs(this.hubCar.v) < 3 && this.hubCar.y > -0.5 ? t('prompt.getOut') : null)));
     this.drawBattle(dt);
     if (this.flight) this.updateFlightHud(cam);

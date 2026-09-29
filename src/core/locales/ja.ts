@@ -1140,5 +1140,7 @@ const ja: Locale = {
   'tour.blurb': "世界をめぐる長いドライブ旅：それぞれ約10の地区と10キロ、地図全体を横断する旅つき。",
   'tour.terminal': "✈ グランドツアー",
   'mis.journey': "旅",
+  'prompt.petDog': "E · 犬をなでる",
+  'prompt.petCat': "E · 猫をなでる",
 };
 export default ja;

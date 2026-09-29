@@ -417,6 +417,60 @@ export class Ambience {
     }
   }
 
+  /** Animal calls: a dog's woof, a cat's meow, a crow's caw, a cow's moo, an elephant's trumpet. */
+  animal(call: 'bark' | 'meow' | 'caw' | 'moo' | 'trumpet', level: number): void {
+    const ctx = this.ctx;
+    const t = ctx.currentTime;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = Math.random() * 1.2 - 0.6;
+    pan.connect(this.bus);
+    const voice = (type: OscillatorType, at: number, dur: number, f: [number, number, number], form: number, q: number, gain: number, vib = 0): void => {
+      const o = ctx.createOscillator();
+      o.type = type;
+      o.frequency.setValueAtTime(f[0], at);
+      o.frequency.linearRampToValueAtTime(f[1], at + dur * 0.4);
+      o.frequency.linearRampToValueAtTime(f[2], at + dur);
+      if (vib) {
+        const v = ctx.createOscillator();
+        v.frequency.value = 6;
+        const vd = ctx.createGain();
+        vd.gain.value = vib;
+        v.connect(vd).connect(o.frequency);
+        v.start(at);
+        v.stop(at + dur);
+      }
+      const bp = ctx.createBiquadFilter();
+      bp.type = 'bandpass';
+      bp.frequency.value = form;
+      bp.Q.value = q;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(gain * level, at + Math.min(0.03, dur * 0.2));
+      g.gain.setValueAtTime(gain * level, at + dur * 0.7);
+      g.gain.linearRampToValueAtTime(0, at + dur);
+      o.connect(bp).connect(g).connect(pan);
+      o.start(at);
+      o.stop(at + dur + 0.02);
+    };
+    switch (call) {
+      case 'bark':
+        for (let i = 0; i < (Math.random() < 0.5 ? 1 : 2); i++) voice('sawtooth', t + i * 0.22, 0.12, [420, 520, 300], 900, 1.5, 0.05);
+        break;
+      case 'meow':
+        voice('triangle', t, 0.55, [520, 780, 460], 1300, 2, 0.035);
+        break;
+      case 'caw':
+        for (let i = 0; i < 2 + Math.floor(Math.random() * 2); i++) voice('sawtooth', t + i * 0.32, 0.22, [760, 700, 560], 1500, 3, 0.03);
+        break;
+      case 'moo':
+        voice('sawtooth', t, 1.3, [105, 140, 95], 420, 1.2, 0.06);
+        break;
+      case 'trumpet':
+        voice('sawtooth', t, 0.9, [340, 720, 640], 1100, 1.5, 0.05, 25);
+        break;
+    }
+  }
+
   /** "Ha-ha-ha": quick falling syllables. */
   private laugh(t: number, level: number): void {
     const ctx = this.ctx;

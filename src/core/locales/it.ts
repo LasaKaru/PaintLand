@@ -1140,5 +1140,7 @@ const it: Locale = {
   'tour.blurb': "Lunghi viaggi on the road intorno al mondo: circa dieci quartieri e dieci chilometri ciascuno, con un viaggio che attraversa tutta la mappa.",
   'tour.terminal': "✈ Grand tour",
   'mis.journey': "Viaggio",
+  'prompt.petDog': "E · Accarezza il cane",
+  'prompt.petCat': "E · Accarezza il gatto",
 };
 export default it;

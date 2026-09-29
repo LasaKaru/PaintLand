@@ -17,6 +17,8 @@ import { buildBillboard, buildBusStop, buildChest, buildCrossing, buildFoodCart,
 import { HumanModel } from '../models/Human';
 import { personOf } from './Peoples';
 import { TownLife } from './TownLife';
+import { AnimalLife } from './AnimalLife';
+import type { Species } from '../models/Animals';
 import { VEHICLES, VehicleModel } from '../models/Vehicles';
 import { FreeWorld } from '../gameplay/FreeRoam';
 import { PALETTE } from '../gameplay/Profile';
@@ -145,6 +147,8 @@ export class City implements FreeRoamArea {
   private readonly nm = new THREE.Matrix3();
   private readonly traffic: TrafficCar[] = [];
   /** Townspeople going about their day (see TownLife.ts). */
+  /** Dogs, cats, crows and more (see AnimalLife.ts). */
+  readonly animals = new AnimalLife(new Random(6601), 160);
   readonly life = new TownLife((r) => this.pavementSpot(r), new Random(66001), { greetings: ['ayubowan', 'wave'], cull: 160, pace: 0.4 });
   private readonly labels: HTMLDivElement[] = [];
   private readonly rings: THREE.Mesh[] = [];
@@ -809,6 +813,15 @@ export class City implements FreeRoamArea {
 
   private buildWalkers(): void {
     this.group.add(this.life.group);
+    this.group.add(this.animals.group);
+    {
+      const r = new Random(6602);
+      for (const [species, n] of [['dog', 6], ['crow', 10], ['cow', 2]] as [Species, number][])
+        for (let i = 0; i < n; i++) {
+          const p = TownLife.clearSpot(this.world, ...(Object.values(this.pavementSpot(r)) as [number, number]));
+          this.animals.add(species, p.x, p.z);
+        }
+    }
     const rnd = new Random(66);
     // Colombo's people: Sinhala, Tamil, Muslim, Burgher and visitors, in everyday dress (see Peoples.ts).
     for (let i = 0; i < 44; i++) {
@@ -927,6 +940,7 @@ export class City implements FreeRoamArea {
       car.model.setBrakeLights(blocked);
     }
     this.life.update(dt, time, player, this.world);
+    this.animals.update(dt, time, player, this.world, this.life.env);
     // Secrets and chests bob and spin.
     for (const s of this.secrets) if (s.mesh?.visible) {
       s.mesh.rotation.y = time * 1.5;

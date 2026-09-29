@@ -1140,5 +1140,7 @@ const nl: Locale = {
   'tour.blurb': "Lange roadtrips rond de wereld: elk zo’n tien wijken en tien kilometer, met een reis dwars over de hele kaart.",
   'tour.terminal': "✈ Grote reis",
   'mis.journey': "Reis",
+  'prompt.petDog': "E · Aai de hond",
+  'prompt.petCat': "E · Aai de kat",
 };
 export default nl;

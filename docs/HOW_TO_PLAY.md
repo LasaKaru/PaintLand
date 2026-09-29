@@ -162,6 +162,18 @@ for each other and for you. Near a crowd you hear a soft murmur of voices, chatt
 **Street musicians** play in every town from 09:00 to 22:00 (not in the rain): a guitarist or a
 drummer with a Sri Lankan *geta bera*. They play in time with your radio.
 
+**Animals** live in the towns and along the roads:
+
+- Stray dogs nap in the shade and sometimes trot over to see you. Press **E** to pet a dog, and it
+  may follow you about for a while.
+- Cats slink off if you rush them. Press **E** to pet one.
+- Crows hop about and take off when you walk up. At night they roost out of sight.
+- Cows graze in India and Sri Lanka, and elephants bathe by the Tea Hills lake.
+- Deer in the Lantern Village and Japan bow to you if you stand still in front of them.
+- Kangaroos hop along Australian roads.
+
+Everything except an elephant gets out of the way of a fast car.
+
 Faith is part of everyday life in these places. Some locals wear a hijab, turban, kippah or prayer
 cap, and in Sri Lanka and the Himalayas you may pass monks in saffron or maroon robes. These
 clothes belong to the people who wear them. You can't buy them in the shop or wear them yourself.

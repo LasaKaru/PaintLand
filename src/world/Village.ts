@@ -14,6 +14,8 @@ import { buildBambooClump, buildCherryTree, buildChorten, buildFox, buildFuji, b
 import { HumanModel } from '../models/Human';
 import { personOf } from './Peoples';
 import { TownLife } from './TownLife';
+import { AnimalLife } from './AnimalLife';
+import type { Species } from '../models/Animals';
 import { FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
@@ -58,6 +60,8 @@ export class Village implements FreeRoamArea {
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -90, z: 4, heading: -Math.PI / 2 };
   /** Townspeople going about their day (see TownLife.ts). */
+  /** Dogs, cats, crows and more (see AnimalLife.ts). */
+  readonly animals = new AnimalLife(new Random(8801));
   readonly life = new TownLife((r) => this.randomSpot(r), new Random(88001), { greetings: ['bow', 'wave'] });
   private readonly labels: HTMLDivElement[] = [];
   private labelLang = '';
@@ -324,6 +328,15 @@ export class Village implements FreeRoamArea {
 
   private buildFolk(): void {
     this.group.add(this.life.group);
+    this.group.add(this.animals.group);
+    {
+      const r = new Random(8802);
+      for (const [species, n] of [['deer', 4], ['cat', 3], ['crow', 4]] as [Species, number][])
+        for (let i = 0; i < n; i++) {
+          const p = TownLife.clearSpot(this.world, ...(Object.values(this.randomSpot(r)) as [number, number]));
+          this.animals.add(species, p.x, p.z);
+        }
+    }
     const rnd = new Random(88);
     for (let i = 0; i < 18; i++) {
       const look = personOf('japan', () => rnd.next()).look;
@@ -405,6 +418,7 @@ export class Village implements FreeRoamArea {
 
   update(dt: number, time: number, player: { x: number; z: number }, camera: THREE.PerspectiveCamera): void {
     this.life.update(dt, time, player, this.world);
+    this.animals.update(dt, time, player, this.world, this.life.env);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     const langNow = document.documentElement.lang;
     if (langNow !== this.labelLang) {

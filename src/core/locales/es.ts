@@ -1140,5 +1140,7 @@ const es: Locale = {
   'tour.blurb': "Largos viajes por carretera alrededor del mundo: unos diez distritos y diez kilómetros cada uno, con un viaje que cruza todo el mapa.",
   'tour.terminal': "✈ Gran gira",
   'mis.journey': "Viaje",
+  'prompt.petDog': "E · Acariciar al perro",
+  'prompt.petCat': "E · Acariciar al gato",
 };
 export default es;

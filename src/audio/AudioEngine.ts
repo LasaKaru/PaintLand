@@ -835,6 +835,11 @@ export class AudioEngine {
     o.stop(t + 0.5);
   }
 
+  /** An animal nearby (0..1 by distance). */
+  animal(call: 'bark' | 'meow' | 'caw' | 'moo' | 'trumpet', level: number): void {
+    this.ambience?.animal(call, level * this.ambienceVolume);
+  }
+
   /** A crowd-ish burst of claps (stunts). */
   cheer(): void {
     if (!this.ctx) return;

@@ -1140,5 +1140,7 @@ const vi: Locale = {
   'tour.blurb': "Những chuyến đi đường dài vòng quanh thế giới: mỗi chuyến khoảng mười khu và mười cây số, cùng một hành trình băng qua cả bản đồ.",
   'tour.terminal': "✈ Du hành lớn",
   'mis.journey': "Hành trình",
+  'prompt.petDog': "E · Vuốt ve chú chó",
+  'prompt.petCat': "E · Vuốt ve chú mèo",
 };
 export default vi;

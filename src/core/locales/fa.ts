@@ -1140,5 +1140,7 @@ const fa: Locale = {
   'tour.blurb': "سفرهای جاده‌ای طولانی دور دنیا: هر کدام حدود ده محله و ده کیلومتر، با سفری که از کل نقشه می‌گذرد.",
   'tour.terminal': "✈ سفر بزرگ",
   'mis.journey': "سفر",
+  'prompt.petDog': "E · سگ را نوازش کن",
+  'prompt.petCat': "E · گربه را نوازش کن",
 };
 export default fa;

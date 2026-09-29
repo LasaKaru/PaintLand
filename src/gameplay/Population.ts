@@ -2,7 +2,8 @@ import * as THREE from 'three';
 import { RoadPath, createFrame } from '../road/RoadPath';
 import { KERB_WIDTH } from '../road/RoadMesh';
 import { HumanModel, DEFAULT_HUMAN_LOOK, type HumanLook, type HumanPose } from '../models/Human';
-import { personOf, regionFor } from '../world/Peoples';
+import { personOf, regionFor, type RegionId } from '../world/Peoples';
+import { AnimalModel, COATS, type AnimalPose, type Species } from '../models/Animals';
 import { kindOf, presence, speechBubble, type Kind } from '../world/TownLife';
 import { VEHICLES, VehicleModel, tuningFor } from '../models/Vehicles';
 import { RoverController } from './RoverController';
@@ -43,6 +44,38 @@ interface Walker {
   temper: number;
 }
 
+/** An animal by the road: a stray dog, a cat, a cow, deer in Japan, kangaroos in Australia. */
+export interface RoadAnimal {
+  species: Species;
+  coat: string;
+  model: AnimalModel | null;
+  s: number;
+  x: number;
+  home: number;
+  side: number;
+  state: 'rest' | 'wander' | 'flee';
+  t: number;
+  dir: number;
+  rest: AnimalPose;
+  pose: AnimalPose;
+}
+
+/** Which animals live along the roads of each region (and how many per district). */
+const ROAD_ANIMALS: Record<RegionId, [Species, number][]> = {
+  lanka: [['dog', 2], ['cow', 1]],
+  india: [['cow', 2], ['dog', 1]],
+  japan: [['deer', 1], ['cat', 1]],
+  korea: [['cat', 1], ['dog', 1]],
+  china: [['cat', 1], ['dog', 1]],
+  seasia: [['dog', 1], ['cat', 1]],
+  himalaya: [['cow', 1], ['dog', 1]],
+  mena: [['cat', 2]],
+  europe: [['dog', 1], ['cat', 1]],
+  americas: [['dog', 1]],
+  oceania: [['kangaroo', 2]],
+  mixed: [['dog', 1], ['cat', 1]],
+};
+
 export interface Giver {
   mission: MissionDef;
   model: HumanModel;
@@ -76,6 +109,7 @@ export interface Marker {
 export class Population {
   readonly group = new THREE.Group();
   readonly walkers: Walker[] = [];
+  readonly animals: RoadAnimal[] = [];
   readonly givers: Giver[] = [];
   readonly cars: Car[] = [];
   readonly markers: Marker[] = [];
@@ -129,6 +163,35 @@ export class Population {
         }
         if (kind < 0.22) this.addWalker(personOf(region, r, { age: 'child', aids: false }).look, s, x, side, rnd, lead);
         else if (kind < 0.4) this.addWalker(personOf(region, r, { aids: false }).look, s, x, side, rnd, lead);
+      }
+    }
+    // Animals by the road, from the same region's list (kangaroos only in Australia; now and then an elephant in Sri Lanka).
+    const arnd = new Random(hashString(chapterId + ':animals'));
+    for (const sp of spans) {
+      const region = regionFor(chapterId, districtIds[sp.district]);
+      for (const [kind, n] of ROAD_ANIMALS[region]) {
+        let species: Species = kind === 'kangaroo' && chapterId !== 'australia' ? 'dog' : kind;
+        if (species === 'cow' && region === 'lanka' && arnd.chance(0.2)) species = 'elephant';
+        for (let i = 0; i < n; i++) {
+          const s = sp.start + arnd.range(0.1, 0.9) * (sp.end - sp.start);
+          const side = arnd.chance(0.5) ? -1 : 1;
+          const f = path.sample(Math.min(path.length - 1, Math.max(1, s)), this.frame);
+          const far = species === 'elephant' ? 7 : species === 'cow' || species === 'kangaroo' || species === 'deer' ? 4 : 2;
+          this.animals.push({
+            species,
+            coat: arnd.pick(COATS[species]),
+            model: null,
+            s,
+            x: side * (f.width / 2 + KERB_WIDTH + far + arnd.range(0, 2)),
+            home: s,
+            side,
+            state: 'rest',
+            t: arnd.range(2, 10),
+            dir: arnd.chance(0.5) ? 1 : -1,
+            rest: arnd.pick(species === 'cow' || species === 'deer' || species === 'elephant' ? ['eat', 'idle', 'lie'] as AnimalPose[] : ['sit', 'lie', 'idle'] as AnimalPose[]),
+            pose: 'idle',
+          });
+        }
       }
     }
     // Marker shapes.
@@ -371,6 +434,7 @@ export class Population {
       }
     }
     for (let i = bubbles; i < this.bubbles.length; i++) this.bubbles[i].visible = false;
+    for (const a of this.animals) this.updateAnimal(a, dt, time, focusS, focusX);
     for (const g of this.givers) {
       const visible = Math.abs(g.s - focusS) < near + 60;
       g.model.root.visible = g.marker.visible = visible;
@@ -394,6 +458,41 @@ export class Population {
       car.model.setBrakeLights(car.ctrl.braking);
       car.driver.animate(dt, 'sit', 0, time);
     }
+  }
+
+  /** Animals rest, amble about near home, and get out of the way when you come close. */
+  private updateAnimal(a: RoadAnimal, dt: number, time: number, focusS: number, focusX: number): void {
+    const visible = Math.abs(a.s - focusS) < 150;
+    if (a.model) a.model.root.visible = visible;
+    if (!visible) return;
+    if (!a.model) {
+      a.model = new AnimalModel(a.species, a.coat);
+      this.group.add(a.model.root);
+    }
+    a.t -= dt;
+    const close = Math.abs(a.s - focusS) < 9 && Math.abs(a.x - focusX) < 6;
+    if (close && a.state !== 'flee' && a.species !== 'elephant' && a.species !== 'cow') {
+      a.state = 'flee';
+      a.t = 1.5;
+    }
+    if (a.t <= 0) {
+      a.state = a.state === 'rest' ? 'wander' : 'rest';
+      a.t = a.state === 'rest' ? 4 + Math.random() * 10 : 3 + Math.random() * 6;
+      if (a.state === 'wander') a.dir = Math.abs(a.s - a.home) > 8 ? Math.sign(a.home - a.s) : Math.random() < 0.5 ? 1 : -1;
+    }
+    let yaw = a.dir > 0 ? 0 : Math.PI;
+    const walk = a.species === 'elephant' || a.species === 'cow' ? 0.6 : a.species === 'kangaroo' ? 1.8 : 1.1;
+    if (a.state === 'wander') {
+      a.s += a.dir * walk * dt;
+      a.pose = a.species === 'kangaroo' ? 'hop' : 'walk';
+    } else if (a.state === 'flee') {
+      // Away from the road.
+      if (Math.abs(a.x) < 24) a.x += a.side * 4 * dt;
+      yaw = a.side > 0 ? -Math.PI / 2 : Math.PI / 2;
+      a.pose = a.species === 'kangaroo' ? 'hop' : 'run';
+    } else a.pose = a.rest;
+    this.place(a.model.root, a.s, a.x, 0.18, yaw);
+    a.model.animate(dt, a.pose, a.state === 'wander' ? walk : a.state === 'flee' ? 4 : 0, time);
   }
 
   dispose(): void {

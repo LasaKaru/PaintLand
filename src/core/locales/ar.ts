@@ -1140,5 +1140,7 @@ const ar: Locale = {
   'tour.blurb': "رحلات برية طويلة حول العالم: نحو عشرة أحياء وعشرة كيلومترات لكل منها، مع رحلة تعبر الخريطة كلها.",
   'tour.terminal': "✈ الجولة الكبرى",
   'mis.journey': "رحلة",
+  'prompt.petDog': "E · ربّت على الكلب",
+  'prompt.petCat': "E · ربّت على القطة",
 };
 export default ar;

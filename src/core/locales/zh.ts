@@ -1140,5 +1140,7 @@ const zh: Locale = {
   'tour.blurb': "环游世界的长途公路之旅：每段约十个街区、十公里，还有一段横跨整张地图的旅程。",
   'tour.terminal': "✈ 环游世界",
   'mis.journey': "旅程",
+  'prompt.petDog': "E · 摸摸狗狗",
+  'prompt.petCat': "E · 摸摸猫咪",
 };
 export default zh;

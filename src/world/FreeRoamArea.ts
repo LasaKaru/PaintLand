@@ -6,6 +6,7 @@ import type { District } from '../gameplay/Restoration';
 import type { MapInfo } from '../ui/MapView';
 import type { Perahera } from './Perahera';
 import type { TownLife } from './TownLife';
+import type { AnimalLife } from './AnimalLife';
 
 /** Ground height of every free-roam area above the sea. */
 export const AREA_Y = 2;
@@ -103,6 +104,8 @@ export interface FreeRoamArea {
   readonly perahera?: Perahera;
   /** Townspeople going about their day (towns only). */
   readonly life?: TownLife;
+  /** Animals about town. */
+  readonly animals?: AnimalLife;
   /** Data for the paper map; `paint` gives each district's paint 0..1. */
   /** Paintable mural boards in this area. */
   readonly murals: MuralBoard[];

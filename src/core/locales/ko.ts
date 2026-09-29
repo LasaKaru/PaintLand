@@ -1140,5 +1140,7 @@ const ko: Locale = {
   'tour.blurb': "세계를 도는 긴 자동차 여행: 각각 약 10개 구역, 10킬로미터, 지도 전체를 가로지르는 여정과 함께.",
   'tour.terminal': "✈ 그랜드 투어",
   'mis.journey': "여정",
+  'prompt.petDog': "E · 강아지 쓰다듬기",
+  'prompt.petCat': "E · 고양이 쓰다듬기",
 };
 export default ko;

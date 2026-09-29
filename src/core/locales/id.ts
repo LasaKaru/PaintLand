@@ -1140,5 +1140,7 @@ const id: Locale = {
   'tour.blurb': "Perjalanan darat panjang keliling dunia: masing-masing sekitar sepuluh distrik dan sepuluh kilometer, dengan perjalanan yang melintasi seluruh peta.",
   'tour.terminal': "✈ Tur Akbar",
   'mis.journey': "Perjalanan",
+  'prompt.petDog': "E · Elus anjingnya",
+  'prompt.petCat': "E · Elus kucingnya",
 };
 export default id;

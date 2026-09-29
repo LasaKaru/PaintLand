@@ -1140,5 +1140,7 @@ const ur: Locale = {
   'tour.blurb': "دنیا بھر کے لمبے سڑک سفر: ہر ایک میں تقریباً دس علاقے اور دس کلومیٹر، اور پورے نقشے کو پار کرنے والا ایک سفر۔",
   'tour.terminal': "✈ عظیم سفر",
   'mis.journey': "سفر",
+  'prompt.petDog': "E · کتے کو سہلائیں",
+  'prompt.petCat': "E · بلی کو سہلائیں",
 };
 export default ur;

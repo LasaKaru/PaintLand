@@ -1140,5 +1140,7 @@ const tr: Locale = {
   'tour.blurb': "Dünyanın dört bir yanında uzun yol gezileri: her biri yaklaşık on semt ve on kilometre, tüm haritayı geçen bir yolculukla.",
   'tour.terminal': "✈ Büyük Tur",
   'mis.journey': "Yolculuk",
+  'prompt.petDog': "E · Köpeği sev",
+  'prompt.petCat': "E · Kediyi sev",
 };
 export default tr;

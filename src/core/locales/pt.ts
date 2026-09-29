@@ -1140,5 +1140,7 @@ const pt: Locale = {
   'tour.blurb': "Longas viagens de estrada pelo mundo: cerca de dez bairros e dez quilômetros cada, com uma jornada que atravessa o mapa inteiro.",
   'tour.terminal': "✈ Grande viagem",
   'mis.journey': "Jornada",
+  'prompt.petDog': "E · Fazer carinho no cão",
+  'prompt.petCat': "E · Fazer carinho no gato",
 };
 export default pt;

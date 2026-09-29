@@ -1140,5 +1140,7 @@ const si: Locale = {
   'tour.blurb': "ලොව වටා දිගු මාර්ග චාරිකා: එක එකක දිස්ත්‍රික්ක දහයක් පමණ සහ කිලෝමීටර් දහයක් පමණ, මුළු සිතියමම හරහා යන ගමනක් සමඟ.",
   'tour.terminal': "✈ මහා සංචාරය",
   'mis.journey': "ගමන",
+  'prompt.petDog': "E · බල්ලාව අතගාන්න",
+  'prompt.petCat': "E · පූසාව අතගාන්න",
 };
 export default si;

@@ -18,6 +18,8 @@ import { buildChurch, buildKodimaram } from '../models/LandmarksFaith';
 import { buildGopuram } from '../models/LandmarksIndia';
 import { personOf } from './Peoples';
 import { TownLife } from './TownLife';
+import { AnimalLife } from './AnimalLife';
+import type { Species } from '../models/Animals';
 import { FreeWorld } from '../gameplay/FreeRoam';
 import { CHAPTERS } from './Chapters';
 import { t, type StringKey } from '../core/i18n';
@@ -65,6 +67,8 @@ export class Hills implements FreeRoamArea {
   readonly zones: AreaZone[] = [];
   readonly spawn = { x: -96, z: 4, heading: -Math.PI / 2 };
   /** Townspeople going about their day (see TownLife.ts). */
+  /** Dogs, cats, crows and more (see AnimalLife.ts). */
+  readonly animals = new AnimalLife(new Random(11051));
   readonly life = new TownLife((r) => this.randomSpot(r), new Random(1105001), { greetings: ['ayubowan', 'wave'] });
   private readonly labels: HTMLDivElement[] = [];
   private labelLang = '';
@@ -367,6 +371,20 @@ export class Hills implements FreeRoamArea {
 
   private buildFolk(): void {
     this.group.add(this.life.group);
+    this.group.add(this.animals.group);
+    {
+      const r = new Random(11052);
+      for (const [species, n] of [['dog', 3], ['cow', 4], ['crow', 5]] as [Species, number][])
+        for (let i = 0; i < n; i++) {
+          const p = TownLife.clearSpot(this.world, ...(Object.values(this.randomSpot(r)) as [number, number]));
+          this.animals.add(species, p.x, p.z);
+        }
+      // Elephants by the lake.
+      for (const [x, z] of [[-40, 72], [-55, 70]]) {
+        const p = TownLife.clearSpot(this.world, x, z);
+        this.animals.add('elephant', p.x, p.z, 8);
+      }
+    }
     const rnd = new Random(1105);
     for (let i = 0; i < 18; i++) {
       // Tea pickers (every third) dress for the estate; everyone else as they like.
@@ -469,6 +487,7 @@ export class Hills implements FreeRoamArea {
       s.position.y = -AREA_Y + 0.3 + Math.sin(time * 1.3 + i) * 0.08;
     });
     this.life.update(dt, time, player, this.world);
+    this.animals.update(dt, time, player, this.world, this.life.env);
     for (const ring of this.zoneRings) ring.scale.setScalar(1 + Math.sin(time * 3) * 0.04);
     const langNow = document.documentElement.lang;
     if (langNow !== this.labelLang) {

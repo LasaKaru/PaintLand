@@ -1140,5 +1140,7 @@ const sw: Locale = {
   'tour.blurb': "Safari ndefu za barabarani duniani kote: kila moja takriban mitaa kumi na kilomita kumi, pamoja na safari inayovuka ramani nzima.",
   'tour.terminal': "✈ Ziara Kuu",
   'mis.journey': "Safari",
+  'prompt.petDog': "E · Mbembeleze mbwa",
+  'prompt.petCat': "E · Mbembeleze paka",
 };
 export default sw;

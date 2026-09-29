@@ -1140,5 +1140,7 @@ const th: Locale = {
   'tour.blurb': "ทริปขับรถไกลรอบโลก: แต่ละทริปราวสิบย่านและสิบกิโลเมตร พร้อมการเดินทางที่ข้ามทั้งแผนที่",
   'tour.terminal': "✈ แกรนด์ทัวร์",
   'mis.journey': "การเดินทาง",
+  'prompt.petDog': "E · ลูบหัวน้องหมา",
+  'prompt.petCat': "E · ลูบหัวน้องแมว",
 };
 export default th;

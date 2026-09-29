@@ -1140,5 +1140,7 @@ const fr: Locale = {
   'tour.blurb': "De longs road trips autour du monde : une dizaine de quartiers et une dizaine de kilomètres chacun, avec un voyage qui traverse toute la carte.",
   'tour.terminal': "✈ Grand tour",
   'mis.journey': "Voyage",
+  'prompt.petDog': "E · Caresser le chien",
+  'prompt.petCat': "E · Caresser le chat",
 };
 export default fr;
