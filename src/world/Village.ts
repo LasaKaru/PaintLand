@@ -332,6 +332,13 @@ export class Village implements FreeRoamArea {
       this.group.add(model.root);
       this.life.add(model, look, p.x, p.z);
     }
+    // Street musicians playing along with the radio.
+    {
+      const look = personOf('japan', () => rnd.next(), { age: 'adult', aids: false }).look;
+      const model = new HumanModel(look);
+      this.group.add(model.root);
+      this.life.addBusker(model, look, 30, 5, Math.atan2(30, 5), 'guitar');
+    }
   }
 
   /** A random point on the street, the avenue, the waterfront or the plaza. */

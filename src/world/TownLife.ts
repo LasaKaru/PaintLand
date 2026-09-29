@@ -1,12 +1,12 @@
 import * as THREE from 'three';
 import { FreeWalker, type FreeWorld } from '../gameplay/FreeRoam';
-import type { HumanLook, HumanModel, HumanPose } from '../models/Human';
+import type { Carry, HumanLook, HumanModel, HumanPose } from '../models/Human';
 import { ModelKit } from '../models/ModelKit';
 import { PaintMaterial } from '../render/PaintMaterial';
 import type { Random } from '../core/Random';
 
 /** What a townsperson is doing right now. */
-export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet';
+export type Activity = 'stroll' | 'jog' | 'play' | 'chat' | 'pause' | 'greet' | 'dodge' | 'home' | 'away' | 'busk';
 
 /** Who someone is, which decides what they like to do. */
 export type Kind = 'child' | 'adult' | 'elder' | 'wheels';
@@ -32,7 +32,67 @@ export interface TownPerson {
   pose: HumanPose;
   /** How this person says hello to the player. */
   hello: HumanPose;
+  /** 0..1, fixed: who stays out late, who carries an umbrella, who likes a sun hat (compared with the hour and weather). */
+  temper: number;
+  /** Where they come from and go back to. */
+  home: { x: number; z: number };
+  /** Stepping out of the way: the direction to move in. */
+  away: { x: number; z: number };
+  /** A busker's instrument. */
+  instrument: Carry;
+  /** A busker's pitch (they stay put). */
+  pitch: { x: number; z: number; heading: number } | null;
 }
+
+/** The world around the town this frame (set by the game before update). */
+export interface TownEnv {
+  /** 0..24. */
+  hour: number;
+  /** 0..1. */
+  rain: number;
+  /** The player's car, when driving: position and velocity (m/s). */
+  car: { x: number; z: number; vx: number; vz: number } | null;
+  /** The player on foot. */
+  onFoot: boolean;
+  /** Tempo for buskers (the radio's, if it is playing). */
+  bpm: number;
+}
+
+/** Share of townspeople out and about at each hour (the rest are at home). */
+export function presence(hour: number, kind: Kind): number {
+  const h = ((hour % 24) + 24) % 24;
+  if (kind === 'child') return h >= 7 && h < 20 ? 1 : h >= 6 && h < 21 ? 0.3 : 0;
+  if (h >= 7 && h < 21) return 1;
+  if (h >= 6 && h < 22) return 0.7;
+  if (h >= 5 && h < 23) return 0.45;
+  return 0.25;
+}
+
+/** How each activity's chances change through the day (morning jogs, midday rests, evening walks and chats). */
+function hourBias(hour: number, act: Activity, kind: Kind): number {
+  const h = ((hour % 24) + 24) % 24;
+  const morning = h >= 5.5 && h < 9;
+  const midday = h >= 11 && h < 15;
+  const evening = h >= 17 && h < 21;
+  const night = h >= 21 || h < 5.5;
+  switch (act) {
+    case 'jog':
+      return morning ? 3 : evening ? 1.5 : midday ? 0.3 : night ? 0.3 : 1;
+    case 'play':
+      // Children walk to school in the morning and play most in the late afternoon.
+      return morning ? 0.4 : evening || (h >= 15 && h < 17) ? 1.6 : 1;
+    case 'pause':
+      return midday ? 1.6 : 1;
+    case 'chat':
+      return evening ? 1.7 : night ? 1.3 : 1;
+    case 'stroll':
+      return evening ? 1.3 : kind === 'child' && morning ? 2 : 1;
+    default:
+      return 1;
+  }
+}
+
+const UMBRELLAS = ['#e0432f', '#3e6fa8', '#f4d23b', '#2d8a5a', '#e8559a', '#2b2622', '#f08a2e'];
 
 export interface TownLifeOptions {
   /** How the town greets the player and each other (a wave everywhere; a bow, or ayubowan). */
@@ -77,6 +137,9 @@ const PAUSES: Record<Kind, HumanPose[]> = {
 export class TownLife {
   readonly people: TownPerson[] = [];
   readonly group = new THREE.Group();
+  /** The hour, weather and the player's car, set each frame by the game. */
+  env: TownEnv = { hour: 12, rain: 0, car: null, onFoot: true, bpm: 96 };
+  private carStill = 0;
   private readonly bubbles: THREE.Mesh[] = [];
   private readonly greetings: HumanPose[];
   private readonly pace: number;
@@ -109,16 +172,83 @@ export class TownLife {
       cool: this.rnd.range(0, 6),
       pose: 'idle',
       hello: this.rnd.pick(this.greetings),
+      temper: this.rnd.next(),
+      home: { x, z },
+      away: { x: 0, z: 0 },
+      instrument: null,
+      pitch: null,
     };
     this.people.push(p);
     return p;
+  }
+
+  /** A street musician who stays at one spot, playing along with the radio (09:00–22:00). */
+  addBusker(model: HumanModel, look: HumanLook, x: number, z: number, heading: number, instrument: 'guitar' | 'drum'): TownPerson {
+    const p = this.add(model, look, x, z);
+    p.act = 'busk';
+    p.t = Infinity;
+    p.instrument = instrument;
+    p.pitch = { x, z, heading };
+    p.body.place(x, z, heading);
+    model.setCarry(instrument);
+    return p;
+  }
+
+  /** The nearest spot to (x, z) with room to stand. */
+  static clearSpot(world: FreeWorld, x: number, z: number): { x: number; z: number } {
+    for (let r = 1; r <= 16; r++)
+      for (let a = 0; a < 12; a++) {
+        const q = { x: x + Math.cos((a / 12) * Math.PI * 2) * r, z: z + Math.sin((a / 12) * Math.PI * 2) * r };
+        if (!world.resolve({ ...q }, 0.6)) return q;
+      }
+    return { x, z };
+  }
+
+  /** People nearby clap and cheer (a big jump landed, a district painted back to colour). */
+  celebrate(x: number, z: number, radius = 45): number {
+    let n = 0;
+    for (const p of this.people) {
+      if (p.act === 'away' || p.act === 'home' || p.act === 'busk' || p.act === 'dodge') continue;
+      if (Math.hypot(p.body.x - x, p.body.z - z) > radius) continue;
+      this.leave(p);
+      p.act = 'pause';
+      p.still = p.kind === 'child' ? 'cheer' : this.rnd.pick(['clap', 'clap', 'cheer'] as HumanPose[]);
+      p.t = this.rnd.range(2.5, 4);
+      p.away = { x, z };
+      n++;
+    }
+    return n;
+  }
+
+  /** How lively it sounds around the player: how many people are near, and how many are talking or laughing. */
+  crowdAt(x: number, z: number): { people: number; talk: number } {
+    let people = 0;
+    let talk = 0;
+    for (const p of this.people) {
+      if (p.act === 'away' || !p.model.root.visible) continue;
+      const d = Math.hypot(p.body.x - x, p.body.z - z);
+      if (d > 22) continue;
+      const w = 1 - d / 22;
+      people += w;
+      if (p.pose === 'talk' || p.pose === 'laugh' || p.pose === 'cheer' || p.pose === 'clap') talk += w;
+    }
+    return { people: Math.min(1, people / 8), talk: Math.min(1, talk / 3) };
   }
 
   /** Pick the next thing to do. */
   private next(p: TownPerson): void {
     const rnd = this.rnd;
     this.leave(p);
-    const weights = WEIGHTS[p.kind];
+    p.away = { x: 0, z: 0 };
+    // Time to go home for the night?
+    if (p.temper > presence(this.env.hour, p.kind)) {
+      p.act = 'home';
+      p.target = p.home;
+      p.t = 60;
+      return;
+    }
+    const wet = this.env.rain > 0.3;
+    const weights = WEIGHTS[p.kind].map(([a, w]) => [a, w * hourBias(this.env.hour, a, p.kind) * (wet && a === 'chat' ? 0.4 : 1)] as [Activity, number]);
     let roll = rnd.next() * weights.reduce((a, [, w]) => a + w, 0);
     let act: Activity = 'stroll';
     for (const [a, w] of weights) if ((roll -= w) <= 0) {
@@ -131,6 +261,8 @@ export class TownLife {
     p.other = null;
     if (act === 'pause') {
       p.still = rnd.pick(PAUSES[p.kind]);
+      // Nobody sits on wet grass or stretches in the rain.
+      if (wet && (p.still === 'sitdown' || p.still === 'stretch' || p.still === 'dance')) p.still = p.kind === 'child' ? 'cheer' : 'idle';
       p.t = rnd.range(3, 8);
     } else {
       p.target = this.spot(rnd);
@@ -191,14 +323,42 @@ export class TownLife {
 
   update(dt: number, time: number, player: { x: number; z: number }, world: FreeWorld): void {
     const rnd = this.rnd;
+    const env = this.env;
     let bubble = 0;
+    const car = env.car;
+    const carSpeed = car ? Math.hypot(car.vx, car.vz) : 0;
+    this.carStill = car && carSpeed < 3 ? this.carStill + dt : 0;
+    const wet = env.rain > 0.3;
+    const sunny = env.rain < 0.1 && env.hour >= 10 && env.hour < 16;
+    const dark = env.hour >= 19 || env.hour < 6;
     for (const p of this.people) {
       const pd = Math.hypot(player.x - p.body.x, player.z - p.body.z);
+      // At home: come back out (somewhere the player isn't looking) when the day starts.
+      if (p.act === 'away') {
+        p.model.root.visible = false;
+        p.t -= dt;
+        if (p.t <= 0) {
+          p.t = 5;
+          if (p.temper <= presence(env.hour, p.kind) && pd > 35) {
+            p.body.place(p.home.x, p.home.z, p.body.heading);
+            p.act = 'stroll';
+            p.t = rnd.range(5, 15);
+            p.target = this.spot(rnd);
+          }
+        }
+        continue;
+      }
       if (this.opts.cull) {
         const on = pd < this.opts.cull;
         p.model.root.visible = on;
         if (!on) continue;
+      } else p.model.root.visible = true;
+      // What they carry and wear: umbrellas in the rain, lanterns after dark, a sun hat at midday.
+      if (p.act !== 'busk') {
+        const want: Carry = wet && p.temper < 0.75 ? 'umbrella' : dark && p.temper > 0.55 ? 'lantern' : null;
+        if (p.model.carry !== want) p.model.setCarry(want, UMBRELLAS[Math.floor(p.temper * 97) % UMBRELLAS.length]);
       }
+      p.model.setSunHat(sunny && p.temper > 0.62);
       p.t -= dt;
       p.cool -= dt;
       const b = p.body;
@@ -208,8 +368,30 @@ export class TownLife {
       let jump = false;
       let face: { x: number; z: number } | null = null;
       let pose: HumanPose | null = null;
-      const near = pd < 5 && p.act !== 'chat' && p.act !== 'jog';
+      const busy = p.act === 'chat' || p.act === 'jog' || p.act === 'dodge' || p.act === 'home' || p.act === 'busk';
+      const near = pd < 5 && !busy && !(p.act === 'pause' && (p.still === 'clap' || p.still === 'cheer'));
       if (p.t <= 0) this.next(p);
+      // A car coming fast: step out of its way (then point after it: slow down!).
+      if (car && carSpeed > 9 && p.act !== 'dodge' && p.act !== 'busk') {
+        const rx = b.x - car.x;
+        const rz = b.z - car.z;
+        const along = (rx * car.vx + rz * car.vz) / carSpeed;
+        const side = (rx * car.vz - rz * car.vx) / carSpeed;
+        if (along > 0 && along < 10 && Math.abs(side) < 3.2) {
+          this.leave(p);
+          const s = side >= 0 ? 1 : -1;
+          p.act = 'dodge';
+          p.away = { x: (car.vz / carSpeed) * s, z: (-car.vx / carSpeed) * s };
+          p.t = 0.8;
+        }
+      }
+      // A car stopped nearby: someone may take a photo of it.
+      if (car && this.carStill > 1 && this.carStill < 1.2 && pd < 11 && (p.act === 'stroll' || p.act === 'pause') && p.kind !== 'child' && rnd.chance(0.3)) {
+        p.act = 'pause';
+        p.still = 'photo';
+        p.t = rnd.range(2.5, 4);
+        p.away = { x: car.x, z: car.z };
+      }
 
       switch (p.act) {
         case 'stroll':
@@ -250,6 +432,46 @@ export class TownLife {
           }
           break;
         }
+        case 'dodge':
+          mx = p.away.x;
+          my = -p.away.z;
+          speed = p.kind === 'elder' || p.kind === 'wheels' ? 0.5 : 0.9;
+          if (p.t <= dt) {
+            p.act = 'pause';
+            p.still = p.kind === 'child' ? 'point' : rnd.pick(['point', 'idle'] as HumanPose[]);
+            p.t = rnd.range(1.2, 2);
+            p.away = car ? { x: car.x, z: car.z } : p.away;
+          }
+          break;
+        case 'home': {
+          // Walk home; once the player is far enough not to see, go inside.
+          const dx = p.target.x - b.x;
+          const dz = p.target.z - b.z;
+          const d = Math.hypot(dx, dz);
+          if (d > 1.5) {
+            mx = dx / d;
+            my = -dz / d;
+          }
+          if ((d < 1.5 || p.t < 1) && pd > 30) {
+            p.act = 'away';
+            p.t = 5;
+            p.model.root.visible = false;
+          } else if (p.t < 1) p.t = 10;
+          break;
+        }
+        case 'busk': {
+          const pitch = p.pitch!;
+          // The first time: make sure the pitch is somewhere clear (not inside a wall or a tree).
+          if (world.resolve({ x: pitch.x, z: pitch.z }, 0.6)) Object.assign(pitch, TownLife.clearSpot(world, pitch.x, pitch.z));
+          const on = env.hour >= 9 && env.hour < 22 && !wet;
+          p.model.root.visible = on && p.model.root.visible;
+          if (!on) break;
+          if (Math.hypot(b.x - pitch.x, b.z - pitch.z) > 0.3) b.place(pitch.x, pitch.z, pitch.heading);
+          b.heading = pitch.heading;
+          p.model.tempo = env.bpm;
+          pose = p.instrument === 'drum' ? 'drum' : 'strum';
+          break;
+        }
         case 'chat': {
           const o = p.other;
           if (!o || o.other !== p) {
@@ -288,12 +510,71 @@ export class TownLife {
           if (p.t <= 0.05) p.other = null;
           break;
         case 'pause':
-          pose = p.still;
+          pose = wet && (p.still === 'sitdown' || p.still === 'stretch' || p.still === 'dance') ? 'idle' : p.still;
+          // Clapping, cheering and taking photos face what they're looking at.
+          if (p.still === 'clap' || p.still === 'cheer' || p.still === 'photo' || p.still === 'point') face = p.away.x || p.away.z ? p.away : null;
           break;
+      }
+      // Caught in the rain without an umbrella: hurry (children splash about happily).
+      if (wet && p.model.carry !== 'umbrella' && (p.act === 'stroll' || p.act === 'play') && p.kind !== 'elder' && p.kind !== 'wheels') speed = Math.max(speed, 0.8);
+      // Step aside for each other, for the player and for the car.
+      if (p.act !== 'busk' && p.act !== 'chat') {
+        let px = 0;
+        let pz = 0;
+        for (const o of this.people) {
+          if (o === p || o.act === 'away' || (!o.model.root.visible && this.opts.cull)) continue;
+          const ox = b.x - o.body.x;
+          const oz = b.z - o.body.z;
+          const d2 = ox * ox + oz * oz;
+          if (d2 < 0.81 && d2 > 1e-6) {
+            const d = Math.sqrt(d2);
+            px += (ox / d) * (0.9 - d);
+            pz += (oz / d) * (0.9 - d);
+          }
+        }
+        // Walking toward someone: keep to the right, like on a pavement.
+        const wx = mx;
+        const wz = -my;
+        const wl = Math.hypot(wx, wz);
+        if (wl > 0.1) {
+          for (const o of this.people) {
+            if (o === p || o.act === 'away') continue;
+            const ox = o.body.x - b.x;
+            const oz = o.body.z - b.z;
+            const ahead = (ox * wx + oz * wz) / wl;
+            const lateral = (ox * wz - oz * wx) / wl;
+            if (ahead > 0 && ahead < 2.5 && Math.abs(lateral) < 0.9) {
+              // Right of the walking direction (wx, wz) is (−wz, wx) seen from above with −Z forward.
+              const k = (1 - ahead / 2.5) * 0.9;
+              px += (-wz / wl) * k;
+              pz += (wx / wl) * k;
+            }
+          }
+        }
+        const keep = (x: number, z: number, r: number, k: number): void => {
+          const ox = b.x - x;
+          const oz = b.z - z;
+          const d = Math.hypot(ox, oz);
+          if (d < r && d > 1e-3) {
+            px += (ox / d) * (r - d) * k;
+            pz += (oz / d) * (r - d) * k;
+          }
+        };
+        if (env.onFoot) keep(player.x, player.z, 1.1, 1);
+        if (car) keep(car.x, car.z, 3.2, 1.5);
+        if (px || pz) {
+          mx += px * 1.6;
+          my -= pz * 1.6;
+          const l = Math.hypot(mx, my);
+          if (l > 1) {
+            mx /= l;
+            my /= l;
+          }
+        }
       }
 
       // Everyone turns to wave at the player when they come close (in the local way).
-      if (near && p.act !== 'greet') {
+      if (near && p.act !== 'greet' && p.act !== 'away') {
         face = player;
         pose = p.hello;
       }
@@ -307,6 +588,7 @@ export class TownLife {
         if (p.pose === 'run' || p.pose === 'air') p.pose = 'walk';
       }
       if (p.kind === 'wheels' && (p.pose === 'sitdown' || p.pose === 'stretch')) p.pose = 'idle';
+      if (p.act === 'dodge' && p.kind === 'adult' && p.pose === 'walk') p.pose = 'run';
       p.model.root.position.set(b.x, b.y, b.z);
       p.model.root.rotation.y = b.heading;
       p.model.animate(dt, p.pose, b.speed, time);

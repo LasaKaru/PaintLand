@@ -21,6 +21,10 @@ export interface AmbienceParams {
   wind?: number;
   /** 0..1 a quiet moment (viewpoints, the World's End): a soft pad and wind chimes. */
   calm?: number;
+  /** 0..1 how many townspeople are around (a soft murmur of voices). */
+  crowd?: number;
+  /** 0..1 how many of them are talking, laughing or cheering (chatter and laughs). */
+  chatter?: number;
   /** Master volume for ambience (Settings → Audio). */
   volume: number;
 }
@@ -46,6 +50,10 @@ export class Ambience {
   private readonly windGain: GainNode;
   private readonly windFilter: BiquadFilterNode;
   private readonly padGain: GainNode;
+  private readonly murmurGain: GainNode;
+  private readonly murmurFilter: BiquadFilterNode;
+  private nextSyllable = 0;
+  private nextLaugh = 0;
   private readonly padVoices: OscillatorNode[] = [];
   private chord = 0;
   private nextChord = 0;
@@ -115,6 +123,16 @@ export class Ambience {
     this.cityGain = ctx.createGain();
     this.cityGain.gain.value = 0;
     city.connect(cityFilter).connect(this.cityGain).connect(this.bus);
+
+    // Crowd: a murmur of far-off voices (noise through a vowel-like band that wanders).
+    const murmur = this.loop(0.8);
+    this.murmurFilter = ctx.createBiquadFilter();
+    this.murmurFilter.type = 'bandpass';
+    this.murmurFilter.frequency.value = 650;
+    this.murmurFilter.Q.value = 1.2;
+    this.murmurGain = ctx.createGain();
+    this.murmurGain.gain.value = 0;
+    murmur.connect(this.murmurFilter).connect(this.murmurGain).connect(this.bus);
 
     // Waterfalls and rivers: broad rushing noise, a little brighter than the sea.
     const water = this.loop(1.0);
@@ -188,6 +206,19 @@ export class Ambience {
     this.leafGain.gain.setTargetAtTime(p.nature * 0.025 * (0.6 + 0.4 * Math.sin(this.swell * 1.3)) * v, t, 0.3);
     this.cricketGain.gain.setTargetAtTime(Math.max(0, p.night - 0.4) * p.nature * 0.012 * dry * v, t, 0.8);
     this.cityGain.gain.setTargetAtTime(p.city * 0.12 * v, t, 0.6);
+    // The crowd murmur rises and falls like people talking over each other.
+    const crowd = p.crowd ?? 0;
+    this.murmurGain.gain.setTargetAtTime(crowd * 0.05 * (0.75 + 0.25 * Math.sin(this.swell * 2.3)) * v, t, 0.5);
+    this.murmurFilter.frequency.setTargetAtTime(500 + 350 * (0.5 + 0.5 * Math.sin(this.swell * 1.7) * Math.sin(this.swell * 0.61)), t, 0.2);
+    const chatter = p.chatter ?? 0;
+    if (t > this.nextSyllable) {
+      this.nextSyllable = t + 0.25 + Math.random() * (2.4 - chatter * 2);
+      if (chatter > 0.05) this.babble(t, chatter * v);
+    }
+    if (t > this.nextLaugh) {
+      this.nextLaugh = t + 4 + Math.random() * 8;
+      if (chatter > 0.3 && Math.random() < chatter) this.laugh(t, chatter * v);
+    }
     // Rushing water, with a slow flutter.
     const water = p.water ?? 0;
     this.waterGain.gain.setTargetAtTime(water * water * 0.16 * (0.9 + 0.1 * Math.sin(this.swell * 3.1)) * v, t, 0.3);
@@ -354,6 +385,65 @@ export class Ambience {
   }
 
   /** A far-away car horn, filtered and quiet. */
+  /** A few made-up syllables: nobody's words, just the sound of a conversation. */
+  private babble(t: number, level: number): void {
+    const ctx = this.ctx;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = Math.random() * 1.4 - 0.7;
+    pan.connect(this.bus);
+    const voice = 120 + Math.random() * 160;
+    const n = 2 + Math.floor(Math.random() * 4);
+    let at = t;
+    for (let i = 0; i < n; i++) {
+      const dur = 0.07 + Math.random() * 0.1;
+      const o = ctx.createOscillator();
+      o.type = 'sawtooth';
+      const f0 = voice * (0.9 + Math.random() * 0.25);
+      o.frequency.setValueAtTime(f0, at);
+      o.frequency.linearRampToValueAtTime(f0 * (0.85 + Math.random() * 0.3), at + dur);
+      // A vowel: one formant band, different each syllable.
+      const form = ctx.createBiquadFilter();
+      form.type = 'bandpass';
+      form.frequency.value = 500 + Math.random() * 1400;
+      form.Q.value = 5;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.018 * level, at + 0.02);
+      g.gain.linearRampToValueAtTime(0, at + dur);
+      o.connect(form).connect(g).connect(pan);
+      o.start(at);
+      o.stop(at + dur + 0.02);
+      at += dur + 0.02 + Math.random() * 0.06;
+    }
+  }
+
+  /** "Ha-ha-ha": quick falling syllables. */
+  private laugh(t: number, level: number): void {
+    const ctx = this.ctx;
+    const pan = ctx.createStereoPanner();
+    pan.pan.value = Math.random() * 1.2 - 0.6;
+    pan.connect(this.bus);
+    const f0 = 220 + Math.random() * 180;
+    for (let i = 0; i < 4; i++) {
+      const at = t + i * 0.14;
+      const o = ctx.createOscillator();
+      o.type = 'triangle';
+      o.frequency.setValueAtTime(f0 * (1 - i * 0.05), at);
+      o.frequency.linearRampToValueAtTime(f0 * (0.9 - i * 0.05), at + 0.09);
+      const form = ctx.createBiquadFilter();
+      form.type = 'bandpass';
+      form.frequency.value = 900;
+      form.Q.value = 2;
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0, at);
+      g.gain.linearRampToValueAtTime(0.022 * level, at + 0.015);
+      g.gain.exponentialRampToValueAtTime(0.0005, at + 0.1);
+      o.connect(form).connect(g).connect(pan);
+      o.start(at);
+      o.stop(at + 0.12);
+    }
+  }
+
   private distantHorn(t: number, level: number): void {
     const ctx = this.ctx;
     const f0 = 380 + Math.random() * 180;

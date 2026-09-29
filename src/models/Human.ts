@@ -82,10 +82,13 @@ export const LEISURE_POSES = ['fish', 'reel', 'sip', 'tend', 'dj', 'sleep'] as c
 export type LeisurePose = (typeof LEISURE_POSES)[number];
 export const isLeisurePose = (v: unknown): v is LeisurePose => typeof v === 'string' && (LEISURE_POSES as readonly string[]).includes(v);
 
-/** Everyday things townspeople do: chatting, listening, checking a phone, stretching, pointing something out. */
-export const AMBIENT_POSES = ['talk', 'listen', 'phone', 'stretch', 'point'] as const;
+/** Everyday things townspeople do: chatting, listening, a phone, stretching, pointing, taking a photo, busking. */
+export const AMBIENT_POSES = ['talk', 'listen', 'phone', 'stretch', 'point', 'photo', 'strum', 'drum'] as const;
 export type AmbientPose = (typeof AMBIENT_POSES)[number];
 export const isAmbientPose = (v: unknown): v is AmbientPose => typeof v === 'string' && (AMBIENT_POSES as readonly string[]).includes(v);
+
+/** Something carried: an umbrella in the rain, a paper lantern at night, a busker's guitar or drum. */
+export type Carry = 'umbrella' | 'lantern' | 'guitar' | 'drum' | null;
 
 export type HumanPose = 'idle' | 'walk' | 'run' | 'air' | 'sit' | 'ride' | Emote | LeisurePose | AmbientPose;
 
@@ -446,6 +449,74 @@ export class HumanModel {
     this.layers = this.layers.filter((l) => l.weight > 0 || l.target > 0);
   }
 
+  /** What is carried (see setCarry). */
+  carry: Carry = null;
+  private carryObj: THREE.Object3D | null = null;
+  private sunHat: THREE.Mesh | null = null;
+  /** Beats per minute for strumming and drumming (buskers play in time with the radio). */
+  tempo = 100;
+
+  /**
+   * Carry an umbrella or lantern in the right hand, or wear a guitar or drum.
+   * Returns false when the hands are busy (a walking stick, a wheelchair's wheels).
+   */
+  setCarry(c: Carry, colour = '#e0432f'): boolean {
+    if (c === this.carry) return true;
+    if (c && (this.look.aid === 'cane' || this.look.aid === 'wheelchair') && c !== 'lantern') return false;
+    if (c === 'lantern' && this.look.aid === 'cane') return false;
+    if (this.carryObj) {
+      if (this.carryObj === this.held) this.hold(null);
+      else this.carryObj.removeFromParent();
+    }
+    this.carry = c;
+    this.carryObj = null;
+    if (!c) return true;
+    const obj = new THREE.Mesh(carryGeometry(c, colour), propMaterial());
+    if (c === 'guitar') {
+      obj.position.set(0.02, 0.12, -0.2);
+      obj.rotation.set(0, 0, 0.95);
+      this.chest.add(obj);
+    } else if (c === 'drum') {
+      // A Sri Lankan drum, played on both ends, slung across the waist.
+      obj.position.set(0, -0.12, -0.3);
+      this.chest.add(obj);
+    } else this.hold(obj);
+    this.carryObj = obj;
+    return true;
+  }
+
+  /** A wide straw hat on sunny middays (only for people not already wearing something on their head). */
+  setSunHat(on: boolean): void {
+    if (on && !this.sunHat && (this.look.hat ?? 'none') === 'none') {
+      this.sunHat = new THREE.Mesh(sunHatGeometry(), propMaterial());
+      this.head.add(this.sunHat);
+    } else if (!on && this.sunHat) {
+      this.sunHat.removeFromParent();
+      this.sunHat = null;
+    }
+  }
+
+  get wearingSunHat(): boolean {
+    return !!this.sunHat;
+  }
+
+  /** Hold the umbrella up over your head, or the lantern out in front. */
+  private carryPose(): void {
+    const right = this.arms[1];
+    const obj = this.carryObj;
+    if (!obj || obj !== this.held) return;
+    if (this.carry === 'umbrella') {
+      right.shoulder.rotation.set(0.35, 0, -0.25);
+      right.elbow.rotation.x = 1.55;
+      obj.rotation.set(-(0.35 + 1.55), 0, 0);
+    } else if (this.carry === 'lantern') {
+      const sx = Math.max(0.35, right.shoulder.rotation.x);
+      right.shoulder.rotation.set(sx, 0, -0.15);
+      right.elbow.rotation.x = 0.25;
+      obj.rotation.set(-(sx + 0.25), 0, 0);
+    }
+  }
+
   /** Hold something in the right hand (a fishing rod); null lets go. */
   hold(obj: THREE.Object3D | null): void {
     const hand = this.arms[1].elbow;
@@ -495,6 +566,7 @@ export class HumanModel {
       else if (pose === 'laugh' || pose === 'listen') this.head.rotation.x = (pose === 'laugh' ? 0.3 : -0.05) + Math.max(0, Math.sin(time * 2.4)) ** 4 * 0.15;
     } else this.procedural(dt, pose, speed, time);
     if (this.layers.length) this.applyClips(dt);
+    if (this.carry && !this.seated && pose !== 'photo' && pose !== 'sitdown') this.carryPose();
     // An older person's gentle stoop.
     if (this.look.stoop) this.chest.rotation.x -= this.look.stoop;
   }
@@ -616,6 +688,38 @@ export class HumanModel {
         right.elbow.rotation.x = 0.05;
         this.head.rotation.set(0.1, -0.15, 0);
         break;
+      case 'photo':
+        // A phone held up in both hands to take a picture.
+        right.shoulder.rotation.set(1.35, 0, -0.35);
+        left.shoulder.rotation.set(1.35, 0, 0.35);
+        right.elbow.rotation.x = left.elbow.rotation.x = 0.7;
+        this.head.rotation.set(0.05, 0, 0);
+        break;
+      case 'strum': {
+        // Right hand strums on the beat, left hand on the neck.
+        const beat = (time * this.tempo) / 60;
+        const hit = Math.pow(Math.abs(Math.sin(beat * Math.PI)), 3);
+        right.shoulder.rotation.set(0.55, 0, -0.05);
+        right.elbow.rotation.x = 1.15 + hit * 0.3;
+        left.shoulder.rotation.set(0.85, 0, 0.75);
+        left.elbow.rotation.x = 0.55;
+        this.head.rotation.set(-0.15 + hit * 0.06, 0.25, 0);
+        this.hips.position.y = 0.86 - hit * 0.02;
+        break;
+      }
+      case 'drum': {
+        // Both hands on the two ends of the drum, taking turns.
+        const beat = (time * this.tempo) / 60;
+        const l = Math.max(0, Math.sin(beat * Math.PI));
+        const r = Math.max(0, -Math.sin(beat * Math.PI));
+        left.shoulder.rotation.set(0.55 + l * 0.2, 0, 0.55);
+        right.shoulder.rotation.set(0.55 + r * 0.2, 0, -0.55);
+        left.elbow.rotation.x = 0.9 - l * 0.3;
+        right.elbow.rotation.x = 0.9 - r * 0.3;
+        this.head.rotation.set(Math.sin(beat * Math.PI * 2) * 0.08, 0, 0);
+        this.hips.position.y = 0.86 - (l + r) * 0.02;
+        break;
+      }
     }
   }
 
@@ -807,6 +911,50 @@ function addHair(k: ModelKit, look: HumanLook): void {
     case 'bald':
       break;
   }
+}
+
+let propMat: PaintMaterial | null = null;
+const propMaterial = (): PaintMaterial => (propMat ??= new PaintMaterial({ vertexColors: true, flat: true, gloss: 0.08 }));
+const carryGeos = new Map<string, THREE.BufferGeometry>();
+/** Shared shapes for carried things (umbrellas come in a few colours). */
+function carryGeometry(c: Exclude<Carry, null>, colour: string): THREE.BufferGeometry {
+  const key = c === 'umbrella' ? `${c}:${colour}` : c;
+  let g = carryGeos.get(key);
+  if (g) return g;
+  const k = new ModelKit();
+  if (c === 'umbrella') {
+    k.cylinder(0.012, 0.012, 1.0, 5, INK, { position: [0, 0.5, 0] });
+    k.cylinder(0.03, 0.62, 0.3, 10, colour, { position: [0, 1.08, 0] });
+    k.cylinder(0.62, 0.6, 0.03, 10, shadeHex(colour, 0.85), { position: [0, 0.93, 0] });
+    k.box(0.08, 0.025, 0.025, INK, { position: [0.03, -0.01, 0] });
+  } else if (c === 'lantern') {
+    k.cylinder(0.006, 0.006, 0.18, 4, INK, { position: [0, -0.09, 0] });
+    k.cylinder(0.08, 0.09, 0.2, 8, '#f6c453', { position: [0, -0.3, 0], nightGlow: 1 });
+    k.cylinder(0.05, 0.05, 0.03, 8, '#b0352a', { position: [0, -0.19, 0] });
+    k.cylinder(0.05, 0.05, 0.03, 8, '#b0352a', { position: [0, -0.41, 0] });
+  } else if (c === 'guitar') {
+    k.blob(0.2, '#c8843a', { position: [0, -0.2, 0], scale: [1, 1.15, 0.35], detail: 1 });
+    k.cylinder(0.05, 0.05, 0.02, 10, INK, { position: [0, -0.16, -0.07], rotation: [Math.PI / 2, 0, 0] });
+    k.box(0.06, 0.5, 0.04, '#6b4028', { position: [0, 0.2, 0] });
+    k.box(0.08, 0.1, 0.04, '#3b2418', { position: [0, 0.48, 0] });
+  } else {
+    // A geta bera: a barrel drum with skins on both ends and a strap.
+    k.cylinder(0.13, 0.13, 0.42, 12, '#b0352a', { rotation: [0, 0, Math.PI / 2], pattern: Pattern.Thatch });
+    for (const x of [-0.22, 0.22]) k.cylinder(0.14, 0.14, 0.03, 12, '#f2e3c2', { position: [x, 0, 0], rotation: [0, 0, Math.PI / 2] });
+    k.box(0.44, 0.02, 0.02, INK, { position: [0, 0.12, 0.05] });
+  }
+  g = k.build(0.004, 9);
+  carryGeos.set(key, g);
+  return g;
+}
+
+let sunHatGeo: THREE.BufferGeometry | null = null;
+function sunHatGeometry(): THREE.BufferGeometry {
+  return (sunHatGeo ??= new ModelKit()
+    .cylinder(0.36, 0.36, 0.025, 14, '#e8c872', { position: [0, 0.43, 0], pattern: Pattern.Thatch })
+    .cylinder(0.16, 0.19, 0.13, 12, '#e8c872', { position: [0, 0.51, 0], pattern: Pattern.Thatch })
+    .cylinder(0.195, 0.195, 0.035, 12, '#3e6fa8', { position: [0, 0.46, 0] })
+    .build(0.004, 8));
 }
 
 let caneGeo: THREE.BufferGeometry | null = null;

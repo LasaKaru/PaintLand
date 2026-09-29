@@ -3,7 +3,7 @@ import { RoadPath, createFrame } from '../road/RoadPath';
 import { KERB_WIDTH } from '../road/RoadMesh';
 import { HumanModel, DEFAULT_HUMAN_LOOK, type HumanLook, type HumanPose } from '../models/Human';
 import { personOf, regionFor } from '../world/Peoples';
-import { kindOf, speechBubble, type Kind } from '../world/TownLife';
+import { kindOf, presence, speechBubble, type Kind } from '../world/TownLife';
 import { VEHICLES, VehicleModel, tuningFor } from '../models/Vehicles';
 import { RoverController } from './RoverController';
 import { Autopilot } from './Autopilot';
@@ -39,6 +39,8 @@ interface Walker {
   /** A child's hop: height above the pavement and upward speed. */
   hop: number;
   vy: number;
+  /** 0..1, fixed: who stays out late and who carries an umbrella. */
+  temper: number;
 }
 
 export interface Giver {
@@ -95,6 +97,8 @@ export class Population {
     wheels: ['idle', 'phone', 'point'],
   };
   private readonly bubbles: THREE.Mesh[] = [];
+  /** The hour and the rain, set by the game each frame (umbrellas, lanterns, quiet nights). */
+  env = { hour: 12, rain: 0 };
 
   /** Most pedestrians on one route (their models are built only when near). */
   static readonly MAX_WALKERS = 110;
@@ -175,6 +179,7 @@ export class Population {
       still: 'idle',
       hop: 0,
       vy: 0,
+      temper: lead ? lead.temper : rnd.next(),
     };
     if (lead) lead.mate = w;
     this.walkers.push(w);
@@ -300,8 +305,14 @@ export class Population {
   update(dt: number, time: number, focusS: number, focusX: number, alpha: number): void {
     const near = 170;
     let bubbles = 0;
+    const wet = this.env.rain > 0.3;
+    const dark = this.env.hour >= 19 || this.env.hour < 6;
     for (const w of this.walkers) {
-      const visible = Math.abs(w.s - focusS) < near;
+      // At night most people are at home (a family goes in together).
+      const head = w.lead ?? w;
+      const withChild = head.kind === 'child' || head.mate?.kind === 'child';
+      const out = head.temper <= presence(this.env.hour, withChild ? 'child' : 'adult');
+      const visible = Math.abs(w.s - focusS) < near && out;
       if (w.model) w.model.root.visible = visible;
       if (!visible) continue;
       if (!w.model) {
@@ -309,6 +320,8 @@ export class Population {
         this.group.add(w.model.root);
       }
       const playerClose = Math.abs(w.s - focusS) < 7 && Math.abs(w.x - focusX) < 6;
+      const want = wet && w.temper < 0.75 && !w.jogger ? 'umbrella' : dark && w.temper > 0.55 ? 'lantern' : null;
+      if (w.model.carry !== want) w.model.setCarry(want, UMBRELLAS[Math.floor(w.temper * 97) % UMBRELLAS.length]);
       let yaw = w.dir > 0 ? 0 : Math.PI;
       if (w.lead) {
         // Walk beside your companion; when they stop, chat (or wave at the player).
@@ -389,3 +402,4 @@ export class Population {
 }
 
 const _y = new THREE.Vector3(0, 1, 0);
+const UMBRELLAS = ['#e0432f', '#3e6fa8', '#f4d23b', '#2d8a5a', '#e8559a', '#2b2622', '#f08a2e'];

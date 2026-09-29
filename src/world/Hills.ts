@@ -379,6 +379,13 @@ export class Hills implements FreeRoamArea {
       this.group.add(model.root);
       this.life.add(model, look, p.x, p.z);
     }
+    // Street musicians playing along with the radio.
+    {
+      const look = personOf('lanka', () => rnd.next(), { age: 'adult', aids: false }).look;
+      const model = new HumanModel(look);
+      this.group.add(model.root);
+      this.life.addBusker(model, look, 20, 5, Math.atan2(20, 5), 'drum');
+    }
   }
 
   private randomSpot(rnd: Random): { x: number; z: number } {

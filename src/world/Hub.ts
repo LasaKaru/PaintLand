@@ -444,6 +444,19 @@ export class Hub implements FreeRoamArea {
       this.group.add(model.root);
       this.life.add(model, look, p.x, p.z);
     }
+    // Street musicians playing along with the radio.
+    {
+      const look = personOf('mixed', () => rnd.next(), { age: 'adult', aids: false }).look;
+      const model = new HumanModel(look);
+      this.group.add(model.root);
+      this.life.addBusker(model, look, 14, 6, Math.atan2(14, 6), 'guitar');
+    }
+    {
+      const look = personOf('mixed', () => rnd.next(), { age: 'adult', aids: false }).look;
+      const model = new HumanModel(look);
+      this.group.add(model.root);
+      this.life.addBusker(model, look, -14, 6, Math.atan2(-14, 6), 'drum');
+    }
   }
 
   /** A random point on the streets or the plaza. */

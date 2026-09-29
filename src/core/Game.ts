@@ -2847,6 +2847,7 @@ export class Game {
     this.world.decor.update(this.time, dt);
     const focusS = this.mode === 'foot' ? this.human.s : r.s;
     this.world.items.update(dt, this.time, focusS, f.up);
+    this.world.people.env = { hour: this.env.hour, rain: this.env.rain };
     this.world.people.update(dt, this.time, focusS, this.mode === 'foot' ? this.human.x : r.x, alpha);
     this.updateGhost();
     if (this.state !== 'photo') {
@@ -3428,6 +3429,8 @@ export class Game {
       const stunt = this.stuntAir;
       this.stuntAir = null;
       this.profile.recordStat('bestAir', air);
+      // Townspeople who saw it clap and cheer.
+      if (air > 0.8) this.area?.life?.celebrate(car.x, car.z, 40);
       if (!stunt) {
         if (air > 0.8) this.popAtPawn(t('fun.air', { s: air.toFixed(1) }), 'info');
         return;
@@ -4710,6 +4713,16 @@ export class Game {
     skyUniforms.uTime.value = this.time;
     waterUniforms.uTime.value = this.time;
     const player = this.flight ? { x: this.glider.x, z: this.glider.z } : this.mode === 'foot' ? { x: this.hubWalker.x, z: this.hubWalker.z } : { x: this.hubCar.x, z: this.hubCar.z };
+    if (area.life) {
+      const radioOn = this.audio.radioOn;
+      area.life.env = {
+        hour: this.env.hour,
+        rain: this.env.rain,
+        car: this.mode === 'drive' && !this.flight ? { x: this.hubCar.x, z: this.hubCar.z, vx: -Math.sin(this.hubCar.heading) * this.hubCar.v, vz: -Math.cos(this.hubCar.heading) * this.hubCar.v } : null,
+        onFoot: this.mode === 'foot' && !this.flight,
+        bpm: radioOn ? this.audio.beat.bpm : 96,
+      };
+    }
     area.update(dt * this.timeScale, this.time, player, cam);
     this.updateDistricts(area, player.x, player.z, dt);
     this.updateFireworks(dt);
@@ -4784,7 +4797,8 @@ export class Game {
     const amb = area.ambienceAt(player.x, player.z);
     const flyWind = this.flight ? clamp(this.glider.y / 50, 0.2, 1) : 0;
     this.audio.calm = calm;
-    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...amb, wind: Math.max(amb.wind ?? 0, flyWind), calm });
+    const crowd = area.life && !this.flight ? area.life.crowdAt(player.x, player.z) : { people: 0, talk: 0 };
+    this.audio.setAmbience({ night: paintShared.uNight.value, rain: this.env.rain, ...amb, wind: Math.max(amb.wind ?? 0, flyWind), calm, crowd: crowd.people * (1 - this.env.rain * 0.5), chatter: crowd.talk });
     this.audioFrame(this.mode === 'drive' && !this.flight && this.state === 'hub', Math.abs(this.hubCar.v), this.hubCar.boosting || this.hubCar.burst > 0, this.mode === 'drive' ? this.input.throttle() : 0, this.mode === 'drive' && this.hubCar.grounded && (Math.abs(this.hubCar.slip) > 1.2 || this.hubCar.drifting) ? 1 : 0);
 
     this.splash = Math.max(0, this.splash - dt * 1.4);
@@ -4968,6 +4982,8 @@ export class Game {
     const cx = (x0 + x1) / 2;
     const cz = (z0 + z1) / 2;
     for (let i = 0; i < 12; i++) this.launchFirework(cx + (Math.random() - 0.5) * 120, cz + (Math.random() - 0.5) * 120, i * 0.45);
+    // Everyone in the district cheers.
+    this.area?.life?.celebrate(cx, cz, Math.max(x1 - x0, z1 - z0) * 0.7);
     this.checkTrophies();
   }
 

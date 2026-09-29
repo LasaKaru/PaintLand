@@ -146,6 +146,22 @@ pass, and they greet you when you walk up: a wave in Harbour Town, a bow in the 
 and *ayubowan* in Serendib City and the Tea Hills. Elders and wheelchair users go at their own
 pace, and they never run or jump.
 
+Towns follow the clock and the weather:
+
+- **Morning:** joggers are out and children walk to school.
+- **Midday:** people rest in the shade, and on sunny days some wear straw hats.
+- **Evening:** families walk and friends stop to chat.
+- **Night:** most people go home, and those still out carry paper lanterns.
+- **Rain:** umbrellas come out, and people without one hurry along. Nobody sits on wet grass.
+
+They also notice you. Drive fast and they step out of the way and point after you (slow down!).
+Stop your car near them and someone may take a photo of it. Land a big jump, or paint a district
+back to colour, and everyone nearby claps and cheers. People keep to the right and step aside
+for each other and for you. Near a crowd you hear a soft murmur of voices, chatter and laughter.
+
+**Street musicians** play in every town from 09:00 to 22:00 (not in the rain): a guitarist or a
+drummer with a Sri Lankan *geta bera*. They play in time with your radio.
+
 Faith is part of everyday life in these places. Some locals wear a hijab, turban, kippah or prayer
 cap, and in Sri Lanka and the Himalayas you may pass monks in saffron or maroon robes. These
 clothes belong to the people who wear them. You can't buy them in the shop or wear them yourself.

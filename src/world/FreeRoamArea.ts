@@ -5,6 +5,7 @@ import type { FreeWorld, Ramp } from '../gameplay/FreeRoam';
 import type { District } from '../gameplay/Restoration';
 import type { MapInfo } from '../ui/MapView';
 import type { Perahera } from './Perahera';
+import type { TownLife } from './TownLife';
 
 /** Ground height of every free-roam area above the sea. */
 export const AREA_Y = 2;
@@ -100,6 +101,8 @@ export interface FreeRoamArea {
   readonly districts?: District[];
   /** The night festival parade, if this area has one. */
   readonly perahera?: Perahera;
+  /** Townspeople going about their day (towns only). */
+  readonly life?: TownLife;
   /** Data for the paper map; `paint` gives each district's paint 0..1. */
   /** Paintable mural boards in this area. */
   readonly murals: MuralBoard[];

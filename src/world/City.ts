@@ -818,6 +818,13 @@ export class City implements FreeRoamArea {
       this.group.add(model.root);
       this.life.add(model, look, p.x, p.z);
     }
+    // Street musicians: a drummer on Galle Face and a guitarist on a downtown pavement.
+    for (const [x, z, heading, ins] of [[-290, 498, 0, 'drum'], [...Object.values(this.pavementSpot(new Random(67))), Math.PI / 2, 'guitar']] as [number, number, number, 'drum' | 'guitar'][]) {
+      const look = personOf('lanka', () => rnd.next(), { age: 'adult', aids: false }).look;
+      const model = new HumanModel(look);
+      this.group.add(model.root);
+      this.life.addBusker(model, look, x, z, heading, ins);
+    }
   }
 
   /** A point on a downtown or old-town pavement. */

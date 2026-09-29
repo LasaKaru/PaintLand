@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { TownLife, kindOf, type TownPerson } from '../src/world/TownLife';
+import { TownLife, kindOf, presence, type TownPerson } from '../src/world/TownLife';
 import { personOf } from '../src/world/Peoples';
 import { HumanModel, type HumanPose } from '../src/models/Human';
 import { FreeWorld } from '../src/gameplay/FreeRoam';
@@ -115,5 +115,142 @@ describe('people along the routes', () => {
     for (const pose of ['walk', 'run', 'talk', 'listen', 'air'] as HumanPose[]) expect(seen.has(pose), pose).toBe(true);
     // Elders and wheelchair users are never the ones running.
     for (const w of pop.walkers) if (w.kind === 'elder' || w.kind === 'wheels') expect(w.jogger).toBe(false);
+  });
+});
+
+describe('a day in town', () => {
+  const world = new FreeWorld({ minX: -60, maxX: 60, minZ: -60, maxZ: 60 });
+  const town = (n = 40, seed = 2): TownLife => {
+    const life = new TownLife((r) => ({ x: r.range(-40, 40), z: r.range(-40, 40) }), new Random(seed), { greetings: ['wave'] });
+    const r = new Random(seed + 10);
+    for (let i = 0; i < n; i++) {
+      const look = personOf('lanka', () => r.next()).look;
+      life.add(new HumanModel(look), look, r.range(-40, 40), r.range(-40, 40));
+    }
+    return life;
+  };
+  const run = (life: TownLife, seconds: number, player = { x: 500, z: 500 }): void => {
+    for (let i = 0; i < seconds * 20; i++) life.update(1 / 20, i / 20, player, world);
+  };
+
+  it('most people go home at night, children first, and come back out in the morning', () => {
+    expect(presence(12, 'adult')).toBe(1);
+    expect(presence(2, 'child')).toBe(0);
+    expect(presence(2, 'adult')).toBeLessThan(0.5);
+    const life = town();
+    life.env = { ...life.env, hour: 2 };
+    run(life, 120);
+    const away = life.people.filter((p) => p.act === 'away' || p.act === 'home');
+    expect(away.length).toBeGreaterThan(life.people.length / 2);
+    for (const p of life.people.filter((q) => q.kind === 'child')) expect(['away', 'home']).toContain(p.act);
+    expect(life.people.filter((p) => p.act === 'away').every((p) => !p.model.root.visible)).toBe(true);
+    life.env = { ...life.env, hour: 9 };
+    run(life, 60);
+    expect(life.people.filter((p) => p.act === 'away').length).toBe(0);
+  });
+
+  it('after dark some carry paper lanterns; in the rain, umbrellas (never with a stick or a wheelchair)', () => {
+    const life = town();
+    life.env = { ...life.env, hour: 20 };
+    run(life, 2);
+    expect(life.people.some((p) => p.model.carry === 'lantern')).toBe(true);
+    life.env = { ...life.env, hour: 12, rain: 0.8 };
+    run(life, 30);
+    const brollies = life.people.filter((p) => p.model.carry === 'umbrella');
+    expect(brollies.length).toBeGreaterThan(5);
+    for (const p of brollies) expect(p.model.look.aid ?? 'none').toBe('none');
+    // Nobody sits on the wet grass.
+    expect(life.people.some((p) => p.pose === 'sitdown')).toBe(false);
+  });
+
+  it('sun hats at a sunny midday, only for people with nothing else on their heads', () => {
+    const life = town(60);
+    life.env = { ...life.env, hour: 13, rain: 0 };
+    run(life, 1);
+    const hats = life.people.filter((p) => p.model.wearingSunHat);
+    expect(hats.length).toBeGreaterThan(3);
+    for (const p of hats) expect(p.model.look.hat ?? 'none').toBe('none');
+    life.env = { ...life.env, hour: 18 };
+    run(life, 1);
+    expect(life.people.some((p) => p.model.wearingSunHat)).toBe(false);
+  });
+
+  it('people step out of the way of a fast car, and clap and cheer a big jump', () => {
+    const life = new TownLife(() => ({ x: 0, z: -50 }), new Random(4));
+    const look = personOf('lanka', () => 0.4, { age: 'adult', aids: false }).look;
+    const p = life.add(new HumanModel(look), look, 0, 0);
+    life.env = { ...life.env, car: { x: 0, z: 8, vx: 0, vz: -15 }, onFoot: false };
+    for (let i = 0; i < 10; i++) life.update(1 / 20, i / 20, { x: 0, z: 8 }, world);
+    expect(Math.abs(p.body.x)).toBeGreaterThan(0.4);
+    life.env = { ...life.env, car: null, onFoot: true };
+    for (let i = 0; i < 40; i++) life.update(1 / 20, i / 20, { x: 30, z: 30 }, world);
+    expect(life.celebrate(p.body.x, p.body.z, 20)).toBe(1);
+    life.update(1 / 20, 0, { x: 30, z: 30 }, world);
+    expect(['clap', 'cheer']).toContain(p.pose);
+  });
+
+  it('someone may stop to take a photo of your car when you park near them', () => {
+    let photos = 0;
+    for (let seed = 0; seed < 8 && !photos; seed++) {
+      const life = town(30, seed);
+      life.env = { ...life.env, car: { x: 0, z: 0, vx: 0, vz: 0 }, onFoot: false };
+      run(life, 3, { x: 0, z: 0 });
+      photos += life.people.filter((p) => p.still === 'photo').length;
+    }
+    expect(photos).toBeGreaterThan(0);
+  });
+
+  it('people walking toward each other step aside instead of walking through', () => {
+    const life = new TownLife(() => ({ x: 0, z: 0 }), new Random(6));
+    const look = personOf('lanka', () => 0.4, { age: 'adult', aids: false }).look;
+    const a = life.add(new HumanModel(look), look, -8, 0.05);
+    const b = life.add(new HumanModel(look), look, 8, -0.05);
+    a.target = { x: 12, z: 0 };
+    b.target = { x: -12, z: 0 };
+    a.t = b.t = 60;
+    a.cool = b.cool = 60;
+    let closest = 99;
+    for (let i = 0; i < 200; i++) {
+      life.update(1 / 30, i / 30, { x: 500, z: 500 }, world);
+      closest = Math.min(closest, Math.hypot(a.body.x - b.body.x, a.body.z - b.body.z));
+    }
+    expect(closest).toBeGreaterThan(0.45);
+  });
+
+  it('buskers stay at their pitch playing in time, and pack up at night and in the rain', () => {
+    const life = new TownLife(() => ({ x: 0, z: 0 }), new Random(7));
+    const look = personOf('lanka', () => 0.4, { age: 'adult', aids: false }).look;
+    const p = life.addBusker(new HumanModel(look), look, 5, 5, 0, 'drum');
+    life.env = { ...life.env, hour: 15, bpm: 120 };
+    run(life, 5, { x: 6, z: 6 });
+    expect(p.pose).toBe('drum');
+    expect(p.model.tempo).toBe(120);
+    expect(Math.hypot(p.body.x - 5, p.body.z - 5)).toBeLessThan(0.31);
+    life.env = { ...life.env, hour: 23 };
+    run(life, 1);
+    expect(p.model.root.visible).toBe(false);
+  });
+
+  it('it sounds livelier among people, and livelier still when they talk', () => {
+    const life = town(40);
+    run(life, 30);
+    const busy = life.crowdAt(0, 0);
+    expect(busy.people).toBeGreaterThan(0.3);
+    expect(life.crowdAt(400, 400).people).toBe(0);
+  });
+
+  it('every town has street musicians, standing somewhere clear', async () => {
+    const { Hub } = await import('../src/world/Hub');
+    const { Village } = await import('../src/world/Village');
+    const { Hills } = await import('../src/world/Hills');
+    const { City } = await import('../src/world/City');
+    for (const A of [Hub, Village, Hills, City]) {
+      const area = new A(fakeEl() as unknown as HTMLElement);
+      area.life.env = { ...area.life.env, hour: 12, rain: 0 };
+      area.life.update(1 / 30, 0, { x: 0, z: 0 }, area.world);
+      const buskers = area.life.people.filter((p) => p.act === 'busk');
+      expect(buskers.length, A.name).toBeGreaterThan(0);
+      for (const b of buskers) expect(area.world.resolve({ x: b.pitch!.x, z: b.pitch!.z }, 0.4), `${A.name} ${b.pitch!.x},${b.pitch!.z}`).toBeNull();
+    }
   });
 });
