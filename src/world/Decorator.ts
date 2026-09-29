@@ -30,6 +30,11 @@ export interface Mover {
   halfWidth: number;
 }
 
+/** Culling cell size (m) for props spread along a long route (see Decorator.flush). */
+export const CELL = 600;
+/** Props whose copies span less than this stay one instanced mesh (one draw call). */
+const SPLIT_SPAN = 1200;
+
 export type Dresser = (d: Decorator, span: { start: number; end: number; district: number }, rnd: Random, def: DistrictDef) => void;
 
 /**
@@ -304,16 +309,46 @@ export class Decorator {
     return c.divideScalar(Math.max(1, n));
   }
 
-  /** Turn the buckets into instanced meshes (one draw call per model variant). */
+  /**
+   * Turn the buckets into instanced meshes, one draw call per model variant.
+   * A variant spread along a long route (trees, lamps, houses) is split into
+   * CELL-sized cells instead: each cell then has tight bounds, so three skips
+   * cells that are off screen or past the draw distance (the camera's far
+   * plane). One mesh spanning a 10 km route would be drawn every frame.
+   */
   private flush(): void {
+    const pos = new THREE.Vector3();
     for (const [geometry, matrices] of this.buckets) {
-      const mesh = new THREE.InstancedMesh(geometry, this.material, matrices.length);
-      matrices.forEach((m, i) => mesh.setMatrixAt(i, m));
-      mesh.instanceMatrix.needsUpdate = true;
-      mesh.castShadow = this.castShadow.has(geometry);
-      mesh.receiveShadow = true;
-      mesh.computeBoundingSphere();
-      this.group.add(mesh);
+      let minX = Infinity, maxX = -Infinity, minZ = Infinity, maxZ = -Infinity;
+      for (const m of matrices) {
+        pos.setFromMatrixPosition(m);
+        minX = Math.min(minX, pos.x);
+        maxX = Math.max(maxX, pos.x);
+        minZ = Math.min(minZ, pos.z);
+        maxZ = Math.max(maxZ, pos.z);
+      }
+      const groups: THREE.Matrix4[][] = [];
+      if (Math.max(maxX - minX, maxZ - minZ) < SPLIT_SPAN) groups.push(matrices);
+      else {
+        const cells = new Map<string, THREE.Matrix4[]>();
+        for (const m of matrices) {
+          pos.setFromMatrixPosition(m);
+          const key = `${Math.floor(pos.x / CELL)},${Math.floor(pos.z / CELL)}`;
+          let list = cells.get(key);
+          if (!list) cells.set(key, (list = []));
+          list.push(m);
+        }
+        groups.push(...cells.values());
+      }
+      for (const list of groups) {
+        const mesh = new THREE.InstancedMesh(geometry, this.material, list.length);
+        list.forEach((m, i) => mesh.setMatrixAt(i, m));
+        mesh.instanceMatrix.needsUpdate = true;
+        mesh.castShadow = this.castShadow.has(geometry);
+        mesh.receiveShadow = true;
+        mesh.computeBoundingSphere();
+        this.group.add(mesh);
+      }
     }
     this.buckets.clear();
   }
