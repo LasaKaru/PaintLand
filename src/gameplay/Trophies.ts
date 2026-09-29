@@ -75,6 +75,8 @@ export const TROPHIES: TrophyDef[] = [
   { id: 'tour-kimchi', name: 'Family Recipe', text: 'Deliver Grandma’s kimchi from Seoul all the way to Jeju.', icon: '🥬', reward: 250, progress: (p) => [p.data.missionsDone.includes('kr-kimchi') ? 1 : 0, 1] },
   { id: 'tour-germany', name: 'Wanderlust', text: 'Finish a lap of the Grand Tour of Germany and get your passport stamped.', icon: '🇩🇪', reward: 300, progress: (p) => [p.data.tour?.includes('germany') ? 1 : 0, 1] },
   { id: 'tour-pretzel', name: 'Fresh from the Oven', text: 'Deliver the pretzels from Berlin all the way to the Alps.', icon: '🥨', reward: 250, progress: (p) => [p.data.missionsDone.includes('de-pretzel') ? 1 : 0, 1] },
+  { id: 'tour-canada', name: 'From Sea to Sea', text: 'Finish a lap of the Grand Tour of Canada and get your passport stamped.', icon: '🇨🇦', reward: 300, progress: (p) => [p.data.tour?.includes('canada') ? 1 : 0, 1] },
+  { id: 'tour-syrup', name: 'Sweet as Syrup', text: 'Deliver the maple syrup from Québec all the way to Vancouver.', icon: '🍁', reward: 250, progress: (p) => [p.data.missionsDone.includes('ca-syrup') ? 1 : 0, 1] },
   { id: 'tour-ekiben', name: 'All Aboard', text: 'Deliver every lunch box on the Ekiben Run from Tokyo to Okinawa.', icon: '🍱', reward: 250, progress: (p) => [p.data.missionsDone.includes('jp-bento') ? 1 : 0, 1] },
   { id: 'tour-mail', name: 'First Class Post', text: 'Finish the Royal Mail Run from Edinburgh to Brighton.', icon: '📮', reward: 250, progress: (p) => [p.data.missionsDone.includes('gb-mail') ? 1 : 0, 1] },
   { id: 'laps-50', name: 'Road Regular', text: 'Finish 50 laps.', icon: '🛞', reward: 250, progress: stat('laps', 50) },

@@ -12,6 +12,7 @@ import { INDIA_DRESSERS } from './india';
 import { CHINA_DRESSERS } from './china';
 import { KOREA_DRESSERS } from './korea';
 import { GERMANY_DRESSERS } from './germany';
+import { CANADA_DRESSERS } from './canada';
 
 /** Each chapter's own dresser table (a test checks that no two share a style). */
 export const DRESSER_GROUPS: Record<string, Partial<Record<DressStyle, Dresser>>> = {
@@ -27,6 +28,7 @@ export const DRESSER_GROUPS: Record<string, Partial<Record<DressStyle, Dresser>>
   CHINA_DRESSERS,
   KOREA_DRESSERS,
   GERMANY_DRESSERS,
+  CANADA_DRESSERS,
 };
 
 /** Every district style, mapped to the function that dresses it. */
@@ -43,4 +45,5 @@ export const DRESSERS: Record<DressStyle, Dresser> = {
   ...CHINA_DRESSERS,
   ...KOREA_DRESSERS,
   ...GERMANY_DRESSERS,
+  ...CANADA_DRESSERS,
 };

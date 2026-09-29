@@ -272,7 +272,7 @@ a little bit of you.
 
 ---
 
-## 4 · Chapter themes (108 districts)
+## 4 · Chapter themes (118 districts)
 
 **How to use:** each chapter has one **Chapter style**. For each district,
 paste the chapter style **plus** the district's extra words into Suno's Style
@@ -447,6 +447,20 @@ Each district tune is 48 steps long (six phrases), so these can be 2–3 minute 
 | Munich | Bavarian oompah brass band, tuba, clapping, beer tent, 132 bpm |
 | Neuschwanstein | Wagnerian orchestra, harp and horns, dreamy lydian, fairytale |
 | The Bavarian Alps | yodelling ländler, accordion, alphorn, cowbells, bright finale |
+
+### 4.15 Grand Tour · Canada (Book 2). Chapter style: *Canadian road trip, fiddle, acoustic guitar, banjo, soft strings, open and big-sky, 104 bpm, instrumental*
+| District | Add |
+|---|---|
+| Québec City | Québécois fiddle reel, foot percussion (podorythmie), accordion |
+| Ottawa | ceremonial brass fanfare, carillon bells from the Peace Tower |
+| Toronto | moody R&B city pop, night drive by the lake |
+| Niagara Falls | rushing strings and timpani, thunder of water, awe |
+| Algonquin | campfire folk, a loon's call, canoe paddles, autumn |
+| The Prairies | fiddle breakdown, banjo, big open sky, 128 bpm |
+| Banff | shimmering lydian strings and piano, turquoise lake, mountains |
+| The Icefields | cold ambient, glassy synth pads, creaking ice, vast |
+| Vancouver | rainy indie pop, soft drums, glass towers and ocean |
+| The Pacific Coast | West-coast surf guitar and hand drums, orca calls, sunset finale |
 
 ---
 

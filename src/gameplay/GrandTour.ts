@@ -58,6 +58,13 @@ export const TOUR_STAMPS: TourStamp[] = [
     hex: '#d8a82a',
     note: 'Through the Brandenburg Gate, flat out on the Autobahn, castles along the Rhine, a cuckoo in the Black Forest, a brass band in Munich and cowbells under the Alps.',
   },
+  {
+    chapter: 'canada',
+    country: 'Canada',
+    flag: '🇨🇦',
+    hex: '#d8263a',
+    note: 'Coast to coast: a castle over the St Lawrence, the roar of Niagara, a moose among the maples, wheat to the horizon, glaciers, and orcas in the Pacific.',
+  },
 ];
 
 /** Ink for a first stamp. */
