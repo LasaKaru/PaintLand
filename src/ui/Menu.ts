@@ -142,6 +142,14 @@ export interface MenuHost extends AccountHost, HomeHost, ContestHost, FestivalHo
 
 /** Typed on a menu screen, opens the admin login (the password is checked by the server). */
 const SECRET = 'kumara';
+/** True when the last letters typed are the secret word (it opens the admin login). */
+export function typedSecret(typed: string): boolean {
+  return typed.toLowerCase().endsWith(SECRET);
+}
+/** True for the secret word asked for on touch screens. */
+export function isSecret(word: string | null): boolean {
+  return !!word && word.trim().toLowerCase() === SECRET;
+}
 const PAINTED_UI = new Map<string, string>();
 
 const $ = <T extends HTMLElement = HTMLElement>(root: ParentNode, sel: string): T => root.querySelector<T>(sel)!;

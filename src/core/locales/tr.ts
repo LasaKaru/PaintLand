@@ -1255,5 +1255,16 @@ const tr: Locale = {
   'fact.torii': "Torii kapısı bir tapınağa giden yolu gösterir: içinden geçince gündelik hayatı ardında bırakırsın.",
   'fact.pagoda': "Pagodalar, katların sallanmasına izin veren uzun bir orta direk sayesinde depremlere dayanır.",
   'fact.bamboo': "Bazı bambular bir günde neredeyse bir metre uzar. Neredeyse büyürken izleyebilirsin.",
+  'maint.titleMaint': "Birazdan dönüyoruz — boyayı tazeliyoruz",
+  'maint.titleDev': "Yeni yollar yapılıyor",
+  'maint.textMaint': "Inkroads kısa bir bakım için kapalı. Kayıtların güvende.",
+  'maint.textDev': "Inkroads için yeni bir şey yapıyoruz. Kayıtların güvende.",
+  'maint.back': "{time} sonra dönüyoruz",
+  'maint.backAt': "{time}'da yeniden açılıyor (senin saatin)",
+  'maint.noTime': "En kısa sürede döneceğiz.",
+  'maint.opening': "Kapılar açılıyor…",
+  'maint.offline': "Bu arada tek başıma oynayayım",
+  'maint.offlineNote': "O zamana kadar çevrim içi oyun kapalı.",
+  'maint.soon': "🛠 Inkroads {time} sonra bakıma giriyor. Sürüşünü bitir!",
 };
 export default tr;

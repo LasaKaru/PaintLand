@@ -143,11 +143,14 @@ export class Population {
   static readonly FULL_MODEL = 60;
   private readonly standIns = new StandIns(96);
   private readonly dummy = new THREE.Object3D();
+  /** The crowd's own dice (seeded by the chapter, so the same road behaves the same every time). */
+  private readonly dice: Random;
 
   constructor(private readonly path: RoadPath, private readonly chapterId: string, private readonly districtIds: string[] = []) {
     this.group.name = 'population';
     this.group.add(this.standIns.group);
     const rnd = new Random(hashString(chapterId + ':people'));
+    this.dice = new Random(hashString(chapterId + ':crowd'));
     const r = () => rnd.next();
     // Pedestrians in every district, dressed as the people who live there: people on their own,
     // friends walking together, and a parent with a child.
@@ -422,7 +425,7 @@ export class Population {
         if (talking && !playerClose) yaw = w.x > w.lead.x ? Math.PI / 2 : -Math.PI / 2;
         if (w.pose === 'listen' && Math.sin(time * 0.7 + w.s) > 0.93) w.pose = 'laugh';
         // Children hop and skip beside their parent.
-        if (w.kind === 'child' && w.pose === 'walk' && w.hop <= 0 && Math.random() < dt * 0.6) w.vy = 3.2;
+        if (w.kind === 'child' && w.pose === 'walk' && w.hop <= 0 && this.dice.next() < dt * 0.6) w.vy = 3.2;
       } else if (w.pause > 0) {
         w.pause -= dt;
         const partner = w.mate;
@@ -437,10 +440,10 @@ export class Population {
         w.pose = w.jogger ? 'run' : 'walk';
         const turn = w.s > w.s1 || w.s < w.s0;
         // Now and then people stop along the way (joggers stop to stretch at the ends).
-        if (turn || (!w.jogger && Math.random() < dt * 0.04)) {
+        if (turn || (!w.jogger && this.dice.next() < dt * 0.04)) {
           if (turn) w.dir = -w.dir;
-          w.pause = w.jogger ? (turn ? 3 + Math.random() * 3 : 0) : 2 + Math.random() * 5;
-          w.still = w.jogger ? 'stretch' : Population.STILLS[w.kind][Math.floor(Math.random() * Population.STILLS[w.kind].length)];
+          w.pause = w.jogger ? (turn ? 3 + this.dice.next() * 3 : 0) : 2 + this.dice.next() * 5;
+          w.still = w.jogger ? 'stretch' : Population.STILLS[w.kind][Math.floor(this.dice.next() * Population.STILLS[w.kind].length)];
         }
       }
       if (w.vy > 0 || w.hop > 0) {
@@ -504,8 +507,8 @@ export class Population {
     }
     if (a.t <= 0) {
       a.state = a.state === 'rest' ? 'wander' : 'rest';
-      a.t = a.state === 'rest' ? 4 + Math.random() * 10 : 3 + Math.random() * 6;
-      if (a.state === 'wander') a.dir = Math.abs(a.s - a.home) > 8 ? Math.sign(a.home - a.s) : Math.random() < 0.5 ? 1 : -1;
+      a.t = a.state === 'rest' ? 4 + this.dice.next() * 10 : 3 + this.dice.next() * 6;
+      if (a.state === 'wander') a.dir = Math.abs(a.s - a.home) > 8 ? Math.sign(a.home - a.s) : this.dice.next() < 0.5 ? 1 : -1;
     }
     let yaw = a.dir > 0 ? 0 : Math.PI;
     const walk = a.species === 'elephant' || a.species === 'cow' ? 0.6 : a.species === 'kangaroo' ? 1.8 : 1.1;

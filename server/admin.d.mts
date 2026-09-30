@@ -10,7 +10,11 @@ export interface AdminConfig {
   challenges?: AdminChallenge[];
   legal: AdminLegal;
   features: { fishingContest: boolean; party: boolean };
+  maintenance: AdminMaintenance;
 }
+export interface AdminMaintenance { on: boolean; mode: 'maintenance' | 'development'; message: string; from: number; until: number; offline: boolean }
+export declare const MAINTENANCE_MODES: string[];
+export declare function maintenanceState(m: Partial<AdminMaintenance> | undefined, now?: number): { active: boolean; upcoming: boolean };
 export interface AdminLegal { entity: string; country: string; minAge: number; updated: string; healthWarning: boolean; termsForOnline: boolean; hideDonationsInApp: boolean; credits: { name: string; role: string }[] }
 export interface AdminChallenge { id: string; sponsorId: string; title: string; text: string; kind: string; target: number; ink: number; item: string; start: number; end: number; enabled: boolean }
 export declare const CHALLENGE_KINDS: string[];
@@ -30,6 +34,8 @@ export declare function createAdmin(opts: { dataDir: string; distDir?: string; l
   handle(req: IncomingMessage, res: ServerResponse, url: URL): Promise<boolean>;
   maxRoom(): number;
   features(): { fishingContest: boolean; party: boolean };
+  closed(): boolean;
+  reopens(): number;
   isBanned(name: string): boolean;
   bannedList(): string[];
   logChat(room: string, name: string, text: string): void;

@@ -102,6 +102,8 @@ describe('people along the routes', () => {
     const c = chapterById('serendib');
     const pop = new Population(c.buildRoute(), c.id, c.districts.map((d) => d.id));
     expect(pop.walkers.some((w) => w.jogger)).toBe(true);
+    // After school, when the children are out.
+    pop.env = { ...pop.env, hour: 16 };
     const seen = new Set<HumanPose>();
     const dt = 1 / 20;
     // Follow the crowd around the whole route (a few seconds at each stop).

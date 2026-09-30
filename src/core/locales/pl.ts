@@ -1255,5 +1255,16 @@ const pl: Locale = {
   'fact.torii': "Brama torii wskazuje drogę do chramu: przejdź przez nią, a codzienność zostaje w tyle.",
   'fact.pagoda': "Pagody przetrwają trzęsienia ziemi dzięki wysokiemu środkowemu słupowi, który pozwala piętrom się kołysać.",
   'fact.bamboo': "Niektóre bambusy rosną prawie metr dziennie. Prawie widać, jak rosną.",
+  'maint.titleMaint': "Zaraz wracamy — poprawiamy farbę",
+  'maint.titleDev': "Nowe drogi w budowie",
+  'maint.textMaint': "Inkroads jest na chwilę zamknięte z powodu prac. Twoje zapisy są bezpieczne.",
+  'maint.textDev': "Budujemy coś nowego dla Inkroads. Twoje zapisy są bezpieczne.",
+  'maint.back': "Wracamy za {time}",
+  'maint.backAt': "Otwarcie o {time} (twój czas)",
+  'maint.noTime': "Wrócimy najszybciej, jak się da.",
+  'maint.opening': "Otwieramy drzwi…",
+  'maint.offline': "W międzyczasie graj sam",
+  'maint.offlineNote': "Gra online jest do tego czasu zamknięta.",
+  'maint.soon': "🛠 Inkroads zostanie zamknięte na prace za {time}. Dokończ przejażdżkę!",
 };
 export default pl;

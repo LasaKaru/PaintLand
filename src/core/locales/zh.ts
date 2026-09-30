@@ -1255,5 +1255,16 @@ const zh: Locale = {
   'fact.torii': "鸟居标志着通往神社的路：穿过它，就把日常留在身后。",
   'fact.pagoda': "宝塔靠一根高高的中心柱让各层轻轻摇摆，因此能抵御地震。",
   'fact.bamboo': "有些竹子一天能长将近一米，几乎能看着它长高。",
+  'maint.titleMaint': "马上回来——我们正在补漆",
+  'maint.titleDev': "新道路建设中",
+  'maint.textMaint': "Inkroads 正在进行短暂维护。你的存档很安全。",
+  'maint.textDev': "我们正在为 Inkroads 打造新内容。你的存档很安全。",
+  'maint.back': "{time}后回来",
+  'maint.backAt': "{time} 重新开放（你的时间）",
+  'maint.noTime': "我们会尽快回来。",
+  'maint.opening': "正在开门……",
+  'maint.offline': "在此期间自己玩",
+  'maint.offlineNote': "在此之前在线游戏暂停。",
+  'maint.soon': "🛠 Inkroads 将在 {time}后进入维护。抓紧跑完这一程！",
 };
 export default zh;

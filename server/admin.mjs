@@ -59,6 +59,12 @@ export const DEFAULT_CONFIG = {
   challenges: [],
   /** Things the owner can switch on or off (the game's src/brand/Brand.ts FeatureConfig). */
   features: { fishingContest: true, party: true },
+  /**
+   * Closing the game for maintenance or development (the game's src/brand/Brand.ts
+   * MaintenanceConfig). `from`/`until` are times in ms (0: now / no set time); the
+   * game opens again by itself at `until`.
+   */
+  maintenance: { on: false, mode: 'maintenance', message: '', from: 0, until: 0, offline: true },
   /** Release and legal settings (the game's src/brand/Brand.ts LegalConfig). */
   legal: {
     entity: 'HelaO2',
@@ -143,6 +149,24 @@ export function sanitizeConfig(input, current) {
     c.features = { ...structuredClone(DEFAULT_CONFIG.features), ...c.features };
     for (const k of Object.keys(DEFAULT_CONFIG.features)) if (i.features[k] !== undefined) c.features[k] = !!i.features[k];
   }
+  if (i.maintenance && typeof i.maintenance === 'object') {
+    const m = i.maintenance;
+    const time = (v) => {
+      const n = Math.round(Number(v) || 0);
+      // Up to a year ahead; nothing silly.
+      return n > 0 && n < Date.now() + 366 * 86400_000 ? n : 0;
+    };
+    const from = time(m.from);
+    const until = time(m.until);
+    c.maintenance = {
+      on: !!m.on,
+      mode: MAINTENANCE_MODES.includes(m.mode) ? m.mode : 'maintenance',
+      message: clean(m.message, 240),
+      from,
+      until: until && until > from ? until : 0,
+      offline: m.offline === undefined ? true : !!m.offline,
+    };
+  }
   if (i.maxPlayersPerRoom !== undefined) c.maxPlayersPerRoom = Math.min(64, Math.max(2, Math.round(Number(i.maxPlayersPerRoom) || 32)));
   if (Array.isArray(i.sponsors)) {
     // Only edits of existing sponsors (name, link, weight, on/off); uploads go through /api/admin/sponsor.
@@ -179,6 +203,20 @@ export function sanitizeConfig(input, current) {
       .filter((x) => x.title && x.kind && sponsorIds.has(x.sponsorId));
   }
   return c;
+}
+
+export const MAINTENANCE_MODES = ['maintenance', 'development'];
+
+/**
+ * Is the game closed right now? `active` while switched on, after `from` and
+ * before `until`; `upcoming` when switched on for a later start. After `until`
+ * it's over by itself (no one has to remember to switch it off).
+ */
+export function maintenanceState(m, now = Date.now()) {
+  if (!m?.on) return { active: false, upcoming: false };
+  if (m.until && now >= m.until) return { active: false, upcoming: false };
+  if (m.from && now < m.from) return { active: false, upcoming: true };
+  return { active: true, upcoming: false };
 }
 
 /** The challenges players see now: switched on, running, and their sponsor still showing. */
@@ -404,7 +442,17 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
       challenges: activeChallenges(config),
       legal: { ...DEFAULT_CONFIG.legal, ...config.legal },
       features: { ...DEFAULT_CONFIG.features, ...config.features },
+      maintenance: publicMaintenance(),
     };
+  }
+
+  /** What players see about maintenance (nothing at all when it's off or over). */
+  function publicMaintenance() {
+    const m = { ...DEFAULT_CONFIG.maintenance, ...config.maintenance };
+    const now = Date.now();
+    const st = maintenanceState(m, now);
+    if (!st.active && !st.upcoming) return undefined;
+    return { mode: m.mode, message: m.message, from: m.from, until: m.until, offline: m.offline, active: st.active, now };
   }
 
   // ————— analytics —————
@@ -934,6 +982,10 @@ export function createAdmin({ dataDir, distDir, live, accounts = () => null, gal
     handle,
     maxRoom: () => config.maxPlayersPerRoom,
     features: () => ({ ...DEFAULT_CONFIG.features, ...config.features }),
+    /** Closed for maintenance right now (the relay turns players away from rooms). */
+    closed: () => maintenanceState(config.maintenance).active,
+    /** When the game opens again (ms; 0 when no time is set). */
+    reopens: () => config.maintenance?.until ?? 0,
     isBanned: (name) => moderation.banned.some((b) => b.toLowerCase() === String(name ?? '').toLowerCase()),
     /** Banned names, for the other relays (server/shards.mjs). */
     bannedList: () => [...moderation.banned],

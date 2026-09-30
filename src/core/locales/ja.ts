@@ -1255,5 +1255,16 @@ const ja: Locale = {
   'fact.torii': "鳥居は神社への入り口のしるし。くぐると、日常から一歩離れた場所へ。",
   'fact.pagoda': "五重塔は、揺れを逃がす中心の柱（心柱）のおかげで地震に強いんです。",
   'fact.bamboo': "竹は一日に1メートル近く伸びることも。伸びるのが見えそうなくらい。",
+  'maint.titleMaint': "もうすぐ戻ります — ただいま塗り直し中",
+  'maint.titleDev': "新しい道をつくっています",
+  'maint.textMaint': "Inkroads は少しのあいだメンテナンス中です。セーブデータは安全です。",
+  'maint.textDev': "Inkroads の新しいものを作っています。セーブデータは安全です。",
+  'maint.back': "あと {time} で再開",
+  'maint.backAt': "{time} に再開（あなたの時間）",
+  'maint.noTime': "できるだけ早く戻ります。",
+  'maint.opening': "扉を開けています…",
+  'maint.offline': "そのあいだ一人で遊ぶ",
+  'maint.offlineNote': "それまでオンラインプレイはお休みです。",
+  'maint.soon': "🛠 あと {time} で Inkroads はメンテナンスに入ります。走りを終えてね！",
 };
 export default ja;

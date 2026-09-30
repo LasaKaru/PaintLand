@@ -1255,5 +1255,16 @@ const id: Locale = {
   'fact.torii': "Gerbang torii menandai jalan ke kuil: melewatinya berarti meninggalkan keseharian.",
   'fact.pagoda': "Pagoda tahan gempa berkat tiang tengah tinggi yang membiarkan lantainya bergoyang.",
   'fact.bamboo': "Ada bambu yang tumbuh hampir satu meter sehari. Hampir bisa dilihat tumbuhnya.",
+  'maint.titleMaint': "Segera kembali — kami sedang merapikan cat",
+  'maint.titleDev': "Jalan baru sedang dibuat",
+  'maint.textMaint': "Inkroads tutup sebentar untuk perawatan. Simpanan kamu aman.",
+  'maint.textDev': "Kami sedang membuat sesuatu yang baru untuk Inkroads. Simpanan kamu aman.",
+  'maint.back': "Kembali dalam {time}",
+  'maint.backAt': "Buka lagi pukul {time} (waktumu)",
+  'maint.noTime': "Kami akan kembali secepatnya.",
+  'maint.opening': "Membuka pintu…",
+  'maint.offline': "Main sendiri dulu sementara ini",
+  'maint.offlineNote': "Main online ditutup sampai saat itu.",
+  'maint.soon': "🛠 Inkroads tutup untuk perawatan dalam {time}. Selesaikan perjalananmu!",
 };
 export default id;

@@ -1255,5 +1255,16 @@ const vi: Locale = {
   'fact.torii': "Cổng torii đánh dấu lối vào đền: bước qua là để lại đời thường phía sau.",
   'fact.pagoda': "Chùa tháp chịu được động đất nhờ cột trụ giữa cao cho phép các tầng lắc lư.",
   'fact.bamboo': "Có loài tre lớn gần một mét mỗi ngày. Gần như nhìn thấy nó lớn.",
+  'maint.titleMaint': "Sắp quay lại — chúng tôi đang sơn lại",
+  'maint.titleDev': "Những con đường mới đang được làm",
+  'maint.textMaint': "Inkroads tạm đóng để bảo trì một chút. Dữ liệu lưu của bạn vẫn an toàn.",
+  'maint.textDev': "Chúng tôi đang làm điều mới cho Inkroads. Dữ liệu lưu của bạn vẫn an toàn.",
+  'maint.back': "Quay lại sau {time}",
+  'maint.backAt': "Mở lại lúc {time} (giờ của bạn)",
+  'maint.noTime': "Chúng tôi sẽ quay lại sớm nhất có thể.",
+  'maint.opening': "Đang mở cửa…",
+  'maint.offline': "Trong lúc chờ, chơi một mình",
+  'maint.offlineNote': "Chơi trực tuyến tạm đóng đến lúc đó.",
+  'maint.soon': "🛠 Inkroads sẽ đóng để bảo trì sau {time}. Hãy hoàn thành chuyến đi!",
 };
 export default vi;

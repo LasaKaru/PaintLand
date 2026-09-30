@@ -287,6 +287,23 @@ function relayHttp(req, res, url) {
 
 const wss = new WebSocketServer({ server: http, maxPayload: MAX_RACE_MESSAGE });
 
+// When the admin closes the game, players already in rooms are told and let go
+// (their game shows the maintenance page). Checked every few seconds.
+if (admin) {
+  setInterval(() => {
+    if (!admin.closed()) return;
+    const msg = JSON.stringify({ t: 'maintenance', until: admin.reopens() });
+    for (const client of wss.clients) {
+      try {
+        client.send(msg);
+        client.close(4003, 'maintenance');
+      } catch {
+        /* already gone */
+      }
+    }
+  }, 5000).unref();
+}
+
 wss.on('connection', (socket, req) => {
   const url = new URL(req.url ?? '/', 'http://localhost');
   const room = (url.searchParams.get('room') ?? 'lobby').slice(0, 32).replace(/[^a-zA-Z0-9_-]/g, '') || 'lobby';
@@ -295,6 +312,12 @@ wss.on('connection', (socket, req) => {
   if (home !== SHARD.index) {
     socket.send(JSON.stringify({ t: 'moved', url: SHARD.urls[home], room }));
     socket.close(4010, 'moved');
+    return;
+  }
+  // Closed for maintenance: say so (and when it opens again) instead of joining.
+  if (admin?.closed()) {
+    socket.send(JSON.stringify({ t: 'maintenance', until: admin.reopens() }));
+    socket.close(4003, 'maintenance');
     return;
   }
   let members = rooms.get(room);

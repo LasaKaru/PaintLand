@@ -1255,5 +1255,16 @@ const sw: Locale = {
   'fact.torii': "Lango la torii huonyesha njia ya kwenda hekaluni: ukipita, unaacha maisha ya kila siku nyuma.",
   'fact.pagoda': "Pagoda husimama katika matetemeko kwa sababu ya nguzo ndefu ya kati inayoruhusu ghorofa kuyumba.",
   'fact.bamboo': "Baadhi ya mianzi hukua karibu mita moja kwa siku. Karibu unaweza kuiona ikikua.",
+  'maint.titleMaint': "Tunarudi hivi punde — tunarekebisha rangi",
+  'maint.titleDev': "Barabara mpya zinajengwa",
+  'maint.textMaint': "Inkroads imefungwa kwa matengenezo mafupi. Hifadhi zako ziko salama.",
+  'maint.textDev': "Tunajenga kitu kipya kwa Inkroads. Hifadhi zako ziko salama.",
+  'maint.back': "Tunarudi baada ya {time}",
+  'maint.backAt': "Inafunguliwa tena saa {time} (saa yako)",
+  'maint.noTime': "Tutarudi haraka iwezekanavyo.",
+  'maint.opening': "Tunafungua milango…",
+  'maint.offline': "Cheza peke yangu kwa sasa",
+  'maint.offlineNote': "Mchezo wa mtandaoni umefungwa hadi wakati huo.",
+  'maint.soon': "🛠 Inkroads itafungwa kwa matengenezo baada ya {time}. Maliza safari yako!",
 };
 export default sw;

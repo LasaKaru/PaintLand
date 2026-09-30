@@ -40,8 +40,56 @@ If you forget the password:
 | 🤝 **Sponsors** | Upload, replace or delete sponsor logos and their links (shown on billboards in the towns and chapters) |
 | 🎟 **Pass & challenges** | The season pass (make one-use Patron codes, give an account the Patron track), and sponsor challenges (goal, reward ink and cosmetic, dates) |
 | ⚖ **Release & legal** | What a store release needs: the legal name and country in the Terms of Use, the minimum age for online play, the terms date (a new date asks every player to accept again), the health notice, asking for the terms before online play, hiding donation links in the desktop (Steam) app, and the credits list. See STEAM_PUBLISHING.md §7 |
+| 🛠 **Maintenance** | Close the game for players while you fix or build something, with a return time. See below. |
 | 👥 **Players & chat** | Recent chat and player reports (dismiss, or ban the player name); ban and unban names; the **photo contest** (view, hide, show again or remove entries); reported **gallery roads** (keep or remove) |
 | 🔒 **Security** | Change the admin email and password; check which address the server sees for rate limits (needed behind Render's proxy, see HOSTING.md) |
+
+### Maintenance: closing the game for a while
+
+**🛠 Maintenance** closes the game for players while you update the server,
+fix something, or build something new.
+
+1. Tick **Close the game for players**.
+2. Choose what players see:
+   - **🔧 Maintenance:** "Back soon, we're touching up the paint". A little
+     car sits on a jack while the road is repainted, with turning gears and
+     dripping paint.
+   - **✏ Development:** "New roads in the making". A pencil sketches a new road,
+     colour washes in, and a crane lowers a piece of road into place.
+3. Optional: add a **note to players** (up to 240 letters), for example "New
+   chapter coming tonight!".
+4. **Starts:** leave it empty to close straight away, or set a later time.
+   Players who are playing then get a warning 15 minutes before.
+5. **Opens again at:** the game reopens **by itself** at this time, so you
+   don't have to remember. Use the quick buttons (+30 min, +1 hour, +2 hours,
+   +6 hours, +1 day), or leave it empty to stay closed until you press
+   **🟢 Open the game now**.
+6. **Let players keep playing on their own meanwhile:** when ticked, players
+   get a "Play on my own meanwhile" button, and only online play is closed.
+   Leave it on for the desktop (Steam) app, where people have paid for the
+   game.
+7. **Save.** Players see the page within about half a minute. **👀 Preview**
+   shows it to you exactly as players see it.
+
+What players get:
+- A painted page with your note and a live countdown ("Back in 1 hr 34 min").
+  It shows the time the game opens in their own time zone, and it's
+  translated into all 24 languages.
+- Their game stops where it was, with the sound paused. When the page washes
+  away, they carry on from the same spot. Saves are never touched.
+- Multiplayer rooms close: players already in a room are let go, and new ones
+  can't join until it opens.
+
+What you get:
+- While you're logged in to the admin panel, the game stays open **for you**,
+  so you can test. A small banner at the top says it's closed for players,
+  with a **Preview** button.
+- The secret word still works on the closed page. On a phone, tap the logo
+  five times.
+
+A player whose game can't reach the server (for example the desktop app
+offline) is never locked out. The closed page only appears when the server
+says so right now.
 
 ### Crashes & speed
 

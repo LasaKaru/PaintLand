@@ -90,6 +90,7 @@ import { analytics } from '../net/Analytics';
 import { APP_VERSION, reportError, setCrashPlace } from '../net/CrashReporter';
 import { FrameGuard, SafePoint, StuckWatch, finite, freeSpot } from './Guard';
 import { AdminPanel } from '../ui/Admin';
+import { MaintenanceScreen } from '../ui/Maintenance';
 import { FreeCar, FreeWalker } from '../gameplay/FreeRoam';
 import { TouchControls } from '../ui/TouchControls';
 import { TRIAL_VERSION, TrialSim, encodeInputs, quantizeInput, type TrialConfig } from '../gameplay/TrialSim';
@@ -357,6 +358,10 @@ export class Game {
   // Milestone 8: Colour the City, map, daily brushstrokes, perahera.
   private readonly mapView: MapView;
   private readonly admin: AdminPanel;
+  /** The owner's "closed for maintenance / development" page (admin panel → 🛠 Maintenance). */
+  private readonly maintenance: MaintenanceScreen;
+  /** Closed: the game stops where it is until the page lifts. */
+  private closedForMaint = false;
   private readonly strokeCache = new Map<string, Stroke[]>();
   private districtCache: { area: string; seen: number; list: DistrictProgress[] } | null = null;
   private readonly washShown: number[] = [];
@@ -582,6 +587,18 @@ export class Game {
       openAdmin: () => this.admin.show(),
     });
     this.admin = new AdminPanel(container);
+    this.maintenance = new MaintenanceScreen(container, {
+      openAdmin: () => this.admin.show(),
+      isAdmin: () => this.admin.loggedIn,
+      setClosed: (closed) => {
+        this.closedForMaint = closed;
+        this.input.releasePointerLock();
+        if (closed) void this.audio.ctx?.suspend();
+        else if (this.state !== 'paused') void this.audio.ctx?.resume();
+      },
+      warn: (text) => this.hud.tip(text, 8, '🛠'),
+    });
+    this.admin.onPreviewMaintenance = () => this.maintenance.showPreview();
     this.net.onChat = (name, text) => this.incomingChat(name, text);
     this.remotes.hidden = (name) => this.options.blocked.includes(name);
     this.remotes.speaking = (id) => this.voice.speaking(id);
@@ -2435,6 +2452,8 @@ export class Game {
     if (cap > 0 && now - this.lastFrame < 1000 / cap - 2) return;
     const rawDt = (now - this.lastFrame) / 1000;
     this.lastFrame = now;
+    // Closed for maintenance: everything waits (the page covers the screen).
+    if (this.closedForMaint) return;
     if (this.frameGuard.halted) return;
     try {
       this.tick(rawDt);

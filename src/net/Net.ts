@@ -126,6 +126,13 @@ class SocketTransport implements Transport {
   }
 
   private handle(msg: { t?: string; url?: unknown }): void {
+    // Closed for maintenance: the relay lets us go. Try again only now and then.
+    if (msg.t === 'maintenance') {
+      this.retry = Math.max(this.retry, 4);
+      this.onStatus('closed for maintenance');
+      window.dispatchEvent(new Event('inkroads:maintenance'));
+      return;
+    }
     // Several relays share rooms: this room lives on another one (server/shards.mjs).
     if (msg.t === 'moved') {
       const to = msg.url;

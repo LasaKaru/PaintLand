@@ -1,5 +1,5 @@
 import { api, apiBase, apiUrl, setApiBase } from '../net/Api';
-import { COMPANY_LOGO, DEFAULT_FEATURES, DEFAULT_LEGAL, brand, setBrand, type BrandConfig } from '../brand/Brand';
+import { COMPANY_LOGO, DEFAULT_FEATURES, DEFAULT_LEGAL, brand, loadBrand, serverNow, setBrand, type BrandConfig } from '../brand/Brand';
 import { paintedLogo } from '../brand/Watercolour';
 
 /** What /api/admin/stats returns (server/admin.mjs). */
@@ -57,7 +57,26 @@ const CHALLENGE_KINDS: [string, string][] = [
   ['secrets', 'Golden pots'],
 ];
 const dateIn = (t: number): string => new Date(t || Date.now()).toISOString().slice(0, 10);
-interface ServerConfig extends Omit<BrandConfig, 'sponsors' | 'challenges'> {
+/** The maintenance switch as the server stores it (server/admin.mjs DEFAULT_CONFIG.maintenance). */
+interface MaintenanceConfig {
+  on: boolean;
+  mode: 'maintenance' | 'development';
+  message: string;
+  from: number;
+  until: number;
+  offline: boolean;
+}
+const NO_MAINTENANCE: MaintenanceConfig = { on: false, mode: 'maintenance', message: '', from: 0, until: 0, offline: true };
+/** A time for a datetime-local box, in this computer's time zone. */
+const localIn = (ms: number): string => {
+  if (!ms) return '';
+  const d = new Date(ms);
+  const p = (n: number): string => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T${p(d.getHours())}:${p(d.getMinutes())}`;
+};
+const localOut = (v: string): number => (v ? new Date(v).getTime() || 0 : 0);
+interface ServerConfig extends Omit<BrandConfig, 'sponsors' | 'challenges' | 'maintenance'> {
+  maintenance?: MaintenanceConfig;
   maxPlayersPerRoom: number;
   sponsors: { id: string; name: string; url: string; file: string; weight: number; enabled: boolean }[];
   challenges?: AdminChallenge[];
@@ -117,7 +136,7 @@ interface Health {
 }
 type CrashFilter = 'active' | 'resolved' | 'ignored' | 'all';
 
-type Tab = 'dashboard' | 'health' | 'branding' | 'links' | 'sponsors' | 'business' | 'release' | 'players' | 'security';
+type Tab = 'dashboard' | 'health' | 'branding' | 'links' | 'sponsors' | 'business' | 'release' | 'maintenance' | 'players' | 'security';
 
 const TOKEN = 'paintland.admin';
 const esc = (s: unknown): string => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] ?? c);
@@ -150,6 +169,13 @@ export class AdminPanel {
   private email = '';
   open = false;
   onClose: (() => void) | null = null;
+  /** Show the closed page as players see it (the game sets this). */
+  onPreviewMaintenance: (() => void) | null = null;
+
+  /** Logged in: an admin keeps playing while the game is closed for players. */
+  get loggedIn(): boolean {
+    return !!this.token;
+  }
 
   constructor(container: HTMLElement) {
     this.root = document.createElement('div');
@@ -247,6 +273,7 @@ export class AdminPanel {
       sponsors: c.sponsors.filter((s) => s.enabled).map((s) => ({ id: s.id, name: s.name, url: s.url, weight: s.weight, image: `/api/brand/${s.file}` })),
       // Running challenges come in the public config on the next load; keep the current ones meanwhile.
       challenges: brand().challenges,
+      maintenance: brand().maintenance,
       legal: { ...DEFAULT_LEGAL, ...c.legal },
       features: { ...DEFAULT_FEATURES, ...c.features },
     });
@@ -276,8 +303,8 @@ export class AdminPanel {
   }
 
   private panel(): string {
-    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['health', '🩺 Crashes & speed'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['business', '🎟 Pass & challenges'], ['release', '⚖ Release & legal'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
-    const body = { dashboard: () => this.dashboard(), health: () => this.healthTab(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), business: () => this.businessTab(), release: () => this.releaseTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
+    const tabs: [Tab, string][] = [['dashboard', '📊 Dashboard'], ['health', '🩺 Crashes & speed'], ['branding', '🏷 Branding'], ['links', '🔗 Menu links'], ['sponsors', '🤝 Sponsors'], ['business', '🎟 Pass & challenges'], ['release', '⚖ Release & legal'], ['maintenance', '🛠 Maintenance'], ['players', '👥 Players & chat'], ['security', '🔒 Security']];
+    const body = { dashboard: () => this.dashboard(), health: () => this.healthTab(), branding: () => this.branding(), links: () => this.linksTab(), sponsors: () => this.sponsorsTab(), business: () => this.businessTab(), release: () => this.releaseTab(), maintenance: () => this.maintenanceTab(), players: () => this.playersTab(), security: () => this.securityTab() }[this.tab]();
     return `<div class="card admin-panel">
       <div class="admin-head">
         <div class="admin-brand"><img src="${esc(this.config?.company.logo ? apiUrl(this.config.company.logo) : COMPANY_LOGO)}" alt=""><span class="hand">${esc(this.config?.company.name ?? 'HelaO2')} · Inkroads admin</span></div>
@@ -478,6 +505,56 @@ export class AdminPanel {
       </div>
       <label>Credits: one person per line, “Name — role” (up to 40)<textarea class="text-input" name="credits" rows="6" placeholder="Lasantha — Game design and code">${esc(credits)}</textarea></label>
       <button class="btn primary" type="submit">Save release settings</button>
+    </form>`;
+  }
+
+  private maintenanceTab(): string {
+    const c = this.config;
+    if (!c) return '<p class="menu-hint">Loading…</p>';
+    const m = { ...NO_MAINTENANCE, ...c.maintenance };
+    const now = serverNow();
+    const when = (ms: number): string => new Date(ms).toLocaleString(undefined, { weekday: 'short', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+    const status = !m.on
+      ? '🟢 <b>Open</b>: everyone can play.'
+      : m.until && now >= m.until
+        ? `🟢 <b>Open again</b>: the set time (${when(m.until)}) has passed.`
+        : m.from && now < m.from
+          ? `🟡 <b>Closing at ${when(m.from)}</b>. Players are warned 15 minutes before.`
+          : `🔴 <b>Closed for players</b> (${m.mode})${m.until ? ` until ${when(m.until)}` : ', until you open it'}. You can still play as admin.`;
+    const quick = [
+      [30, '+30 min'],
+      [60, '+1 hour'],
+      [120, '+2 hours'],
+      [360, '+6 hours'],
+      [1440, '+1 day'],
+    ]
+      .map(([min, label]) => `<button class="btn small" type="button" data-admin="maint-add" data-min="${min}">${label}</button>`)
+      .join(' ');
+    return `<form class="admin-form" data-form="maintenance">
+      <p class="menu-hint">Close the game for players while you fix or build something. They see a painted "back soon" page with your note and a countdown, and the game opens again by itself at the time you set. Online play (multiplayer rooms) closes too. Players' saves are never touched. As long as you're logged in here, you keep playing and testing.</p>
+      <div class="admin-msg">${status}</div>
+      <label class="check"><input type="checkbox" name="on" ${m.on ? 'checked' : ''}> <b>Close the game for players</b></label>
+      <div class="grid2">
+        <div>
+          <div class="field"><label>What players see</label>
+            <label class="check"><input type="radio" name="mode" value="maintenance" ${m.mode !== 'development' ? 'checked' : ''}> 🔧 Maintenance: "Back soon, we're touching up the paint" (a car on a jack, the road being repainted)</label>
+            <label class="check"><input type="radio" name="mode" value="development" ${m.mode === 'development' ? 'checked' : ''}> ✏ Development: "New roads in the making" (a new road sketched in pencil, then painted)</label>
+          </div>
+          <label>Your note to players (optional, up to 240 letters)<textarea class="text-input" name="message" rows="3" maxlength="240" placeholder="New chapter coming tonight!">${esc(m.message)}</textarea></label>
+          <label class="check"><input type="checkbox" name="offline" ${m.offline ? 'checked' : ''}> Let players keep playing on their own meanwhile (only online play is closed)</label>
+        </div>
+        <div>
+          <label>Starts (empty: straight away)<input class="text-input" type="datetime-local" name="from" value="${localIn(m.from && m.from > now ? m.from : 0)}"></label>
+          <label>Opens again at (empty: when you open it here)<input class="text-input" type="datetime-local" name="until" value="${localIn(m.until && m.until > now ? m.until : 0)}"></label>
+          <div class="row wrap">${quick}</div>
+          <p class="menu-hint">Times are in this computer's time zone. Players see them in their own.</p>
+        </div>
+      </div>
+      <div class="row wrap">
+        <button class="btn primary" type="submit">Save</button>
+        <button class="btn" type="button" data-admin="maint-open">🟢 Open the game now</button>
+        <button class="btn" type="button" data-admin="maint-preview">👀 Preview what players see</button>
+      </div>
     </form>`;
   }
 
@@ -702,6 +779,24 @@ export class AdminPanel {
       a.click();
       return;
     }
+    if (d.admin === 'maint-add') {
+      // Quick times: from the start (or now) plus that long.
+      const form = el.closest('form');
+      const from = form?.querySelector<HTMLInputElement>('[name="from"]');
+      const until = form?.querySelector<HTMLInputElement>('[name="until"]');
+      if (until) until.value = localIn(Math.max(Date.now(), localOut(from?.value ?? '')) + Number(d.min) * 60_000);
+      return;
+    }
+    if (d.admin === 'maint-preview') {
+      this.hide();
+      this.onPreviewMaintenance?.();
+      return;
+    }
+    if (d.admin === 'maint-open') {
+      const saved = await this.call<ServerConfig>('/api/admin/config', 'PUT', { maintenance: { ...NO_MAINTENANCE, ...this.config?.maintenance, on: false } });
+      if (saved) this.saved(saved, 'The game is open again. Players see it within half a minute.');
+      return;
+    }
     if (d.admin === 'reset-logo' && this.config) {
       const saved = await this.call<ServerConfig>('/api/admin/config', 'PUT', { company: { ...this.config.company, logo: '' } });
       if (saved) this.saved(saved, 'The HelaO2 logo is back.');
@@ -774,6 +869,8 @@ export class AdminPanel {
   private saved(c: ServerConfig, msg: string): void {
     this.config = c;
     this.applyToGame(c);
+    // The live state (maintenance, running challenges) comes from the public config.
+    void loadBrand();
     this.flash(msg);
   }
 
@@ -844,6 +941,15 @@ export class AdminPanel {
         legal: { entity: v('entity'), country: v('country'), minAge: Number(v('minAge')), updated: v('updated'), healthWarning: f.get('healthWarning') === 'on', termsForOnline: f.get('termsForOnline') === 'on', hideDonationsInApp: f.get('hideDonationsInApp') === 'on', credits },
       });
       if (saved) this.saved(saved, 'Release settings saved.');
+    } else if (kind === 'maintenance') {
+      const from = localOut(v('from'));
+      const until = localOut(v('until'));
+      if (until && until <= Math.max(Date.now(), from)) return this.flash('"Opens again at" has to be later than the start.');
+      const on = f.get('on') === 'on';
+      const saved = await this.call<ServerConfig>('/api/admin/config', 'PUT', {
+        maintenance: { on, mode: v('mode') === 'development' ? 'development' : 'maintenance', message: v('message'), from, until, offline: f.get('offline') === 'on' },
+      });
+      if (saved) this.saved(saved, on ? (from > Date.now() ? 'Saved: the game closes at the start time (players are warned 15 minutes before).' : 'Saved: the game is closed for players. They see it within half a minute.') : 'Saved. The game is open.');
     } else if (kind === 'links') {
       const custom = [];
       for (let i = 0; i < 8; i++) if (v(`label${i}`) && v(`url${i}`)) custom.push({ label: v(`label${i}`), url: v(`url${i}`) });

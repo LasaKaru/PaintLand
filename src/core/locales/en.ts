@@ -1253,6 +1253,17 @@ const en = {
   'fact.torii': "A torii gate marks the way into a shrine: walk through, and you leave the everyday behind.",
   'fact.pagoda': "Pagodas ride out earthquakes thanks to a tall central pillar that lets the floors sway.",
   'fact.bamboo': "Some bamboo can grow nearly a metre in a single day. You can almost watch it.",
+  'maint.titleMaint': "Back soon — we're touching up the paint",
+  'maint.titleDev': "New roads in the making",
+  'maint.textMaint': "Inkroads is closed for a little maintenance. Your saves are safe.",
+  'maint.textDev': "We're building something new for Inkroads. Your saves are safe.",
+  'maint.back': "Back in {time}",
+  'maint.backAt': "Opens again at {time} (your time)",
+  'maint.noTime': "We'll be back as soon as we can.",
+  'maint.opening': "Opening the doors…",
+  'maint.offline': "Play on my own meanwhile",
+  'maint.offlineNote': "Online play is closed until then.",
+  'maint.soon': "🛠 Inkroads closes for maintenance in {time}. Finish your ride!",
 } as const;
 
 export default en;

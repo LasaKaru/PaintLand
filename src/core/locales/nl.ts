@@ -1255,5 +1255,16 @@ const nl: Locale = {
   'fact.torii': "Een torii wijst de weg naar een heiligdom: wie erdoor loopt, laat het alledaagse achter.",
   'fact.pagoda': "Pagodes doorstaan aardbevingen dankzij een hoge middenpaal die de verdiepingen laat meezwaaien.",
   'fact.bamboo': "Sommige bamboe groeit bijna een meter per dag. Je kunt het bijna zien groeien.",
+  'maint.titleMaint': "Zo terug — we werken de verf bij",
+  'maint.titleDev': "Nieuwe wegen in de maak",
+  'maint.textMaint': "Inkroads is even gesloten voor onderhoud. Je opgeslagen spel is veilig.",
+  'maint.textDev': "We bouwen iets nieuws voor Inkroads. Je opgeslagen spel is veilig.",
+  'maint.back': "Terug over {time}",
+  'maint.backAt': "Weer open om {time} (jouw tijd)",
+  'maint.noTime': "We zijn zo snel mogelijk terug.",
+  'maint.opening': "De deuren gaan open…",
+  'maint.offline': "Ondertussen alleen spelen",
+  'maint.offlineNote': "Online spelen is tot dan gesloten.",
+  'maint.soon': "🛠 Inkroads gaat over {time} dicht voor onderhoud. Maak je rit af!",
 };
 export default nl;

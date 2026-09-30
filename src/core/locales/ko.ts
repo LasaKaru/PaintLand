@@ -1255,5 +1255,16 @@ const ko: Locale = {
   'fact.torii': "도리이는 신사로 가는 길을 알려요. 지나가면 일상을 뒤로하게 되죠.",
   'fact.pagoda': "탑은 층들이 흔들리도록 해 주는 높은 중심 기둥 덕분에 지진을 견뎌요.",
   'fact.bamboo': "어떤 대나무는 하루에 거의 1미터나 자라요. 자라는 게 보일 정도예요.",
+  'maint.titleMaint': "곧 돌아올게요 — 페인트를 손보는 중",
+  'maint.titleDev': "새 길을 만드는 중",
+  'maint.textMaint': "Inkroads는 잠시 점검 중이에요. 저장 데이터는 안전해요.",
+  'maint.textDev': "Inkroads의 새로운 것을 만들고 있어요. 저장 데이터는 안전해요.",
+  'maint.back': "{time} 후에 돌아와요",
+  'maint.backAt': "{time}에 다시 열려요 (내 시간)",
+  'maint.noTime': "최대한 빨리 돌아올게요.",
+  'maint.opening': "문을 여는 중…",
+  'maint.offline': "그동안 혼자 놀기",
+  'maint.offlineNote': "그때까지 온라인 플레이는 닫혀 있어요.",
+  'maint.soon': "🛠 {time} 후 Inkroads가 점검에 들어가요. 달리기를 마무리하세요!",
 };
 export default ko;

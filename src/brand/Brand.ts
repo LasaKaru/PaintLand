@@ -13,6 +13,24 @@ export interface BrandConfig {
   legal: LegalConfig;
   /** Things the owner can switch on or off (admin panel → Branding). */
   features: FeatureConfig;
+  /** The game is closed (or about to close) for maintenance or development (admin panel → Maintenance). */
+  maintenance?: MaintenanceInfo;
+}
+
+/** What the server says about maintenance (server/admin.mjs publicMaintenance). */
+export interface MaintenanceInfo {
+  mode: 'maintenance' | 'development';
+  /** The owner's note to players (may be empty). */
+  message: string;
+  /** When it starts and when the game opens again (ms; 0: now / no set time). */
+  from: number;
+  until: number;
+  /** Players may keep playing on their own meanwhile (online play stays closed). */
+  offline: boolean;
+  /** Closed right now (otherwise it's coming up at `from`). */
+  active: boolean;
+  /** The server's clock when it answered (ms), to count down in the server's time. */
+  now: number;
 }
 
 export interface FeatureConfig {
@@ -79,12 +97,16 @@ export interface BrandLogo {
 
 const CACHE = 'paintland.brand';
 let current: BrandConfig = readCache() ?? DEFAULT_BRAND;
+/** How far the server's clock is ahead of ours (ms), from the last live answer. */
+let skew = 0;
 const listeners: ((b: BrandConfig) => void)[] = [];
 
 function readCache(): BrandConfig | null {
   try {
     const raw = localStorage.getItem(CACHE);
-    return raw ? withDefaults(JSON.parse(raw) as BrandConfig) : null;
+    // Maintenance only ever comes from a live answer: an old "closed" must never lock
+    // someone out of playing on their own later (say, offline in the desktop app).
+    return raw ? { ...withDefaults(JSON.parse(raw) as BrandConfig), maintenance: undefined } : null;
   } catch {
     return null;
   }
@@ -111,7 +133,7 @@ export function onBrandChange(fn: (b: BrandConfig) => void): void {
 export function setBrand(b: BrandConfig): void {
   current = withDefaults(b);
   try {
-    localStorage.setItem(CACHE, JSON.stringify(current));
+    localStorage.setItem(CACHE, JSON.stringify({ ...current, maintenance: undefined }));
   } catch {
     /* storage blocked */
   }
@@ -121,7 +143,15 @@ export function setBrand(b: BrandConfig): void {
 /** Fetch the live branding (keeps the cached copy when the server is away). */
 export async function loadBrand(): Promise<void> {
   const res = await api<BrandConfig>('/api/config', { timeout: 4000 });
-  if (res.ok && res.data?.company) setBrand(res.data);
+  if (res.ok && res.data?.company) {
+    if (res.data.maintenance?.now) skew = res.data.maintenance.now - Date.now();
+    setBrand(res.data);
+  }
+}
+
+/** The time now on the server's clock (ms). */
+export function serverNow(): number {
+  return Date.now() + skew;
 }
 
 /**
