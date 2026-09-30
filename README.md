@@ -14,7 +14,7 @@
 
 **Microsoft Store:** every push also builds a Store package; the **[Microsoft Store guide](docs/MICROSOFT_STORE.md)** covers the account, the three identity values and the first submission (the Store signs the app, so no certificate is needed).
 
-**Your own server:** **[Domain setup](docs/DOMAIN_SETUP.md)** (point your domain at your server, and set `VITE_API_BASE` / `VITE_SERVER_WS` so the Windows app connects), then the **[self-hosting guide](docs/SELF_HOSTING.md)** for security, updates and backups.
+**Your own server:** **[Domain setup](docs/DOMAIN_SETUP.md)** (point your domain at your server, and set `VITE_API_BASE` / `VITE_SERVER_WS` so the Windows app connects), then the **[self-hosting guide](docs/SELF_HOSTING.md)** for security, updates and backups. On a **Contabo VPS**, the **[Contabo guide](docs/CONTABO.md)** covers everything from buying the domain to the Windows app, with the game and HTTPS running as systemd services (no Docker).
 
 *Paint the road. Then drive up it.* Prefer it real? One slider turns the sketchbook into a realistically lit world with HDR light, reflections, fog and depth of field.
 
