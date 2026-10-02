@@ -1,0 +1,32 @@
+{
+  "tracks": [
+    {
+      "title": "Harbour Morning",
+      "artist": "Inkroads music engine",
+      "license": "Original music made with the Inkroads music engine. \u00a9 HelaO2. A placeholder until the commissioned soundtrack.",
+      "file": "music/harbour-morning.webm",
+      "seconds": 60
+    },
+    {
+      "title": "Lotus Tower Lights",
+      "artist": "Inkroads music engine",
+      "license": "Original music made with the Inkroads music engine. \u00a9 HelaO2. A placeholder until the commissioned soundtrack.",
+      "file": "music/lotus-tower-lights.webm",
+      "seconds": 60
+    },
+    {
+      "title": "Rain on the Seine",
+      "artist": "Inkroads music engine",
+      "license": "Original music made with the Inkroads music engine. \u00a9 HelaO2. A placeholder until the commissioned soundtrack.",
+      "file": "music/rain-on-the-seine.webm",
+      "seconds": 60
+    },
+    {
+      "title": "Tea Country Raga",
+      "artist": "Inkroads music engine",
+      "license": "Original music made with the Inkroads music engine. \u00a9 HelaO2. A placeholder until the commissioned soundtrack.",
+      "file": "music/tea-country-raga.webm",
+      "seconds": 60
+    }
+  ]
+}
